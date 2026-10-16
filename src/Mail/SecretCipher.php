@@ -15,20 +15,23 @@ namespace Webwerkwien\ContaoConshoBundle\Mail;
  */
 final class SecretCipher
 {
-    public function __construct(private readonly string $key)
+    private readonly string $key;
+
+    /**
+     * @param string|null $key null when CONSHO_SECRET_KEY is not set — what
+     *                         `%env(base64:default::…)%` hands over then
+     */
+    public function __construct(string|null $key)
     {
         /*
-         * Checked here rather than at first use. A key of the wrong length
-         * fails inside sodium with an unhelpful message, at the moment someone
-         * is trying to send mail — the wrong place to learn that an environment
-         * variable is mis-set.
+         * Checked at use, not here (v0.1.2). Consho's terminate listeners
+         * build the mail services on every request and every console command,
+         * so a check in the constructor took down Contao's post-update script
+         * on an installation without the key — before anything wanted to send
+         * mail. A wrong key still fails with a message naming the variable,
+         * at the first value that needs it.
          */
-        if (SODIUM_CRYPTO_SECRETBOX_KEYBYTES !== \strlen($key)) {
-            throw new \InvalidArgumentException(\sprintf(
-                'The encryption key must be exactly %d bytes.',
-                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
-            ));
-        }
+        $this->key = $key ?? '';
     }
 
     public function encrypt(string $plaintext): string
@@ -41,7 +44,7 @@ final class SecretCipher
 
         $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
 
-        return base64_encode($nonce.sodium_crypto_secretbox($plaintext, $nonce, $this->key));
+        return base64_encode($nonce.sodium_crypto_secretbox($plaintext, $nonce, $this->key()));
     }
 
     /**
@@ -69,8 +72,26 @@ final class SecretCipher
         $nonce = substr($raw, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
         $payload = substr($raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
 
-        $plaintext = sodium_crypto_secretbox_open($payload, $nonce, $this->key);
+        $plaintext = sodium_crypto_secretbox_open($payload, $nonce, $this->key());
 
         return false === $plaintext ? null : $plaintext;
+    }
+
+    /**
+     * A key of the wrong length fails inside sodium with an unhelpful message;
+     * this one names the variable and how to make one.
+     */
+    private function key(): string
+    {
+        if (SODIUM_CRYPTO_SECRETBOX_KEYBYTES !== \strlen($this->key)) {
+            throw new \InvalidArgumentException(\sprintf(
+                'The encryption key must be exactly %d bytes: set CONSHO_SECRET_KEY in .env.local to %d base64-encoded random bytes (php -r "echo base64_encode(random_bytes(%d));").',
+                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+            ));
+        }
+
+        return $this->key;
     }
 }

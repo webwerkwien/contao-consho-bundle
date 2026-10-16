@@ -5,6 +5,16 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.2] – 2026-10-16
+
+### Behoben
+
+- **Ohne `CONSHO_SECRET_KEY` brach Contaos Nachlauf nach der Installation ab** (`contao-setup`, also auch der
+  Contao Manager): Der Mailschlüssel wurde schon beim Anlegen des Dienstes geprüft, und Consho legt ihn bei jeder
+  Anfrage und jedem Konsolenbefehl an. Jetzt erst, wenn wirklich ein Passwort ver- oder entschlüsselt wird, mit einer
+  Meldung, die die Variable nennt und sagt, wie man einen Schlüssel erzeugt. Für SMTP-Zugangsdaten bleibt der
+  Schlüssel nötig: `CONSHO_SECRET_KEY` in der `.env.local`, 32 zufällige Bytes base64-kodiert.
+
 ## [0.1.1] – 2026-10-16
 
 ### Behoben

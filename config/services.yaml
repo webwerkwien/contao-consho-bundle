@@ -62,11 +62,13 @@ services:
     # encrypting mail credentials is that a database dump is not enough to read
     # them, and a key stored beside them would defeat exactly that.
     #
-    # `default::` makes an unset variable an empty string rather than an
-    # EnvNotFoundException at container build. SecretCipher then refuses it with
-    # "the encryption key must be exactly 32 bytes", which names the problem —
-    # and it does so only when something actually needs to send mail, not on
-    # every back end page.
+    # `default::` makes an unset variable null (not an empty string, as this
+    # comment once claimed) rather than an EnvNotFoundException. SecretCipher
+    # takes null and refuses only when a value really has to be encrypted or
+    # decrypted, with a message naming CONSHO_SECRET_KEY. Until v0.1.2 it
+    # refused in its constructor — and the terminate listeners build it on
+    # every request and console command, which broke Contao's post-update
+    # script on an installation without the key (2026-10-16).
     #
     # ⚠️ base64, NOT hex2bin. Symfony ships base64, bool, not, const, csv, file,
     # float, int, json, key, url, query_string, resolve, default, string, trim,

@@ -71,10 +71,40 @@ class SecretCipherTest extends TestCase
         self::assertNull($this->cipher->decrypt(base64_encode('short')));
     }
 
-    public function testAKeyOfTheWrongLengthIsRefusedAtConstruction(): void
+    /**
+     * Refused at use, not at construction (v0.1.2). Consho's terminate
+     * listeners build the mail services on every request and every console
+     * command; a check in the constructor took down Contao's post-update
+     * script on an installation without the key (the agency site,
+     * 2026-10-16), long before anything wanted to send mail.
+     */
+    public function testAKeyOfTheWrongLengthIsRefusedWhenUsed(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $cipher = new SecretCipher('too short');
 
-        new SecretCipher('too short');
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('CONSHO_SECRET_KEY');
+
+        $cipher->encrypt('hunter2');
+    }
+
+    /**
+     * What `%env(base64:default::CONSHO_SECRET_KEY)%` hands over when the
+     * variable is not set: null, not '' as the service definition once said.
+     */
+    public function testWithoutAKeyItConstructsAndRefusesOnlyRealWork(): void
+    {
+        $cipher = new SecretCipher(null);
+
+        // Nothing to protect: no key needed, nothing thrown.
+        self::assertSame('', $cipher->encrypt(''));
+        self::assertSame('', $cipher->decrypt(''));
+
+        try {
+            $cipher->decrypt(base64_encode(str_repeat('x', 40)));
+            self::fail('a stored password without a key must not pass silently');
+        } catch (\InvalidArgumentException $e) {
+            self::assertStringContainsString('CONSHO_SECRET_KEY', $e->getMessage());
+        }
     }
 }
