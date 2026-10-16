@@ -196,7 +196,7 @@ final class InvoiceView
             // EPC069-12: what the code holds is also printed, so the payer can
             // compare — read out of the code itself (its eleventh element, the
             // unstructured remittance), so the two cannot differ.
-            'paymentReference' => null !== $giroCode ? (explode("\n", (string) ($payment['giroCode'] ?? ''))[10] ?? '') : '',
+            'paymentReference' => null !== $giroCode ? (explode("\n", $payment['giroCode'])[10] ?? '') : '',
             'footer' => (string) ($notes['footer'] ?? ''),
             'reverseChargeNote' => (string) ($notes['reverseCharge'] ?? ''),
         ];

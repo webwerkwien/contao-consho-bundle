@@ -245,9 +245,9 @@ class PaymentChangeTest extends TestCase
         $this->change(discount: '2.0000')->change(1, 4, 'de', 1_790_000_000);
 
         // 10 + 10 netto − 2 Nachlass = 18; brutto 12 + 11 − 1,20 − 1,10 = 20,70.
-        self::assertSame('18.00', $this->orders->order['netTotal']);
-        self::assertSame('20.70', $this->orders->order['grandTotal']);
-        self::assertSame('2.70', $this->orders->order['taxTotal']);
+        self::assertSame('18.00', $this->orders->current()['netTotal']);
+        self::assertSame('20.70', $this->orders->current()['grandTotal']);
+        self::assertSame('2.70', $this->orders->current()['taxTotal']);
     }
 
     /**
@@ -415,7 +415,7 @@ class PaymentChangeTest extends TestCase
         $changed = $this->change()->change(1, 3, 'de', 1_790_000_000);
 
         self::assertSame(56, $changed->invoiceId, 'Vorkasse stellt aus');
-        self::assertSame(1_790_500_000, $this->orders->order['paymentDueAt']);
+        self::assertSame(1_790_500_000, $this->orders->current()['paymentDueAt']);
     }
 
     /**
@@ -435,7 +435,7 @@ class PaymentChangeTest extends TestCase
 
         $this->change()->change(1, 3, 'de', 1_790_000_000);
 
-        self::assertSame(1_790_500_000, $this->orders->order['paymentDueAt'], 'die Vorkasse-Rechnung nimmt das Ziel nicht mit');
+        self::assertSame(1_790_500_000, $this->orders->current()['paymentDueAt'], 'die Vorkasse-Rechnung nimmt das Ziel nicht mit');
     }
 
     public function testOhneAboBleibtDieNeueRechnungOhneZiel(): void
@@ -555,6 +555,17 @@ final class InMemoryPaymentChangeRepository implements PaymentChangeRepositoryIn
         'billingCountry' => 'AT', 'shippingCountry' => '', 'paymentMethod' => '2',
         'netTotal' => '10.00', 'taxTotal' => '2.00', 'grandTotal' => '12.00',
     ];
+
+    /**
+     * The order as it stands now, read anew: the change writes it from
+     * another object, and PHPStan keeps a property it read before such a call.
+     *
+     * @return array<string, string|int>
+     */
+    public function current(): array
+    {
+        return $this->order;
+    }
 
     /** @var list<array<string, string|int>> */
     public array $items = [

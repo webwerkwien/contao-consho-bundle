@@ -268,13 +268,13 @@ class OssReportTest extends TestCase
         $source = new OssThresholdIssueSource($this->report(), $cache, $this->at('2026-09-01'));
 
         $this->order(3, paidAt: $this->at('2026-02-01'), items: [$this->goods('AT', 'DE', '20', '8000.00')]);
-        self::assertSame(ConfigurationFinding::OssThresholdNear, $source->issues()[0]->finding ?? null);
+        self::assertSame(ConfigurationFinding::OssThresholdNear, $this->finding($source));
 
         $this->order(3, paidAt: $this->at('2026-02-02'), items: [$this->goods('AT', 'DE', '20', '3000.00')]);
-        self::assertSame(ConfigurationFinding::OssThresholdNear, $source->issues()[0]->finding ?? null, 'noch aus dem Cache');
+        self::assertSame(ConfigurationFinding::OssThresholdNear, $this->finding($source), 'noch aus dem Cache');
 
         $cache->clear();
-        self::assertSame(ConfigurationFinding::OssThresholdReached, $source->issues()[0]->finding ?? null);
+        self::assertSame(ConfigurationFinding::OssThresholdReached, $this->finding($source));
     }
 
     /**
@@ -287,14 +287,14 @@ class OssReportTest extends TestCase
         $source = new OssThresholdIssueSource($this->report(), new \Symfony\Component\Cache\Adapter\ArrayAdapter(clock: $clock), $this->at('2026-09-01'));
 
         $this->order(3, paidAt: $this->at('2026-02-01'), items: [$this->goods('AT', 'DE', '20', '8000.00')]);
-        self::assertSame(ConfigurationFinding::OssThresholdNear, $source->issues()[0]->finding ?? null);
+        self::assertSame(ConfigurationFinding::OssThresholdNear, $this->finding($source));
 
         $this->order(3, paidAt: $this->at('2026-02-02'), items: [$this->goods('AT', 'DE', '20', '3000.00')]);
         $clock->sleep(3599);
-        self::assertSame(ConfigurationFinding::OssThresholdNear, $source->issues()[0]->finding ?? null);
+        self::assertSame(ConfigurationFinding::OssThresholdNear, $this->finding($source));
 
         $clock->sleep(2);
-        self::assertSame(ConfigurationFinding::OssThresholdReached, $source->issues()[0]->finding ?? null);
+        self::assertSame(ConfigurationFinding::OssThresholdReached, $this->finding($source));
     }
 
     public function testDieCsvSchreibtDezimalkommaUndSchuetztText(): void
@@ -384,6 +384,15 @@ class OssReportTest extends TestCase
             static fn ($issue): array => [$issue->finding, $issue->context],
             (new OssThresholdIssueSource($this->report(), now: $this->at('2026-09-01')))->issues(),
         );
+    }
+
+    /**
+     * The first finding, asked anew on every call: the cache in between is
+     * what these tests are about, so no two calls may be taken for one.
+     */
+    private function finding(OssThresholdIssueSource $source): ?ConfigurationFinding
+    {
+        return $source->issues()[0]->finding ?? null;
     }
 
     private function report(): OssReport

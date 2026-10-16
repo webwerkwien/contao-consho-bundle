@@ -35,7 +35,7 @@
         "ext-sodium": "*",
         "ext-zip": "*",
         "contao/core-bundle": "^5.7",
-        "brick/math": "^0.20",
+        "brick/math": "^0.20 || ^1.0",
         "symfony/http-client": "^7.4",
         "symfony/intl": "^7.4",
         "symfony/validator": "^7.4",

@@ -256,7 +256,12 @@ class BackendSystemMessagesListener implements ResetInterface
         // none of Contao's input encoding, and this way the path is testable
         // (review M6/M19/M20 — no test had ever touched it).
         $request = $this->requests?->getCurrentRequest();
-        $submitted = null !== $request && $request->isMethod('POST') ? $request->request->getString('consho_ack') : '';
+
+        if (null === $request || !$request->isMethod('POST')) {
+            return;
+        }
+
+        $submitted = $request->request->getString('consho_ack');
 
         if ('' === $submitted) {
             return;
@@ -274,11 +279,7 @@ class BackendSystemMessagesListener implements ResetInterface
             if ($issue->fingerprint() === $submitted && !$issue->finding->isWarning() && $this->maySee($issue)) {
                 $this->acknowledgements->acknowledge($issue, $userId);
 
-                if (null !== $this->requests?->getCurrentRequest()) {
-                    throw new RedirectResponseException($this->requests->getCurrentRequest()->getRequestUri());
-                }
-
-                return;
+                throw new RedirectResponseException($request->getRequestUri());
             }
         }
     }

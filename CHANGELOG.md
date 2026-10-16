@@ -5,6 +5,14 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.1] – 2026-10-16
+
+### Behoben
+
+- **Ließ sich neben einer aktuellen Contao-Installation nicht installieren:** Consho verlangte `brick/math ^0.20`,
+  frische Installationen haben aber 1.0 (über Contaos Anmelde-Pakete). Jetzt `^0.20 || ^1.0`; 1.0.0 ist laut
+  Hersteller unverändert gegenüber 0.20.0, die Suite läuft gegen beide.
+
 ## [0.1.0] – 2026-10-16
 
 Erste veröffentlichte Version. Jeder Eintrag beschreibt den Stand zu diesem Release; Korrekturen an

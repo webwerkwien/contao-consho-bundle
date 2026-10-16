@@ -638,6 +638,17 @@ final class SpyTransport extends AbstractTransport
 
     public int $attempts = 0;
 
+    /**
+     * The mails so far, read anew: whatever sends sits on another object, and
+     * PHPStan keeps a property it read before such a call.
+     *
+     * @return list<Email>
+     */
+    public function sent(): array
+    {
+        return $this->sent;
+    }
+
     public string $failFor = '';
 
     public function __toString(): string

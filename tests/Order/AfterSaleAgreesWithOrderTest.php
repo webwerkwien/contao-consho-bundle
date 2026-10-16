@@ -447,8 +447,9 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertNotNull($this->withdrawalRow($withdrawal)['confirmationSentAt']);
 
         // Eingangsbestätigung mit Datum UND Uhrzeit (Spec D 2, Punkt 4), Kopie an den Betreiber.
-        self::assertCount(2, $this->transport->sent);
-        [$confirmation, $copy] = $this->transport->sent;
+        $sent = $this->transport->sent();
+        self::assertCount(2, $sent);
+        [$confirmation, $copy] = $sent;
         $html = (string) $confirmation->getHtmlBody();
         self::assertSame('Eingangsbestätigung: Widerruf zur Bestellung WEB-00074', $confirmation->getSubject());
         self::assertStringContainsString('5. Oktober 2026', $html);
@@ -535,8 +536,9 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame(self::DONE, (int) $this->orderRow()['orderStatus']);
 
         // Die Erstattungsmail, mit der Korrektur im Anhang.
-        self::assertCount(1, $this->transport->sent);
-        $mail = $this->transport->sent[0];
+        $sent = $this->transport->sent();
+        self::assertCount(1, $sent);
+        $mail = $sent[0];
         $html = (string) $mail->getHtmlBody();
         self::assertSame('Ihr Widerruf WEB-00074-W1 zur Bestellung WEB-00074: Erstattung', $mail->getSubject());
         self::assertStringContainsString('Wir erstatten Ihnen 30,00', $html);
@@ -597,12 +599,13 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
                 $this->connection->fetchAllAssociative('SELECT number, receivedAt FROM tl_consho_withdrawal WHERE pid = ? ORDER BY id', [self::ORDER]),
             ),
         );
+        $sent = $this->transport->sent();
         self::assertSame(
             ['Eingangsbestätigung: Widerruf zur Bestellung WEB-00075', 'Widerruf eingegangen: Bestellung WEB-00075', 'Eingangsbestätigung: Widerruf zur Bestellung WEB-00075', 'Widerruf eingegangen: Bestellung WEB-00075'],
-            array_map(static fn (Email $mail): string => (string) $mail->getSubject(), $this->transport->sent),
+            array_map(static fn (Email $mail): string => (string) $mail->getSubject(), $sent),
         );
-        self::assertStringContainsString('22. Oktober 2026', (string) $this->transport->sent[2]->getHtmlBody());
-        self::assertStringContainsString('23:59:59', (string) $this->transport->sent[2]->getHtmlBody());
+        self::assertStringContainsString('22. Oktober 2026', (string) $sent[2]->getHtmlBody());
+        self::assertStringContainsString('23:59:59', (string) $sent[2]->getHtmlBody());
         self::assertSame([], $this->logger->errors);
     }
 

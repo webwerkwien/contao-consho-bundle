@@ -124,7 +124,7 @@ class StockNoticeTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_stock_notice'), 'genau eine Mail');
 
         $this->cron()();
-        self::assertCount(1, $this->transport->sent);
+        self::assertCount(1, $this->transport->sent());
     }
 
     public function testScheitertDieMailBleibtDerWunsch(): void
