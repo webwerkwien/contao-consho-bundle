@@ -1,0 +1,230 @@
+{#
+  Order confirmation to the customer (C-9), in the language of the order.
+
+  Decision A4 holds: verified in Template Studio on 2026-09-09, this template
+  is listed and carries both "Ihr Template erstellen" and "Variante erstellen".
+  Dropping Notification Center is only defensible because its main benefit —
+  editing texts in the back end — applies without it, and it does.
+
+  🔴 The folder IS part of the name. Measured on c5 on 2026-09-24 with
+  `debug:contao-twig` (Contao 5.7):
+
+      Original name  @Contao_ContaoConshoBundle/mail/consho_order_confirmation.html.twig
+      @Contao name   @Contao/mail/consho_order_confirmation.html.twig
+
+  Loaded as @Contao/mail/consho_order_confirmation.html.twig (OrderConfirmation).
+
+  ── What has to be in here, and why ─────────────────────────────────────
+
+  The confirmation on a durable medium carries the pre-contractual
+  information (Art. 8 Abs. 7 lit. a Directive 2011/83/EU, § 7 Abs 3 FAGG). A
+  link is not a durable medium, so the terms and the withdrawal instructions
+  are printed IN the mail, as frozen at the purchase — not linked, and not
+  read from today's page. The harmonised guarantee notice is an image that
+  must not be altered (Implementing Regulation (EU) 2025/1960, Annex I) and
+  travels as an attachment, not as a remote image a mail client blocks.
+
+  ⚠️ Parameters are a LIST: Contao's translator fills contao_default strings
+  with vsprintf (Translation/Translator.php), not by name. A "%number%" in
+  a language string would be a broken format, not a placeholder.
+
+  The withdrawal LINK since D-2 (C24), see withdrawalUrl.
+
+  Variables:
+    order        the order in InvoiceView's shape (lines, taxes, totals,
+                 payment instructions, bank details), in the order's language
+    customer     {name, email} of the buyer
+    reference    the payment reference — the invoice number, '' without one
+    legal        list of {headline, text}: terms and withdrawal, frozen HTML
+    viewUrl      the order page, with a token
+    withdrawalUrl  the order page on the declaration (D-2), null without a withdrawal function
+    attachments  {invoice: bool, warranty: bool}
+    digitalConsent  the consumer consented to the early start of digital
+                 content (F-3) — recorded here as § 7 Abs. 3 FAGG and
+                 § 312f Abs. 3 BGB require
+    digital      {kind, date}: when the digital lines will be on the order
+                 page (F-7) — now, afterPayment, afterPeriod, afterBoth; null
+                 without digital lines
+    garan        list of {name, years, info, cid, width}: the manufacturer's durability
+                 guarantees frozen on the lines (block GARAN), each label
+                 embedded under cid; empty without one
+#}
+{% block subject %}{{ 'CONSHO.mail.confirmation.subject'|trans([order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{#
+  Laid out for mail clients, not browsers (Michael, 2026-09-25, after the
+  first real mail: "hübsch ist es nicht"): one centred column of 600 px,
+  tables for structure, inline styles only — Outlook and most webmailers
+  ignore <style> blocks and flexbox. Amounts right-aligned and never wrapped.
+#}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+{% set cell = 'padding: 6px 8px; border-bottom: 1px solid #e2e2e2; vertical-align: top;' %}
+{% set head = 'padding: 6px 8px; border-bottom: 2px solid #222222; font-weight: bold; text-align: left;' %}
+{% set num = 'text-align: right; white-space: nowrap;' %}
+{% set caption = 'margin: 24px 0 8px 0; font-size: 16px; font-weight: bold;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.confirmation.intro'|trans([order.orderNumber, order.orderDate], 'contao_default') }}</p>
+
+<h2 style="{{ caption }}">{{ 'CONSHO.invoice.lines'|trans({}, 'contao_default') }}</h2>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+    <thead>
+        <tr>
+            <th scope="col" style="{{ head }}">{{ 'CONSHO.invoice.item'|trans({}, 'contao_default') }}</th>
+            <th scope="col" style="{{ head }} {{ num }}">{{ 'CONSHO.invoice.quantity'|trans({}, 'contao_default') }}</th>
+            <th scope="col" style="{{ head }} {{ num }}">{{ 'CONSHO.invoice.unitPrice'|trans({}, 'contao_default') }}</th>
+            <th scope="col" style="{{ head }} {{ num }}">{{ 'CONSHO.invoice.total'|trans({}, 'contao_default') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for line in order.lines %}
+        <tr>
+            <th scope="row" style="{{ cell }} text-align: left; font-weight: normal;">{{ line.name }}{% if line.terms|default('') %}<br><small style="color: #555555;">{{ line.terms }}</small>{% endif %}</th>
+            <td style="{{ cell }} {{ num }}">{{ line.quantity }}</td>
+            <td style="{{ cell }} {{ num }}">{{ line.unitPrice }}</td>
+            <td style="{{ cell }} {{ num }}">{{ line.total }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-top: 12px; {{ font }}">
+    {#- Acceptance WG-7: an order of vouchers only is not taxable — said, not "0,00". #}
+    {% set untaxed = order.taxes|default([]) is not empty and order.taxes|filter(t => not t.notTaxable) is empty %}
+    {% if not untaxed %}
+    <tr>
+        <th scope="row" style="padding: 4px 8px; text-align: right; font-weight: normal;">{{ 'CONSHO.invoice.netTotal'|trans({}, 'contao_default') }}</th>
+        <td width="110" style="padding: 4px 8px; {{ num }}">{{ order.netTotal }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+        <th scope="row" style="padding: 4px 8px; text-align: right; font-weight: normal;">{{ 'CONSHO.invoice.taxTotal'|trans({}, 'contao_default') }}</th>
+        <td width="110" style="padding: 4px 8px; {{ num }}">{{ untaxed ? 'CONSHO.invoice.notTaxable'|trans({}, 'contao_default') : order.taxTotal }}</td>
+    </tr>
+    <tr>
+        <th scope="row" style="padding: 8px; text-align: right; border-top: 2px solid #222222;">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th>
+        <td width="110" style="padding: 8px; border-top: 2px solid #222222; font-weight: bold; font-size: 16px; {{ num }}">{{ order.grandTotal }}</td>
+    </tr>
+</table>
+
+{#- Block GARAN (§ 7 Abs. 3, § 4 Abs. 1 Z 12a FAGG): the manufacturer's
+    durability guarantee as it stood before the button, with its label
+    embedded (cid:), not linked — a blocked remote image is no confirmation
+    on a durable medium. The sentence carries the content for a reader
+    without images. #}
+{% if garan|default([]) is not empty %}
+<h2 style="{{ caption }}">{{ 'CONSHO.mail.confirmation.garanHeadline'|trans({}, 'contao_default') }}</h2>
+{% for item in garan %}
+{% set years = item.years|replace({'.': 'MSC.decimalSeparator'|trans({}, 'contao_default')}) %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.confirmation.garanLine'|trans([item.name, years], 'contao_default') }}</p>
+<p style="margin: 0 0 4px 0;"><img src="cid:{{ item.cid }}" alt="{{ 'CONSHO.garan.alt'|trans([years], 'contao_default') }}" width="{{ item.width }}" style="display: block; width: {{ item.width }}px; max-width: 100%; height: auto; border: 0;"></p>
+{# GA10: where the QR code leads, as a link — readable with images blocked too. #}
+<p style="margin: 0 0 16px 0;"><a href="{{ item.info }}">{{ 'CONSHO.garan.more'|trans({}, 'contao_default') }}</a></p>
+{% endfor %}
+{% endif %}
+
+<h2 style="{{ caption }}">{{ 'CONSHO.invoice.taxes'|trans({}, 'contao_default') }}</h2>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+    <thead>
+        <tr>
+            <th scope="col" style="{{ head }}">{{ 'CONSHO.invoice.taxRate'|trans({}, 'contao_default') }}</th>
+            <th scope="col" style="{{ head }} {{ num }}">{{ 'CONSHO.invoice.net'|trans({}, 'contao_default') }}</th>
+            <th scope="col" style="{{ head }} {{ num }}">{{ 'CONSHO.invoice.tax'|trans({}, 'contao_default') }}</th>
+            <th scope="col" style="{{ head }} {{ num }}">{{ 'CONSHO.invoice.gross'|trans({}, 'contao_default') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for tax in order.taxes %}
+        <tr>
+            <th scope="row" style="{{ cell }} text-align: left; font-weight: normal;">{{ tax.rate }}</th>
+            <td style="{{ cell }} {{ num }}">{{ tax.net }}</td>
+            <td style="{{ cell }} {{ num }}">{{ tax.tax }}</td>
+            <td style="{{ cell }} {{ num }}">{{ tax.gross }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% if order.reverseChargeNote %}
+<p style="margin: 12px 0 0 0;">{{ order.reverseChargeNote|nl2br }}</p>
+{% endif %}
+
+<h2 style="{{ caption }}">{{ 'CONSHO.invoice.payment'|trans({}, 'contao_default') }}</h2>
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+    {% if order.shippingMethod %}
+    <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ 'CONSHO.invoice.shippingMethod'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ order.shippingMethod }}</td></tr>
+    {% endif %}
+    {% if order.deliveryPeriod %}
+    <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ 'CONSHO.invoice.deliveryPeriod'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ order.deliveryPeriod }}</td></tr>
+    {% endif %}
+    <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ 'CONSHO.invoice.paymentMethod'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ order.paymentMethod }}</td></tr>
+</table>
+
+{% if order.paymentInstructions or order.bankDetails is not empty %}
+<div style="margin-top: 12px; padding: 12px 16px; background: #f7f7f7; border-left: 3px solid #222222;">
+    {{ order.paymentInstructions|raw }}
+    {% if order.bankDetails is not empty %}
+    <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+        {% for key, value in order.bankDetails|filter(v => v is not empty) %}
+        <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ ('CONSHO.invoice.bank.' ~ key)|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ value }}</td></tr>
+        {% endfor %}
+        {% if reference %}
+        <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ 'CONSHO.invoice.bank.reference'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0; font-weight: bold;">{{ reference }}</td></tr>
+        {% endif %}
+    </table>
+    {% endif %}
+</div>
+{% endif %}
+
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+
+{# The withdrawal link must be reachable WITHOUT logging in again — § 13a FAGG
+   in Austria from 1 October 2026, § 356a BGB in Germany since 19 June 2026.
+   Since D-2 the order page opened on the declaration; null where the shop has
+   no withdrawal function (period 0). #}
+{% if withdrawalUrl %}
+<p style="margin: 12px 0 0 0;"><a href="{{ withdrawalUrl }}">{{ 'CONSHO.mail.withdraw'|trans({}, 'contao_default') }}</a></p>
+{% endif %}
+
+{# Abo-2, P14: one sentence per withdrawal kind frozen on the lines; none
+   known (an order before Abo-2) is the content sentence, as before. #}
+{% if digitalConsent|default(false) %}
+{% for kind in digitalConsentKinds|default([]) is empty ? ['content'] : digitalConsentKinds %}
+<p style="margin: 12px 0 0 0;">{{ (kind == 'service' ? 'CONSHO.mail.confirmation.digitalConsentService' : 'CONSHO.mail.confirmation.digitalConsent')|trans({}, 'contao_default') }}</p>
+{% endfor %}
+{% endif %}
+
+{% if digital|default(null) %}
+<p style="margin: 12px 0 0 0;">{{ ('CONSHO.mail.confirmation.' ~ digital.what|default('digital') ~ '.' ~ digital.kind)|trans([digital.date], 'contao_default') }}</p>
+{% endif %}
+
+{% if attachments.invoice or attachments.warranty %}
+<p style="margin: 24px 0 0 0; color: #555555;">
+    {% if attachments.invoice %}{{ 'CONSHO.mail.confirmation.invoiceAttached'|trans({}, 'contao_default') }}{% endif %}
+    {% if attachments.warranty %}{{ 'CONSHO.mail.confirmation.warrantyAttached'|trans({}, 'contao_default') }}{% endif %}
+</p>
+{% endif %}
+
+{% for text in legal %}
+<div style="margin-top: 28px; padding-top: 16px; border-top: 1px solid #e2e2e2; font-size: 13px; color: #444444;">
+<h2 style="margin: 0 0 8px 0; font-size: 15px; color: #222222;">{{ text.headline }}</h2>
+{# Frozen at the purchase from the operator's own text element, insert tags
+   resolved (C17) — the very markup the checkout showed. #}
+{{ text.text|raw }}
+</div>
+{% endfor %}
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

@@ -1,0 +1,443 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+{% use "@Contao/component/_figure.html.twig" %}
+{% use "@Contao/component/_rich_text.html.twig" %}
+
+{#
+    The product on a product page.
+
+    Variables: product (ProductDetail, null when the element is not on a product
+    page), figures (list of Figure), price (array or null), safety
+    (ProductSafetyInfo), axes (list of VariantAxisView), purchase (articleId,
+    minPurchase, purchaseSteps), partial (Twig path or ''), notice (CartNotice
+    or null — the reason a previous add was refused, C-3c), plans (list of
+    {rule, label — null for the one-time sale, price, terms, checked}; empty
+    unless a subscription is offered, Abo-2), customFields (list of
+    CustomFieldView — alias, title, type, value, formatted, yes; ZW-4).
+
+    Order matters: the warnings and the age notice stand next to the price,
+    before the description and before the manufacturer block, visible without a
+    click (specification 6.4). Tabs are the theme's business, not this file's.
+
+    Plain texts come input encoded from the database. Templates in the @Contao
+    namespace are escaped with Contao's own strategy, which does not encode
+    "&amp;" a second time. Rich text goes through Contao's rich text component
+    (sanitize_html), never through |raw.
+#}
+
+{# Nothing at all without a product, not even the wrapper. #}
+{% block wrapper %}
+    {% if product %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if figures|default([]) is not empty %}
+        <div class="consho-detail__gallery">
+            {% for figure in figures %}
+                {% with {figure: figure} %}{{ block('figure_component') }}{% endwith %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <h1 class="consho-detail__title">{{ product.title }}</h1>
+
+    {% if product.teaser %}
+        <p class="consho-detail__teaser">{{ product.teaser }}</p>
+    {% endif %}
+
+    {% block consho_price %}
+        {# No price in the shop's currency: no price area at all. #}
+        {% if price %}
+            <div class="consho-detail__price">
+                {#- Block H (H-2): badge and strike-through only for a promotion
+                    below the lowest price of the 30 days before it began (B). -#}
+                {% if price.compare|default(null) %}
+                    <p class="consho-detail__badge consho-detail__badge--promotion">{{ "CONSHO.promotion.badge"|trans({}, "contao_default") }}</p>
+                {% endif %}
+                <p class="consho-detail__amount">
+                    {#- "from" only when the variants genuinely differ in price. -#}
+                    {% if price.isFrom %}{{ "CONSHO.priceFrom"|trans({}, "contao_default") }} {% endif %}
+                    {{- price.formatted -}}
+                </p>
+                {% if price.compare|default(null) %}
+                    <p class="consho-detail__reference"><del>{{ price.compare }}</del> {{ "CONSHO.promotion.reference"|trans({}, "contao_default") }}</p>
+                {% endif %}
+                {#- A product sold by subscription only leads with its first plan
+                   (Abo-2, P10); the amount alone would not say per what. #}
+                {% if price.terms|default(null) %}
+                    <p class="consho-detail__terms">{{ price.terms }}</p>
+                {% endif %}
+                {% if price.basePrice %}
+                    <p class="consho-detail__base-price">{{ "CONSHO.basePrice"|trans([price.basePrice.formatted, price.basePrice.quantity, ("CONSHO.unitSymbols." ~ price.basePrice.unit)|trans({}, "contao_default")], "contao_default") }}</p>
+                {% endif %}
+                {#
+                    No link yet: the shipping costs page belongs to block E.
+
+                    Which of the two sentences appears is decided in the
+                    controller and carried on price.showsNet (C-4) — the
+                    template never asks who is logged in, so an amount and the
+                    sentence under it cannot come from two different answers.
+                #}
+                {#- Acceptance WG-7: not taxable — no tax sentence, shipping if any. #}
+                {% if not untaxed|default(false) or (shipped ?? true) %}<p class="consho-detail__tax">{{ untaxed|default(false) ? "CONSHO.priceShippingOnly"|trans({}, "contao_default") : ("CONSHO." ~ ((shipped ?? true) ? "priceTaxNotice" : "priceTaxOnly") ~ (price.showsNet ? "Net" : ""))|trans({}, "contao_default") }}</p>{% endif %}
+
+                {% if price.scale is not empty %}
+                    <table class="consho-detail__scale">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ "CONSHO.scaleQuantity"|trans({}, "contao_default") }}</th>
+                                <th scope="col">{{ "CONSHO.scalePrice"|trans({}, "contao_default") }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for step in price.scale %}
+                                <tr>
+                                    <td>{{ "CONSHO.scaleFrom"|trans([step.quantity], "contao_default") }}</td>
+                                    <td>{{ step.formatted }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endblock %}
+
+    {# Block GARAN: the manufacturer's durability guarantee, next to the price
+       and before the buy button (§ 4 Abs. 1 Z 12a FAGG). #}
+    {% block consho_garan %}
+        {% if garan|default(null) %}
+            {% include "@Contao/consho/garan_label.html.twig" with {garan: garan} only %}
+        {% endif %}
+    {% endblock %}
+
+    {# Next to the goods, never behind a tab or a click (specification 6.4). #}
+    {% if safety.warnings %}
+        {% with {rich_text: {text: safety.warnings, attributes: attrs().addClass('consho-detail__warnings').set('role', 'note')}} %}
+            {{ block('rich_text_component') }}
+        {% endwith %}
+    {% endif %}
+
+    {% if product.minimumAge > 0 %}
+        <p class="consho-detail__age" role="note">{{ "CONSHO.minimumAge"|trans([product.minimumAge], "contao_default") }}</p>
+    {% endif %}
+
+    {# Links, not a form: every link leads to a variant that exists and is
+       visible. An option no visible variant has is shown, so nothing moves,
+       but not linked. #}
+    {% for axis in axes|default([]) %}
+        <nav class="consho-variants" aria-label="{{ axis.label }}">
+            <p class="consho-variants__label">{{ axis.label }}</p>
+            <ul class="consho-variants__list">
+                {% for option in axis.options %}
+                    <li class="consho-variants__option{% if option.selected %} is-selected{% endif %}{% if option.changesOthers %} consho-variants__option--changes-others{% endif %}">
+                        {% if option.url %}
+                            <a href="{{ option.url }}"{% if option.selected %} aria-current="true"{% endif %}>{{ option.label }}{% if option.unavailable|default(false) %} <small class="consho-variants__unavailable">({{ "CONSHO.stock.unavailable"|trans({}, "contao_default") }})</small>{% endif %}</a>
+                        {% else %}
+                            <span aria-disabled="true">{{ option.label }}</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </nav>
+    {% endfor %}
+
+    {# The purchase form (C-3, C11). NO request token: this page is cached and
+       shared between visitors, so a token in here would be somebody else's.
+       The route checks Origin instead and the cookie is SameSite=Lax.
+       minPurchase/purchaseSteps are decimal(10,4) strings from the database
+       (e.g. "1.0000") and go into min/step verbatim, with no |number_format:
+       that filter is locale-aware and could hand the browser a comma where
+       HTML5 requires a dot, which the browser then rejects outright — for
+       the same value PurchaseCheck accepts on the server via BigDecimal.
+
+       Two purchase boxes for the same product can appear on one page (main
+       area and sidebar): the content element's own id (data.id), not the
+       article id, keeps the quantity field's id unique per instance — the
+       same pattern as safety_heading_id below. #}
+    {% block consho_purchase %}
+        {#- Why a refused add says so here and not on the basket page (C-3c):
+           the basket only enters the picture once something worked, and a
+           visitor without a basket in this shop had no row the reason could
+           be written on — so they got no feedback at all. The reason arrives
+           in ?consho_notice=, already looked up as an enumeration by the
+           controller; anything that is not one of our own REFUSAL cases is
+           null here and renders nothing — the success case included, so a
+           shared link cannot fake "added to your basket" on a cached page.
+
+           OUTSIDE the purchase.articleId check on purpose: a variant that
+           still needs choosing has no buy button, but a refusal about it must
+           still be readable. role="status" and not "alert" — it follows the
+           visitor's own click, it does not interrupt them. #}
+        {% if notice %}
+            <p class="consho-detail__notice" role="status">
+                {{ ("CONSHO.cart.notice." ~ notice.value)|trans({}, "contao_default") }}
+            </p>
+        {% endif %}
+
+        {#- Block G (G7): the state of the chosen article, only where stock is
+            kept. Never the number — "nur noch wenige" says enough. Sold out,
+            the page stays and the buy button goes (purchase.articleId is
+            null then). #}
+        {% if stock|default(null) %}
+            <p class="consho-detail__stock consho-detail__stock--{{ stock.state }}">
+                {{ ("CONSHO.stock." ~ stock.state)|trans({}, "contao_default") }}
+                {%- if stock.availableFrom %} — {{ "CONSHO.stock.availableFrom"|trans([stock.availableFrom], "contao_default") }}{% endif %}
+            </p>
+        {% endif %}
+
+        {#- Block G (G12, G15): the outcome of the last button, looked up as an
+            enumeration by the controller — never echoed from the address. #}
+        {% if stockNoticeResult|default(null) %}
+            <p class="consho-detail__notice" role="status">{{ ("CONSHO.stockNotice.result." ~ stockNoticeResult.value)|trans({}, "contao_default") }}</p>
+        {% endif %}
+
+        {#- The link of "wieder lieferbar": confirming the address takes a
+            button (a POST), signed in as the account the mail went to. #}
+        {% if emailConfirm|default(null) %}
+            <div class="consho-detail__confirm">
+                {% if emailConfirm.state == 'pending' %}
+                    <form method="post" action="{{ path('consho_stock_notice') }}">
+                        <input type="hidden" name="consho_action" value="confirm">
+                        <input type="hidden" name="token" value="{{ emailConfirm.token }}">
+                        <input type="hidden" name="article" value="{{ emailConfirm.articleId }}">
+                        <input type="hidden" name="main" value="{{ emailConfirm.main }}">
+                        <input type="hidden" name="page" value="{{ emailConfirm.pageId }}">
+                        <p>{{ "CONSHO.stockNotice.confirm.pending"|trans({}, "contao_default") }}</p>
+                        <button type="submit">{{ "CONSHO.stockNotice.confirm.button"|trans({}, "contao_default") }}</button>
+                    </form>
+                {% else %}
+                    <p>{{ ("CONSHO.stockNotice.confirm." ~ emailConfirm.state)|trans({}, "contao_default") }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {#- "Benachrichtigen, wenn wieder da" where the buy button went. #}
+        {% if stockNotice|default(null) %}
+            {% if stockNotice.state == 'login' %}
+                <p class="consho-detail__stock-notice">{{ "CONSHO.stockNotice.login"|trans({}, "contao_default") }}</p>
+            {% else %}
+                <form class="consho-detail__stock-notice" method="post" action="{{ path('consho_stock_notice') }}">
+                    <input type="hidden" name="consho_action" value="{{ stockNotice.state == 'subscribed' ? 'unsubscribe' : 'subscribe' }}">
+                    <input type="hidden" name="article" value="{{ stockNotice.articleId }}">
+                    <input type="hidden" name="main" value="{{ stockNotice.main }}">
+                    <input type="hidden" name="page" value="{{ stockNotice.pageId }}">
+                    {% if stockNotice.state == 'subscribed' %}
+                        {# Right after subscribing the result line already says it (Abnahme G-8). #}
+                        {% if stockNoticeResult|default(null) is null or stockNoticeResult.value != 'subscribed' %}
+                            <p>{{ "CONSHO.stockNotice.subscribed"|trans({}, "contao_default") }}</p>
+                        {% endif %}
+                        <button type="submit">{{ "CONSHO.stockNotice.unsubscribe"|trans({}, "contao_default") }}</button>
+                    {% else %}
+                        <button type="submit">{{ "CONSHO.stockNotice.subscribe"|trans({}, "contao_default") }}</button>
+                    {% endif %}
+                </form>
+            {% endif %}
+        {% endif %}
+
+        {% if purchase.articleId %}
+            {% set quantity_id = 'consho-quantity-' ~ data.id|default('') %}
+            {% set quantity_help_id = quantity_id ~ '-help' %}
+
+            {#- Compared numerically, not with Twig truthiness: only the exact
+               string "0" is falsy in Twig, so a stored "0.0000" would pass a
+               plain {% if %} — for purchaseSteps that would emit
+               step="0.0000", invalid HTML the browser silently turns into
+               step="1". #}
+            {#- The same numeric comparison for the field's own default and its
+               min attribute. A stored 0 is allowed (tl_consho_product.minPurchase
+               carries rgxp 'digit'), and it arrives here as "0.0000" — true in
+               Twig, and untouched by |default(), which only fires for null,
+               false or empty. Read as truth it produced a minimum of nought
+               and a prefilled nought, and a click that changed nothing landed
+               in InvalidQuantity: "this quantity is not possible" about a
+               number the shop itself had put in the field. #}
+            {% set quantity_has_min = purchase.minPurchase|default(0) > 0 %}
+            {% set quantity_has_min_hint = purchase.minPurchase|default(0) > 1 %}
+            {% set quantity_has_step_hint = purchase.purchaseSteps|default(0) > 1 %}
+            {% set quantity_hint = quantity_has_min_hint or quantity_has_step_hint %}
+
+            {#- Trimmed to how a person would write the number down: the column
+               always carries four decimals ("5.0000", "1.0000").
+
+               ⚠️ Also for `value`, and that was missing until Michael saw it
+               in the front end on 2026-09-21: the comment that used to stand
+               further down argued these were "display text, not an HTML
+               attribute value" — true of the hint, and wrong about `value`,
+               whose content is exactly what the browser PRINTS IN THE FIELD.
+               The quantity box of every product read "1,0000".
+
+               `min` and `step` are never shown, but they are trimmed too:
+               both forms are equally valid HTML, and one rule for the four
+               numbers of one field is easier to keep than two.
+
+               Stops at the decimal point on purpose — trimming "0" and "."
+               together would also eat the trailing zero of "100". #}
+            {% set quantity_min_display = purchase.minPurchase|default('')|trim(characterMask='0', side='right')|trim(characterMask='.', side='right') %}
+            {% set quantity_step_display = purchase.purchaseSteps|default('')|trim(characterMask='0', side='right')|trim(characterMask='.', side='right') %}
+
+            <form class="consho-purchase" method="post" action="{{ path('consho_cart_add') }}">
+                <input type="hidden" name="article" value="{{ purchase.articleId }}">
+                <input type="hidden" name="page" value="{{ purchase.pageId }}">
+
+                {#- The plan choice (Abo-2, P10): only where a subscription is
+                   among the plans — a product sold once posts no field and the
+                   route reads that as the one-time sale. The first plan is
+                   checked, so a click without a choice buys what the price
+                   area above shows. Ids carry the element id like the quantity
+                   field, for two purchase boxes on one page. The conditions
+                   are tied to their radio with aria-describedby, so a screen
+                   reader reads the term with the amount. #}
+                {% if plans|default([]) is not empty %}
+                    <fieldset class="consho-purchase__plans">
+                        <legend>{{ "CONSHO.subscription.choose"|trans({}, "contao_default") }}</legend>
+                        {% for plan in plans %}
+                            {% set plan_id = 'consho-plan-' ~ data.id|default('') ~ '-' ~ plan.rule %}
+                            <div class="consho-purchase__plan">
+                                <input type="radio" name="subscriptionRule" id="{{ plan_id }}" value="{{ plan.rule }}"{% if plan.checked %} checked{% endif %}{% if plan.terms %} aria-describedby="{{ plan_id }}-terms"{% endif %}>
+                                <label for="{{ plan_id }}">{{ plan.label ?? "CONSHO.subscription.oneTimeSale"|trans({}, "contao_default") }} — {{ plan.price }}</label>
+                                {% if plan.terms %}
+                                    <p class="consho-purchase__plan-terms" id="{{ plan_id }}-terms"><small>{{ plan.terms }}</small></p>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </fieldset>
+                {% endif %}
+
+                <label for="{{ quantity_id }}">
+                    {{ "CONSHO.cart.quantity"|trans({}, "contao_default") }}
+                </label>
+                <input
+                    id="{{ quantity_id }}"
+                    class="consho-purchase__quantity"
+                    type="number"
+                    name="quantity"
+                    inputmode="decimal"
+                    value="{{ quantity_has_min ? quantity_min_display : '1' }}"
+                    {% if quantity_has_min %}min="{{ quantity_min_display }}"{% endif %}
+                    {% if purchase.purchaseSteps|default(0) > 0 %}step="{{ quantity_step_display }}"{% endif %}
+                    {% if quantity_hint %}aria-describedby="{{ quantity_help_id }}"{% endif %}
+                >
+                {% if quantity_hint %}
+                    <p class="consho-purchase__quantity-help" id="{{ quantity_help_id }}">
+                        {{ "CONSHO.cart.quantityHint"|trans([quantity_min_display, quantity_step_display], "contao_default") }}
+                    </p>
+                {% endif %}
+
+                <button type="submit" class="consho-purchase__submit">
+                    {{ "CONSHO.cart.add"|trans({}, "contao_default") }}
+                </button>
+            </form>
+        {% endif %}
+    {% endblock %}
+
+    {% if product.description %}
+        {% with {rich_text: {text: product.description, attributes: attrs().addClass('consho-detail__description')}} %}
+            {{ block('rich_text_component') }}
+        {% endwith %}
+    {% endif %}
+
+    {% if product.sku or product.gtin or product.mpn %}
+        <dl class="consho-detail__identification">
+            {% if product.sku %}
+                <dt>{{ "CONSHO.detail.sku"|trans({}, "contao_default") }}</dt>
+                <dd>{{ product.sku }}</dd>
+            {% endif %}
+            {% if product.gtin %}
+                <dt>{{ "CONSHO.detail.gtin"|trans({}, "contao_default") }}</dt>
+                <dd>{{ product.gtin }}</dd>
+            {% endif %}
+            {% if product.mpn %}
+                <dt>{{ "CONSHO.detail.mpn"|trans({}, "contao_default") }}</dt>
+                <dd>{{ product.mpn }}</dd>
+            {% endif %}
+        </dl>
+    {% endif %}
+
+    {% if product.properties is not empty %}
+        <dl class="consho-detail__properties">
+            {% for property in product.properties %}
+                <dt>{{ property.label }}</dt>
+                <dd>{{ property.values|join(', ') }}</dd>
+            {% endfor %}
+        </dl>
+    {% endif %}
+
+    {# The product type's custom fields (ZW-4, Z3): filled ones only, in the
+       type's order, already in the page's language. A partial gets them as
+       well, by alias — customFields.vintage — for its own layout. #}
+    {% block consho_custom_fields %}
+        {% if customFields is not empty %}
+            <dl class="consho-detail__custom-fields" aria-label="{{ "CONSHO.detail.customFields"|trans({}, "contao_default") }}">
+                {% for field in customFields %}
+                    <dt>{{ field.title }}</dt>
+                    <dd>{% if field.type == 'boolean' %}{{ (field.yes ? "CONSHO.detail.yes" : "CONSHO.detail.no")|trans({}, "contao_default") }}{% else %}{{ field.formatted }}{% endif %}</dd>
+                {% endfor %}
+            </dl>
+        {% endif %}
+    {% endblock %}
+
+    {# The product type's own fields. A partial deleted from the Template Studio
+       must not take the page down, hence "ignore missing". #}
+    {% if partial %}
+        {% set custom_by_alias = {} %}
+        {% for field in customFields %}{% set custom_by_alias = custom_by_alias|merge({(field.alias): field}) %}{% endfor %}
+        {% include partial ignore missing with {product: product, properties: product.properties, customFields: custom_by_alias} only %}
+    {% endif %}
+
+    {# One labelled section, reachable before ordering. Nothing at all when
+       there is neither a manufacturer nor safety information — the gap is
+       reported on the back end start page, not shown as an empty frame. #}
+    {% if safety.hasManufacturer or safety.safetyInformation %}
+        {% set safety_heading_id = 'consho-safety-' ~ data.id|default('') %}
+        <section class="consho-detail__product-safety" aria-labelledby="{{ safety_heading_id }}">
+            <h2 id="{{ safety_heading_id }}">{{ "CONSHO.detail.productSafety"|trans({}, "contao_default") }}</h2>
+
+            {% if safety.hasManufacturer %}
+                <div class="consho-detail__manufacturer">
+                    <h3>{{ "CONSHO.detail.manufacturer"|trans({}, "contao_default") }}</h3>
+                    <p>
+                        {{- safety.manufacturerName -}}
+                        {% if safety.manufacturerAddress %}<br>{{ safety.manufacturerAddress|nl2br }}{% endif %}
+                    </p>
+                    {% if safety.manufacturerEmail %}
+                        <p>{{ safety.manufacturerEmail }}</p>
+                    {% endif %}
+                    {% if safety.manufacturerContactUrl %}
+                        {# Linked only as a web address; anything else stays text. #}
+                        <p>
+                            {%- if safety.manufacturerContactUrl starts with 'https://' or safety.manufacturerContactUrl starts with 'http://' -%}
+                                <a href="{{ safety.manufacturerContactUrl }}">{{ safety.manufacturerContactUrl }}</a>
+                            {%- else -%}
+                                {{ safety.manufacturerContactUrl }}
+                            {%- endif -%}
+                        </p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if safety.hasEuResponsible %}
+                <div class="consho-detail__eu-responsible">
+                    <h3>{{ "CONSHO.detail.euResponsible"|trans({}, "contao_default") }}</h3>
+                    <p>
+                        {{- safety.euResponsibleName -}}
+                        {% if safety.euResponsibleAddress %}<br>{{ safety.euResponsibleAddress|nl2br }}{% endif %}
+                    </p>
+                    {% if safety.euResponsibleEmail %}
+                        <p>{{ safety.euResponsibleEmail }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if safety.safetyInformation %}
+                <div class="consho-detail__safety-information">
+                    <h3>{{ "CONSHO.detail.safetyInformation"|trans({}, "contao_default") }}</h3>
+                    {% with {rich_text: {text: safety.safetyInformation}} %}
+                        {{ block('rich_text_component') }}
+                    {% endwith %}
+                </div>
+            {% endif %}
+        </section>
+    {% endif %}
+{% endblock %}

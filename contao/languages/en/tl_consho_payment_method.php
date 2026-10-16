@@ -1,0 +1,43 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['title'] = ['Title', 'How the payment method appears at checkout and on the invoice.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['type'] = ['Type', 'The code behind the payment method. A payment module brings further types.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['types'] = ['cod' => 'Cash on delivery', 'invoice' => 'On account', 'prepayment' => 'Prepayment', 'test' => 'Test provider (no money)'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['description'] = ['Description', 'Shown at checkout below the title.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['instructions'] = ['Payment notice', 'Shown after the order and in the confirmation, with prepayment together with the bank connection — e.g. "Please transfer within 7 days quoting the order number."'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['accountHolder'] = ['Account holder', 'Exactly as the bank keeps the account. Since 9 October 2025 banks compare name and IBAN; a name that differs shows the customer a warning. At most 70 characters (SEPA).'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['iban'] = ['IBAN', 'Checked against its check digits on save and stored without spaces.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['bic'] = ['BIC', 'Not needed within the SEPA area.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['bankName'] = ['Bank', 'Name of the bank.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['giroCode'] = ['Giro-Code on the invoice', 'Prints a QR code that banking apps take over as a transfer: account holder, IBAN, BIC, amount and invoice number. Only on invoices in euro from 0.01. Otherwise — or if the bank connection is incomplete — the code is left out and the invoice stays the same.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxMode'] = ['Tax on a fee', 'Only if the payment method charges a fee. "Proportional" splits it over the tax rates of the goods like shipping, "fixed" taxes it with one tax class. Whether a payment fee is ancillary to the goods or a supply of its own is not decided by Consho — clarify it with your tax adviser. Without a choice, a payment method with a fee is not offered.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxModes'] = ['proportional' => 'proportional to the goods', 'fixed' => 'fixed tax class'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxClass'] = ['Tax class of the fee', 'Only with "fixed". Without a tax class, a payment method with a fee is not offered.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['dueDays'] = ['Payment term (days)', 'The invoice is issued at shipment and states "payable by" — this many days after its date. Empty: 14 days.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['allowedGroups'] = ['Only for customer groups', 'Empty: everyone, guests included. With a selection only members of these groups — then no guests.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['maxNet'] = ['Highest net amount', 'Goods and shipping, net. Above it, "on account" is not offered. Empty: no limit.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['maxNetCurrency'] = ['Currency of the highest amount', 'For example EUR. In any other currency "on account" is not offered while a highest amount is set.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['sameCountry'] = ['Only within one country', 'Offer only when billing and delivery address are in the same country.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['notHandedOutAtOnce'] = ['Not for digital goods', 'Do not offer when downloads, licence keys or gift vouchers are in the basket. They count as delivered with the release and can be used at once; whoever wants the money first sells them by prepayment.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['graceDays'] = ['Grace period (days)', 'If the invoice is still open this many days after its due date, the digital goods of the order rest until the payment is recorded. Empty: 14 days.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['fee'] = ['Net fee', 'Empty: no fee. Whether and how a fee for a payment method may be charged is your responsibility. For reference: § 56 (3) ZaDiG 2018 (Austria) prohibits a payee from charging for the use of a specific payment instrument, and § 270a BGB (Germany) voids a charge for SEPA core and business direct debit, SEPA credit transfer and — where Regulation (EU) 2015/751 applies, for consumers — payment cards.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeCurrency'] = ['Currency of the fee', 'For example EUR. In any other currency cash on delivery is not offered while a fee is set.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['published'] = ['Published', 'Only published payment methods are offered at checkout, even if a shop has selected them.'];
+
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['title_legend'] = 'Title and type';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['fee_legend'] = 'Fee';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['invoice_legend'] = 'On account';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['cod_legend'] = 'Cash on delivery';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['bank_legend'] = 'Bank connection';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['test_legend'] = 'Test provider';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResult'] = ['Follow-up payment', 'What charging a follow-up order of a subscription comes to. “Pending” gets no answer and goes “on account” after 7 days.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResults'] = ['paid' => 'paid', 'pending' => 'pending', 'failed' => 'failed'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testSecret'] = ['Secret', 'Signs the messages of the test provider. At least 16 characters. The test provider only exists with CONSHO_TEST_PAYMENT=1 and never takes money.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['publish_legend'] = 'Publishing';
+
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['new'] = ['New payment method', 'Create a payment method'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['edit'] = ['Edit', 'Edit payment method ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['copy'] = ['Duplicate', 'Duplicate payment method ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['delete'] = ['Delete', 'Delete payment method ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['toggle'] = ['Publish', 'Publish or hide payment method ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['show'] = ['Details', 'Show the details of payment method ID %s'];

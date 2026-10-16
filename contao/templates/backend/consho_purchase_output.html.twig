@@ -1,0 +1,31 @@
+{#
+  A purchase list — right after it was saved, or handed out again later
+  (Block G, G-7). Always the same three ways, from the list as it was saved.
+
+  Saving and handing out are two requests (review G-7, S1): the form posts,
+  the list is saved, and the browser lands HERE — a reload or a second click
+  can no longer save it twice. The output chosen at the form is started from
+  this page: the download by a refresh, the print view in a new tab (a link
+  as well, in case the browser blocks it).
+#}
+{% set l = lang %}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+</div>
+
+<div class="tl_formbody_edit consho-purchase-page">
+    <h2 class="sub_headline">{{ list.number }}</h2>
+    {% if saved %}
+        <p class="tl_confirm">{{ (l.saved|default('Die Einkaufsliste %s ist gespeichert.'))|format(list.number) }}</p>
+    {% endif %}
+    <div class="tl_submit_container">
+        <a class="tl_submit" href="{{ url }}&amp;format=clipboard">{{ l.toClipboard|default('Zwischenablage') }}</a>
+        <a class="tl_submit" href="{{ url }}&amp;format=print" target="_blank">{{ l.toPrint|default('Druckansicht') }}</a>
+        <a class="tl_submit" href="{{ url }}&amp;format=csv">{{ l.toCsv|default('CSV-Export') }}</a>
+    </div>
+    {% if then == 'csv' %}
+        <meta http-equiv="refresh" content="0;url={{ url }}&amp;format=csv">
+    {% elseif then == 'print' %}
+        <script>window.open({{ (url ~ '&format=print')|json_encode|raw }}, '_blank');</script>
+    {% endif %}
+</div>

@@ -1,0 +1,63 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{% block content %}
+    {% if not configured %}
+        {# A listing outside a shop must not look like an empty catalogue.
+           The back end start page reports the gap. #}
+    {% elseif products is empty %}
+        <p class="consho-empty">{{ "CONSHO.listEmpty"|trans({}, "contao_default") }}</p>
+    {% else %}
+        {# Links, not a form: shareable, cacheable, no JavaScript. The default
+           order links without a sort value, and a new order starts on page one.
+           Empty for a listing that does not follow the address. #}
+        {% if sortLinks|default([]) is not empty %}
+            <nav class="consho-sort" aria-label="{{ "MSC.sortBy"|trans({}, "contao_default") }}">
+                <ul class="consho-sort__list">
+                    {% for link in sortLinks %}
+                        <li class="consho-sort__item">
+                            <a href="{{ link.url }}"{% if link.active %} aria-current="true"{% endif %}>{{ ("CONSHO.sort." ~ link.sort)|trans({}, "contao_default") }}</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        {% endif %}
+
+        {#
+            Where this visitor's own prices are (C-4). Only for members whose
+            group actually carries prices — the tiles show the list price,
+            because the projection behind them knows no customer group.
+
+            Not a price and not an offer: a sentence saying where to look. It
+            is never rendered for a guest, who sees no contradiction and would
+            be promised a discount the shop probably does not give them.
+        #}
+        {% if ownPriceGroup|default('') %}
+            <p class="consho-products__own-price" role="note">{{ "CONSHO.ownPriceGroup"|trans([ownPriceGroup], "contao_default") }}</p>
+        {% endif %}
+
+        <ul class="consho-products">
+            {% for product in products %}
+                <li class="consho-products__item">
+                    {# A list of two: Twig takes the first that exists, so a
+                       chosen tile deleted from the Template Studio falls back
+                       to the bundled one instead of taking the page down. #}
+                    {% include tileTemplate ? [tileTemplate, "@Contao/content_element/consho_product_tile.html.twig"] : "@Contao/content_element/consho_product_tile.html.twig" with {
+                        product: product,
+                        imageSize: imageSize,
+                        showsNet: showsNet|default(false),
+                        shipped: shippedTiles[product.id] ?? true,
+                        untaxed: untaxedTiles[product.id] ?? false,
+                        garan: garanTiles[product.id] ?? null,
+                        tilePurchase: tilePurchase|default(false),
+                        purchasePage: purchasePage|default(0),
+                    } only %}
+                </li>
+            {% endfor %}
+        </ul>
+
+        {# Contao renders the pagination itself, including rel=prev/next.
+           The page number is a parameter of its own — never inside cq, which
+           robots.txt excludes. #}
+        {{ pagination|default('')|raw }}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{#
+  The operator's copy after a change of payment method (C-10), in the
+  language of the shop (Michael, 2026-09-25, E4): a transfer may still arrive
+  quoting the cancelled invoice number, and the bookkeeping has to know it no
+  longer stands. Both documents ride along.
+
+  Loaded as @Contao/mail/consho_payment_changed_operator.html.twig.
+
+  Variables:
+    order      the order in InvoiceView's shape, in the shop's language
+    customer   {name, email}
+    documents  {cancelledInvoice, cancellation, invoice} — numbers, '' where none
+#}
+{% block subject %}{{ 'CONSHO.mail.paymentChanged.operator.subject'|trans([order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.paymentChanged.operator.intro'|trans([order.orderNumber, order.paymentMethod], 'contao_default') }}</p>
+
+<p style="margin: 0 0 16px 0;">
+    {{ customer.name }}<br>
+    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+</p>
+
+{% if documents.cancellation %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.paymentChanged.cancelled'|trans([documents.cancelledInvoice, documents.cancellation], 'contao_default') }}</p>
+{% endif %}
+{% if documents.invoice %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.paymentChanged.newInvoice'|trans([documents.invoice], 'contao_default') }}</p>
+{% endif %}
+
+<p style="margin: 16px 0 0 0;">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}: <strong>{{ order.grandTotal }}</strong></p>
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

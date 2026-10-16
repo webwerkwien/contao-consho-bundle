@@ -1,0 +1,19 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['entitlement_legend'] = 'Berechtigung';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['validity_legend'] = 'Gültigkeit';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['orderItem'] = ['Position', 'Die Bestellposition, aus der die Berechtigung stammt.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['product'] = ['Artikel', 'ID des Artikels beim Kauf.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['quantity'] = ['Menge', 'Eine Berechtigung je Position, mit Menge — je Stück ein Schlüssel oder Zugang, wo die Auslieferung einen vergibt.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['deliveryType'] = ['Auslieferung', 'Womit die Berechtigung eingelöst wird, zum Zeitpunkt der Freigabe.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['validFrom'] = ['Freigegeben am', 'Die Freigabe gilt als Lieferung der Position.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['validUntil'] = ['Gültig bis', 'Leer: dauerhaft. Was nach dem Ende aufhört, legt das Produkt fest.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['revoked'] = ['Gesperrt', 'Die Berechtigung gilt nicht mehr, etwa bei einer offenen Rechnung. Die Bestellung bleibt unverändert.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['suspendedAt'] = ['Ruht seit', 'Eine Rechnung des Abos ist über Zahlungsziel und Nachfrist offen. Mit dem Zahlungseingang lebt die Berechtigung von selbst wieder auf.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['subscription'] = ['Abo', 'Das Abo der Position. Die Berechtigung endet mit der bezahlten Periode des Abos.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['edit'] = ['Bearbeiten', 'Berechtigung ID %s bearbeiten'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['show'] = ['Details', 'Details der Berechtigung ID %s anzeigen'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['permanent'] = 'dauerhaft';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['until'] = 'gültig bis %s';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['revokedLabel'] = 'gesperrt';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['suspendedLabel'] = 'ruht seit %s';

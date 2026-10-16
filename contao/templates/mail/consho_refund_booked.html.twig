@@ -1,0 +1,80 @@
+{#
+  A booked refund (D-3, decision F4), to the customer, in the language of the
+  order, with the cancellation or invoice correction attached where one was
+  issued.
+
+  Two cases, and the mail says which: money goes back (payout), or nothing
+  had been paid beyond what is still owed and the amount due fell instead
+  (payout ''). § 357 Abs. 3 BGB / § 14 Abs. 1 FAGG want the refund made with
+  the means of payment used — the sentence says so; making it happen is the
+  operator's.
+
+  Loaded as @Contao/mail/consho_refund_booked.html.twig. Parameters are a LIST.
+
+  Variables:
+    order       the order in InvoiceView's shape, in the order's language
+    customer    {name, email}
+    withdrawal  the withdrawal number
+    payout      the amount paid back, formatted; '' where nothing is paid back
+    credit      the amount credited, formatted
+    documents   the numbers of the attached documents, comma-separated; '' where none
+    viewUrl     the order page, with a token; '' where the shop has none
+    remaining   what is still to pay, formatted; '' where nothing is (F3b —
+                an invoice issued with the refund carries no Giro-Code, so
+                this sentence is the only place naming the amount)
+    kept        the value compensation kept back for a service, formatted;
+                '' where none (Abo-8, P81)
+    subscriptions  the numbers of the subscriptions the withdrawal ended,
+                comma-separated; '' where none (P78, P81)
+#}
+{% block subject %}{{ 'CONSHO.mail.refund.subject'|trans([withdrawal, order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.refund.intro'|trans([withdrawal, order.orderNumber], 'contao_default') }}</p>
+
+{% if payout %}
+<p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.refund.payout'|trans([payout], 'contao_default') }}</strong></p>
+{% else %}
+<p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.refund.credit'|trans([credit], 'contao_default') }}</strong></p>
+{% endif %}
+
+{% if vouchers|default('') %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.refund.vouchers'|trans([vouchers], 'contao_default') }}</p>
+{% endif %}
+
+{% if kept %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.refund.valueCompensation'|trans([kept], 'contao_default') }}</p>
+{% endif %}
+
+{% if subscriptions %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.refund.subscriptionEnded'|trans([subscriptions], 'contao_default') }}</p>
+{% endif %}
+
+{% if remaining %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.refund.remaining'|trans([remaining], 'contao_default') }}</p>
+{% endif %}
+
+{% if documents %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.refund.documentAttached'|trans([documents], 'contao_default') }}</p>
+{% endif %}
+
+{% if viewUrl %}
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+{% endif %}
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

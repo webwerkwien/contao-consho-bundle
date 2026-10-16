@@ -1,0 +1,70 @@
+{#
+  "Pausieren" at a subscription (Abo pausieren, P101). Rendered inside the
+  back end frame by SubscriptionPauseBackendController; the forms post back to
+  the same address with Contao's request token.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.pauseBack|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+{% if announced and not announced.withdrawable %}
+    {# Cancelled since (review S1): it takes place, but cannot be taken back. #}
+    <div class="tl_formbody_edit">
+        <fieldset class="tl_box">
+            <legend>{{ lang.pauseLegend|default('Pause') }}: {{ number }}</legend>
+            <p class="tl_info">{{ lang.pauseAnnounced|default('%s – %s')|format(announced.from, announced.until) }}</p>
+        </fieldset>
+    </div>
+{% elseif announced %}
+    <form action="{{ action }}" method="post" class="tl_form">
+        <div class="tl_formbody_edit">
+            <input type="hidden" name="FORM_SUBMIT" value="consho_subscription_pause_withdraw">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <input type="hidden" name="consho_pause_action" value="withdraw">
+            <fieldset class="tl_box">
+                <legend>{{ lang.pauseLegend|default('Pause') }}: {{ number }}</legend>
+                <p class="tl_info">{{ lang.pauseAnnounced|default('%s – %s')|format(announced.from, announced.until) }}</p>
+            </fieldset>
+        </div>
+        <div class="tl_formbody_submit">
+            <div class="tl_submit_container">
+                <button type="submit" class="tl_submit">{{ lang.pauseWithdraw|default('Pause zurücknehmen') }}</button>
+            </div>
+        </div>
+    </form>
+{% elseif options is empty %}
+    <div class="tl_formbody_edit">
+        <fieldset class="tl_box">
+            <legend>{{ lang.pauseLegend|default('Pause') }}: {{ number }}</legend>
+            <p class="tl_info">{{ lang.pauseNotPossible|default('') }}</p>
+        </fieldset>
+    </div>
+{% else %}
+    <form action="{{ action }}" method="post" class="tl_form">
+        <div class="tl_formbody_edit">
+            <input type="hidden" name="FORM_SUBMIT" value="consho_subscription_pause">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <input type="hidden" name="consho_pause_action" value="pause">
+            <fieldset class="tl_box">
+                <legend>{{ lang.pauseLegend|default('Pause') }}: {{ number }}</legend>
+                <div class="widget w50">
+                    <h3><label for="ctrl_consho_pause_months">{{ lang.pauseLength|default('Dauer') }}</label></h3>
+                    <select name="consho_pause_months" id="ctrl_consho_pause_months" class="tl_select">
+                        {% for option in options %}
+                            <option value="{{ option.months }}">{{ lang.pauseOption|default('%d / %s')|format(option.months, option.until) }}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="tl_help tl_tip">{{ lang.pauseHelp|default('')|format(from) }}</p>
+                </div>
+            </fieldset>
+        </div>
+        <div class="tl_formbody_submit">
+            <div class="tl_submit_container">
+                <button type="submit" class="tl_submit">{{ lang.pauseSubmit|default('Pausieren') }}</button>
+            </div>
+        </div>
+    </form>
+{% endif %}

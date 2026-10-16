@@ -1,0 +1,49 @@
+{#
+  "Testmail senden" at a mail configuration (C-9). Rendered inside the back
+  end frame by MailTransportTestController; the form posts back to the same
+  address with Contao's request token.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.testBack|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML; foreign text in it is escaped by the controller. #}
+{{ messages|raw }}
+
+<form action="{{ action }}" method="post" class="tl_form">
+    <div class="tl_formbody_edit">
+        <input type="hidden" name="FORM_SUBMIT" value="consho_mail_test">
+        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+        <fieldset class="tl_box">
+            <legend>{{ lang.testLegend|default('Testmail') }}: {{ title }}</legend>
+
+            <div class="widget w50">
+                <h3><label for="ctrl_recipient">{{ lang.testRecipient|default('Empfänger') }}</label></h3>
+                <input type="email" name="recipient" id="ctrl_recipient" class="tl_text" value="{{ recipient }}" required>
+                <p class="tl_help tl_tip">{{ lang.testHelp|default('')|format(sender) }}</p>
+            </div>
+        </fieldset>
+
+        {# D-7, M5: what DNS says about the sender, next to the technical test. #}
+        <fieldset class="tl_box">
+            <legend>{{ lang.deliverabilityLegend|default('Zustellbarkeit') }}: {{ sender }}</legend>
+            {% if deliverability.clean %}
+                <p class="tl_confirm">{{ lang.deliverabilityClean|default('') }}</p>
+            {% else %}
+                {% for problem in deliverability.problems %}
+                    <p class="tl_error">{{ problem }}</p>
+                {% endfor %}
+            {% endif %}
+            {% if deliverability.dkim %}
+                <p class="tl_help">{{ deliverability.dkim }}</p>
+            {% endif %}
+        </fieldset>
+    </div>
+
+    <div class="tl_formbody_submit">
+        <div class="tl_submit_container">
+            <button type="submit" class="tl_submit">{{ lang.testSubmit|default('Testmail senden') }}</button>
+        </div>
+    </div>
+</form>

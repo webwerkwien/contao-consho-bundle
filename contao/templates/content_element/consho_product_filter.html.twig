@@ -1,0 +1,64 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    The filter controls of a product listing.
+
+    Nothing at all without groups, not even the wrapper: no shop, no listing,
+    or an address the listing answers 404 for. A half-built page is a normal
+    state and must not show an empty box.
+
+    Labels come input encoded from the database, as every Contao text field
+    does. Templates in the @Contao namespace are escaped with Contao's own
+    strategy, which does not encode "&amp;" a second time — the product tile
+    relies on the same.
+#}
+{% block wrapper %}
+    {% if groups is not empty or available|default(null) is not null %}
+        {{ parent() }}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {# "Nur verfügbare" (block Verfügbarkeit): a link like every option —
+       ticking it changes the address, no form, no JavaScript. Marked up like
+       the options, not as role="checkbox": a link does not toggle with the
+       space bar, and a screen reader would promise it does (review). #}
+    {% if available|default(null) is not null %}
+        <p class="consho-filter__available{% if available.selected %} is-selected{% endif %}">
+            {% if available.url %}
+                <a href="{{ available.url }}"{% if available.selected %} aria-current="true"{% endif %}>{{ "CONSHO.filterAvailableOnly"|trans({}, "contao_default") }}</a>
+            {% else %}
+                <span aria-disabled="true">{{ "CONSHO.filterAvailableOnly"|trans({}, "contao_default") }}</span>
+            {% endif %}
+            {% if available.count is not null %}
+                <span class="consho-filter__count">({{ available.count }})</span>
+            {% endif %}
+        </p>
+    {% endif %}
+    {% for group in groups %}
+        {# fieldset and legend without a form are valid, and give screen
+           readers the grouping. #}
+        <fieldset class="consho-filter__group">
+            <legend class="consho-filter__legend">{{ group.label }}</legend>
+            <ul class="consho-filter__list">
+                {% for option in group.options %}
+                    <li class="consho-filter__option{% if option.selected %} is-selected{% endif %}">
+                        {# Links, not a form: shareable, cacheable, no JavaScript.
+                           No rel=nofollow — robots.txt keeps cq addresses from
+                           crawling, and a landing page should be followed. #}
+                        {% if option.url %}
+                            <a href="{{ option.url }}"{% if option.selected %} aria-current="true"{% endif %}>{{ option.label }}</a>
+                        {% else %}
+                            {# A choice that would leave nothing: shown, so nothing
+                               moves, but not linked — it would lead to a 404. #}
+                            <span aria-disabled="true">{{ option.label }}</span>
+                        {% endif %}
+                        {% if option.count is not null %}
+                            <span class="consho-filter__count">({{ option.count }})</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </fieldset>
+    {% endfor %}
+{% endblock %}

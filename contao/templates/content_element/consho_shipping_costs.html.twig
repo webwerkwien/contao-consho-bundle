@@ -1,0 +1,71 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    "Versandkosten" (E-6, V5) — from the shipping methods, not typed by hand.
+
+    Variables: methods (title, countries, prices [upTo, amount], calculated,
+    proportional, cashOnDelivery, limits [length, girth, weight]) and codFee
+    — see ShippingCostsView.
+#}
+
+{% block content %}
+    {% set t = 'CONSHO.shippingCosts.' %}
+
+    {% if methods is empty %}
+        <p>{{ (t ~ 'none')|trans([], 'contao_default') }}</p>
+    {% else %}
+        {% for method in methods %}
+            <section class="consho-shipping-method">
+                <h3>{{ method.title }}</h3>
+
+                <p class="consho-shipping-method__countries">
+                    {% if method.countries is empty %}
+                        {{ (t ~ 'allCountries')|trans([], 'contao_default') }}
+                    {% else %}
+                        {{ (t ~ 'countries')|trans([method.countries|join(', ')], 'contao_default') }}
+                    {% endif %}
+                </p>
+
+                {% if method.calculated %}
+                    <p>{{ (t ~ 'calculated')|trans([], 'contao_default') }}</p>
+                {% elseif method.prices|length == 1 and method.prices[0].upTo == '' %}
+                    <p class="consho-shipping-method__price">{{ method.prices[0].amount ?: (t ~ 'noAmount')|trans([], 'contao_default') }}</p>
+                {% else %}
+                    <table class="consho-shipping-method__brackets">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ (t ~ 'weight')|trans([], 'contao_default') }}</th>
+                                <th scope="col">{{ (t ~ 'price')|trans([], 'contao_default') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for price in method.prices %}
+                                {#- data-cellheadline: themes that stack tables on narrow screens label each cell with it (as in D-4). -#}
+                                <tr>
+                                    <td data-cellheadline="{{ (t ~ 'weight')|trans([], 'contao_default') }}">{{ (t ~ 'upTo')|trans([price.upTo], 'contao_default') }}</td>
+                                    <td data-cellheadline="{{ (t ~ 'price')|trans([], 'contao_default') }}">{{ price.amount ?: (t ~ 'noAmount')|trans([], 'contao_default') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+
+                {% if method.proportional and not method.calculated %}
+                    <p class="consho-shipping-method__note">{{ (t ~ 'proportional')|trans([], 'contao_default') }}</p>
+                {% endif %}
+
+                {% set limits = [] %}
+                {% if method.limits.length %}{% set limits = limits|merge([(t ~ 'limitLength')|trans([method.limits.length], 'contao_default')]) %}{% endif %}
+                {% if method.limits.girth %}{% set limits = limits|merge([(t ~ 'limitGirth')|trans([method.limits.girth], 'contao_default')]) %}{% endif %}
+                {% if method.limits.weight %}{% set limits = limits|merge([(t ~ 'limitWeight')|trans([method.limits.weight], 'contao_default')]) %}{% endif %}
+                {% if limits is not empty %}
+                    <p class="consho-shipping-method__limits">{{ (t ~ 'limits')|trans([limits|join(', ')], 'contao_default') }}</p>
+                {% endif %}
+
+                {% if method.cashOnDelivery %}
+                    <p class="consho-shipping-method__cod">{{ (t ~ (codFee ? 'codWithFee' : 'cod'))|trans([], 'contao_default') }}</p>
+                {% endif %}
+            </section>
+        {% endfor %}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,66 @@
+<?php declare(strict_types=1);
+
+namespace Webwerkwien\ContaoConshoBundle\Tests\Mail;
+
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\Mailer\Bridge\MicrosoftGraph\Transport\MicrosoftGraphApiTransport;
+use Symfony\Component\Mailer\Transport\SendmailTransport;
+use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
+use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactory;
+use Webwerkwien\ContaoConshoBundle\Mail\SecretCipher;
+use Webwerkwien\ContaoConshoBundle\Mail\TransportDsnBuilder;
+
+class MailTransportFactoryTest extends TestCase
+{
+    private SecretCipher $cipher;
+
+    private MailTransportFactory $factory;
+
+    protected function setUp(): void
+    {
+        $this->cipher = new SecretCipher(str_repeat('k', 32));
+        $this->factory = new MailTransportFactory(new TransportDsnBuilder($this->cipher), new MockHttpClient());
+    }
+
+    /**
+     * Ohne Grenze wartet der Käufer nach dem Kaufklick default_socket_timeout
+     * lang — meist 60 Sekunden — auf einen Mailserver, der nicht antwortet.
+     */
+    public function testSmtpBekommtEinZeitlimitVonZehnSekunden(): void
+    {
+        $transport = $this->factory->create([
+            'type' => 'smtp',
+            'host' => 'smtp.example.org',
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => '',
+            'password' => '',
+        ]);
+
+        self::assertInstanceOf(EsmtpTransport::class, $transport);
+
+        $stream = $transport->getStream();
+
+        self::assertInstanceOf(SocketStream::class, $stream);
+        self::assertSame(10.0, $stream->getTimeout());
+    }
+
+    public function testGraphEntstehtMitHttpClient(): void
+    {
+        $transport = $this->factory->create([
+            'type' => 'graph',
+            'tenantId' => 'tenant-1',
+            'clientId' => 'client-1',
+            'clientSecret' => $this->cipher->encrypt('shhh'),
+        ]);
+
+        self::assertInstanceOf(MicrosoftGraphApiTransport::class, $transport);
+    }
+
+    public function testSendmailBleibtSendmail(): void
+    {
+        self::assertInstanceOf(SendmailTransport::class, $this->factory->create(['type' => 'sendmail']));
+    }
+}

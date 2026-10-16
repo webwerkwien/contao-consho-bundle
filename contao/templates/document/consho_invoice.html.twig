@@ -1,0 +1,270 @@
+{#
+  Invoice — the PDF and the accessible HTML version (4.3) from one template.
+
+  ⚠️ This template LAYS OUT, it never supplies data (8.1). Every figure,
+  address and label value arrives formatted from InvoiceView; the snapshot
+  holds everything, and nothing here reads the shop or the order. A change
+  here changes how every regenerated invoice looks, never what it says.
+
+  dompdf renders CSS 2.1 only: tables for layout, no flex, no grid. The logo
+  arrives as a data: URI or not at all — the PDF engine loads nothing.
+
+  ⚠️ PDF/A-3b was validated with veraPDF on 2026-09-24 for THIS layout,
+  the Giro-Code included.
+  After changing it, validate again (see DompdfRenderer).
+
+  Contao resolves this file WITH its folder: @Contao/document/consho_invoice.html.twig
+  (debug:contao-twig on c5, 2026-09-24 — the first attempt left the folder
+  out and answered with a 500).
+
+  Variables: invoice (InvoiceView::build), logo (data: URI or null),
+  regenerated (bool — archive configured but this is not the stored file)
+#}
+<!DOCTYPE html>
+<html lang="{{ invoice.language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ ('CONSHO.invoice.types.' ~ invoice.type)|trans({}, 'contao_default') }} {{ invoice.number }}</title>
+<style>
+    @page { margin: 18mm 16mm 20mm 16mm; }
+    body { font-family: "DejaVu Sans", sans-serif; font-size: 9pt; color: #111; line-height: 1.35; }
+    h1 { font-size: 15pt; margin: 0 0 4mm 0; }
+    h2 { font-size: 9pt; margin: 0 0 1mm 0; text-transform: uppercase; letter-spacing: 0.04em; color: #444; }
+    table { border-collapse: collapse; width: 100%; }
+    .head td { vertical-align: top; padding: 0; }
+    .logo { max-height: 22mm; max-width: 60mm; }
+    .issuer { text-align: right; font-size: 8pt; }
+    .addresses { margin: 8mm 0 6mm 0; }
+    .addresses > tr > td, .addresses td { vertical-align: top; width: 50%; padding: 0 4mm 0 0; }
+    h2.next { margin-top: 4mm; }
+    .facts { width: 100%; }
+    .facts th { text-align: left; font-weight: normal; color: #444; padding: 0 3mm 0.5mm 0; width: 35mm; white-space: nowrap; }
+    .facts td { padding: 0 0 0.5mm 0; width: auto; }
+    .addresses td.facts-cell { padding-right: 0; }
+    .facts-right { width: auto; margin-left: auto; margin-right: 0; }
+    .facts-right th { width: auto; }
+    /* Paged (PDF only): payment and footer at the foot of the page. The
+       hidden copy in the flow keeps exactly their room free, so they never
+       cover a line; if it does not fit, both move to the next page. */
+    .closing-space { visibility: hidden; page-break-inside: avoid; }
+    .closing-paged { position: absolute; left: 0; right: 0; bottom: 0; }
+    .section { margin-top: 5mm; }
+    .lines thead th, .taxes thead th { text-align: left; border-bottom: 0.3mm solid #111; padding: 1mm 1.5mm; font-size: 8pt; }
+    /* Row headers are there for screen readers; on paper they are ordinary cells. */
+    .lines td, .taxes td, .lines tbody th, .taxes tbody th { border-bottom: 0.2mm solid #ccc; padding: 1.2mm 1.5mm; vertical-align: top; text-align: left; font-weight: normal; font-size: 9pt; }
+    .lines .num, .taxes .num, .totals .num { text-align: right; white-space: nowrap; }
+    .totals { width: 60%; margin: 3mm 0 0 auto; }
+    .totals th { text-align: left; font-weight: normal; padding: 0.8mm 1.5mm; }
+    .totals td { padding: 0.8mm 1.5mm; }
+    .grand th, .grand td { font-weight: bold; border-top: 0.3mm solid #111; }
+    caption { text-align: left; font-weight: bold; padding-bottom: 1mm; }
+    .payment, .notes { margin-top: 7mm; }
+    .giro td { vertical-align: top; padding: 0; }
+    .giro .giro-code { width: 34mm; text-align: center; font-size: 7pt; color: #444; }
+    .giro .giro-code img { width: 30mm; height: 30mm; }
+    .regenerated { border: 0.4mm solid #b00; color: #b00; padding: 2mm; margin-bottom: 5mm; }
+    .footer { margin-top: 10mm; border-top: 0.2mm solid #999; padding-top: 2mm; font-size: 7.5pt; color: #333; }
+</style>
+</head>
+<body>
+{% if regenerated %}
+<p class="regenerated" role="note">{{ 'CONSHO.invoice.regenerated'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+<table class="head" role="presentation">
+    <tr>
+        <td>{% if logo %}<img class="logo" src="{{ logo }}" alt="{{ invoice.issuer.lines|first|default('') }}">{% endif %}</td>
+        <td class="issuer">
+            {% for line in invoice.issuer.lines %}{{ line }}<br>{% endfor %}
+            {% if invoice.issuer.vatId %}{{ 'CONSHO.invoice.vatId'|trans({}, 'contao_default') }}: {{ invoice.issuer.vatId }}{% endif %}
+        </td>
+    </tr>
+</table>
+
+<table class="addresses" role="presentation">
+    <tr>
+        <td>
+            <h2>{{ 'CONSHO.invoice.billingAddress'|trans({}, 'contao_default') }}</h2>
+            {% for line in invoice.billing %}{{ line }}<br>{% endfor %}
+            {% if invoice.customerVatId %}{{ 'CONSHO.invoice.customerVatId'|trans({}, 'contao_default') }}: {{ invoice.customerVatId }}{% endif %}
+            {% if invoice.shipping is not empty %}
+            <h2 class="next">{{ 'CONSHO.invoice.shippingAddress'|trans({}, 'contao_default') }}</h2>
+            {% for line in invoice.shipping %}{{ line }}<br>{% endfor %}
+            {% endif %}
+        </td>
+        {# The facts beside the addresses, as on DACH invoices — below them they
+           pushed the bank details onto a second page (seen 2026-09-24). As
+           wide as their content and flush right, like the issuer above and
+           the totals below (Michael, 2026-09-24). #}
+        <td class="facts-cell">
+            <table class="facts facts-right">
+                {# The correction has its own labels: "Rechnungsnummer GS-…" above
+                   "Korrigiert Rechnung RE-…" read as a contradiction (Michael,
+                   2026-09-27: only for the correction — a cancellation is an
+                   invoice itself). #}
+                {% set facts = invoice.type == 'creditNote' ? 'CONSHO.invoice.correction.' : 'CONSHO.invoice.' %}
+                <tr><th scope="row">{{ (facts ~ 'number')|trans({}, 'contao_default') }}</th><td>{{ invoice.number }}</td></tr>
+                <tr><th scope="row">{{ (facts ~ 'date')|trans({}, 'contao_default') }}</th><td>{{ invoice.issuedAt }}</td></tr>
+                {# A cancellation names the invoice it cancels (C-10). #}
+                {% if invoice.cancels %}<tr><th scope="row">{{ 'CONSHO.invoice.cancels'|trans({}, 'contao_default') }}</th><td>{{ invoice.cancels.number }}{% if invoice.cancels.date %} {{ 'CONSHO.invoice.cancelsDate'|trans([invoice.cancels.date], 'contao_default') }}{% endif %}</td></tr>{% endif %}
+                {# A correction names the invoice it corrects and the withdrawal (D-3). #}
+                {% if invoice.corrects|default(null) %}<tr><th scope="row">{{ 'CONSHO.invoice.corrects'|trans({}, 'contao_default') }}</th><td>{{ invoice.corrects.number }}{% if invoice.corrects.date %} {{ 'CONSHO.invoice.cancelsDate'|trans([invoice.corrects.date], 'contao_default') }}{% endif %}</td></tr>{% endif %}
+                {% if invoice.withdrawal|default('') %}<tr><th scope="row">{{ 'CONSHO.invoice.withdrawal'|trans({}, 'contao_default') }}</th><td>{{ invoice.withdrawal }}</td></tr>{% endif %}
+                <tr><th scope="row">{{ 'CONSHO.invoice.orderNumber'|trans({}, 'contao_default') }}</th><td>{{ invoice.orderNumber }}</td></tr>
+                {% if invoice.orderDate %}<tr><th scope="row">{{ 'CONSHO.invoice.orderDate'|trans({}, 'contao_default') }}</th><td>{{ invoice.orderDate }}</td></tr>{% endif %}
+                {# A follow-up order names its subscription and the period it bills (Abo-4). #}
+                {% if invoice.subscription|default('') %}<tr><th scope="row">{{ 'CONSHO.invoice.subscription'|trans({}, 'contao_default') }}</th><td>{{ invoice.subscription }}</td></tr>{% endif %}
+                {% if invoice.servicePeriod|default('') %}<tr><th scope="row">{{ 'CONSHO.invoice.servicePeriod'|trans({}, 'contao_default') }}</th><td>{{ invoice.servicePeriod }}</td></tr>{% endif %}
+                {% if invoice.deliveryPeriod %}
+                    {#- E-6b: at shipment the day of delivery, after a partial one with the rest. -#}
+                    {% set kind = invoice.deliveryKind|default('expected') %}
+                    {% if kind == 'delivered' %}
+                        <tr><th scope="row">{{ 'CONSHO.invoice.deliveryDate'|trans({}, 'contao_default') }}</th><td>{{ invoice.deliveryFirst }}</td></tr>
+                    {% elseif kind == 'partial' %}
+                        <tr><th scope="row">{{ 'CONSHO.invoice.deliveryDate'|trans({}, 'contao_default') }}</th><td>{{ 'CONSHO.invoice.deliveryPartial'|trans([invoice.deliveryFirst], 'contao_default') }}</td></tr>
+                        {% if invoice.deliveryRest != invoice.deliveryFirst %}<tr><th scope="row">{{ 'CONSHO.invoice.deliveryRest'|trans({}, 'contao_default') }}</th><td>{{ invoice.deliveryRest }}</td></tr>{% endif %}
+                    {% else %}
+                        <tr><th scope="row">{{ 'CONSHO.invoice.deliveryPeriod'|trans({}, 'contao_default') }}</th><td>{{ invoice.deliveryPeriod }}</td></tr>
+                    {% endif %}
+                {% endif %}
+                {% if invoice.shippingMethod %}<tr><th scope="row">{{ 'CONSHO.invoice.shippingMethod'|trans({}, 'contao_default') }}</th><td>{{ invoice.shippingMethod }}</td></tr>{% endif %}
+                {% if invoice.paymentMethod %}<tr><th scope="row">{{ 'CONSHO.invoice.paymentMethod'|trans({}, 'contao_default') }}</th><td>{{ invoice.paymentMethod }}</td></tr>{% endif %}
+                {# The payment term of a purchase on account (E-2). #}
+                {% if invoice.dueDate|default('') %}<tr><th scope="row">{{ 'CONSHO.invoice.dueDate'|trans({}, 'contao_default') }}</th><td>{{ invoice.dueDate }}</td></tr>{% endif %}
+            </table>
+        </td>
+    </tr>
+</table>
+
+<h1>{{ ('CONSHO.invoice.types.' ~ invoice.type)|trans({}, 'contao_default') }} {{ invoice.number }}</h1>
+
+<table class="lines">
+    <caption>{{ 'CONSHO.invoice.lines'|trans({}, 'contao_default') }}</caption>
+    <thead>
+        <tr>
+            <th scope="col">{{ 'CONSHO.invoice.position'|trans({}, 'contao_default') }}</th>
+            <th scope="col">{{ 'CONSHO.invoice.item'|trans({}, 'contao_default') }}</th>
+            <th scope="col">{{ 'CONSHO.invoice.sku'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.quantity'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.unitPrice'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.taxRate'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.total'|trans({}, 'contao_default') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for line in invoice.lines %}
+        <tr>
+            <td>{{ line.position }}</td>
+            <th scope="row">{{ line.name }}{% if line.terms|default('') %}<br><small class="consho-invoice__terms">{{ line.terms }}</small>{% endif %}</th>
+            <td>{{ line.sku }}</td>
+            <td class="num">{{ line.quantity }}</td>
+            <td class="num">{{ line.unitPrice }}</td>
+            <td class="num">{{ line.taxRate }}</td>
+            <td class="num">{{ line.total }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div class="section">
+<table class="taxes">
+    <caption>{{ 'CONSHO.invoice.taxes'|trans({}, 'contao_default') }}</caption>
+    <thead>
+        <tr>
+            <th scope="col">{{ 'CONSHO.invoice.taxRate'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.net'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.tax'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.gross'|trans({}, 'contao_default') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for tax in invoice.taxes %}
+        <tr>
+            <th scope="row">{% if tax.notTaxable|default(false) %}{{ 'CONSHO.invoice.notTaxable'|trans({}, 'contao_default') }}{% else %}{{ tax.rate }}{% endif %}</th>
+            <td class="num">{{ tax.net }}</td>
+            <td class="num">{{ tax.tax }}</td>
+            <td class="num">{{ tax.gross }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<table class="totals">
+    <tr><th scope="row">{{ 'CONSHO.invoice.netTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.netTotal }}</td></tr>
+    <tr><th scope="row">{{ 'CONSHO.invoice.taxTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.taxTotal }}</td></tr>
+    <tr class="grand"><th scope="row">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.grandTotal }}</td></tr>
+    {# What was paid before the invoice and what remains (formatVersion 9, WG12). #}
+    {% for payment in invoice.payments|default([]) %}
+    <tr><th scope="row">{% if payment.refund %}{{ 'CONSHO.invoice.refunded'|trans({}, 'contao_default') }}{% else %}{{ 'CONSHO.invoice.paid'|trans({}, 'contao_default') }}{% if payment.label %} ({{ payment.label }}){% endif %}{% endif %}</th><td class="num">{{ payment.amount }}</td></tr>
+    {% endfor %}
+    {% if invoice.outstanding|default('') %}
+    <tr class="grand"><th scope="row">{{ 'CONSHO.invoice.outstanding'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.outstanding }}</td></tr>
+    {% endif %}
+</table>
+
+{% if invoice.reverseChargeNote %}
+<div class="notes">{{ invoice.reverseChargeNote|nl2br }}</div>
+{% endif %}
+
+{# Payment and footer close the invoice. In the PDF they sit at the foot of
+   the page (Michael, 2026-09-24: „Kann der Block Payment unten sitzen?"),
+   in the HTML version they follow the totals — it has no page. #}
+{% set closing %}
+{% if invoice.paymentInstructions or invoice.bankDetails is not empty %}
+<div class="payment">
+    <h2>{{ 'CONSHO.invoice.payment'|trans({}, 'contao_default') }}</h2>
+    {# The operator's rich text from the payment method (tinyMCE), frozen at issue. #}
+    {{ invoice.paymentInstructions|raw }}
+    {% if invoice.giroCode %}
+    {# Giro-Code (EPC069-12): the code beside the same data in plain text,
+       so the payer can compare what the banking app filled in. #}
+    <table class="giro" role="presentation">
+        <tr>
+            <td class="giro-facts">
+                <table class="facts">
+                    {% for key, value in invoice.bankDetails %}
+                    <tr><th scope="row">{{ ('CONSHO.invoice.bank.' ~ key)|trans({}, 'contao_default') }}</th><td>{{ value }}</td></tr>
+                    {% endfor %}
+                    {% if invoice.outstanding|default('') %}
+                    <tr><th scope="row">{{ 'CONSHO.invoice.outstanding'|trans({}, 'contao_default') }}</th><td>{{ invoice.outstanding }}</td></tr>
+                    {% else %}
+                    <tr><th scope="row">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th><td>{{ invoice.grandTotal }}</td></tr>
+                    {% endif %}
+                    <tr><th scope="row">{{ 'CONSHO.invoice.bank.reference'|trans({}, 'contao_default') }}</th><td>{{ invoice.paymentReference }}</td></tr>
+                </table>
+            </td>
+            <td class="giro-code">
+                {# The caption is the alt text, so a screen reader learns there is
+                   something to scan; the visible copy is hidden from it, or it
+                   would be read twice. The data itself is beside, in plain text. #}
+                <img src="{{ invoice.giroCode }}" alt="{{ 'CONSHO.invoice.giroCode'|trans({}, 'contao_default') }}"><br>
+                <span aria-hidden="true">{{ 'CONSHO.invoice.giroCode'|trans({}, 'contao_default') }}</span>
+            </td>
+        </tr>
+    </table>
+    {% elseif invoice.bankDetails is not empty %}
+    <table class="facts">
+        {% for key, value in invoice.bankDetails %}
+        <tr><th scope="row">{{ ('CONSHO.invoice.bank.' ~ key)|trans({}, 'contao_default') }}</th><td>{{ value }}</td></tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if invoice.footer %}
+<div class="footer">{{ invoice.footer|nl2br }}</div>
+{% endif %}
+{% endset %}
+
+{% if closing|trim is not empty %}
+    {% if paged %}
+<div class="closing-space" aria-hidden="true">{{ closing }}</div>
+<div class="closing-paged">{{ closing }}</div>
+    {% else %}
+{{ closing }}
+    {% endif %}
+{% endif %}
+</body>
+</html>

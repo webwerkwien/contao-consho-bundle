@@ -1,0 +1,39 @@
+{#
+  What a forger cannot know: order date, address, shipping method and the
+  articles — the block every mail after the purchase carries (D-1, D-7).
+
+  History: in the D-1 acceptance the bare "on its way + tracking number + one
+  button" was the only mail filed as junk; with this block the shipping mail
+  reached the inbox. In D-7 (c5, a fresh Gmail mailbox, 2026-09-28) the two
+  mails still without it went to spam — "payment received" and the
+  confirmation of a withdrawal — while the confirmation and the shipping mail
+  arrived. SPF, DKIM and DMARC passed on all four. Not proven to be the cause
+  (four mails, a test domain, Gmail gives no reasons), but the customer needs
+  to see WHICH order is meant anyway (Michael, 2026-09-28: M7).
+
+  Parameters (include ... with):
+    order  the order in InvoiceView's shape
+    font   the inline font style of the mail
+    items  optional list of {quantity, name}; default: the goods lines of
+           the order (a shipping mail passes what is in the parcel)
+#}
+{% set address = order.shipping is not empty ? order.shipping : order.billing %}
+{% set label = 'padding: 2px 16px 2px 0; text-align: left; vertical-align: top; font-weight: normal; color: #555555;' %}
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 0 12px 0; {{ font }}">
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.invoice.orderDate'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ order.orderDate }}</td></tr>
+    {% if address is not empty %}
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.invoice.shippingAddress'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ address|map(line => line|e)|join('<br>')|raw }}</td></tr>
+    {% endif %}
+    {% if order.shippingMethod %}
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.invoice.shippingMethod'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ order.shippingMethod }}</td></tr>
+    {% endif %}
+</table>
+
+{% set list = items ?? order.lines|filter(line => line.type == 'product') %}
+{% if list is not empty %}
+<ul style="margin: 0 0 12px 0; padding-left: 20px;">
+{% for item in list %}
+    <li>{{ item.quantity }} × {{ item.name }}</li>
+{% endfor %}
+</ul>
+{% endif %}

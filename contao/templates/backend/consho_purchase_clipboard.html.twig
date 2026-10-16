@@ -1,0 +1,45 @@
+{#
+  A purchase list for the clipboard (Block G, G-7): tab separated — pasted
+  into a spreadsheet it lands in columns, pasted into a mail it stays
+  readable. Copying needs a click of the person (browsers allow the
+  clipboard only on a gesture); the text is selected as a fallback.
+#}
+{% set l = lang %}
+<!doctype html>
+<html lang="{{ app.request.locale|default('de') }}">
+<head>
+    <meta charset="utf-8">
+    <title>{{ list.number }}</title>
+    <style>
+        body { font: 14px/1.5 Arial, Helvetica, sans-serif; margin: 20px; color: #222; }
+        textarea { width: 100%; height: 50vh; font-family: monospace; font-size: 13px; }
+        button, a { font-size: 14px; margin-right: 12px; }
+        .done { color: #2a7a2a; }
+    </style>
+</head>
+<body>
+    <p>{{ (l.saved|default('Die Einkaufsliste %s ist gespeichert.'))|format(list.number) }}</p>
+    <textarea id="consho-purchase-text" readonly>{{ text }}</textarea>
+    <p>
+        <button type="button" id="consho-purchase-copy">{{ l.copy|default('In die Zwischenablage kopieren') }}</button>
+        <span class="done" id="consho-purchase-copied" hidden>{{ l.copied|default('Kopiert.') }}</span>
+        <a href="{{ lists }}" target="_top">{{ l.toLists|default('Zu den Einkaufslisten') }}</a>
+    </p>
+    <script>
+        (function () {
+            var text = document.getElementById('consho-purchase-text');
+            text.select();
+            document.getElementById('consho-purchase-copy').addEventListener('click', function () {
+                text.select();
+                var done = function () { document.getElementById('consho-purchase-copied').hidden = false; };
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text.value).then(done, function () { document.execCommand('copy'); done(); });
+                } else {
+                    document.execCommand('copy');
+                    done();
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

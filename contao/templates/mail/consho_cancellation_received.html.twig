@@ -1,0 +1,64 @@
+{#
+  Confirmation of receipt of a cancellation (Abo-7, P62), to the customer, in
+  the language of the order. § 312k Abs. 4 BGB wants the CONTENT of the
+  declaration, the DATE AND TIME of receipt and the time the contract ends by
+  it, at once and in text form — the mail repeats the declaration in full.
+
+  An extraordinary cancellation has no end yet: the operator decides and the
+  customer hears again (P57).
+
+  Loaded as @Contao/mail/consho_cancellation_received.html.twig. Parameters are
+  a LIST (vsprintf, see consho_payment_received.html.twig).
+
+  Variables:
+    order         the latest order of the subscription in InvoiceView's shape
+    customer      {name, email}
+    cancellation  {number, subscription, product, receivedAt (date and time
+                  with zone), kind: ordinary|extraordinary, reason, name, email,
+                  requestedAt ('' = earliest possible), effectiveAt ('' for an
+                  extraordinary one), earliestApplied, earliestAt (formatted),
+                  laterThanEarliest: the end lies after the earliest possible
+                  one — periods beginning before it are billed in full (S1)}
+    viewUrl       the order page, with a token; '' where the shop has none
+#}
+{% block subject %}{{ 'CONSHO.mail.cancellation.subject'|trans([cancellation.subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+{% set label = 'padding: 2px 16px 2px 0; text-align: left; vertical-align: top; font-weight: normal; color: #555555;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.intro'|trans([cancellation.subscription], 'contao_default') }}</p>
+
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.cancellation.statement'|trans({}, 'contao_default') }}</p>
+{% include '@Contao/mail/_cancellation_statement.html.twig' with {cancellation: cancellation, font: font, label: label} only %}
+
+{% if cancellation.kind == 'extraordinary' %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.pending'|trans({}, 'contao_default') }}</p>
+{% else %}
+<p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.endsAt'|trans([cancellation.effectiveAt], 'contao_default') }}</strong></p>
+{% if cancellation.earliestApplied %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.earliestApplied'|trans({}, 'contao_default') }}</p>
+{% endif %}
+{% if cancellation.laterThanEarliest %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.laterThanEarliest'|trans([cancellation.earliestAt], 'contao_default') }}</p>
+{% endif %}
+{% endif %}
+
+{% if viewUrl %}
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+{% endif %}
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

@@ -1,0 +1,20 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_stock']['stock_legend'] = 'Bestand';
+$GLOBALS['TL_LANG']['tl_consho_stock']['article'] = ['Artikel', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['main'] = ['Produkt', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['source'] = ['Quelle', 'Lager (von Hand geführt) oder Schlüsselvorrat.'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['quantity'] = ['Bestand', 'Bei Schlüsseln: freie Codes abzüglich offener Bestellungen.'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['availableFrom'] = ['Wieder lieferbar ab', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['supplier'] = ['Lieferant', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['active'] = ['Aktiv', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['skuColumn'] = ['Artikelnummer', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['orderedColumn'] = ['Bestellt', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['stateColumn'] = ['Zustand', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['noticesColumn'] = ['Benachrichtigungen', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['keysFree'] = '%s frei';
+$GLOBALS['TL_LANG']['tl_consho_stock']['purchase'] = ['Einkauf', 'Einkaufsliste aus dem Meldebestand zusammenstellen'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['purchaseLists'] = ['Einkaufslisten', 'Gespeicherte Einkaufslisten, Ausgabe und Eingang'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['product'] = ['Artikel bearbeiten', 'Artikel des Bestands ID %s bearbeiten'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['movements'] = ['Bewegungen', 'Bewegungen des Bestands ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['show'] = ['Details', 'Details des Bestands ID %s anzeigen'];

@@ -1,0 +1,71 @@
+{#
+  "Einkauf" (Block G, G-7), usually in Contao's modal (StockListListener).
+
+  Every article kept in stock by hand. Those at or below their Meldebestand
+  come ticked, with what fills them up to the Sollbestand less what is on
+  order (E1), in whole packs (E2); the others can be ticked and filled in
+  (Michael: "Einträge können ergänzt oder rausgenommen werden").
+
+  One field per line: packs where the article has a pack size (VPE > 1),
+  pieces otherwise (E2: "bis zu 2 Felder, aktiv je nachdem ob Einzelstücke
+  oder VPE"). Each of the three buttons saves the list and hands it out (L6).
+#}
+{% set l = lang %}
+{{ messages|raw }}
+
+<div class="tl_formbody_edit consho-purchase-page">
+    {# One list per submit (review G-7, S1): the buttons disable themselves. #}
+    <form action="{{ action }}" method="post" onsubmit="var f = this; setTimeout(function () { f.querySelectorAll('button').forEach(function (b) { b.disabled = true; }); }, 0);">
+        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+        {% if lines is empty %}
+            <p class="tl_info">{{ l.noArticles|default('Kein Artikel führt Bestand.') }}</p>
+        {% else %}
+            <table class="tl_listing consho-purchase-lines">
+                <thead><tr>
+                    <th class="tl_folder_tlist">{{ l.colTake|default('Übernehmen') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colArticle|default('Artikel') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colSupplier|default('Lieferant') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colStock|default('Bestand') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colOrdered|default('bestellt') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colWarning|default('Meldebestand') }} / {{ l.colTarget|default('Sollbestand') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colPieces|default('Stück') }}</th>
+                    <th class="tl_folder_tlist">{{ l.colPacks|default('Packungen') }}</th>
+                </tr></thead>
+                <tbody>
+                {% for line in lines %}
+                    {% set id = 'consho-purchase-' ~ line.article %}
+                    <tr{% if line.proposed is not null %} class="consho-purchase-lines__proposed"{% endif %}>
+                        <td class="tl_file_list">
+                            <input type="checkbox" class="tl_checkbox" name="take[{{ line.article }}]" id="{{ id }}" value="1"{% if line.proposed is not null %} checked{% endif %}>
+                        </td>
+                        <td class="tl_file_list">
+                            <label for="{{ id }}">{{ line.title }}</label>
+                            {% if line.sku %}<br><small>{{ line.sku }}</small>{% endif %}
+                        </td>
+                        <td class="tl_file_list">{{ line.supplier }}{% if line.supplierSku %}<br><small>{{ line.supplierSku }}</small>{% endif %}</td>
+                        <td class="tl_file_list">{{ line.stock }}</td>
+                        <td class="tl_file_list">{{ line.ordered != '0' ? line.ordered : '' }}</td>
+                        <td class="tl_file_list">{{ line.warning }} / {{ line.target != '0' ? line.target : '–' }}</td>
+                        {% if line.packUnit > 1 %}
+                            <td class="tl_file_list"><small>{{ l.perPack|default('%s je VPE')|format(line.packUnit) }}</small></td>
+                            <td class="tl_file_list"><input type="text" inputmode="numeric" class="tl_text consho-quantity" name="packs[{{ line.article }}]" value="{{ line.packs }}" aria-label="{{ l.colPacks|default('Packungen') }}: {{ line.title }}"></td>
+                        {% else %}
+                            <td class="tl_file_list"><input type="text" inputmode="decimal" class="tl_text consho-quantity" name="pieces[{{ line.article }}]" value="{{ line.pieces }}" aria-label="{{ l.colPieces|default('Stück') }}: {{ line.title }}"></td>
+                            <td class="tl_file_list"></td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <p class="tl_help">{{ l.outputHint|default('Jede der drei Ausgaben vermerkt die Liste unter „Einkaufslisten"; die Artikel gelten dann als bestellt.') }}</p>
+
+            <div class="tl_submit_container">
+                <button type="submit" name="format" value="clipboard" class="tl_submit">{{ l.toClipboard|default('Zwischenablage') }}</button>
+                <button type="submit" name="format" value="print" class="tl_submit">{{ l.toPrint|default('Druckansicht') }}</button>
+                <button type="submit" name="format" value="csv" class="tl_submit">{{ l.toCsv|default('CSV-Export') }}</button>
+            </div>
+        {% endif %}
+    </form>
+</div>

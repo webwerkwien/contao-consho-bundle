@@ -1,0 +1,41 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    "Verträge hier kündigen" (Abo-7; A7, § 312k BGB, P58, P61).
+
+    Variables: result (the recorded cancellation for the result page, or
+    null), expired (a result page past its 90 days), form (show the confirmation page), identify, input, error, until
+    — see component/_consho_cancellation_form.html.twig.
+
+    The two button labels are set by law (§ 312k Abs. 2: "Verträge hier
+    kündigen", "jetzt kündigen") and come from the language file.
+
+    No JavaScript. Everything works with the keyboard alone.
+#}
+
+{% block content %}
+    {% if result %}
+        {% include '@Contao/component/_consho_cancellation_result.html.twig' with {result: result} only %}
+    {% elseif not form %}
+        {% if expired %}
+            <p class="consho-cancellation__notice" role="status">{{ 'CONSHO.cancellation.expired'|trans({}, 'contao_default') }}</p>
+        {% endif %}
+        {# A button in a GET form, like "Vertrag widerrufen": the theme
+           styles it as a button, and a GET changes nothing. #}
+        <form method="get" class="consho-cancellation__start">
+            <input type="hidden" name="consho_cancel" value="1">
+            <button type="submit">{{ 'CONSHO.cancellation.button'|trans({}, 'contao_default') }}</button>
+        </form>
+    {% else %}
+        {% include '@Contao/component/_consho_cancellation_form.html.twig' with {
+            element_id: data.id|default(''),
+            identify: identify,
+            contract: '',
+            subscription: 0,
+            input: input,
+            error: error,
+            until: until,
+            earliest: '',
+        } only %}
+    {% endif %}
+{% endblock %}

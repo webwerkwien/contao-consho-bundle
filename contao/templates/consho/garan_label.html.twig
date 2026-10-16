@@ -1,0 +1,30 @@
+{#
+    The GARAN label of an article (block GARAN, § 4 Abs. 1 Z 12a FAGG) —
+    product page and checkout.
+
+    Variable: garan {years, info, src, width, height} (DurabilityLabelImages);
+    years canonical ("2.5"), shown with the language's decimal separator (GA9).
+
+    The image as uploaded, never scaled by a size setting: its parts must not
+    be distorted or separated (DVO 2025/1960, Anhang II). max-width only keeps
+    it inside a narrow column. The link opens it at full size — the QR code
+    must stay readable.
+
+    The alternative text carries the information as words: the guarantee,
+    its duration and the legal guarantee next to it. Without it the label is
+    silent for a screen reader.
+
+    The caption links where the QR code leads: "A clickable link to the same
+    destination as the QR code should always be available" (Commission
+    guidelines, 3.3.2 — GA10). As text, not on the image: the image already
+    opens itself at full size.
+#}
+{% set years = garan.years|replace({'.': 'MSC.decimalSeparator'|trans({}, 'contao_default')}) %}
+<figure class="consho-garan">
+    <a href="{{ garan.src }}" target="_blank" rel="noopener">
+        <img src="{{ garan.src }}" alt="{{ 'CONSHO.garan.alt'|trans([years], 'contao_default') }}"{% if garan.width %} width="{{ garan.width }}" height="{{ garan.height }}"{% endif %} style="max-width: 100%; height: auto;">
+    </a>
+    {% if garan.info|default('') %}
+        <figcaption><a href="{{ garan.info }}" target="_blank" rel="noopener">{{ 'CONSHO.garan.more'|trans({}, 'contao_default') }}</a></figcaption>
+    {% endif %}
+</figure>

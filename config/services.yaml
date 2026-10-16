@@ -1,0 +1,178 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    Webwerkwien\ContaoConshoBundle\:
+        resource: ../src
+        exclude:
+            - ../src/{ContaoManager,ContaoConshoBundle.php}
+            # Built with `new`, never injected: it holds rows a caller already
+            # has (DbalGroupPriceAboveListIssueSource). As a service it would
+            # be a second PriceRepositoryInterface and make the autowiring of
+            # every consumer ambiguous — which is exactly what happened on
+            # 2026-09-21, and `cache:clear` refused to build the container.
+            - ../src/Pricing/InMemoryPriceRepository.php
+            # Back end widgets are built by Contao (BE_FFL), with the field's
+            # attributes — never by the container (Block G, SuggestField).
+            - ../src/Widget
+
+    # Which implementation the price rows come from. Explicit since C-4 and
+    # for the same reason as the two aliases below: there is more than one
+    # class implementing this interface now, and autowiring cannot guess.
+    Webwerkwien\ContaoConshoBundle\Pricing\PriceRepositoryInterface:
+        alias: Webwerkwien\ContaoConshoBundle\Pricing\DbalPriceRepository
+
+    # The filter counts are an extension point (specification 5.6, way 2): a
+    # module for large catalogues replaces the core's exact counting by pointing
+    # this alias at its own service. Explicit rather than left to autowiring's
+    # single-implementation guess, so the place to override is written down.
+    Webwerkwien\ContaoConshoBundle\Catalog\FilterCountsInterface:
+        alias: Webwerkwien\ContaoConshoBundle\Catalog\ProductQuery
+
+    # The basket asks for a line price through this name. Explicit, like the
+    # filter counts above, so the place to override is written down rather than
+    # left to autowiring's single-implementation guess.
+    #
+    # C-3 expected C-4 to swap this implementation for one that knows the
+    # member's customer group. It did not have to: the groups travel as an
+    # ARGUMENT through CartPricer::price(), so the seam stays a seam and the
+    # basket keeps one way of getting a price. An implementation per audience
+    # would have put the question "who is looking" into the wiring, where no
+    # request can answer it.
+    Webwerkwien\ContaoConshoBundle\Pricing\CartLinePriceSource:
+        alias: Webwerkwien\ContaoConshoBundle\Pricing\ArticlePriceResolver
+
+    # The PDF engine (C7). Explicit for the same reason as the aliases above:
+    # a shop that wants another engine — one that tags PDFs, say — points this
+    # at its own service, and the place to do it is written down.
+    Webwerkwien\ContaoConshoBundle\Document\Pdf\PdfRendererInterface:
+        alias: Webwerkwien\ContaoConshoBundle\Document\Pdf\DompdfRenderer
+
+    # Block R (R13): two classes implement it since HandingOverArchiver
+    # decorates the archiver — explicit, or autowiring cannot guess and the
+    # decorator has nothing to decorate.
+    Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface:
+        alias: Webwerkwien\ContaoConshoBundle\Document\DocumentArchiver
+
+    # The one service that cannot be autowired: its constructor takes a string,
+    # and no amount of type information tells Symfony which string.
+    #
+    # The key lives in the environment, never in the database — the point of
+    # encrypting mail credentials is that a database dump is not enough to read
+    # them, and a key stored beside them would defeat exactly that.
+    #
+    # `default::` makes an unset variable an empty string rather than an
+    # EnvNotFoundException at container build. SecretCipher then refuses it with
+    # "the encryption key must be exactly 32 bytes", which names the problem —
+    # and it does so only when something actually needs to send mail, not on
+    # every back end page.
+    #
+    # ⚠️ base64, NOT hex2bin. Symfony ships base64, bool, not, const, csv, file,
+    # float, int, json, key, url, query_string, resolve, default, string, trim,
+    # require, enum, shuffle, defined and urlencode — and nothing else. A made-up
+    # processor does not fail when the container is built: env variables resolve
+    # LAZILY, so cache:clear passes, debug:container shows the argument, and the
+    # first page that touches the service dies with "Unsupported env var prefix".
+    # Verified against EnvVarProcessor::getProvidedTypes() on 2026-09-09, after
+    # exactly that happened.
+    #
+    # Generating one:  php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
+    # Storing it:      CONSHO_SECRET_KEY=<44 base64 characters> in .env.local
+    #
+    # ⚠️ Rotating this key makes every stored password undecryptable. They have
+    # to be re-entered, so it is not a routine operation.
+    Webwerkwien\ContaoConshoBundle\Mail\SecretCipher:
+        arguments:
+            $key: '%env(base64:default::CONSHO_SECRET_KEY)%'
+
+    # The same env variable ContaoCache hands to StripQueryParametersSubscriber
+    # (manager-bundle, HttpKernel/ContaoCache.php). Read here only to report an
+    # allow list that would swallow ?consho_notice= — see NoticeParamIssueSource.
+    #
+    # default:: so an unset variable does not raise an EnvNotFoundException
+    # while the container is being built: not configuring an allow list is the
+    # normal case, and by far the most common one.
+    #
+    # ⚠️ With an empty fallback it resolves to NULL, not to an empty string —
+    # measured the hard way on c5 on 2026-09-21, where a `string` type hint on
+    # the constructor took every back end page down with a TypeError. The
+    # constructor is nullable for exactly that reason; do not "tidy" it.
+    Webwerkwien\ContaoConshoBundle\Cart\NoticeParamIssueSource:
+        arguments:
+            $allowList: '%env(default::QUERY_PARAMS_ALLOW_LIST)%'
+
+    # The withdrawal form (D-2, decision E4): 5 attempts per IP in 15 minutes.
+    # Written the way Contao defines its own limiter for "Passwort vergessen"
+    # (contao.rate_limit.member_password_reset, 3 in 15 minutes) — a factory
+    # and a CacheStorage on cache.rate_limiter, no `framework.rate_limiter`
+    # configuration needed in the installation. Five, not three: whoever
+    # mistypes an order number twice must not be locked out of a right.
+    consho.rate_limit.withdrawal_form:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_withdrawal_form, policy: fixed_window, limit: 5, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # Abo-7 (P58): "Verträge hier kündigen", like the withdrawal form — five
+    # attempts per IP in 15 minutes; a mistyped number must not lock anyone
+    # out of cancelling.
+    consho.rate_limit.cancellation_form:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_cancellation_form, policy: fixed_window, limit: 5, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # Abo-7 (§ 312k Abs. 3): the signed address of a cancellation's result
+    # page, with parameters of its own (CancellationForm::HASH_PARAM,
+    # EXPIRES_PARAM) so that an allow list of "consho_.*" keeps them.
+    consho.cancellation_signer:
+        class: Symfony\Component\HttpFoundation\UriSigner
+        arguments: ['%kernel.secret%', 'consho_hash', 'consho_expires']
+
+    # D-4 (K3): the confirmation mail of "Meine Bestellungen", per account.
+    # Three in an hour is enough for a mail that went to spam and one typo
+    # fixed in between; more would let a signed-in account send mail to any
+    # address it types into "Persönliche Daten", over and over.
+    consho.rate_limit.email_confirmation:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_email_confirmation, policy: fixed_window, limit: 3, interval: 1 hour }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # D-6 (T4): "Neuen Link anfordern" on the order page. Per IP as the
+    # withdrawal form (a typo twice must not lock anyone out), per address
+    # three in an hour like the confirmation mail — against flooding one
+    # mailbox from many IPs.
+    consho.rate_limit.order_link_ip:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_order_link_ip, policy: fixed_window, limit: 5, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    consho.rate_limit.order_link_address:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_order_link_address, policy: fixed_window, limit: 3, interval: 1 hour }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # Block Wertgutscheine (WG5): codes typed in the basket — discount codes
+    # and vouchers. Only failed attempts count (CodeAttemptLimit), per IP and
+    # per basket; ten wrong ones in 15 minutes is more than any typo needs and
+    # far too few to guess a 16-character code.
+    consho.rate_limit.code_entry:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_code_entry, policy: fixed_window, limit: 10, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    consho.rate_limit.withdrawal_form_storage:
+        class: Symfony\Component\RateLimiter\Storage\CacheStorage
+        arguments:
+            - '@cache.rate_limiter'

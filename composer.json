@@ -1,0 +1,84 @@
+{
+    "name": "webwerkwien/contao-consho-bundle",
+    "description": "Consho - E-commerce for Contao. Multi-shop, API-first, built for EU compliance.",
+    "type": "contao-bundle",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Michael Morgenbesser",
+            "homepage": "https://web.werk.wien",
+            "role": "Developer"
+        }
+    ],
+    "keywords": [
+        "contao",
+        "consho",
+        "ecommerce",
+        "shop",
+        "webshop",
+        "onlineshop",
+        "commerce",
+        "multishop",
+        "eu",
+        "dsgvo",
+        "oss",
+        "shopsystem"
+    ],
+    "homepage": "https://github.com/webwerkwien/contao-consho-bundle",
+    "support": {
+        "issues": "https://github.com/webwerkwien/contao-consho-bundle/issues",
+        "source": "https://github.com/webwerkwien/contao-consho-bundle"
+    },
+    "require": {
+        "php": "^8.4.1",
+        "ext-gd": "*",
+        "ext-sodium": "*",
+        "ext-zip": "*",
+        "contao/core-bundle": "^5.7",
+        "brick/math": "^0.20",
+        "symfony/http-client": "^7.4",
+        "symfony/intl": "^7.4",
+        "symfony/validator": "^7.4",
+        "dompdf/dompdf": "^3.1.6",
+        "chillerlan/php-qrcode": "^6.0.1",
+        "symfony/mailer": "^7.4",
+        "symfony/microsoft-graph-mailer": "^8.1",
+        "symfony/rate-limiter": "^7.4",
+        "horstoeko/zugferd": "^1.0.132"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "contao/manager-plugin": "^2.13"
+    },
+    "autoload": {
+        "psr-4": {
+            "Webwerkwien\\ContaoConshoBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Webwerkwien\\ContaoConshoBundle\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "0.1.x-dev"
+        },
+        "contao-manager-plugin": "Webwerkwien\\ContaoConshoBundle\\ContaoManager\\Plugin"
+    },
+    "scripts": {
+        "phpstan": "phpstan analyse --memory-limit=1G",
+        "phpunit": "phpunit",
+        "ci": [
+            "@phpstan",
+            "@phpunit"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "contao/manager-plugin": true
+        }
+    }
+}

@@ -1,0 +1,34 @@
+{#
+  The operator's copy of the confirmation of receipt of a cancellation (Abo-7,
+  P62), in the language of the shop. An extraordinary one waits for the
+  operator's decision in the back end (P57).
+
+  Loaded as @Contao/mail/consho_cancellation_received_operator.html.twig.
+
+  Variables: as consho_cancellation_received.html.twig, without viewUrl.
+#}
+{% block subject %}{{ 'CONSHO.mail.cancellation.operator.subject'|trans([cancellation.subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+{% set label = 'padding: 2px 16px 2px 0; text-align: left; vertical-align: top; font-weight: normal; color: #555555;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.cancellation.operator.intro'|trans([cancellation.subscription], 'contao_default') }}</p>
+
+{% include '@Contao/mail/_cancellation_statement.html.twig' with {cancellation: cancellation, font: font, label: label} only %}
+
+{% if cancellation.kind == 'extraordinary' %}
+<p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.operator.decide'|trans({}, 'contao_default') }}</strong></p>
+{% else %}
+<p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.endsAt'|trans([cancellation.effectiveAt], 'contao_default') }}</strong></p>
+{% endif %}
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

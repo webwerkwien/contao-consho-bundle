@@ -1,0 +1,37 @@
+{#
+  The page cache of a shop on the setup page (block I, I4b): the setting of
+  each start point at once, the measurement on request. A neutral block —
+  no status, it never blocks and is not part of "ready".
+#}
+<section class="consho-setup__cache">
+    <h4 class="consho-dashboard__heading">{{ l.cache|default('Seiten-Cache') }}</h4>
+    <p class="consho-setup__help">{{ l.cacheHelp|default('') }}</p>
+
+    {% for root in cache.roots %}
+        <p>{{ root.text }}</p>
+
+        {% if root.canEnable %}
+            <form method="post" class="consho-setup__action" data-turbo="false">
+                <input type="hidden" name="FORM_SUBMIT" value="consho_setup">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ requestToken }}">
+                <input type="hidden" name="consho_setup_action" value="cache">
+                <input type="hidden" name="consho_setup_target" value="{{ root.id }}">
+                <button type="submit" class="tl_submit">{{ l.cacheEnable|default('Zwischenspeichern einschalten (1 Stunde)') }}</button>
+            </form>
+        {% endif %}
+
+        {% if root.measured is not empty %}
+            <ul class="consho-setup__measured">
+            {% for page in root.measured %}
+                <li class="consho-setup__measured--{{ page.result }}"><a href="{{ page.url }}" target="_blank" rel="noopener">{{ page.title }}</a>: {{ page.text }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endfor %}
+
+    {% if cache.probed %}
+        <p class="tl_gray">{{ l.probeNote|default('') }}</p>
+    {% elseif cache.probeUrl %}
+        <p><a href="{{ cache.probeUrl }}" class="tl_submit">{{ l.probe|default('Jetzt messen') }}</a></p>
+    {% endif %}
+</section>

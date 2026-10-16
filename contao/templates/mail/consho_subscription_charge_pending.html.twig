@@ -1,0 +1,43 @@
+{#
+  "Abbuchung gestartet" (E7), to the customer, in the language of the order:
+  a charge with the subscription's mandate is under way. The invoice follows
+  with the payment.
+
+  Loaded as @Contao/mail/consho_subscription_charge_pending.html.twig.
+  Parameters are a LIST (vsprintf, see consho_payment_received.html.twig).
+
+  Variables:
+    order          the follow-up order in InvoiceView's shape
+    customer       {name, email}
+    subscription   the subscription number
+    periodFrom     first day of the period, formatted
+    periodUntil    last day of the period, formatted
+    amount         the amount, formatted with its currency
+    paymentMethod  the method's title as frozen at the order
+    viewUrl        the order page, with a token
+#}
+{% block subject %}{{ 'CONSHO.mail.subscriptionChargePending.subject'|trans([subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionChargePending.intro'|trans([subscription, periodFrom, periodUntil], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionChargePending.charge'|trans([amount, paymentMethod], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionChargePending.invoiceFollows'|trans({}, 'contao_default') }}</p>
+
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

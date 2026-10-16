@@ -1,0 +1,193 @@
+{#
+  "Kunden" (D-4, K2, K6), rendered inside the back end frame by
+  CustomerBackendController. Two views: the list (filter by shop, search,
+  pages of 50) and one customer with their orders.
+
+  Contao's own list markup (tl_listing, tl_folder_tlist, tl_file_list), so
+  the page looks like every other list and follows the dark scheme without a
+  rule of its own. Twig escapes everything — names and addresses are what
+  customers typed.
+#}
+{% set l = lang %}
+{#
+  Member account and order open in Contao's modal, as its own "edit in
+  popup" does (`popup=1&nb=1`). Their "Zurück" goes one level up in their
+  own module — Mitglieder, Bestellungen — never back here (acceptance D-5).
+#}
+{% macro popup(title) %}onclick="Backend.openModalIframe({title:'{{ title|e('js') }}', url:this.href+'&amp;popup=1&amp;nb=1'});return false"{% endmacro %}
+{% import _self as m %}
+{# Contao's own HTML; nothing of the customer's in it. #}
+{{ messages|default('')|raw }}
+{% if customer is defined %}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+</div>
+
+<div class="tl_listing_container consho-customer">
+    <h2 class="consho-customer__name">
+        {{ customer.name ?: customer.email }}
+        <span class="tl_gray">{{ customer.member ? l.member|default('Mitglied') : l.guest|default('Gast') }}{% if customer.alsoGuest %}, {{ l.alsoGuest|default('auch als Gast bestellt') }}{% endif %}</span>
+    </h2>
+    <p>
+        {{ customer.email }} — {{ customer.shop }}
+        {% if customer.memberUrl %} — <a href="{{ customer.memberUrl }}" {{ m.popup(l.openMember|default('Mitgliedskonto öffnen')) }}>{{ l.openMember|default('Mitgliedskonto öffnen') }}</a>{% endif %}
+    </p>
+
+    {% if orders is empty %}
+        <p class="tl_empty">{{ l.noOrders|default('Noch keine Bestellung in diesem Shop.') }}</p>
+    {% else %}
+    <table class="tl_listing showColumns">
+        <thead>
+            <tr>
+                <th class="tl_folder_tlist">{{ l.colOrder|default('Bestellung') }}</th>
+                <th class="tl_folder_tlist">{{ l.colDate|default('Bestellt am') }}</th>
+                <th class="tl_folder_tlist">{{ l.colTotal|default('Gesamtsumme') }}</th>
+                <th class="tl_folder_tlist">{{ l.colAs|default('Bestellt als') }}</th>
+                <th class="tl_folder_tlist">{{ l.colErasure|default('Löschung verlangt') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for order in orders %}
+            <tr class="{{ cycle(['even', 'odd'], loop.index0) }} hover-row">
+                <td class="tl_file_list"><a href="{{ order.url }}" {{ m.popup(order.number) }}>{{ order.number }}</a></td>
+                <td class="tl_file_list">{{ order.date }}</td>
+                <td class="tl_file_list">{{ order.total }}</td>
+                <td class="tl_file_list">{{ order.guest ? l.guest|default('Gast') : l.member|default('Mitglied') }}</td>
+                <td class="tl_file_list">{{ order.erasureRequested ?: '—' }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {# ── D-5: access and erasure (L1, L3) ─────────────────────────────── #}
+    <fieldset class="tl_tbox consho-customer__privacy">
+        <legend>{{ l.privacyLegend|default('Auskunft und Löschung') }}</legend>
+        <p class="tl_help">{{ l.privacyHelp|default('') }}</p>
+        <p><a href="{{ exportUrl }}" class="tl_submit">{{ l.exportButton|default('Auskunft herunterladen') }}</a></p>
+
+        <form method="post" class="consho-customer__erase">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <p class="tl_help">{{ l.eraseHelp|default('') }}</p>
+            <p>
+                <input type="checkbox" name="consho_confirmed" value="1" id="consho-erase-confirmed" class="tl_checkbox">
+                <label for="consho-erase-confirmed">{{ l.eraseConfirm|default('Die Person hat die Löschung verlangt, ihre Identität ist geprüft.') }}</label>
+            </p>
+            <button type="submit" name="consho_action" value="erase" class="tl_submit">{{ l.eraseButton|default('Daten löschen') }}</button>
+        </form>
+    </fieldset>
+</div>
+{% else %}
+{#
+  The list in Contao's own list markup (Michael, 2026-09-28: „die
+  Kundenübersicht weicht weit von der Bestell-Übersicht ab … keine Icons
+  rechts, Filter sitzen auch nicht rechts"): the global buttons top right
+  with "Filtern" opening Contao's filter panel, and the operations at the end
+  of every row. Copied from the order list as DC_Table renders it (c5,
+  2026-09-28). A GET form, so a filtered list stays a link.
+#}
+{# The frame as DC_Table renders it (order list, c5, 2026-09-28):
+   `.tl_show_all` > the filter form + `.content-inner` > the buttons and the
+   list. Contao's CSS lays the form out as a column on the right
+   (`.tl_show_all:has(> .content-filter)`); anywhere else it sits above the
+   list (acceptance D-5). #}
+<div class="tl_show_all" data-controller="contao--element-count" data-contao--element-count-selector-value=".active:not(#tl_limit)">
+{% set filterButtons %}
+<div class="operations" id="tl_buttons">
+    <ul>
+        {# Hidden like Contao's own: on a wide screen the panel is a column
+           anyway; Contao shows the toggle when it becomes a slide-in. #}
+        <li style="display: none;"><button class="header_filter_toggle" title="{{ l.filterShow|default('Filter einblenden') }}" data-controller="contao--toggle-sender" data-contao--toggle-sender-contao--toggle-receiver-outlet="#tl_content_filter" data-contao--toggle-sender-active-title-value="{{ l.filterHide|default('Filter ausblenden') }}" data-contao--toggle-sender-inactive-title-value="{{ l.filterShow|default('Filter einblenden') }}" data-action="contao--toggle-sender#toggle:prevent">{{ l.filter|default('Filtern') }}<sup data-contao--element-count-target="count"></sup></button></li>
+    </ul>
+</div>
+{% endset %}
+
+<form id="tl_content_filter" class="tl_form content-filter" method="get" aria-label="{{ l.filterLabel|default('Such- und Filterfunktionen') }}" data-controller="contao--toggle-receiver" data-contao--toggle-receiver-active-class="active" data-contao--toggle-receiver-contao--toggle-sender-outlet=".header_filter_toggle" data-contao--element-count-target="parent" data-action="click@document->contao--toggle-receiver#documentClick keydown.esc@document->contao--toggle-receiver#close">
+    <button type="button" class="close" title="{{ l.filterHide|default('Filter ausblenden') }}" aria-controls="tl_content_filter" data-action="contao--toggle-receiver#close">×</button>
+    <div class="tl_formbody">
+        <input type="hidden" name="do" value="consho_customer">
+        <div class="tl_panel">
+            <fieldset class="tl_search tl_subpanel">
+                <legend>{{ l.search|default('Suchen') }}</legend>
+                <label for="consho_customer_q">{{ l.searchHint|default('Name oder E-Mail') }}</label>
+                <input type="search" id="consho_customer_q" name="q" value="{{ search }}" class="tl_text{% if search %} active{% endif %}">
+            </fieldset>
+            <fieldset class="tl_filter tl_subpanel">
+                <legend>{{ l.filter|default('Filtern') }}</legend>
+                <label for="consho_customer_shop">{{ l.shop|default('Shop') }}</label>
+                <div class="tl_select_wrapper">
+                    <select name="shop" id="consho_customer_shop" class="tl_select{% if shopId %} active{% endif %}">
+                        <option value="">-</option>
+                        {% for shop in shops %}
+                            <option value="{{ shop.id }}"{% if shop.id == shopId %} selected{% endif %}>{{ shop.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </fieldset>
+            {# Contao's "Anzeigen": the ranges carry the count (acceptance D-5,
+               a line of its own under the table sat badly). #}
+            {% if ranges is not empty %}
+            <div class="tl_limit tl_subpanel">
+                <label for="consho_customer_page">{{ l.limit|default('Anzeigen') }}</label>
+                <div class="tl_select_wrapper" data-controller="contao--choices">
+                    <select name="page" id="consho_customer_page" class="tl_select" onchange="this.form.requestSubmit()">
+                        {% for r in ranges %}
+                            <option value="{{ r.page }}"{% if r.page == page %} selected{% endif %}>{{ r.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="tl_submit_panel tl_subpanel">
+        <button class="tl_submit filter_apply">{{ l.apply|default('Anwenden') }}</button>
+        <a href="{{ resetUrl }}" class="tl_submit filter_reset">{{ l.reset|default('Zurücksetzen') }}</a>
+    </div>
+</form>
+
+<div class="content-inner">
+{{ filterButtons }}
+<div class="tl_listing_container list_view">
+    {% if customers is empty %}
+        <p class="tl_empty">{{ l.empty|default('Keine Kunden gefunden.') }}</p>
+    {% else %}
+    <table class="tl_listing showColumns">
+        <thead>
+            <tr>
+                <th class="tl_folder_tlist col_name">{{ l.colName|default('Name') }}</th>
+                <th class="tl_folder_tlist col_email">{{ l.colEmail|default('E-Mail') }}</th>
+                <th class="tl_folder_tlist col_kind">{{ l.colKind|default('Konto') }}</th>
+                <th class="tl_folder_tlist col_shop">{{ l.shop|default('Shop') }}</th>
+                <th class="tl_folder_tlist col_orders">{{ l.colOrders|default('Bestellungen') }}</th>
+                <th class="tl_folder_tlist col_last ordered_by">{{ l.colLast|default('Letzte Bestellung') }}</th>
+                <th class="tl_folder_tlist tl_right_nowrap"></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for c in customers %}
+            <tr class="hover-row">
+                <td class="tl_file_list col_name">{{ c.name ?: '—' }}</td>
+                <td class="tl_file_list col_email">{{ c.email }}</td>
+                <td class="tl_file_list col_kind">{{ c.member ? l.member|default('Mitglied') : l.guest|default('Gast') }}{% if c.alsoGuest %} <span class="tl_gray">+ {{ l.guest|default('Gast') }}</span>{% endif %}</td>
+                <td class="tl_file_list col_shop">{{ c.shop }}</td>
+                <td class="tl_file_list col_orders">{{ c.orders }}</td>
+                <td class="tl_file_list col_last ordered_by">{{ c.last ?: '—' }}</td>
+                <td class="tl_file_list tl_right_nowrap">
+                    <div class="operations">
+                        <ul>
+                            <li><a class="show has-icon" href="{{ c.url }}" title="{{ l.opShow|default('Kunde und Bestellungen anzeigen') }}">{{ backend_icon('children.svg', l.opShow|default('Kunde und Bestellungen anzeigen')) }}</a></li>
+                            <li><a class="export has-icon" href="{{ c.exportUrl }}" title="{{ l.exportButton|default('Auskunft herunterladen') }}">{{ backend_icon('archive.svg', l.exportButton|default('Auskunft herunterladen')) }}</a></li>
+                            <li>{% if c.memberUrl %}<a class="member has-icon" href="{{ c.memberUrl }}" {{ m.popup(l.openMember|default('Mitgliedskonto öffnen')) }} title="{{ l.openMember|default('Mitgliedskonto öffnen') }}">{{ backend_icon('member.svg', l.openMember|default('Mitgliedskonto öffnen')) }}</a>{% else %}{{ backend_icon('member--disabled.svg', l.noMember|default('Gast — kein Mitgliedskonto')) }}{% endif %}</li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+</div>{# .content-inner #}
+</div>{# .tl_show_all #}
+{% endif %}

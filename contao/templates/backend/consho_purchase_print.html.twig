@@ -1,0 +1,39 @@
+{#
+  The print view of a purchase list (Block G, G-7) — a page of its own, not
+  inside the back end, one table per supplier. Opens the print dialog.
+#}
+{% set l = lang %}
+<!doctype html>
+<html lang="{{ app.request.locale|default('de') }}">
+<head>
+    <meta charset="utf-8">
+    <title>{{ list.number }}</title>
+    <style>
+        body { font: 12pt/1.4 Arial, Helvetica, sans-serif; color: #000; margin: 1.5cm; }
+        h1 { font-size: 16pt; margin: 0 0 4pt; }
+        p.meta { margin: 0 0 12pt; color: #444; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 18pt; }
+        th, td { border-bottom: 1px solid #999; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+        th { border-bottom: 2px solid #000; }
+        td.num { text-align: right; white-space: nowrap; }
+    </style>
+</head>
+<body onload="window.print()">
+    <h1>{{ l.printTitle|default('Einkaufsliste') }} {{ list.number }}</h1>
+    <p class="meta">{{ list.createdAt|date('d.m.Y H:i') }}</p>
+
+    {% set header = rows|first %}
+    <table>
+        <thead><tr>
+            {% for cell in header %}<th>{{ cell }}</th>{% endfor %}
+        </tr></thead>
+        <tbody>
+        {% for row in rows|slice(1) %}
+            <tr>
+                {% for cell in row %}<td{% if loop.index > 4 %} class="num"{% endif %}>{{ cell }}</td>{% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

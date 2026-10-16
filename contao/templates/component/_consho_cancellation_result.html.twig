@@ -1,0 +1,46 @@
+{#
+    The result page of a cancellation (Abo-7; § 312k Abs. 3 BGB): the
+    declaration as given, WITH the date and time it was given, so that the
+    customer can save or print it — not only "received".
+
+    Variables:
+      result  see CancellationForm::shown() — {number, subscription, product,
+              receivedAt, kind, reason, name, email, requestedAt, effectiveAt,
+              earliestApplied, earliestAt, laterThanEarliest, pending,
+              confirmed}
+#}
+<div class="consho-cancellation__result" role="status">
+    <p><strong>{{ 'CONSHO.cancellation.done'|trans({}, 'contao_default') }}</strong></p>
+
+    {# A definition list, not a table: on narrow screens a theme may hide
+       `th` and put `attr(data-cellheadline)` before each cell instead — the
+       Contao demo theme does, and the labels were gone (acceptance Abo-7).
+       Label and value are a list anyway. #}
+    <dl class="consho-cancellation__statement">
+        <dt>{{ 'CONSHO.mail.cancellation.receivedAt'|trans({}, 'contao_default') }}</dt><dd><strong>{{ result.receivedAt }}</strong></dd>
+        <dt>{{ 'CONSHO.mail.cancellation.number'|trans({}, 'contao_default') }}</dt><dd>{{ result.number }}</dd>
+        <dt>{{ 'CONSHO.mail.cancellation.contract'|trans({}, 'contao_default') }}</dt><dd>{{ result.subscription }}{% if result.product %} — {{ result.product }}{% endif %}</dd>
+        <dt>{{ 'CONSHO.mail.cancellation.kind'|trans({}, 'contao_default') }}</dt><dd>{{ ('CONSHO.mail.cancellation.kinds.' ~ result.kind)|trans({}, 'contao_default') }}</dd>
+        {% if result.kind == 'extraordinary' and result.reason %}
+            <dt>{{ 'CONSHO.mail.cancellation.reason'|trans({}, 'contao_default') }}</dt><dd>{{ result.reason|nl2br }}</dd>
+        {% endif %}
+        <dt>{{ 'CONSHO.mail.cancellation.name'|trans({}, 'contao_default') }}</dt><dd>{{ result.name }}</dd>
+        <dt>{{ 'CONSHO.mail.cancellation.email'|trans({}, 'contao_default') }}</dt><dd>{{ result.email }}</dd>
+        <dt>{{ 'CONSHO.mail.cancellation.requestedAt'|trans({}, 'contao_default') }}</dt><dd>{{ result.requestedAt ?: 'CONSHO.mail.cancellation.earliest'|trans({}, 'contao_default') }}</dd>
+    </dl>
+
+    {% if result.kind == 'extraordinary' %}
+        <p>{{ 'CONSHO.mail.cancellation.pending'|trans({}, 'contao_default') }}</p>
+    {% elseif result.effectiveAt %}
+        <p><strong>{{ 'CONSHO.mail.cancellation.endsAt'|trans([result.effectiveAt], 'contao_default') }}</strong></p>
+        {% if result.earliestApplied %}
+            <p>{{ 'CONSHO.mail.cancellation.earliestApplied'|trans({}, 'contao_default') }}</p>
+        {% endif %}
+        {% if result.laterThanEarliest %}
+            <p>{{ 'CONSHO.mail.cancellation.laterThanEarliest'|trans([result.earliestAt], 'contao_default') }}</p>
+        {% endif %}
+    {% endif %}
+
+    <p>{{ (result.confirmed ? 'CONSHO.cancellation.mailSent' : 'CONSHO.cancellation.mailNotSent')|trans([result.email], 'contao_default') }}</p>
+    <p class="consho-cancellation__hint">{{ 'CONSHO.cancellation.save'|trans({}, 'contao_default') }}</p>
+</div>

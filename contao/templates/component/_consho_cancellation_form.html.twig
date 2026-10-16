@@ -1,0 +1,84 @@
+{#
+    The confirmation page of a cancellation (Abo-7, P61; § 312k Abs. 2 BGB),
+    shared by "Verträge hier kündigen" and "Meine Abos".
+
+    What § 312k Abs. 2 Satz 2 asks for: the kind (and the reason of an
+    extraordinary one), the name, the contract, the date — empty for the
+    earliest possible (Abs. 5) — and the way of the confirmation: the
+    subscription's e-mail address. The button label "jetzt kündigen" is set
+    by law and comes from the language file.
+
+    Variables:
+      element_id    for the ids of the fields
+      identify      true: ask subscription number and e-mail ("Verträge hier
+                    kündigen"); false: the contract is known ("Meine Abos")
+      contract      the contract's label where it is known, else ''
+      subscription  its id where it is known (a hidden field), else 0
+      input         {subscriptionNumber, email, kind, reason, name, date}
+      error         a key of CONSHO.cancellation or null
+      until         the end the subscription already has, for alreadyEnding
+      earliest      the earliest possible end of an ordinary cancellation,
+                    formatted, where the contract is known; else '' (S1)
+
+    No JavaScript: the reason is asked for either kind and only kept for an
+    extraordinary one. Everything works with the keyboard alone.
+#}
+{% if error %}
+    <p class="consho-cancellation__error" role="alert">{{ ('CONSHO.cancellation.error.' ~ error)|trans([until], 'contao_default') }}</p>
+{% endif %}
+
+<p>{{ 'CONSHO.cancellation.formIntro'|trans({}, 'contao_default') }}</p>
+
+<form method="post" class="consho-cancellation">
+    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+    <input type="hidden" name="consho_cancellation_action" value="confirm">
+    {% if subscription %}<input type="hidden" name="consho_cancellation_subscription" value="{{ subscription }}">{% endif %}
+
+    <fieldset class="consho-cancellation__kind">
+        <legend>{{ 'CONSHO.cancellation.kind'|trans({}, 'contao_default') }}</legend>
+        {% for kind in ['ordinary', 'extraordinary'] %}
+            {% set kind_id = 'consho-cancellation-' ~ element_id ~ '-kind-' ~ kind %}
+            <div>
+                <input type="radio" name="consho_cancellation_kind" id="{{ kind_id }}" value="{{ kind }}"{% if input.kind == kind %} checked{% endif %}>
+                <label for="{{ kind_id }}">{{ ('CONSHO.cancellation.kinds.' ~ kind)|trans({}, 'contao_default') }}</label>
+            </div>
+        {% endfor %}
+    </fieldset>
+
+    <div class="consho-cancellation__field">
+        <label for="consho-cancellation-{{ element_id }}-reason">{{ 'CONSHO.cancellation.reason'|trans({}, 'contao_default') }}</label>
+        <textarea name="consho_cancellation_reason" id="consho-cancellation-{{ element_id }}-reason" rows="3">{{ input.reason }}</textarea>
+    </div>
+
+    <div class="consho-cancellation__field">
+        <label for="consho-cancellation-{{ element_id }}-name">{{ 'CONSHO.cancellation.name'|trans({}, 'contao_default') }}</label>
+        <input type="text" name="consho_cancellation_name" id="consho-cancellation-{{ element_id }}-name" value="{{ input.name }}" required autocomplete="name">
+    </div>
+
+    {% if identify %}
+        <div class="consho-cancellation__field">
+            <label for="consho-cancellation-{{ element_id }}-subscriptionNumber">{{ 'CONSHO.cancellation.subscriptionNumber'|trans({}, 'contao_default') }}</label>
+            <input type="text" name="consho_cancellation_subscriptionNumber" id="consho-cancellation-{{ element_id }}-subscriptionNumber" value="{{ input.subscriptionNumber }}" required autocomplete="off">
+        </div>
+        <div class="consho-cancellation__field">
+            <label for="consho-cancellation-{{ element_id }}-email">{{ 'CONSHO.cancellation.email'|trans({}, 'contao_default') }}</label>
+            <input type="email" name="consho_cancellation_email" id="consho-cancellation-{{ element_id }}-email" value="{{ input.email }}" required autocomplete="email">
+        </div>
+    {% else %}
+        <p class="consho-cancellation__contract">{{ 'CONSHO.cancellation.contract'|trans({}, 'contao_default') }}: {{ contract }}</p>
+    {% endif %}
+
+    <div class="consho-cancellation__field">
+        <label for="consho-cancellation-{{ element_id }}-date">{{ 'CONSHO.cancellation.date'|trans({}, 'contao_default') }}</label>
+        <input type="date" name="consho_cancellation_date" id="consho-cancellation-{{ element_id }}-date" value="{{ input.date }}" aria-describedby="consho-cancellation-{{ element_id }}-date-hint">
+        <p id="consho-cancellation-{{ element_id }}-date-hint" class="consho-cancellation__hint">
+            {{ 'CONSHO.cancellation.dateHint'|trans({}, 'contao_default') }}
+            {% if earliest %}{{ 'CONSHO.cancellation.earliestIs'|trans([earliest], 'contao_default') }}{% endif %}
+            {{ 'CONSHO.cancellation.laterBilled'|trans({}, 'contao_default') }}
+        </p>
+    </div>
+
+    <p class="consho-cancellation__hint">{{ 'CONSHO.cancellation.confirmationBy'|trans({}, 'contao_default') }}</p>
+
+    <button type="submit" class="consho-cancellation__confirm">{{ 'CONSHO.cancellation.confirm'|trans({}, 'contao_default') }}</button>
+</form>

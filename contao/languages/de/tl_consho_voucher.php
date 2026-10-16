@@ -1,0 +1,49 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['voucher_legend'] = 'Gutschein';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['use_legend'] = 'Einlösung';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['note_legend'] = 'Notiz';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['code'] = ['Code', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['createdAt'] = ['Ausgestellt', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['shop'] = ['Shop', 'Der Shop, der den Gutschein ausgestellt hat. Dort ist er einlösbar.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['shops'] = ['Weitere Shops', 'Shops desselben Betreibers, in denen der Gutschein ebenfalls gilt.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['currency'] = ['Währung', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['faceValue'] = ['Wert', 'Der Betrag, über den der Gutschein ausgestellt wurde.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['paidAmount'] = ['Bezahlt', 'Was für den Gutschein bezahlt wurde; 0 bei einem von Hand ausgestellten.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['balance'] = ['Saldo', 'Ändert sich nur über eine Bewegung.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['validUntil'] = ['Gültig bis', 'Leer: unbefristet. Eine Befristung gegenüber Verbrauchern braucht einen sachlichen Grund (OGH 7 Ob 22/12d).'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['blocked'] = ['Gesperrt', 'Ein gesperrter Gutschein kann nicht eingelöst werden.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['source'] = ['Herkunft', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['orderId'] = ['Gekauft mit', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['note'] = ['Notiz', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueVoucher'] = ['Gutschein ausstellen', 'Einen Gutschein von Hand ausstellen, etwa aus Kulanz'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['edit'] = ['Bearbeiten', 'Gutschein ID %s bearbeiten'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['bookings'] = ['Bewegungen', 'Bewegungen des Gutscheins ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctVoucher'] = ['Saldo korrigieren', 'Saldo des Gutscheins ID %s mit Begründung ändern'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['show'] = ['Details', 'Details des Gutscheins ID %s anzeigen'];
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['sources'] = ['purchase' => 'Gekauft', 'manual' => 'Von Hand'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['unlimited'] = 'unbefristet';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['blockedShort'] = 'gesperrt';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['back'] = 'Zurück';
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueLegend'] = 'Gutschein ausstellen';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueTarget'] = 'Shop und Währung';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueValue'] = 'Betrag';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueValidUntil'] = 'Gültig bis';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueValidUntilHelp'] = 'Leer lassen für unbefristet.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueNote'] = 'Notiz';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueSubmit'] = 'Ausstellen';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueNoShop'] = 'Kein Shop mit Währung eingerichtet.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueInvalid'] = 'Bitte einen Betrag über 0 mit höchstens zwei Nachkommastellen und ein gültiges Datum angeben.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issued'] = 'Gutschein %s ausgestellt.';
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctLegend'] = 'Saldo korrigieren';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctBalance'] = 'Saldo: %s';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctAmount'] = 'Betrag';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctAmountHelp'] = 'Positiv erhöht den Saldo, negativ verringert ihn.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctNote'] = 'Grund';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctSubmit'] = 'Buchen';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctInvalid'] = 'Bitte einen Betrag ungleich 0 und einen Grund angeben.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctTooLow'] = 'So viel ist auf dem Gutschein nicht mehr übrig.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['corrected'] = 'Gebucht. Neuer Saldo: %s';

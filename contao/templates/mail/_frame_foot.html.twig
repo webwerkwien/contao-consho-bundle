@@ -1,0 +1,19 @@
+{#
+  Foot of a customer mail (block GARAN, part 2, L2): who sends it — firm and
+  legal form, address, and the operator's footer from the shop configuration,
+  the one the invoice prints. Consho adds no legal wording of its own.
+
+  BELOW the white column, on the grey ground (Michael, 2026-10-09: "Fußzeile
+  unterhalb des weißen Bereichs"): included in the outer cell, after the
+  600 px table, and as wide as it. Variable: frame {company, address, footer,
+  logo} — or null.
+#}
+{% if frame|default(null) and (frame.company or frame.address or frame.footer) %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px;">
+<tr><td align="center" style="padding: 16px 28px 0 28px; font-family: Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.5; color: #666666;">
+{% if frame.company %}<p style="margin: 0;">{{ frame.company }}</p>{% endif %}
+{% if frame.address %}<p style="margin: 0;">{{ frame.address }}</p>{% endif %}
+{% if frame.footer %}<p style="margin: 8px 0 0 0;">{{ frame.footer|nl2br }}</p>{% endif %}
+</td></tr>
+</table>
+{% endif %}

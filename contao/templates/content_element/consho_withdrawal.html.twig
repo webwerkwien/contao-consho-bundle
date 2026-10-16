@@ -1,0 +1,71 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    "Vertrag widerrufen" for a buyer without the order mail (D-2, W1, E6).
+
+    Variables: done ('done', 'doneUnconfirmed' or null — the withdrawal was
+    recorded), number (its number), form (show the declaration), input
+    (orderNumber, email, name, part, message as typed), error (a key of
+    CONSHO.withdrawal or null), contact (the shop's address, for "closed").
+
+    The two button labels are fixed by law (§ 356a BGB, § 13a FAGG, Art. 11a
+    Directive 2011/83/EU) and come from the language file, not from here.
+
+    No JavaScript. Everything works with the keyboard alone.
+#}
+
+{% block content %}
+    {% set element_id = data.id|default('') %}
+
+    {% if done %}
+        <p class="consho-withdrawal__done" role="status">{{ ('CONSHO.withdrawal.' ~ done)|trans([number], 'contao_default') }}</p>
+    {% elseif not form %}
+        {# A button in a GET form, like the order page's (acceptance D-2): the
+           theme styles it as a button, and a GET changes nothing. #}
+        <form method="get" class="consho-withdrawal__start">
+            <input type="hidden" name="consho_withdraw" value="1">
+            <button type="submit">{{ 'CONSHO.withdrawal.button'|trans({}, 'contao_default') }}</button>
+        </form>
+    {% else %}
+        {% if error %}
+            <p class="consho-withdrawal__error" role="alert">
+                {% if error == 'closed' and contact %}
+                    {{ 'CONSHO.withdrawal.closedContact'|trans([contact], 'contao_default') }}
+                {% else %}
+                    {{ ('CONSHO.withdrawal.' ~ error)|trans({}, 'contao_default') }}
+                {% endif %}
+            </p>
+        {% endif %}
+
+        <p>{{ 'CONSHO.withdrawal.formIntro'|trans({}, 'contao_default') }}</p>
+
+        <form method="post" class="consho-withdrawal">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <input type="hidden" name="consho_withdrawal_action" value="confirm">
+
+            {% for field in [
+                {name: 'orderNumber', label: 'CONSHO.withdrawal.orderNumber', type: 'text', autocomplete: 'off'},
+                {name: 'email', label: 'CONSHO.withdrawal.orderEmail', type: 'email', autocomplete: 'email'},
+                {name: 'name', label: 'CONSHO.withdrawal.name', type: 'text', autocomplete: 'name'},
+            ] %}
+                {% set field_id = 'consho-withdrawal-' ~ element_id ~ '-' ~ field.name %}
+                <div class="consho-withdrawal__field">
+                    <label for="{{ field_id }}">{{ field.label|trans({}, 'contao_default') }}</label>
+                    <input type="{{ field.type }}" name="consho_withdrawal_{{ field.name }}" id="{{ field_id }}" value="{{ attribute(input, field.name) }}" required autocomplete="{{ field.autocomplete }}">
+                </div>
+            {% endfor %}
+
+            <div class="consho-withdrawal__field">
+                <label for="consho-withdrawal-{{ element_id }}-part">{{ 'CONSHO.withdrawal.partOptional'|trans({}, 'contao_default') }}</label>
+                <textarea name="consho_withdrawal_part" id="consho-withdrawal-{{ element_id }}-part" rows="3">{{ input.part }}</textarea>
+            </div>
+
+            <div class="consho-withdrawal__field">
+                <label for="consho-withdrawal-{{ element_id }}-message">{{ 'CONSHO.withdrawal.message'|trans({}, 'contao_default') }}</label>
+                <textarea name="consho_withdrawal_message" id="consho-withdrawal-{{ element_id }}-message" rows="4">{{ input.message }}</textarea>
+            </div>
+
+            <button type="submit" class="consho-withdrawal__confirm">{{ 'CONSHO.withdrawal.confirm'|trans({}, 'contao_default') }}</button>
+        </form>
+    {% endif %}
+{% endblock %}

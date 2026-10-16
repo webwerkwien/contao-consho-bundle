@@ -1,0 +1,398 @@
+<?php declare(strict_types=1);
+
+namespace Webwerkwien\ContaoConshoBundle\Tests\Seo;
+
+use Contao\CoreBundle\InsertTag\InsertTagParser;
+use Contao\CoreBundle\Routing\ContentUrlGenerator;
+use Contao\CoreBundle\Routing\Page\PageRegistry;
+use Contao\CoreBundle\Routing\PageUrlGenerator;
+use Contao\CoreBundle\Routing\ResponseContext\HtmlHeadBag\HtmlHeadBag;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContext;
+use Contao\CoreBundle\Routing\ResponseContext\ResponseContextAccessor;
+use Contao\CoreBundle\String\HtmlDecoder;
+use Contao\PageModel;
+use Doctrine\DBAL\Connection;
+use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\TestCase;
+use Symfony\Cmf\Component\Routing\RouteProviderInterface;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
+use Webwerkwien\ContaoConshoBundle\Catalog\ListingElement;
+use Webwerkwien\ContaoConshoBundle\Seo\FacetPageRecord;
+use Webwerkwien\ContaoConshoBundle\Seo\FacetPageRepositoryInterface;
+use Webwerkwien\ContaoConshoBundle\Seo\FacetPageResolver;
+use Webwerkwien\ContaoConshoBundle\Seo\FilterState;
+use Webwerkwien\ContaoConshoBundle\Seo\FilterStateCodec;
+use Webwerkwien\ContaoConshoBundle\Seo\FilterUrlGenerator;
+use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
+use Webwerkwien\ContaoConshoBundle\Seo\ListingHead;
+
+/**
+ * Mit echtem ResponseContext, echter HtmlHeadBag und echtem ContentUrlGenerator.
+ *
+ * Seite 12 „Kräuter" auf example.org, Listenelement 7. Der Kopf ist so
+ * vorbelegt, wie CoreResponseContextFactory ihn vor dem Element füllt: Titel
+ * und Beschreibung der Seite, Robots `index,follow`.
+ *
+ * Jeder Aufruf prüft zusätzlich, dass Robots unverändert bleibt — nie
+ * `noindex` (Entscheidung 3, Googles Linie aus Block A 2).
+ */
+class ListingHeadTest extends TestCase
+{
+    private const PAGE_TITLE = 'Kräuter';
+
+    private const PAGE_DESCRIPTION = 'Alles über Kräuter';
+
+    // ── Wer den Kopf schreibt ────────────────────────────────────────────
+
+    public function testOnlyTheFirstListingInAnArticleWritesTheHead(): void
+    {
+        // Übergabe aus Task 6: Zwei adressfolgende Listen setzten sonst beide
+        // den Canonical, und die zuletzt gerenderte gewönne.
+        $first = new ListingElement(7, 12, [], true, true);
+
+        self::assertTrue(ListingHead::isWrittenBy($first, 7));
+        self::assertFalse(ListingHead::isWrittenBy($first, 8));
+    }
+
+    public function testWithoutAListingInAnArticleTheListingThatRendersWritesIt(): void
+    {
+        /*
+         * Übergabe aus Task 7: firstOnPage() findet eine Liste im Layout-Bereich
+         * nie. Ohne diese Regel bekäme eine Kategorie, deren Liste im Layout
+         * steht, weder Landingpage-Titel noch Canonical.
+         */
+        self::assertTrue(ListingHead::isWrittenBy(null, 700));
+    }
+
+    public function testTheCategoryKeepsItsOwnHeadAndItsPageNumber(): void
+    {
+        $head = $this->apply(ListingAddress::category(new FilterState()), 2);
+
+        self::assertSame(self::PAGE_TITLE, $head->getTitle());
+        self::assertSame(self::PAGE_DESCRIPTION, $head->getMetaDescription());
+        self::assertSame('', $head->getCanonicalUri());
+        self::assertSame(['page_c7'], $head->getKeepParamsForCanonical());
+    }
+
+    public function testPageOneOrAListingWithoutPaginationKeepsNoPageNumber(): void
+    {
+        // Der Controller übergibt 1 für Seite 1 UND für eine Liste ohne
+        // Blätterung. Dort ist ?page_c7=… von Hand getippt; bliebe es im
+        // Canonical, wäre jede beliebige Zahl eine eigene kanonische Adresse.
+        // Auf dem Testserver am 2026-09-13 so gemessen (?page_c636=0).
+        $head = $this->apply(ListingAddress::category(new FilterState()), 1);
+
+        self::assertSame([], $head->getKeepParamsForCanonical());
+        self::assertSame(
+            'https://example.org/kraeuter.html',
+            $head->getCanonicalUriForRequest(Request::create('https://example.org/kraeuter.html?page_c7=0')),
+        );
+    }
+
+    public function testContaoThenPointsPageTwoOfTheCategoryAtPageTwo(): void
+    {
+        // Ohne das keep param würfe Contao page_c7 weg, Seite 2 zeigte auf
+        // Seite 1 — Google: „Don't use the first page … as the canonical".
+        $head = $this->apply(ListingAddress::category(new FilterState()), 2);
+
+        self::assertSame(
+            'https://example.org/kraeuter.html?page_c7=2',
+            $head->getCanonicalUriForRequest(Request::create('https://example.org/kraeuter.html?page_c7=2&utm_source=newsletter')),
+        );
+    }
+
+    public function testACanonicalLinkMaintainedOnTheCategoryStays(): void
+    {
+        // canonicalLink und canonicalKeepParams der Seite hat die Factory schon
+        // gesetzt. Die Kategorie selbst fasst Consho nicht an — nur die
+        // Seitenzahl kommt zu den gepflegten Parametern dazu.
+        $head = $this->pageHead();
+        $head->setCanonicalUri('https://example.org/gepflegt.html');
+        $head->setKeepParamsForCanonical(['utm_*']);
+
+        $this->apply(ListingAddress::category(new FilterState()), 2, $head);
+
+        self::assertSame('https://example.org/gepflegt.html', $head->getCanonicalUri());
+        self::assertSame(['utm_*', 'page_c7'], $head->getKeepParamsForCanonical());
+    }
+
+    public function testALandingPageGetsItsOwnTitleDescriptionAndCanonical(): void
+    {
+        $head = $this->apply($this->landing('volume:250ml'));
+
+        self::assertSame('Schwedenbitter 250 ml', $head->getTitle());
+        self::assertSame('Alles über Schwedenbitter in 250 ml', $head->getMetaDescription());
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
+        self::assertSame([], $head->getKeepParamsForCanonical());
+    }
+
+    public function testPageTwoOfALandingPageIsItsOwnCanonical(): void
+    {
+        $head = $this->apply($this->landing('volume:250ml'), 2);
+
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html?page_c7=2', $head->getCanonicalUri());
+    }
+
+    public function testALandingPageWithoutDescriptionKeepsThePagesDescription(): void
+    {
+        $head = $this->apply($this->landing('colour:red;volume:250ml'));
+
+        self::assertSame('Rote 250 ml', $head->getTitle());
+        self::assertSame(self::PAGE_DESCRIPTION, $head->getMetaDescription());
+    }
+
+    public function testASortedLandingPageIsCanonicalToItsUnsortedFirstPage(): void
+    {
+        // Sortiert zeigt Seite 3 andere Produkte als unsortiert Seite 3. Die
+        // Seitenzahl bliebe also nur als falsche Behauptung stehen.
+        $head = $this->apply($this->landing('volume:250ml', 'price_asc'), 3);
+
+        self::assertSame('Schwedenbitter 250 ml', $head->getTitle());
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
+    }
+
+    public function testALandingPageOverridesACanonicalLinkMaintainedOnTheCategory(): void
+    {
+        // Genau deshalb wird der Canonical gesetzt und nicht dem Standard
+        // überlassen: Sonst gewönne der gepflegte Link der Kategorie.
+        $head = $this->pageHead();
+        $head->setCanonicalUri('https://example.org/gepflegt.html');
+
+        $this->apply($this->landing('volume:250ml'), 1, $head);
+
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
+    }
+
+    public function testAReleasedCombinationInTheParameterTakesTheHeadOfItsLandingPage(): void
+    {
+        // Altes Lesezeichen /kraeuter.html?cq=volume:250ml — keine 301,
+        // aber Titel und Canonical der Landingpage (Michael, 2026-09-13).
+        $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']])));
+
+        self::assertSame('Schwedenbitter 250 ml', $head->getTitle());
+        self::assertSame('Alles über Schwedenbitter in 250 ml', $head->getMetaDescription());
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
+        self::assertSame([], $head->getKeepParamsForCanonical());
+    }
+
+    public function testPageTwoOfAReleasedCombinationInTheParameterIsPageTwoOfTheLandingPage(): void
+    {
+        // Abweichung von der Plan-Skizze, die die Seitenzahl nur auf der
+        // Pfadadresse behielt: Unsortiert zeigt ?cq=volume:250ml&page_c7=2
+        // dieselben Produkte wie Seite 2 der Landingpage.
+        $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']])), 2);
+
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html?page_c7=2', $head->getCanonicalUri());
+    }
+
+    public function testASortedReleasedCombinationInTheParameterDropsThePageNumber(): void
+    {
+        $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']], 'price_desc')), 2);
+
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
+    }
+
+    public function testNurVerfuegbareLaesstDieSeitenzahlWeg(): void
+    {
+        // Block Verfügbarkeit: „Nur verfügbare" verengt die Menge — Seite 2
+        // davon ist keine Seite der Landingpage. Der Canonical bleibt die
+        // Landingpage, ohne Häkchen.
+        $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']], '', true)), 2);
+        self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
+
+        $category = $this->apply(ListingAddress::category(new FilterState([], '', true)), 2);
+        self::assertSame([], $category->getKeepParamsForCanonical());
+    }
+
+    public function testAnyOtherFilterLeavesContaosCanonicalOnTheBareCategory(): void
+    {
+        $head = $this->apply(ListingAddress::category(new FilterState(['colour' => ['red']])), 2);
+
+        self::assertSame(self::PAGE_TITLE, $head->getTitle());
+        self::assertSame(self::PAGE_DESCRIPTION, $head->getMetaDescription());
+        self::assertSame('', $head->getCanonicalUri());
+        self::assertSame([], $head->getKeepParamsForCanonical());
+
+        // Contaos Standard wirft cq und Seitenzahl weg: Canonical ist die
+        // Kategorie. Die Kombinatorik gehört nicht in den Index (Block A 2).
+        self::assertSame(
+            'https://example.org/kraeuter.html',
+            $head->getCanonicalUriForRequest(Request::create('https://example.org/kraeuter.html?cq=colour:red&page_c7=2')),
+        );
+    }
+
+    public function testASortOrderAloneDropsThePageNumberToo(): void
+    {
+        $head = $this->apply(ListingAddress::category(new FilterState([], 'price_asc')), 2);
+
+        self::assertSame(self::PAGE_TITLE, $head->getTitle());
+        self::assertSame([], $head->getKeepParamsForCanonical());
+    }
+
+    public function testAParameterThatDecodesToNothingIsTheBareCategory(): void
+    {
+        // Übergabe aus Task 4: ?cq=Foo dekodiert zu einem leeren Zustand und
+        // wird wie die Kategorie behandelt — cq fällt aus dem Canonical, die
+        // Seitenzahl bleibt.
+        $codec = new FilterStateCodec();
+        $head = $this->apply(ListingAddress::category($codec->decode('Foo')), 2);
+
+        self::assertSame(
+            'https://example.org/kraeuter.html?page_c7=2',
+            $head->getCanonicalUriForRequest(Request::create('https://example.org/kraeuter.html?cq=Foo&page_c7=2')),
+        );
+    }
+
+    public function testAnInputEncodedTitleIsDecodedTheWayTheCoreDoes(): void
+    {
+        // Wie CoreResponseContextFactory: HtmlDecoder::inputEncodedToPlainText().
+        // Das Template kodiert beim Ausgeben selbst — doppelt kodiert stünde
+        // sonst "&amp;amp;" im Titel.
+        $head = $this->apply($this->landing('material:glas'));
+
+        self::assertSame('Kräuter & Co', $head->getTitle());
+        self::assertSame('Bitter <süß>', $head->getMetaDescription());
+    }
+
+    public function testAnInvalidAddressLeavesTheHeadAlone(): void
+    {
+        // Das Listenelement antwortet dort 404 (Task 7). Kommt es trotzdem
+        // hierher, darf keine Seitenzahl als kanonisch markiert werden.
+        $head = $this->apply(ListingAddress::invalid(), 2);
+
+        self::assertSame(self::PAGE_TITLE, $head->getTitle());
+        self::assertSame('', $head->getCanonicalUri());
+        self::assertSame([], $head->getKeepParamsForCanonical());
+    }
+
+    public function testWithoutAResponseContextNothingHappens(): void
+    {
+        // Etwa beim Rendern außerhalb einer Seite. Die Datenbank wird dann
+        // gar nicht erst gefragt.
+        $repository = $this->createMock(FacetPageRepositoryInterface::class);
+        $repository->expects(self::never())->method('findByState');
+
+        $this->listingHead(new ResponseContextAccessor(new RequestStack()), $repository)
+            ->apply($this->kraeuter(), ListingAddress::category(new FilterState(['volume' => ['250ml']])), 7, 1)
+        ;
+    }
+
+    public function testAResponseContextWithoutAHeadIsLeftAlone(): void
+    {
+        // createResponseContext() ohne Webseite legt keine HtmlHeadBag an.
+        $context = new ResponseContext();
+
+        $this->listingHead($this->accessor($context), $this->repository())
+            ->apply($this->kraeuter(), $this->landing('volume:250ml'), 7, 1)
+        ;
+
+        self::assertFalse($context->has(HtmlHeadBag::class));
+    }
+
+    private function apply(ListingAddress $address, int $pageNumber = 1, ?HtmlHeadBag $head = null): HtmlHeadBag
+    {
+        $head ??= $this->pageHead();
+        $robots = $head->getMetaRobots();
+
+        $context = new ResponseContext();
+        $context->add($head);
+
+        $this->listingHead($this->accessor($context), $this->repository())->apply($this->kraeuter(), $address, 7, $pageNumber);
+
+        self::assertSame($robots, $head->getMetaRobots(), 'ListingHead setzt nie Robots — kein noindex (Entscheidung 3).');
+
+        return $head;
+    }
+
+    private function pageHead(): HtmlHeadBag
+    {
+        return (new HtmlHeadBag())->setTitle(self::PAGE_TITLE)->setMetaDescription(self::PAGE_DESCRIPTION);
+    }
+
+    private function landing(string $filterState, string $sort = ''): ListingAddress
+    {
+        $record = $this->records()[$filterState];
+
+        return ListingAddress::landingPage(
+            $record,
+            new FilterState((new FilterStateCodec())->decode($filterState)->filters, $sort),
+        );
+    }
+
+    /**
+     * Freigegeben unter Seite 12, Schlüssel ist die kodierte Kombination.
+     *
+     * @return array<string, FacetPageRecord>
+     */
+    private function records(): array
+    {
+        return [
+            'volume:250ml' => new FacetPageRecord(1, 12, 'schwedenbitter-250-ml', 'volume:250ml', 'Schwedenbitter 250 ml', 'Alles über Schwedenbitter in 250 ml'),
+            'colour:red;volume:250ml' => new FacetPageRecord(2, 12, 'rote-250-ml', 'colour:red;volume:250ml', 'Rote 250 ml', ''),
+            'material:glas' => new FacetPageRecord(3, 12, 'glas', 'material:glas', 'Kr&#228;uter &amp; Co', 'Bitter &lt;süß&gt;'),
+        ];
+    }
+
+    private function repository(): FacetPageRepositoryInterface
+    {
+        $records = $this->records();
+
+        $repository = $this->createMock(FacetPageRepositoryInterface::class);
+        $repository->method('findByState')->willReturnCallback(
+            static fn (int $page, string $state): ?FacetPageRecord => 12 === $page ? ($records[$state] ?? null) : null,
+        );
+
+        return $repository;
+    }
+
+    private function listingHead(ResponseContextAccessor $accessor, FacetPageRepositoryInterface $repository): ListingHead
+    {
+        $codec = new FilterStateCodec();
+        $facets = new FacetPageResolver($repository, $codec);
+
+        $insertTags = $this->createMock(InsertTagParser::class);
+        $insertTags->method('replaceInline')->willReturnArgument(0);
+
+        return new ListingHead($accessor, $facets, new FilterUrlGenerator($this->contentUrls(), $facets, $codec), new HtmlDecoder($insertTags));
+    }
+
+    private function accessor(ResponseContext $context): ResponseContextAccessor
+    {
+        $request = Request::create('https://example.org/kraeuter.html');
+        $request->attributes->set(ResponseContext::REQUEST_ATTRIBUTE_NAME, $context);
+
+        $stack = new RequestStack();
+        $stack->push($request);
+
+        return new ResponseContextAccessor($stack);
+    }
+
+    /**
+     * Wie in FilterUrlGeneratorTest: der echte Generator, ohne Datenbank.
+     */
+    private function contentUrls(): ContentUrlGenerator
+    {
+        $registry = new PageRegistry($this->createMock(Connection::class));
+        $router = new PageUrlGenerator($this->createMock(RouteProviderInterface::class), $registry);
+
+        return new ContentUrlGenerator($router, $registry, $this->createMock(EntityManagerInterface::class), []);
+    }
+
+    private function kraeuter(): PageModel
+    {
+        $page = $this->createMock(PageModel::class);
+        $page->method('__get')->willReturnMap([
+            ['id', 12],
+            ['type', 'regular'],
+            ['alias', 'kraeuter'],
+            ['requireItem', false],
+            ['domain', 'example.org'],
+            ['rootUseSSL', true],
+            ['urlPrefix', ''],
+            ['urlSuffix', '.html'],
+        ]);
+
+        return $page;
+    }
+}

@@ -1,0 +1,14 @@
+{#
+  Head of a customer mail (block GARAN, part 2, L1, L4): the shop's logo,
+  embedded under its cid (MailFrame). Nothing without one.
+
+  ABOVE the white column, on the grey ground (Michael, 2026-10-09: "Logo
+  oberhalb … des weißen Bereichs"): included in the outer cell, before the
+  600 px table, and as wide as it. Variable: frame {company, address,
+  footer, logo: {cid, width}|null} — or null.
+#}
+{% if frame.logo|default(null) %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px;">
+<tr><td align="center" style="padding: 0 0 16px 0;"><img src="cid:{{ frame.logo.cid }}" alt="{{ frame.company }}" width="{{ frame.logo.width }}" style="display: block; margin: 0 auto; width: {{ frame.logo.width }}px; max-width: 100%; height: auto; border: 0;"></td></tr>
+</table>
+{% endif %}

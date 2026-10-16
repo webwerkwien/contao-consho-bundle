@@ -1,0 +1,37 @@
+{#
+  A gift voucher as a PDF (block Wertgutscheine, WG4): to print or pass on.
+  Rendered by VoucherDocument in the order's language.
+
+  Variables:
+    voucher   {code, value, balance, validUntil ('' = unlimited), issuer}
+#}
+<!DOCTYPE html>
+<html lang="{{ language|default('de') }}">
+<head>
+<meta charset="UTF-8">
+<title>{{ 'CONSHO.voucher.title'|trans({}, 'contao_default') }}</title>
+<style>
+    @page { margin: 18mm; }
+    body { font-family: DejaVu Sans, Arial, sans-serif; color: #111; font-size: 11pt; }
+    .card { border: 0.6mm solid #111; padding: 14mm 12mm; text-align: center; }
+    .issuer { font-size: 10pt; color: #444; margin: 0 0 8mm 0; }
+    h1 { font-size: 22pt; margin: 0 0 4mm 0; }
+    .value { font-size: 30pt; font-weight: bold; margin: 6mm 0; }
+    .code { font-family: DejaVu Sans Mono, monospace; font-size: 18pt; letter-spacing: 1mm; border: 0.3mm dashed #111; display: inline-block; padding: 3mm 6mm; margin: 4mm 0; }
+    .note { font-size: 9pt; color: #444; margin: 6mm 0 0 0; }
+</style>
+</head>
+<body>
+<div class="card">
+    <p class="issuer">{{ voucher.issuer }}</p>
+    <h1>{{ 'CONSHO.voucher.title'|trans({}, 'contao_default') }}</h1>
+    <p class="value">{{ voucher.value }}</p>
+    <p>{{ 'CONSHO.voucher.code'|trans({}, 'contao_default') }}</p>
+    <p class="code">{{ voucher.code }}</p>
+    <p class="note">
+        {% if voucher.validUntil %}{{ 'CONSHO.voucher.validUntil'|trans([voucher.validUntil], 'contao_default') }}{% else %}{{ 'CONSHO.voucher.unlimited'|trans({}, 'contao_default') }}{% endif %}
+    </p>
+    <p class="note">{{ 'CONSHO.voucher.howTo'|trans({}, 'contao_default') }}</p>
+</div>
+</body>
+</html>

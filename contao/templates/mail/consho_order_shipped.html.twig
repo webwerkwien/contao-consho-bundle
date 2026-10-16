@@ -1,0 +1,61 @@
+{#
+  "Versendet" (D-1, decision Z4), to the customer, in the language of the
+  order. Sent for EVERY reported delivery, part deliveries included — the
+  customer wants to know what is in this parcel, and what is still to come.
+
+  Loaded as @Contao/mail/consho_order_shipped.html.twig. Parameters are a
+  LIST (vsprintf, see consho_payment_received.html.twig).
+
+  Variables:
+    order      the order in InvoiceView's shape, in the order's language
+    customer   {name, email}
+    delivery   {carrier, trackingNumber, items: list of {quantity, name}, complete: bool}
+    invoice    the number of the invoice issued with this delivery and
+               attached, '' where none was issued now
+    viewUrl    the order page, with a token
+#}
+{% block subject %}{{ 'CONSHO.mail.shipped.subject'|trans([order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.shipped.intro'|trans([order.orderNumber], 'contao_default') }}</p>
+
+{# Date, address, shipping method, what is in the parcel (D-1, D-7): see
+   the partial. #}
+{% include '@Contao/mail/_order_context.html.twig' with {order: order, font: font, items: delivery.items} only %}
+
+{% if not delivery.complete %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.shipped.rest'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+{% if delivery.trackingNumber %}
+<p style="margin: 0 0 8px 0;">
+    {% if delivery.carrier %}
+        {{ 'CONSHO.mail.shipped.tracking'|trans([delivery.carrier, delivery.trackingNumber], 'contao_default') }}
+    {% else %}
+        {{ 'CONSHO.mail.shipped.trackingNoCarrier'|trans([delivery.trackingNumber], 'contao_default') }}
+    {% endif %}
+</p>
+{% endif %}
+
+{% if invoice %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.shipped.invoiceAttached'|trans([invoice], 'contao_default') }}</p>
+{% endif %}
+
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

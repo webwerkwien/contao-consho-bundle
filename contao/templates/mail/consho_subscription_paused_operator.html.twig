@@ -1,0 +1,34 @@
+{#
+  The operator's copy of "Pause bestätigt" (Abo pausieren, P110), in the
+  language of the shop.
+
+  Loaded as @Contao/mail/consho_subscription_paused_operator.html.twig.
+
+  Variables:
+    order         an order of the subscription in InvoiceView's shape
+    customer      {name, email}
+    subscription  the subscription number
+    pauseFrom     first day of the pause, formatted
+    pauseUntil    the day billing resumes, formatted
+#}
+{% block subject %}{{ 'CONSHO.mail.subscriptionPaused.operator.subject'|trans([subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.subscriptionPaused.operator.intro'|trans([subscription, pauseFrom, pauseUntil], 'contao_default') }}</p>
+
+<p style="margin: 0 0 16px 0;">
+    {{ customer.name }}<br>
+    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+</p>
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

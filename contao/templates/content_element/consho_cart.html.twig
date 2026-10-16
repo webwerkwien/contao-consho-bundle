@@ -1,0 +1,319 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    The basket (specification 4.2).
+
+    Variables: notice (CartNotice or null), lines (list of {itemId, articleId,
+    title, sku, position, quantity, lineGross, terms — a subscription's
+    conditions or null, renews — the number of the subscription a renewal
+    line continues, or '' (Abo-7b)}), unpriced (list of {itemId, articleId, title, sku,
+    position, quantity}), total (formatted), is_empty (bool),
+    account_required (bool — a subscription line and nobody signed in, Abo-2),
+    checkout_url (string or null), checkout_blocked (bool — the checkout is
+    blocked, so no link but its sentence, E4).
+
+    All amounts arrive formatted — MoneyFormatter did the rounding and the
+    currency, not this file (a template that rounds rounds differently from the
+    order). The quantities arrive without their trailing zeros ("3", not
+    "3.0000") and with a decimal POINT, because they go into input fields that
+    are posted back and parsed as decimals.
+
+    ⚠️ ONE FORM PER LINE, and each of them inside a <td>.
+
+    A browser submits every field of the form the button belongs to. One form
+    around the table would send the `item` of every line at once and the server
+    would read the last one — the visitor changes a line they never touched.
+    Moving the id onto the button (value="update:42") fixes only half of it:
+    the `quantity` fields of the other lines still travel along. And a <form>
+    may not be a child of <table>, <tbody> or <tr> — the parser moves it out
+    and the fields end up in no form at all. A <td> takes flow content, so a
+    form that lives wholly inside one cell is both valid and scoped to its line.
+
+    ⚠️ ids are per ELEMENT and per LINE.
+
+    Two basket elements can stand on one page, and each has several lines. The
+    content element's own id (data.id) makes the instance unique, the line id
+    makes the row unique — the same pattern as quantity_id in
+    consho_product_detail.html.twig, one level deeper.
+
+    The quantity field is type="text" with inputmode="decimal", not
+    type="number": 0 is a legitimate entry here (it removes the line), and a
+    min= that forbade it would have the browser refuse the very entry the
+    server is meant to act on.
+
+    ⚠️ EVERY line carries a mark, and it is VISIBLE.
+
+    The title alone does not identify a line: CartTitles hands out the MAIN
+    product's title by design, so two variants of one product read alike, and
+    two lines with no title at all share one replacement text. That is not a
+    screen reader's problem alone — a sighted visitor faces the same two rows
+    and the same two "remove" buttons, which is why the mark stands in the row
+    rather than in an aria-label nobody can see. The item number is the shop's
+    own answer; where none is maintained it is the line's position in the
+    basket, counted through both loops by the controller.
+
+    The mark goes into the accessible name too (line_name), because the label
+    of the quantity field and the text of both buttons are read out of context,
+    away from the row they sit in.
+#}
+
+{% block content %}
+    {% set field_prefix = 'consho-cart-' ~ data.id|default('') %}
+
+    {% if notice %}
+        <p class="consho-cart__notice" role="status">
+            {{ ("CONSHO.cart.notice." ~ notice.value)|trans({}, "contao_default") }}
+        </p>
+    {% endif %}
+
+    {#
+        Die Altersfreigabe des ganzen Korbs (C19): die höchste über alle
+        Zeilen, auch über die ohne Preis. Sie sperrt nichts — 6, 12 und 14 sind
+        per Definition nur Hinweis, 16 und 18 hält der Checkout auf, wo es eine
+        Identität zu prüfen gibt. Hier steht sie, damit ein Kunde es vor dem
+        Adressformular erfährt und nicht danach.
+    #}
+    {% if minimum_age|default(0) > 0 %}
+        <p class="consho-cart__age" role="note">{{ "CONSHO.minimumAge"|trans([minimum_age], "contao_default") }}</p>
+    {% endif %}
+
+    {% if is_empty %}
+        <p class="consho-cart__empty">{{ "CONSHO.cart.empty"|trans({}, "contao_default") }}</p>
+    {% else %}
+        {% if unpriced is not empty %}
+            <p class="consho-cart__unpriced" role="alert">{{ "CONSHO.cart.unpriced"|trans({}, "contao_default") }}</p>
+        {% endif %}
+
+        {#
+            ⚠️ The article is a <td>, not a <th scope="row">, and every cell
+            carries data-cellheadline (acceptance C-10, Michael 2026-09-25:
+            „okay, wenn das für mobile besser ist"). Themes that turn a table
+            into cards on a phone — the Contao demo theme among them — hide
+            every <th> below the breakpoint and print attr(data-cellheadline)
+            before each cell. A row header vanished there with the article
+            name in it; the column headers stay for everything wider.
+        #}
+        {% set head_article = "CONSHO.cart.article"|trans({}, "contao_default") %}
+        {% set head_quantity = "CONSHO.cart.quantity"|trans({}, "contao_default") %}
+        {% set head_total = "CONSHO.cart.lineTotal"|trans({}, "contao_default") %}
+        {% set head_actions = "CONSHO.cart.actions"|trans({}, "contao_default") %}
+        <table class="consho-cart__lines">
+            <thead>
+                <tr>
+                    <th scope="col">{{ head_article }}</th>
+                    <th scope="col">{{ head_quantity }}</th>
+                    <th scope="col">{{ head_total }}</th>
+                    <th scope="col"><span class="invisible">{{ head_actions }}</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                    {% set line_title = line.title ?: "CONSHO.cart.unknownArticle"|trans({}, "contao_default") %}
+                    {% set line_mark = line.sku ? "CONSHO.detail.sku"|trans({}, "contao_default") ~ ' ' ~ line.sku : '#' ~ line.position %}
+                    {% set line_name = line_title ~ ' (' ~ line_mark ~ ')' %}
+                    {% set quantity_id = field_prefix ~ '-quantity-' ~ line.itemId %}
+                    <tr>
+                        <td data-cellheadline="{{ head_article }}">
+                            {{ line_title }}
+                            <span class="consho-cart__mark">{{ line_mark }}</span>
+                            {#- The conditions of a subscription line (Abo-2, A10),
+                               in the row rather than a tooltip: they are what the
+                               line costs, not a detail about it. #}
+                            {% if line.terms|default(null) %}
+                                <br><small class="consho-cart__terms">{{ line.terms }}</small>
+                            {% endif %}
+                            {#- Abo-7b (P67): which subscription this line renews. #}
+                            {% if line.renews|default('') %}
+                                <br><small class="consho-cart__renews">{{ "CONSHO.cart.renews"|trans([line.renews], "contao_default") }}</small>
+                            {% endif %}
+                            {#- Block G (G5): the basket holds nothing back. #}
+                            {% if line.stock|default(null) %}
+                                {% if line.stock.short and line.stock.state == 'unavailable' %}
+                                    <br><strong class="consho-cart__stock consho-cart__stock--short">{{ "CONSHO.stock.unavailable"|trans({}, "contao_default") }}</strong>
+                                {% elseif line.stock.short %}
+                                    <br><strong class="consho-cart__stock consho-cart__stock--short">{{ "CONSHO.stock.onlyLeft"|trans([line.stock.left], "contao_default") }}</strong>
+                                {% elseif line.stock.state == 'backorder' %}
+                                    <br><small class="consho-cart__stock">{{ "CONSHO.stock.backorder"|trans({}, "contao_default") }}</small>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                        <td data-cellheadline="{{ head_quantity }}">
+                            {#- A renewal keeps the old quantity (A11 as of 2026-10-01):
+                               shown, not a field. #}
+                            {% if line.renews|default('') %}
+                                {{ line.quantity }}
+                            {% else %}
+                            <form method="post" class="consho-cart__update">
+                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                <input type="hidden" name="item" value="{{ line.itemId }}">
+
+                                {#- The label names the line as well as the field: "Menge"
+                                   on its own is the same accessible name in every row —
+                                   and so is the title alone, for two lines of one product. #}
+                                <label class="invisible" for="{{ quantity_id }}">
+                                    {{ "CONSHO.cart.quantityOf"|trans([line_name], "contao_default") }}
+                                </label>
+                                <input
+                                    id="{{ quantity_id }}"
+                                    class="consho-cart__quantity"
+                                    type="text"
+                                    inputmode="decimal"
+                                    name="quantity"
+                                    value="{{ line.quantity }}"
+                                >
+                                <button type="submit" name="consho_cart_action" value="update">
+                                    {{ "CONSHO.cart.update"|trans({}, "contao_default") }}<span class="invisible"> {{ line_name }}</span>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </td>
+                        <td data-cellheadline="{{ head_total }}">{{ line.lineGross }}</td>
+                        <td data-cellheadline="{{ head_actions }}">
+                            <form method="post" class="consho-cart__remove">
+                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                <input type="hidden" name="item" value="{{ line.itemId }}">
+                                <button type="submit" name="consho_cart_action" value="remove">
+                                    {{ "CONSHO.cart.remove"|trans({}, "contao_default") }}<span class="invisible"> {{ line_name }}</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+
+                {#- A line the pricer could not price: no price row left, or no tax
+                   rate for its class in this country. It is shown WITH ITS NAME and
+                   offers removal — without the name the visitor cannot tell which
+                   of the buttons to press. No quantity field: a quantity that
+                   cannot be priced is not worth correcting, only removing. #}
+                {% for line in unpriced %}
+                    {% set line_title = line.title ?: "CONSHO.cart.unknownArticle"|trans({}, "contao_default") %}
+                    {% set line_mark = line.sku ? "CONSHO.detail.sku"|trans({}, "contao_default") ~ ' ' ~ line.sku : '#' ~ line.position %}
+                    {% set line_name = line_title ~ ' (' ~ line_mark ~ ')' %}
+                    <tr class="consho-cart__line--unpriced">
+                        <td data-cellheadline="{{ head_article }}">
+                            {{ line_title }}
+                            <span class="consho-cart__mark">{{ line_mark }}</span>
+                        </td>
+                        <td data-cellheadline="{{ head_quantity }}">{{ line.quantity }}</td>
+                        <td data-cellheadline="{{ head_total }}">{{ "CONSHO.cart.noPrice"|trans({}, "contao_default") }}</td>
+                        <td data-cellheadline="{{ head_actions }}">
+                            <form method="post" class="consho-cart__remove">
+                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                <input type="hidden" name="item" value="{{ line.itemId }}">
+                                <button type="submit" name="consho_cart_action" value="remove">
+                                    {{ "CONSHO.cart.remove"|trans({}, "contao_default") }}<span class="invisible"> {{ line_name }}</span>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                {#- Block H (H-4): the discount that applies — the goods, the
+                    amount off, then the total below. Free shipping saves
+                    nothing here yet: the shipping is chosen in the checkout. #}
+                {% if discount|default(null) %}
+                    {% if not discount.freeShipping %}
+                        <tr class="consho-cart__subtotal">
+                            <th scope="row" colspan="2">{{ "CONSHO.cart.discount.subtotal"|trans({}, "contao_default") }}</th>
+                            <td colspan="2">{{ subtotal }}</td>
+                        </tr>
+                    {% endif %}
+                    <tr class="consho-cart__discount">
+                        <th scope="row" colspan="2">{{ discount.title }}{% if discount.code %} <span class="consho-cart__code">({{ discount.code }})</span>{% endif %}</th>
+                        <td colspan="2">{{ discount.freeShipping ? "CONSHO.cart.discount.freeShipping"|trans({}, "contao_default") : discount.amount }}</td>
+                    </tr>
+                {% endif %}
+                <tr>
+                    <th scope="row" colspan="2">{{ "CONSHO.cart.total"|trans({}, "contao_default") }}</th>
+                    <td colspan="2" data-cellheadline="{{ "CONSHO.cart.total"|trans({}, "contao_default") }}">
+                        {{- total }}
+                        {# Which of the two sentences appears is decided in the
+                           controller and travels on showsNet (C-4). #}
+                        <span class="consho-cart__tax">{{ untaxed|default(false) ? ((shipped ?? true) ? "CONSHO.priceShippingOnly"|trans({}, "contao_default") : "") : ("CONSHO." ~ ((shipped ?? true) ? "priceTaxNotice" : "priceTaxOnly") ~ (showsNet|default(false) ? "Net" : ""))|trans({}, "contao_default") }}</span>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+
+        {#- Block H (H-4, W1): the discount code. Typed, it stays on the basket
+            and the line below says what became of it. #}
+        {% if discount_enabled|default(false) %}
+            <div class="consho-cart__discount-code">
+                {% if discount_code|default('') %}
+                    <form method="post">
+                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                        <p class="consho-cart__code-status consho-cart__code-status--{{ code_status }}" role="status">
+                            {{ ("CONSHO.cart.discount.status." ~ code_status)|trans([discount_code, code_missing], "contao_default") }}
+                        </p>
+                        <button type="submit" name="consho_cart_action" value="removeCode">{{ "CONSHO.cart.discount.remove"|trans({}, "contao_default") }}</button>
+                    </form>
+                {% else %}
+                    <form method="post">
+                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                        <label for="consho-discount-code">{{ "CONSHO.cart.discount.code"|trans({}, "contao_default") }}</label>
+                        <input id="consho-discount-code" type="text" name="discount_code" maxlength="64" autocomplete="off" spellcheck="false" autocapitalize="off">
+                        <button type="submit" name="consho_cart_action" value="code">{{ "CONSHO.cart.discount.apply"|trans({}, "contao_default") }}</button>
+                    </form>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {#- Wertgutscheine (WG-5, E3): several vouchers, each with what it
+            holds or why it pays nothing; set against the total at the
+            checkout, where the shipping is known. #}
+        {% if voucher_enabled|default(false) %}
+            <div class="consho-cart__vouchers">
+                {% if vouchers|default([]) is not empty %}
+                    <ul class="consho-cart__voucher-list">
+                        {% for voucher in vouchers %}
+                            <li class="consho-cart__voucher consho-cart__voucher--{{ voucher.status }}">
+                                <form method="post">
+                                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                    <input type="hidden" name="voucher" value="{{ voucher.value }}">
+                                    <span role="status">{{ ("CONSHO.cart.voucher.status." ~ voucher.status)|trans([voucher.code, voucher.balance], "contao_default") }}</span>
+                                    <button type="submit" name="consho_cart_action" value="removeVoucher" aria-label="{{ "CONSHO.cart.voucher.removeLabel"|trans([voucher.code], "contao_default") }}">{{ "CONSHO.cart.voucher.remove"|trans({}, "contao_default") }}</button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                {% if voucher_payable|default(false) %}
+                    {% if vouchers|default([]) is not empty %}
+                        <p class="consho-cart__voucher-later">{{ "CONSHO.cart.voucher.later"|trans({}, "contao_default") }}</p>
+                    {% endif %}
+                    <form method="post">
+                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                        <label for="consho-voucher-code">{{ "CONSHO.cart.voucher.code"|trans({}, "contao_default") }}</label>
+                        <input id="consho-voucher-code" type="text" name="voucher_code" maxlength="32" autocomplete="off" spellcheck="false" autocapitalize="characters">
+                        <button type="submit" name="consho_cart_action" value="voucher">{{ "CONSHO.cart.voucher.apply"|trans({}, "contao_default") }}</button>
+                    </form>
+                {% else %}
+                    <p class="consho-cart__voucher-later">{{ "CONSHO.cart.voucher.notForVouchers"|trans({}, "contao_default") }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {#- P12: the checkout will ask for an account — said before the link,
+           not after the click. #}
+        {% if account_required|default(false) %}
+            <p class="consho-cart__account" role="note">{{ "CONSHO.subscription.accountRequired"|trans({}, "contao_default") }}</p>
+        {% endif %}
+
+        {% if checkout_url|default('') %}
+            {#
+                Der Weg weiter (4.2). Ein Link, kein Formular: Zum Checkout zu
+                gehen ändert nichts, und ein GET darf man wiederholen.
+            #}
+            <p class="consho-cart__checkout">
+                <a href="{{ checkout_url }}" class="consho-cart__checkout-link">
+                    {{ "CONSHO.cart.checkout"|trans({}, "contao_default") }}
+                </a>
+            </p>
+        {% elseif checkout_blocked|default(false) %}
+            {#- E4: the checkout is blocked — the sentence it would say, not a
+               link to it. #}
+            <p class="consho-cart__blocked" role="note">{{ "CONSHO.checkout.blocked"|trans({}, "contao_default") }}</p>
+        {% endif %}
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['voucher_legend'] = 'Voucher';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['use_legend'] = 'Redemption';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['note_legend'] = 'Note';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['code'] = ['Code', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['createdAt'] = ['Issued', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['shop'] = ['Shop', 'The shop that issued the voucher. It can be redeemed there.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['shops'] = ['Further shops', 'Shops of the same operator in which the voucher is valid as well.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['currency'] = ['Currency', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['faceValue'] = ['Value', 'The amount the voucher was issued for.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['paidAmount'] = ['Paid', 'What was paid for the voucher; 0 for one issued by hand.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['balance'] = ['Balance', 'Changes only through a booking.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['validUntil'] = ['Valid until', 'Empty: unlimited. Limiting it towards consumers needs a reason that holds (Austrian Supreme Court, 7 Ob 22/12d).'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['blocked'] = ['Blocked', 'A blocked voucher cannot be redeemed.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['source'] = ['Origin', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['orderId'] = ['Bought with', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['note'] = ['Note', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueVoucher'] = ['Issue voucher', 'Issue a voucher by hand, e.g. as a goodwill gesture'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['edit'] = ['Edit', 'Edit voucher ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['bookings'] = ['Bookings', 'Bookings of voucher ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctVoucher'] = ['Correct balance', 'Change the balance of voucher ID %s with a reason'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['show'] = ['Details', 'Show the details of voucher ID %s'];
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['sources'] = ['purchase' => 'Bought', 'manual' => 'By hand'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['unlimited'] = 'unlimited';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['blockedShort'] = 'blocked';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['back'] = 'Back';
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueLegend'] = 'Issue voucher';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueTarget'] = 'Shop and currency';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueValue'] = 'Amount';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueValidUntil'] = 'Valid until';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueValidUntilHelp'] = 'Leave empty for unlimited.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueNote'] = 'Note';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueSubmit'] = 'Issue';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueNoShop'] = 'No shop with a currency has been set up.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issueInvalid'] = 'Please enter an amount above 0 with at most two decimals and a valid date.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['issued'] = 'Voucher %s issued.';
+
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctLegend'] = 'Correct balance';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctBalance'] = 'Balance: %s';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctAmount'] = 'Amount';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctAmountHelp'] = 'Positive raises the balance, negative lowers it.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctNote'] = 'Reason';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctSubmit'] = 'Book';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctInvalid'] = 'Please enter an amount other than 0 and a reason.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctTooLow'] = 'There is not that much left on the voucher.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['corrected'] = 'Booked. New balance: %s';

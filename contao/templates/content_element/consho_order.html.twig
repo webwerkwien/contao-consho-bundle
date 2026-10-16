@@ -1,0 +1,505 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    The order page (7.7, C21, C-10).
+
+    Variables: order (the order in InvoiceView's shape — lines, taxes, totals,
+    payment instructions and bank details, formatted), reference (the payment
+    reference, '' without an invoice), payment_state and delivery_state
+    (PaymentState / DeliveryState values), documents (list of {id, type,
+    number, date, cancelled}), change ({offered, block, options: list of {id,
+    title, available, current, amount}}), notice (a key of
+    CONSHO.orderPage.notice or null), online ({state: a key of
+    CONSHO.orderPage.online, retry: bool} or null — C-11), withdrawal (see
+    OrderPageWithdrawal::view(), D-2), withdrawal_token (for the GET form of
+    "Vertrag widerrufen") and order_url (the page without the declaration,
+    token included).
+
+    Every figure arrives formatted — the same view as the invoice and the mail,
+    so the page cannot show an amount the documents do not.
+
+    ⚠️ ONE FORM PER ACTION, like the basket: a browser submits every field of
+    the form its button belongs to, and a document button inside the change
+    form would carry the chosen method along.
+
+    ⚠️ The form posts to the page's own address, token included — no `action`
+    attribute, so the query string stays. A request token is in every form;
+    the first POST of any kind confirms the e-mail address (7.7), which is why
+    even the document buttons are forms and not links.
+
+    No JavaScript. Everything works with the keyboard alone.
+#}
+
+{% block content %}
+    {% set element_id = data.id|default('') %}
+
+    {#
+        No valid link — unknown, expired, missing (D-6, T4): a form for a new
+        one. The same page for every case; link_outcome is an OrderLinkOutcome
+        value after the POST, null before it. See OrderLinkRequest.
+    #}
+    {% if link_request|default(false) %}
+        <div class="consho-order__link-request">
+            <h2>{{ 'CONSHO.orderPage.linkRequest.title'|trans({}, 'contao_default') }}</h2>
+            {% if link_outcome == 'requested' %}
+                <p class="consho-order__notice" role="status">{{ 'CONSHO.orderPage.linkRequest.requested'|trans({}, 'contao_default') }}</p>
+            {% else %}
+                {% if link_outcome %}
+                    <p class="consho-order__notice consho-order__notice--error" role="alert">{{ ('CONSHO.orderPage.linkRequest.' ~ link_outcome)|trans({}, 'contao_default') }}</p>
+                {% endif %}
+                <p>{{ 'CONSHO.orderPage.linkRequest.intro'|trans({}, 'contao_default') }}</p>
+                <form method="post" class="consho-order__link-form">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <input type="hidden" name="consho_order_action" value="requestLink">
+                    {% for field in [
+                        {name: 'number', type: 'text', autocomplete: 'off'},
+                        {name: 'email', type: 'email', autocomplete: 'email'},
+                    ] %}
+                        {% set field_id = 'consho-order-' ~ element_id ~ '-link-' ~ field.name %}
+                        <div class="consho-order__field">
+                            <label for="{{ field_id }}">{{ ('CONSHO.orderPage.linkRequest.' ~ field.name)|trans({}, 'contao_default') }}</label>
+                            <input type="{{ field.type }}" name="consho_link_{{ field.name }}" id="{{ field_id }}" required autocomplete="{{ field.autocomplete }}">
+                        </div>
+                    {% endfor %}
+                    <button type="submit">{{ 'CONSHO.orderPage.linkRequest.submit'|trans({}, 'contao_default') }}</button>
+                </form>
+            {% endif %}
+        </div>
+
+    {#
+        The first open through the mail's link (C-10): one button before the
+        order. Its POST is the reader — scanners follow links but submit no
+        forms — and it confirms the address. See OrderController.
+    #}
+    {% elseif gate|default(false) %}
+        <form method="post" class="consho-order__gate">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <input type="hidden" name="consho_order_action" value="view">
+            <p>{{ 'CONSHO.orderPage.gate.text'|trans([order_number], 'contao_default') }}</p>
+            <button type="submit">{{ 'CONSHO.orderPage.gate.button'|trans({}, 'contao_default') }}</button>
+        </form>
+
+        {# E5: the withdrawal function before the gate, too — § 13a FAGG wants
+           it easily reachable, and this POST confirms the address as well. #}
+        {% if withdrawal.state == 'open' %}
+            <form method="post" class="consho-order__withdraw-start">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <input type="hidden" name="consho_order_action" value="withdrawStart">
+                <button type="submit">{{ 'CONSHO.withdrawal.button'|trans({}, 'contao_default') }}</button>
+            </form>
+        {% endif %}
+    {% elseif withdrawal.form %}
+
+    {#
+        The declaration (D-2, spec 6.1 step 2) — on its own, without the rest
+        of the order, so that nothing else on the page competes with it.
+    #}
+    {% if notice %}
+        <p class="consho-order__notice consho-order__notice--{{ notice }}" role="alert">{{ ('CONSHO.orderPage.notice.' ~ notice)|trans({}, 'contao_default') }}</p>
+    {% endif %}
+
+    <h2 class="consho-order__title">{{ 'CONSHO.withdrawal.title'|trans({}, 'contao_default') }}</h2>
+    <p>{{ 'CONSHO.withdrawal.intro'|trans({}, 'contao_default') }}</p>
+
+    <form method="post" class="consho-withdrawal">
+        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+        <input type="hidden" name="consho_order_action" value="withdraw">
+
+        <dl class="consho-withdrawal__facts">
+            <dt>{{ 'CONSHO.withdrawal.order'|trans({}, 'contao_default') }}</dt>
+            <dd>{{ order.orderNumber }}{% if order.orderDate %} ({{ order.orderDate }}){% endif %}</dd>
+            <dt>{{ 'CONSHO.withdrawal.email'|trans({}, 'contao_default') }}</dt>
+            <dd>{{ withdrawal.email }}</dd>
+        </dl>
+
+        <div class="consho-withdrawal__field">
+            <label for="consho-withdrawal-{{ element_id }}-name">{{ 'CONSHO.withdrawal.name'|trans({}, 'contao_default') }}</label>
+            <input type="text" name="consho_withdraw_name" id="consho-withdrawal-{{ element_id }}-name" value="{{ withdrawal.name }}" required autocomplete="name">
+        </div>
+
+        <fieldset class="consho-withdrawal__scope">
+            <legend>{{ 'CONSHO.withdrawal.scope'|trans({}, 'contao_default') }}</legend>
+            <div>
+                <input type="radio" name="consho_withdraw_scope" value="all" id="consho-withdrawal-{{ element_id }}-all" checked>
+                <label for="consho-withdrawal-{{ element_id }}-all">{{ 'CONSHO.withdrawal.all'|trans({}, 'contao_default') }}</label>
+            </div>
+            {% if withdrawal.items is not empty %}
+                <div>
+                    <input type="radio" name="consho_withdraw_scope" value="items" id="consho-withdrawal-{{ element_id }}-items">
+                    <label for="consho-withdrawal-{{ element_id }}-items">{{ 'CONSHO.withdrawal.items'|trans({}, 'contao_default') }}</label>
+                </div>
+                {# Quantities count only with "Einzelne Artikel" — without
+                   JavaScript they cannot be switched off, so the server
+                   ignores them for "Die ganze Bestellung". #}
+                <ul class="consho-withdrawal__items">
+                    {% for item in withdrawal.items %}
+                        {% set field_id = 'consho-withdrawal-' ~ element_id ~ '-item-' ~ item.id %}
+                        <li>
+                            {# Abo-8, P77: a subscription goes only whole. #}
+                            {% if item.whole %}
+                                <input type="checkbox" name="consho_withdraw_quantity[{{ item.id }}]" id="{{ field_id }}" value="{{ item.max }}">
+                                <label for="{{ field_id }}">{{ 'CONSHO.withdrawal.whole'|trans([item.name, item.left], 'contao_default') }}</label>
+                            {% else %}
+                                <label for="{{ field_id }}">{{ 'CONSHO.withdrawal.quantity'|trans([item.name, item.left], 'contao_default') }}</label>
+                                <input type="number" name="consho_withdraw_quantity[{{ item.id }}]" id="{{ field_id }}" value="0" min="0" max="{{ item.max }}" step="any" inputmode="decimal">
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </fieldset>
+
+        <div class="consho-withdrawal__field">
+            <label for="consho-withdrawal-{{ element_id }}-message">{{ 'CONSHO.withdrawal.message'|trans({}, 'contao_default') }}</label>
+            <textarea name="consho_withdraw_message" id="consho-withdrawal-{{ element_id }}-message" rows="4"></textarea>
+        </div>
+
+        <button type="submit" class="consho-withdrawal__confirm">{{ 'CONSHO.withdrawal.confirm'|trans({}, 'contao_default') }}</button>
+    </form>
+
+    <p><a href="{{ order_url }}">{{ 'CONSHO.withdrawal.back'|trans({}, 'contao_default') }}</a></p>
+
+    {% else %}
+
+    {% if notice %}
+        <p class="consho-order__notice consho-order__notice--{{ notice }}" role="status">{{ ('CONSHO.orderPage.notice.' ~ notice)|trans({}, 'contao_default') }}</p>
+    {% endif %}
+
+    <h2 class="consho-order__title">{{ 'CONSHO.orderPage.title'|trans([order.orderNumber], 'contao_default') }}</h2>
+
+    <dl class="consho-order__facts">
+        {% if order.orderDate %}
+            <dt>{{ 'CONSHO.invoice.orderDate'|trans({}, 'contao_default') }}</dt>
+            <dd>{{ order.orderDate }}</dd>
+        {% endif %}
+        {# A follow-up order: its subscription and the period it bills (Abo-4). #}
+        {% if order.subscription|default('') %}
+            <dt>{{ 'CONSHO.invoice.subscription'|trans({}, 'contao_default') }}</dt>
+            <dd>{{ order.subscription }}</dd>
+        {% endif %}
+        {% if order.servicePeriod|default('') %}
+            <dt>{{ 'CONSHO.invoice.servicePeriod'|trans({}, 'contao_default') }}</dt>
+            <dd>{{ order.servicePeriod }}</dd>
+        {% endif %}
+        <dt>{{ 'CONSHO.orderPage.paymentState'|trans({}, 'contao_default') }}</dt>
+        <dd>{{ ('CONSHO.orderPage.paymentStates.' ~ payment_state)|trans({}, 'contao_default') }}</dd>
+        <dt>{{ 'CONSHO.orderPage.deliveryState'|trans({}, 'contao_default') }}</dt>
+        <dd>{{ ('CONSHO.orderPage.deliveryStates.' ~ delivery_state)|trans({}, 'contao_default') }}</dd>
+        {% if order.shippingMethod %}
+            <dt>{{ 'CONSHO.invoice.shippingMethod'|trans({}, 'contao_default') }}</dt>
+            <dd>{{ order.shippingMethod }}</dd>
+        {% endif %}
+        <dt>{{ 'CONSHO.invoice.paymentMethod'|trans({}, 'contao_default') }}</dt>
+        <dd>{{ order.paymentMethod }}</dd>
+    </dl>
+
+    {#
+        The withdrawal function (D-2): prominent, near the top, labelled
+        exactly as the law says. After the period a sentence instead, with the
+        shop's address (spec 6.2). Nothing at all where there is no function.
+
+        A real BUTTON in a GET form, like every other button on this page
+        (acceptance D-2, Michael: "gleiche Maßnahme wie bei anderen Knöpfen"):
+        Consho ships no front end CSS, so a plain link looked like any link in
+        the text, and the theme's button style is what makes it stand out. GET,
+        so it changes nothing; the token travels as a field, because a GET
+        form replaces the query string of the page address.
+    #}
+    {% if withdrawal.state == 'open' %}
+        <form method="get" class="consho-order__withdraw">
+            <input type="hidden" name="consho_order" value="{{ withdrawal_token }}">
+            <input type="hidden" name="consho_withdraw" value="1">
+            <button type="submit">{{ 'CONSHO.withdrawal.button'|trans({}, 'contao_default') }}</button>
+        </form>
+    {% elseif withdrawal.state == 'expired' %}
+        <p class="consho-order__withdraw-expired">
+            {% if withdrawal.contact %}
+                {{ 'CONSHO.withdrawal.expired'|trans([withdrawal.contact], 'contao_default') }}
+            {% else %}
+                {{ 'CONSHO.withdrawal.expiredNoContact'|trans({}, 'contao_default') }}
+            {% endif %}
+        </p>
+    {% endif %}
+
+    {% if withdrawal.received is not empty %}
+        <section class="consho-order__withdrawals">
+            <h3>{{ 'CONSHO.withdrawal.received'|trans({}, 'contao_default') }}</h3>
+            <ul>
+                {% for entry in withdrawal.received %}
+                    <li>
+                        {{ 'CONSHO.withdrawal.receivedEntry'|trans([entry.number, entry.receivedAt], 'contao_default') }}
+                        — {{ (entry.confirmed ? 'CONSHO.withdrawal.confirmed' : 'CONSHO.withdrawal.unconfirmed')|trans({}, 'contao_default') }}
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {#
+        The online payment (C-11): one sentence for what is PROVEN, never more
+        (Michael, 2026-09-26). "confirmed" = the provider's notification was
+        booked; "reported" = a verified return, the notification still to
+        come; "none" = nothing to go by. "Try again" only after a failure or
+        cancel — while an attempt may be on its way, a second would pay twice.
+    #}
+    {% if online|default(null) %}
+        <div class="consho-order__online consho-order__online--{{ online.state }}" role="status">
+            <p>{{ ('CONSHO.orderPage.online.' ~ online.state)|trans({}, 'contao_default') }}</p>
+            {% if online.retry %}
+                <form method="post" class="consho-order__retry">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <input type="hidden" name="consho_order_action" value="retry">
+                    <button type="submit">{{ 'CONSHO.orderPage.online.retry'|trans({}, 'contao_default') }}</button>
+                </form>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {#
+        ⚠️ The item is a <td>, and every cell carries data-cellheadline — see
+        consho_cart.html.twig: themes that turn tables into cards on a phone
+        hide every <th> and print attr(data-cellheadline) instead (acceptance
+        C-10). The totals keep their row headers AND carry the label, so a
+        wide screen reads a table and a narrow one reads "Label: amount".
+    #}
+    {% set head_item = 'CONSHO.invoice.item'|trans({}, 'contao_default') %}
+    {% set head_quantity = 'CONSHO.invoice.quantity'|trans({}, 'contao_default') %}
+    {% set head_unit = 'CONSHO.invoice.unitPrice'|trans({}, 'contao_default') %}
+    {% set head_total = 'CONSHO.invoice.total'|trans({}, 'contao_default') %}
+    <table class="consho-order__lines">
+        <caption>{{ 'CONSHO.invoice.lines'|trans({}, 'contao_default') }}</caption>
+        <thead>
+            <tr>
+                <th scope="col">{{ head_item }}</th>
+                <th scope="col">{{ head_quantity }}</th>
+                <th scope="col">{{ head_unit }}</th>
+                <th scope="col">{{ head_total }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in order.lines %}
+                <tr>
+                    <td data-cellheadline="{{ head_item }}">{{ line.name }}{% if line.terms|default('') %}<br><small class="consho-order__terms">{{ line.terms }}</small>{% endif %}</td>
+                    <td data-cellheadline="{{ head_quantity }}">{{ line.quantity }}</td>
+                    <td data-cellheadline="{{ head_unit }}">{{ line.unitPrice }}</td>
+                    <td data-cellheadline="{{ head_total }}">{{ line.total }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="consho-order__totals">
+        {#- Acceptance WG-7: an order of vouchers only is not taxable — said,
+            not "USt. 0,00", and without a net line equal to the total. #}
+        {% set untaxed = order.taxes|default([]) is not empty and order.taxes|filter(t => not t.notTaxable) is empty %}
+        {% set totals = untaxed
+            ? {taxTotal: 'CONSHO.invoice.notTaxable'|trans({}, 'contao_default'), grandTotal: order.grandTotal}
+            : {netTotal: order.netTotal, taxTotal: order.taxTotal, grandTotal: order.grandTotal} %}
+        {% for key, amount in totals %}
+            {% set label = ('CONSHO.invoice.' ~ key)|trans({}, 'contao_default') %}
+            <tr{% if 'grandTotal' == key %} class="consho-order__grand"{% endif %}><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ amount }}</td></tr>
+        {% endfor %}
+        {#- Acceptance WG-7: the payments, as the invoice states them — a
+            customer paying part with a voucher sees what is left. #}
+        {% for payment in payments|default([]) %}
+            {% set label = (payment.refund ? 'CONSHO.invoice.refunded' : 'CONSHO.invoice.paid')|trans({}, 'contao_default') ~ (payment.label ? ' (' ~ payment.label ~ ')' : '') %}
+            <tr class="consho-order__payment-line"><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ payment.amount }}</td></tr>
+        {% endfor %}
+        {% if outstanding|default('') %}
+            {% set label = 'CONSHO.invoice.outstanding'|trans({}, 'contao_default') %}
+            <tr class="consho-order__outstanding"><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}"><strong>{{ outstanding }}</strong></td></tr>
+        {% endif %}
+    </table>
+
+    {#- Block GARAN (§ 7 Abs. 3, § 4 Abs. 1 Z 12a FAGG): the manufacturer's
+        durability guarantees as they stood before the button. #}
+    {% if garan|default([]) is not empty %}
+        <section class="consho-order__garan">
+            <h3>{{ 'CONSHO.mail.confirmation.garanHeadline'|trans({}, 'contao_default') }}</h3>
+            {% for item in garan %}
+                <p>{{ 'CONSHO.mail.confirmation.garanLine'|trans([item.name, item.years|replace({'.': 'MSC.decimalSeparator'|trans({}, 'contao_default')})], 'contao_default') }}</p>
+                {% include "@Contao/consho/garan_label.html.twig" with {garan: item} only %}
+            {% endfor %}
+        </section>
+    {% endif %}
+
+    {% if payment_state == 'open' and (order.paymentInstructions or order.bankDetails is not empty) %}
+        <section class="consho-order__payment">
+            <h3>{{ 'CONSHO.invoice.payment'|trans({}, 'contao_default') }}</h3>
+            {# The operator's rich text from the payment method, frozen. #}
+            {{ order.paymentInstructions|raw }}
+            {% if order.bankDetails is not empty %}
+                <dl>
+                    {% for key, value in order.bankDetails|filter(v => v is not empty) %}
+                        <dt>{{ ('CONSHO.invoice.bank.' ~ key)|trans({}, 'contao_default') }}</dt>
+                        <dd>{{ value }}</dd>
+                    {% endfor %}
+                    {% if reference %}
+                        <dt>{{ 'CONSHO.invoice.bank.reference'|trans({}, 'contao_default') }}</dt>
+                        <dd>{{ reference }}</dd>
+                    {% endif %}
+                </dl>
+            {% endif %}
+        </section>
+    {% endif %}
+
+    {% if documents is not empty %}
+        <section class="consho-order__documents">
+            <h3>{{ 'CONSHO.orderPage.documents'|trans({}, 'contao_default') }}</h3>
+            <ul>
+                {% for document in documents %}
+                    {% set document_name = ('CONSHO.invoice.types.' ~ document.type)|trans({}, 'contao_default') ~ ' ' ~ document.number %}
+                    <li class="consho-order__document{{ document.cancelled ? ' consho-order__document--cancelled' : '' }}">
+                        <span>{{ document_name }}{% if document.date %}, {{ document.date }}{% endif %}{% if document.cancelled %} ({{ 'CONSHO.orderPage.cancelled'|trans({}, 'contao_default') }}){% endif %}</span>
+                        {% for format in ['pdf', 'html'] %}
+                            <form method="post" class="consho-order__retrieve">
+                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                <input type="hidden" name="consho_order_action" value="{{ format }}">
+                                <input type="hidden" name="document" value="{{ document.id }}">
+                                {# The document's name in the button: read out of context,
+                                   "PDF" alone does not say which. #}
+                                <button type="submit" aria-label="{{ ('CONSHO.orderPage.retrieve.' ~ format)|trans([document_name], 'contao_default') }}">{{ ('CONSHO.orderPage.format.' ~ format)|trans({}, 'contao_default') }}</button>
+                            </form>
+                        {% endfor %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {#
+        F-5: what the customer may use from the digital lines. The download is
+        a POST of this page (F18) — the order token already says who may.
+        DL3: a service has nothing to download — it is unlocked ("läuft" for a
+        subscription), and may be reported as rendered.
+    #}
+    {% if entitlements|default([]) is not empty %}
+        {% set services = entitlements|filter(e => e.service)|length %}
+        {% set heading = services == 0 ? 'entitlements' : (services == entitlements|length ? 'entitlementsServices' : 'entitlementsMixed') %}
+        <section class="consho-order__entitlements">
+            <h3>{{ ('CONSHO.orderPage.' ~ heading)|trans({}, 'contao_default') }}</h3>
+            <ul>
+                {% for entitlement in entitlements %}
+                    <li class="consho-order__entitlement{{ entitlement.active ? '' : ' consho-order__entitlement--inactive' }}">
+                        <span>
+                            {{- entitlement.quantity }} × {{ entitlement.name -}}
+                            {%- if entitlement.service and entitlement.active %}: {{ (entitlement.subscription ? 'CONSHO.orderPage.serviceRunning' : 'CONSHO.orderPage.serviceUnlocked')|trans({}, 'contao_default') }}{% endif -%}
+                            {%- if entitlement.until %}, {{ 'CONSHO.orderPage.validUntil'|trans([entitlement.until], 'contao_default') }}{% endif -%}
+                            {%- if entitlement.performed %}, {{ 'CONSHO.orderPage.servicePerformed'|trans([entitlement.performed], 'contao_default') }}{% endif -%}
+                            {%- if entitlement.resting %} ({{ 'CONSHO.orderPage.resting'|trans({}, 'contao_default') }})
+                            {%- elseif not entitlement.active %} ({{ 'CONSHO.orderPage.inactive'|trans({}, 'contao_default') }}){% endif -%}
+                        </span>
+                        {% if entitlement.keys is not empty %}
+                            <ul class="consho-order__keys">
+                                {% for key in entitlement.keys %}
+                                    <li><code>{{ key }}</code></li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {#
+                            Block licence (LZ-1): what a module delivered — a text
+                            to copy, a download, a button. Only while active, and
+                            never in a mail (E3, E4).
+                        #}
+                        {% if entitlement.items|default([]) is not empty %}
+                            <ul class="consho-order__items">
+                                {% for item in entitlement.items %}
+                                    <li class="consho-order__item">
+                                        <span class="consho-order__item-label">{{ item.label }}</span>
+                                        {% if item.text is not null %}
+                                            <code class="consho-order__item-text">{{ item.text }}</code>
+                                        {% endif %}
+                                        {% if item.download %}
+                                            <form method="post" class="consho-order__retrieve">
+                                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                                <input type="hidden" name="consho_order_action" value="download">
+                                                <input type="hidden" name="entitlement" value="{{ entitlement.id }}">
+                                                <input type="hidden" name="item" value="{{ item.id }}">
+                                                <button type="submit" aria-label="{{ 'CONSHO.orderPage.downloadOf'|trans([item.label], 'contao_default') }}">{{ 'CONSHO.orderPage.download'|trans({}, 'contao_default') }}</button>
+                                            </form>
+                                        {% endif %}
+                                        {% if item.action is not null %}
+                                            <form method="post" class="consho-order__item-action">
+                                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                                <input type="hidden" name="consho_order_action" value="delivery">
+                                                <input type="hidden" name="entitlement" value="{{ entitlement.id }}">
+                                                <input type="hidden" name="item" value="{{ item.id }}">
+                                                <input type="hidden" name="delivery_action" value="{{ item.action }}">
+                                                <button type="submit">{{ item.actionLabel }}</button>
+                                            </form>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if entitlement.file %}
+                            <form method="post" class="consho-order__retrieve">
+                                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                <input type="hidden" name="consho_order_action" value="download">
+                                <input type="hidden" name="entitlement" value="{{ entitlement.id }}">
+                                <button type="submit" aria-label="{{ 'CONSHO.orderPage.downloadOf'|trans([entitlement.name], 'contao_default') }}">{{ 'CONSHO.orderPage.download'|trans({}, 'contao_default') }}</button>
+                            </form>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {#
+        Block Wertgutscheine (WG14): the vouchers this order bought, with the
+        code and what is left on them. The code in full — the buyer has it in
+        the mail anyway, and this page is behind the order's token.
+    #}
+    {% if vouchers|default([]) is not empty %}
+        <section class="consho-order__vouchers">
+            <h3>{{ 'CONSHO.voucher.heading'|trans({}, 'contao_default') }}</h3>
+            <ul>
+                {% for voucher in vouchers %}
+                    <li class="consho-order__voucher{{ voucher.blocked ? ' consho-order__voucher--blocked' : '' }}">
+                        <code>{{ voucher.code }}</code>
+                        {{ voucher.value }}, {{ 'CONSHO.voucher.balance'|trans({}, 'contao_default') }}: {{ voucher.balance }}
+                        {%- if voucher.validUntil %}, {{ 'CONSHO.voucher.validUntil'|trans([voucher.validUntil], 'contao_default') }}{% endif -%}
+                        {%- if voucher.blocked %} ({{ 'CONSHO.voucher.blocked'|trans({}, 'contao_default') }}){% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    {% if change.block %}
+        <p class="consho-order__change-blocked">{{ ('CONSHO.orderPage.changeBlocked.' ~ change.block)|trans({}, 'contao_default') }}</p>
+    {% elseif change.offered %}
+        <section class="consho-order__change">
+            <h3>{{ 'CONSHO.orderPage.change.title'|trans({}, 'contao_default') }}</h3>
+            <p>{{ 'CONSHO.orderPage.change.explanation'|trans({}, 'contao_default') }}</p>
+            <form method="post">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <input type="hidden" name="consho_order_action" value="change">
+                <fieldset>
+                    <legend>{{ 'CONSHO.invoice.paymentMethod'|trans({}, 'contao_default') }}</legend>
+                    {% for option in change.options %}
+                        {% set option_id = 'consho-order-' ~ element_id ~ '-method-' ~ option.id %}
+                        <div class="consho-order__method">
+                            {# The current method is shown, not chosen: nothing is pre-selected, so
+                               a submit without a choice is refused by the browser, not
+                               answered with "unavailable" by the server. #}
+                            <input type="radio" name="method" value="{{ option.id }}" id="{{ option_id }}" required{% if not option.available %} disabled{% endif %}>
+                            <label for="{{ option_id }}">
+                                {{ option.title }}{% if option.amount %} ({{ option.amount }}){% endif %}
+                                {% if option.current %} — {{ 'CONSHO.orderPage.change.current'|trans({}, 'contao_default') }}{% elseif not option.available %} — {{ 'CONSHO.orderPage.change.unavailable'|trans({}, 'contao_default') }}{% endif %}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </fieldset>
+                <div class="consho-order__confirm">
+                    <input type="checkbox" name="consho_confirm" value="1" id="consho-order-{{ element_id }}-confirm" required>
+                    <label for="consho-order-{{ element_id }}-confirm">{{ 'CONSHO.orderPage.change.confirm'|trans({}, 'contao_default') }}</label>
+                </div>
+                <button type="submit">{{ 'CONSHO.orderPage.change.submit'|trans({}, 'contao_default') }}</button>
+            </form>
+        </section>
+    {% endif %}
+
+    {% endif %}{# gate #}
+{% endblock %}

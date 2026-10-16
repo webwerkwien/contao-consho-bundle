@@ -1,0 +1,24 @@
+{#
+    The nested GARAN label on a tile (GA8; Michael, 2026-10-10: "GA8a").
+
+    Commission guidelines, April 2026, 3.3.1: a compact element for
+    space-limited places; "the harmonised label shall appear in its entirety on
+    the first mouse click, mouse roll-over or tactile screen expansion". The
+    link opens the full label at its own size — one click, also on a touch
+    screen. 3.3: "always accompanied by accessible text and a link" — the
+    alternative text carries the information as on the full label, the title
+    says what the click does. 3.3.2: the link where the QR code leads stays
+    next to it (GA10).
+
+    Variable: garan {years, info, src, width, height, nested {src, width,
+    height}} (DurabilityLabelImages::nestedOf()).
+#}
+{% set years = garan.years|replace({'.': 'MSC.decimalSeparator'|trans({}, 'contao_default')}) %}
+<p class="consho-garan consho-garan--nested">
+    <a href="{{ garan.src }}" target="_blank" rel="noopener" title="{{ 'CONSHO.garan.open'|trans({}, 'contao_default') }}">
+        <img src="{{ garan.nested.src }}" alt="{{ 'CONSHO.garan.alt'|trans([years], 'contao_default') }}"{% if garan.nested.width %} width="{{ garan.nested.width }}" height="{{ garan.nested.height }}"{% endif %} loading="lazy">
+    </a>
+    {% if garan.info|default('') %}
+        <a class="consho-garan__more" href="{{ garan.info }}" target="_blank" rel="noopener">{{ 'CONSHO.garan.more'|trans({}, 'contao_default') }}</a>
+    {% endif %}
+</p>

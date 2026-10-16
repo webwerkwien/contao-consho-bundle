@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         failOnRisky="true">
+    <!--
+        The suite renders real invoices through dompdf, which keeps fonts in
+        memory; its peak crossed 128M (a common php.ini default) at 3581 tests
+        in D-3 (2026-09-27). Set here so the result does not depend on the
+        machine's php.ini.
+    -->
+    <php>
+        <ini name="memory_limit" value="512M"/>
+    </php>
+    <testsuites>
+        <testsuite name="contao-consho-bundle">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+</phpunit>

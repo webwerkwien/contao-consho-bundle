@@ -1,0 +1,22 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_page']['consho_shop'] = ['Shop configuration', 'Which shop applies to this start page. The language variants of one shop point at the SAME configuration — a second one starts its own invoice number sequence and needs taxes and delivery countries all over again.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_currency'] = ['Currency', 'Applies to every page below this start page. The shop decides which currencies are on offer — where it accepts only one, that one is set without this field. The currency belongs to the way in, like the language: the same basket is simply recalculated in the other one.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_cartPage'] = ['Basket page', 'The page with the basket element. Adding an item leads here.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_checkoutPage'] = ['Checkout page', 'The page with the checkout element. The basket leads here; the step travels in the address.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_orderPage'] = ['Order page', 'The page where an order can be looked up. Buyers land there after the purchase, and the link in the confirmation mail points at it.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_shippingCostsPage'] = ['Shipping costs page', 'The page with the element "Shipping costs". It shows shipping methods, countries, prices and limits from the data of the shipping methods.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_subscriptionsPage'] = ['"My subscriptions" page', 'Optional: the protected account page with the "My subscriptions" element. The reminder before a subscription ends links there to renew the licence; without it, to the product page.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_cancellationPage'] =['"Cancel contracts here" page', 'The page with the "cancel contracts here" element (§ 312k BGB) — needed as soon as the shop sells subscriptions. Reachable without a login, and best linked from every page, in the footer for instance.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_withdrawalFormPage'] =['"Withdraw from contract" page', 'The page with the "withdraw from contract" element — the way to withdraw for buyers without the order mail. Not to be confused with the withdrawal instruction below: this is the function, the instruction is the legal text.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_termsElement'] = ['Terms and conditions', 'The content element of type "text" holding the terms. This very element is frozen with a checksum at the buy click — which is why it is an element and not a page. The page follows from it.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_withdrawalElement'] = ['Withdrawal instruction', 'The content element of type "text" holding the withdrawal instruction and the model withdrawal form — both have to reach the customer on a durable medium (Art. 6(1)(h), Art. 8(7) Directive 2011/83/EU). Frozen at the buy click and printed in the confirmation mail.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_warrantyPage'] = ['Guarantee notice', 'The page carrying the harmonised EU notice on the legal guarantee — mandatory since 27.09.2026 (§ 4 Abs. 1 Z 12 FAGG). Get the artwork from the European Commission ("Practical guidelines and high-resolution vector files"), unaltered and in this start point\'s language, plus a clickable link to europa.eu. Linked from the checkout.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_warrantyNotice'] = ['Guarantee notice as a file', 'The same EU notice as PDF, PNG or JPEG, in the language of this start point, in colour and unaltered. It is attached to every order confirmation — the confirmation has to contain it (Art. 8(7) Directive 2011/83/EU), and a linked image is not part of the mail.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_privacyPage'] = ['Privacy page', 'Linked in the checkout. No tick box and nothing to agree to: the order rests on the contract, not on consent.'];
+$GLOBALS['TL_LANG']['tl_page']['consho_legend'] = 'Consho';
+
+$GLOBALS['TL_LANG']['tl_page']['conshoPathTemplate'] = [
+    'Address pattern',
+    'What comes <strong>after this page</strong> in the address — the page alias in front of it comes from the page tree. Available are {alias}, {sku}, {manufacturer} and {type}, each of which is unique per product. <strong>No category</strong>: a product sits in several and would end up with several addresses. The "Route path" field below shows the result. ⚠️ Changing this changes <em>every</em> product address.',
+];

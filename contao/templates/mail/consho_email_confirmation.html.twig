@@ -1,0 +1,47 @@
+{#
+  Confirming an e-mail address (D-4, K3a), for any purpose Consho has
+  (ConfirmationPurpose). The texts of the purpose live under
+  CONSHO.mail.confirmEmail.<purpose>; what is common — validity, "not you?" —
+  under CONSHO.mail.confirmEmail.
+
+  The link leads to a page with a button. Opening it confirms nothing: mail
+  filters open links to inspect them (EmailConfirmation).
+
+  Loaded as @Contao/mail/consho_email_confirmation.html.twig. Parameters are a
+  LIST (vsprintf).
+
+  Variables:
+    purpose  the ConfirmationPurpose value
+    name     the addressee's name; '' where none is known
+    email    the address to confirm
+    link     the page with the confirmation button, token included
+#}
+{# Set inside each block: MailRenderer renders the blocks on their own, and a
+   variable set outside them does not exist there. #}
+{% block subject %}{{ ('CONSHO.mail.confirmEmail.' ~ purpose ~ '.subject')|trans({}, 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set texts = 'CONSHO.mail.confirmEmail.' ~ purpose %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{% if name %}{{ 'CONSHO.mail.salutation'|trans([name], 'contao_default') }}{% else %}{{ 'CONSHO.mail.confirmEmail.hello'|trans({}, 'contao_default') }}{% endif %}</p>
+<p style="margin: 0 0 12px 0;">{{ (texts ~ '.intro')|trans([email], 'contao_default') }}</p>
+
+<p style="margin: 24px 0;">
+    <a href="{{ link }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ (texts ~ '.button')|trans({}, 'contao_default') }}</a>
+</p>
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.confirmEmail.validity'|trans({}, 'contao_default') }}</p>
+<p style="margin: 0; color: #555555;">{{ 'CONSHO.mail.confirmEmail.notYou'|trans({}, 'contao_default') }}</p>
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

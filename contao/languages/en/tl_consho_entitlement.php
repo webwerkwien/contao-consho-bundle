@@ -1,0 +1,19 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['entitlement_legend'] = 'Entitlement';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['validity_legend'] = 'Validity';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['orderItem'] = ['Line', 'The order line the entitlement comes from.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['product'] = ['Article', 'ID of the article at the purchase.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['quantity'] = ['Quantity', 'One entitlement per line, with its quantity — one key or access per piece where the delivery hands one out.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['deliveryType'] = ['Delivery', 'How the entitlement is redeemed, as at its release.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['validFrom'] = ['Released on', 'The release counts as the delivery of the line.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['validUntil'] = ['Valid until', 'Empty: permanent. What stops at the end is the product\'s business.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['revoked'] = ['Revoked', 'The entitlement no longer applies, for an unpaid invoice, say. The order stays as it is.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['suspendedAt'] = ['Resting since', 'An invoice of the subscription is open past its payment term and grace period. Once it is paid, the entitlement comes back by itself.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['subscription'] = ['Subscription', 'The item\'s subscription. The entitlement ends with the subscription\'s paid period.'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['edit'] = ['Edit', 'Edit entitlement ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['show'] = ['Details', 'Show the details of entitlement ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['permanent'] = 'permanent';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['until'] = 'valid until %s';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['revokedLabel'] = 'revoked';
+$GLOBALS['TL_LANG']['tl_consho_entitlement']['suspendedLabel'] = 'resting since %s';

@@ -1,0 +1,136 @@
+{#
+  "Dashboard" (block Dashboard), rendered inside the back end frame by
+  DashboardBackendController. A header, then one block per shop, at most two
+  side by side (Michael, 2026-10-07, D2): figures, threshold, open points.
+  The stock below them: stock belongs to an article, not to a shop.
+
+  Contao's colour variables, so the page follows the back end's look and its
+  dark scheme without rules of its own.
+#}
+{% set l = lang %}
+<div class="tl_listing_container consho-dashboard">
+    {#- The header bar and, to its right, warnings and notes as two counting
+        boxes (Michael, 2026-10-09, DB1–DB3: "rechts vom Headerbalken"): grey at
+        0 and nothing to open, red or blue from 1; the list opens in a dialog
+        (backend-tabs.js, [data-consho-dialog]). The boxes stand also at 0, so
+        the page does not jump — like the tiles. #}
+    <div class="consho-dashboard__top">
+    <header class="consho-dashboard__header">
+        <h2>{{ l.title|default('Consho Dashboard') }}</h2>
+    </header>
+
+    <div class="consho-dashboard__findings">
+    {% for kind in ['warnings', 'notes'] %}
+        {% set count = findings[kind] %}
+        {% set label = kind == 'warnings' ? l.warnings|default('Warnungen') : l.notes|default('Hinweise') %}
+        {% if count > 0 %}
+            <button type="button" class="consho-dashboard__finding consho-dashboard__finding--{{ kind }}" data-consho-dialog="consho-findings-{{ kind }}" aria-haspopup="dialog">
+                <strong class="consho-dashboard__count">{{ count }}</strong><span class="consho-dashboard__label">{{ label }}</span>
+            </button>
+        {% else %}
+            <div class="consho-dashboard__finding consho-dashboard__finding--empty">
+                <strong class="consho-dashboard__count">0</strong><span class="consho-dashboard__label">{{ label }}</span>
+            </div>
+        {% endif %}
+    {% endfor %}
+    </div>
+    </div>
+
+    {% for kind in ['warnings', 'notes'] %}
+        {% if findings[kind] > 0 %}
+            <dialog id="consho-findings-{{ kind }}" class="consho-dashboard__dialog" aria-labelledby="consho-findings-{{ kind }}-title">
+                <header class="consho-dashboard__dialog-head">
+                    <h3 id="consho-findings-{{ kind }}-title">{{ kind == 'warnings' ? l.warnings|default('Warnungen') : l.notes|default('Hinweise') }} ({{ findings[kind] }})</h3>
+                    <form method="dialog"><button type="submit" class="consho-dashboard__dialog-close" aria-label="{{ l.close|default('Schließen') }}">×</button></form>
+                </header>
+                {# Built by the listener, which escapes every value it inserts. #}
+                {{ findings[kind ~ 'Html']|raw }}
+            </dialog>
+        {% endif %}
+    {% endfor %}
+
+    {% if noShop %}
+        <a href="{{ setupUrl }}" class="consho-dashboard__box">{{ l.setupStart|default('Noch keine Shop-Konfiguration — Einrichtung beginnen') }}</a>
+    {% endif %}
+
+    <div class="consho-dashboard__shops">
+    {% for shop in shops %}
+        <section class="consho-dashboard__shop">
+            {% if showShopTitles %}<h3 class="consho-dashboard__shop-title">{{ shop.title }}</h3>{% endif %}
+
+            {% if shop.reasonsHidden %}
+                <p class="consho-overdue">{{ l.incompleteHidden|default('Einrichtung unvollständig — dieser Shop verkauft nicht. Die Gründe sieht, wer die Einrichtung bearbeiten darf.') }}</p>
+            {% elseif shop.incomplete %}
+                <p class="consho-overdue">{{ l.incomplete|default('Einrichtung unvollständig — dieser Shop verkauft nicht.') }} <a href="{{ setupUrl }}">{{ l.setupContinue|default('Einrichtung fortsetzen') }}</a></p>
+            {% endif %}
+
+            {% if figuresShown %}
+                <p class="consho-dashboard__caption">{{ l.figures|default('Bestellungen und Bestellwert brutto, ohne Stornos') }}</p>
+                {% if shop.figures is empty %}
+                    <p class="tl_gray">{{ l.noOrders|default('Diesen Monat noch keine Bestellung.') }}</p>
+                {% else %}
+                    <div class="consho-dashboard__figures">
+                    {% for period in ['today', 'week', 'month'] %}
+                        {% set i = loop.index0 %}
+                        <div class="consho-dashboard__figure">
+                            <span class="consho-dashboard__label">{{ l[period]|default({today: 'Heute', week: '7 Tage', month: 'Monat'}[period]) }}</span>
+                            {% for row in shop.figures %}
+                                <strong class="consho-dashboard__count">{{ row.periods[i].orders }}</strong>
+                                <span class="consho-dashboard__total">{{ row.periods[i].total }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if shop.tax %}
+                <p class="consho-dashboard__tax">
+                    <a href="{{ taxUrl }}">{{ l.threshold|default('Lieferschwelle') }}</a>{% if shop.tax.label %} ({{ shop.tax.label }}){% endif %}:
+                    <span class="consho-dashboard__level--{{ shop.tax.thisLevel|default('ok') }}">{{ shop.tax.thisYear }} %</span>,
+                    {{ l.previousYear|default('Vorjahr') }} <span class="consho-dashboard__level--{{ shop.tax.lastLevel|default('ok') }}">{{ shop.tax.lastYear }} %</span>
+                    {% if shop.tax.shared %}<span class="tl_gray">— {{ l.sharedWith|default('gemeinsam mit %s')|format(shop.tax.shared) }}</span>{% endif %}
+                </p>
+            {% endif %}
+
+            {% if shop.tiles is not empty %}
+                <h4 class="consho-dashboard__heading">{{ l.openPoints|default('Offene Punkte') }}</h4>
+                <ul class="consho-dashboard__tiles">
+                {% for tile in shop.tiles %}
+                    <li class="consho-dashboard__tile{% if tile.count == 0 %} consho-dashboard__tile--empty{% endif %}">
+                        {% if tile.url %}
+                            <a href="{{ tile.url }}"><strong class="consho-dashboard__count">{{ tile.count }}</strong><span class="consho-dashboard__label">{{ tile.label }}</span></a>
+                        {% else %}
+                            <strong class="consho-dashboard__count">{{ tile.count }}</strong><span class="consho-dashboard__label">{{ tile.label }}</span>
+                        {% endif %}
+                        {% if tile.note %}
+                            <span class="consho-dashboard__note">
+                                {% if tile.noteUrl %}<a href="{{ tile.noteUrl }}" class="consho-overdue">{{ tile.note }}</a>{% else %}{{ tile.note }}{% endif %}
+                            </span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </section>
+    {% endfor %}
+    </div>
+
+    {% if figuresShown %}
+        <a href="{{ taxUrl }}" class="consho-dashboard__box">{{ l.taxOpen|default('Steuermeldung und Quartalsexport') }}</a>
+    {% endif %}
+
+    {% if stock %}
+        <section class="consho-dashboard__box consho-dashboard__stock">
+            <h3><a href="{{ stock.url }}">{{ l.reorder|default('Nachbestellen') }}: {{ stock.count }} {{ l.stockLow|default('Artikel unter Meldebestand') }}</a></h3>
+            <ul>
+            {% for item in stock.items %}
+                <li>{{ item }}</li>
+            {% endfor %}
+            </ul>
+            {% if stock.count > stock.items|length %}
+                <p><a href="{{ stock.url }}">{{ l.stockMore|default('und %d weitere')|format(stock.count - stock.items|length) }}</a></p>
+            {% endif %}
+        </section>
+    {% endif %}
+</div>

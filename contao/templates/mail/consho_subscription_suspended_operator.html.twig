@@ -1,0 +1,37 @@
+{#
+  The operator's copy of "Ihr Abo ruht" (Abo-5, P37), in the language of the
+  shop. Consho neither cancels nor dunns; the payment brings it back.
+
+  Loaded as @Contao/mail/consho_subscription_suspended_operator.html.twig.
+
+  Variables:
+    order         the overdue order in InvoiceView's shape, in the shop's language
+    customer      {name, email}
+    subscription  the subscription number
+    invoice       the open invoice's number; '' where none stands
+    dueDate       its payment term, formatted
+    outstanding   what is still open, formatted
+#}
+{% block subject %}{{ 'CONSHO.mail.subscriptionSuspended.operator.subject'|trans([subscription, invoice ?: order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.subscriptionSuspended.operator.intro'|trans([subscription, invoice ?: '–', order.orderNumber, dueDate, outstanding], 'contao_default') }}</p>
+
+<p style="margin: 0 0 16px 0;">
+    {{ customer.name }}<br>
+    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+</p>
+
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionSuspended.operator.note'|trans({}, 'contao_default') }}</p>
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

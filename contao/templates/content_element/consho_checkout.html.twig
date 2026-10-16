@@ -1,0 +1,551 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    The checkout (specification 4.2, C13): four fixed building blocks over one
+    to four steps.
+
+    Variables: blocks (the block names shown on THIS step), step, step_count,
+    state (CheckoutState), checkout (CheckoutData), address_fields, shipping_fields
+    (the delivery address's, C-10), guest_checkout,
+    total and net_total (formatted), problems, blocked_at, is_ready.
+
+    ⚠️ ONE FORM PER BLOCK, and each block posts its own name.
+
+    A browser submits every field of the form its button belongs to. With one
+    form around a step that shows address, shipping and payment at once
+    (step_count = 1), picking a shipping method would re-submit the address —
+    and the VIES check would run again on every click. Each block carries
+    `consho_checkout_block`, and the controller applies exactly that one.
+
+    ⚠️ No JavaScript anywhere. 15.5 requires all four step layouts to work
+    without it and with the keyboard alone, which is why the country has a
+    submit button of its own rather than an onchange, and why the step lives in
+    the address rather than in a tab widget.
+
+    Amounts arrive formatted — MoneyFormatter did the rounding and the
+    currency, not this file.
+#}
+
+{% block content %}
+    {# `data` is Contao's own content element row — the checkout's input is
+       `checkout`, so neither shadows the other. #}
+    {% set element_id = data.id|default('') %}
+    {% if login_required|default(false) %}
+        {#
+            C14: Gastbestellung aus und niemand angemeldet. Das Anmelde-Element
+            steht auf derselben Seite — Contaos eigenes, vom Betreiber gesetzt.
+        #}
+        {#- Abo-2 (P12): in a shop that welcomes guests, it is a subscription
+           in the basket that asks for the account — and the sentence says so. #}
+        <p class="consho-checkout__login-required">{{ (login_reason|default('shop') == 'subscription' ? "CONSHO.subscription.accountRequired" : "CONSHO.checkout.login_required")|trans({}, "contao_default") }}</p>
+    {% elseif renewal_refused|default('') %}
+        {#- Abo-7b (P70): a renewal line that cannot renew any more — the
+           customer removes it on the basket page, as the sentence says. #}
+        <p class="consho-checkout__renewal-refused" role="alert">{{ "CONSHO.subscription.renewalRefused"|trans([renewal_refused], "contao_default") }}</p>
+    {% elseif blockers|default([]) is not empty %}
+        {#
+            11.2: eine Warnung sperrt den Checkout dieses Shops. Was fehlt,
+            steht im Backend — dem Kunden zu sagen, dass keine Zahlungsart
+            eingerichtet ist, hilft niemandem.
+        #}
+        <p class="consho-checkout__blocked" role="alert">{{ "CONSHO.checkout.blocked"|trans({}, "contao_default") }}</p>
+    {% elseif already_ordered|default(false) %}
+        {#
+            F2: Der Kaufklick kam ein zweites Mal an, nachdem der erste schon
+            festgeschrieben hatte — zurück im Browser und noch einmal
+            abgeschickt. Der Warenkorb ist konvertiert und damit unauffindbar;
+            „Ihr Warenkorb ist leer" wäre die falsche Auskunft für jemanden,
+            der gerade gekauft hat.
+        #}
+        <p class="consho-checkout__already-ordered" role="status">{{ "CONSHO.checkout.alreadyOrdered"|trans({}, "contao_default") }}</p>
+    {% elseif state.cart.isEmpty %}
+        <p class="consho-checkout__empty">{{ "CONSHO.checkout.empty"|trans({}, "contao_default") }}</p>
+    {% else %}
+        <nav class="consho-checkout__steps" aria-label="{{ "CONSHO.checkout.steps"|trans({}, "contao_default") }}">
+            <ol>
+                {% for number in 1..step_count %}
+                    <li{% if number == step %} aria-current="step"{% endif %}>
+                        {{ ("CONSHO.checkout.step." ~ step_labels[number - 1])|trans({}, "contao_default") }}
+                    </li>
+                {% endfor %}
+            </ol>
+        </nav>
+
+        {% if problems is not empty %}
+            {#
+                One region, announced. A problem that only coloured a field red
+                would be invisible to a screen reader arriving after the
+                redirect — and every problem here arrives after one.
+            #}
+            <div class="consho-checkout__problems" role="alert">
+                <ul>
+                    {% for problem in problems %}
+                        <li>{{ ("CONSHO.checkout.problem." ~ problem)|trans({}, "contao_default") }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {% for block in blocks %}
+            {% if block == 'address' %}
+                <form method="post" class="consho-checkout__block consho-checkout__block--address">
+                    <input type="hidden" name="consho_checkout_block" value="address">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+                    {#
+                        WCAG 3.3.2: „required" allein ist eine Anweisung an den
+                        Browser, keine an den Menschen. Wer das Formular liest,
+                        bevor er es ausfüllt, muss sehen, was nötig ist — und
+                        ein Screenreader liest den Stern über aria-hidden nicht
+                        mit, weil das Feld schon required ist.
+                    #}
+                    <p class="consho-checkout__required-note">{{ "CONSHO.checkout.requiredNote"|trans({}, "contao_default") }}</p>
+
+                    <fieldset>
+                        <legend>{{ "CONSHO.checkout.address.billing"|trans({}, "contao_default") }}</legend>
+                        {% for field in address_fields %}
+                            {% set id = 'consho_billing_' ~ field ~ '_' ~ element_id %}
+                            {% set required = field in ['lastname', 'street', 'postal', 'city', 'country', 'email'] %}
+                            <p>
+                                <label for="{{ id }}">
+                                    {{- ("CONSHO.checkout.field." ~ field)|trans({}, "contao_default") -}}
+                                    {%- if required %} <span class="consho-checkout__required" aria-hidden="true">*</span>{% endif -%}
+                                </label>
+                                {% if field == 'country' %}
+                                    {#
+                                        Eine Auswahl, kein Freitext: „Österreich"
+                                        statt „AT" hätte keinen Steuersatz und
+                                        damit keinen Preis — der Besucher läse
+                                        eine Meldung über seinen Warenkorb.
+                                    #}
+                                    <select id="{{ id }}" name="billing_country" required autocomplete="billing country">
+                                        <option value="">{{ "CONSHO.checkout.choose"|trans({}, "contao_default") }}</option>
+                                        {% for code, label in billing_countries ?? countries %}
+                                            <option value="{{ code }}"{% if code == checkout.billing.country %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="{{ field == 'email' ? 'email' : 'text' }}"
+                                           id="{{ id }}"
+                                           name="billing_{{ field }}"
+                                           value="{{ attribute(checkout.billing, field) }}"
+                                           {% if field in ['lastname', 'street', 'postal', 'city', 'email'] %}required{% endif %}
+                                           autocomplete="{{ field == 'email' ? 'email' : 'billing ' ~ field }}">
+                                {% endif %}
+                            </p>
+                        {% endfor %}
+
+                        <p>
+                            {% set vat_id = 'consho_vat_id_' ~ element_id %}
+                            <label for="{{ vat_id }}">{{ "CONSHO.checkout.field.vatId"|trans({}, "contao_default") }}</label>
+                            <input type="text" id="{{ vat_id }}" name="consho_vat_id" value="{{ checkout.vatId }}">
+                        </p>
+
+                        {% if state.has(constant('Webwerkwien\\ContaoConshoBundle\\Checkout\\CheckoutProblem::VatServiceUnavailable')) %}
+                            {#
+                                C15: VIES is unreachable. The order goes ahead
+                                WITH tax, and this button asks again — nobody
+                                fixes an EU outage by waiting.
+                            #}
+                            <p class="consho-checkout__vat-retry">
+                                <button type="submit" name="consho_recheck_vat" value="1">
+                                    {{ "CONSHO.checkout.vat.recheck"|trans({}, "contao_default") }}
+                                </button>
+                            </p>
+                        {% endif %}
+                    </fieldset>
+
+                    <p>
+                        {% set separate_id = 'consho_separate_' ~ element_id %}
+                        <input type="checkbox" id="{{ separate_id }}" name="consho_separate_shipping" value="1"{% if checkout.separateShipping %} checked{% endif %}>
+                        <label for="{{ separate_id }}">{{ "CONSHO.checkout.address.separate"|trans({}, "contao_default") }}</label>
+                    </p>
+
+                    {#
+                        Always rendered, never hidden by script: without
+                        JavaScript a hidden fieldset is simply gone, and the
+                        visitor who ticked the box above has nowhere to type.
+                        The controller clears it when the box is not ticked.
+                    #}
+                    <fieldset>
+                        <legend>
+                            {{- "CONSHO.checkout.address.shipping"|trans({}, "contao_default") }}
+                            <span class="consho-checkout__hint">{{ "CONSHO.checkout.address.shippingHint"|trans({}, "contao_default") }}</span>
+                        </legend>
+                        {% for field in shipping_fields|default(address_fields) %}
+                            {% set id = 'consho_shipping_' ~ field ~ '_' ~ element_id %}
+                            {#- Keine Anrede und keine E-Mail in der Lieferadresse (Abnahme C-10): Die Bestellung speichert sie dort nicht, die Kontaktdaten sind die der Rechnungsadresse. Und alles hier gilt nur, wenn das Häkchen oben gesetzt ist — deshalb sagt es die Legende. -#}
+                            {% set required = field in ['lastname', 'street', 'postal', 'city', 'country'] %}
+                            <p>
+                                <label for="{{ id }}">
+                                    {{- ("CONSHO.checkout.field." ~ field)|trans({}, "contao_default") -}}
+                                    {%- if required %} <span class="consho-checkout__required" aria-hidden="true">*</span>{% endif -%}
+                                </label>
+                                {% if field == 'country' %}
+                                    <select id="{{ id }}" name="shipping_country" autocomplete="shipping country">
+                                        <option value="">{{ "CONSHO.checkout.choose"|trans({}, "contao_default") }}</option>
+                                        {% for code, label in countries %}
+                                            <option value="{{ code }}"{% if code == checkout.shipping.country %} selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                {% else %}
+                                    <input type="{{ field == 'email' ? 'email' : 'text' }}"
+                                           id="{{ id }}"
+                                           name="shipping_{{ field }}"
+                                           value="{{ attribute(checkout.shipping, field) }}"
+                                           autocomplete="shipping {{ field }}">
+                                {% endif %}
+                            </p>
+                        {% endfor %}
+                    </fieldset>
+
+                    <button type="submit">{{ "CONSHO.checkout.save"|trans({}, "contao_default") }}</button>
+                </form>
+
+
+            {% endif %}
+
+            {% if block == 'shipping' %}
+                <form method="post" class="consho-checkout__block consho-checkout__block--shipping">
+                    <input type="hidden" name="consho_checkout_block" value="shipping">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+                    <fieldset>
+                        <legend>{{ "CONSHO.checkout.shipping"|trans({}, "contao_default") }}</legend>
+                        {% for option in state.shippingOptions %}
+                            {% set id = 'consho_shipping_method_' ~ option.id ~ '_' ~ element_id %}
+                            <p>
+                                {#
+                                    An unavailable method stays in the list,
+                                    disabled (C2). One that simply disappeared
+                                    would look like a bug to whoever chose it.
+                                #}
+                                <input type="radio"
+                                       id="{{ id }}"
+                                       name="consho_shipping_method"
+                                       value="{{ option.id }}"
+                                       {% if not option.available %}disabled{% endif %}
+                                       {% if state.shipping and state.shipping.id == option.id %} checked{% endif %}>
+                                <label for="{{ id }}">
+                                    {{ option.title }}
+                                    {%- if option_amounts.shipping[option.id] is defined %}: {{ option_amounts.shipping[option.id] }}{% endif %}
+                                    {% if not option.available %}
+                                        <span class="consho-checkout__unavailable">{{ "CONSHO.checkout.unavailable"|trans({}, "contao_default") }}</span>
+                                    {% endif %}
+                                </label>
+                            </p>
+                        {% endfor %}
+                    </fieldset>
+
+                    {#- E-6 (V6): only when the chosen carrier needs it — and only then is it kept. -#}
+                    {% if state.needsPhone %}
+                        {% set id = 'consho_shipping_phone_' ~ element_id %}
+                        <p>
+                            <label for="{{ id }}">
+                                {{- "CONSHO.checkout.shippingPhone"|trans({}, "contao_default") -}}
+                                <span class="consho-checkout__required" aria-hidden="true">*</span>
+                            </label>
+                            <input type="tel" id="{{ id }}" name="consho_shipping_phone" value="{{ checkout.shippingPhone }}" autocomplete="tel" required aria-describedby="{{ id }}_hint">
+                            <span id="{{ id }}_hint">{{ "CONSHO.checkout.shippingPhoneHint"|trans({}, "contao_default") }}</span>
+                        </p>
+                    {% endif %}
+
+                    <button type="submit">{{ "CONSHO.checkout.save"|trans({}, "contao_default") }}</button>
+                </form>
+            {% endif %}
+
+            {% if block == 'payment' %}
+                <form method="post" class="consho-checkout__block consho-checkout__block--payment">
+                    <input type="hidden" name="consho_checkout_block" value="payment">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+                    <fieldset>
+                        <legend>{{ "CONSHO.checkout.payment"|trans({}, "contao_default") }}</legend>
+                        {#- Wertgutscheine (E1): nothing left for a method to collect. #}
+                        {% if state.coveredByVouchers %}
+                            <p class="consho-checkout__covered">{{ "CONSHO.cart.voucher.covered"|trans({}, "contao_default") }}</p>
+                        {% endif %}
+                        {% for option in state.coveredByVouchers ? [] : state.paymentOptions %}
+                            {% set id = 'consho_payment_method_' ~ option.id ~ '_' ~ element_id %}
+                            <p>
+                                <input type="radio"
+                                       id="{{ id }}"
+                                       name="consho_payment_method"
+                                       value="{{ option.id }}"
+                                       {% if not option.available %}disabled{% endif %}
+                                       {% if state.payment and state.payment.id == option.id %} checked{% endif %}>
+                                <label for="{{ id }}">
+                                    {{ option.title }}
+                                    {%- if option_amounts.payment[option.id] is defined %}: {{ option_amounts.payment[option.id] }}{% endif %}
+                                    {% if not option.available %}
+                                        <span class="consho-checkout__unavailable">{{ "CONSHO.checkout.unavailable"|trans({}, "contao_default") }}</span>
+                                    {% endif %}
+                                </label>
+                            </p>
+                        {% endfor %}
+                    </fieldset>
+
+                    <button type="submit">{{ "CONSHO.checkout.save"|trans({}, "contao_default") }}</button>
+                </form>
+            {% endif %}
+
+            {% if block == 'review' %}
+                {#
+                    The button solution, § 8 Abs. 2 FAGG and § 312j Abs. 3 BGB.
+
+                    ⚠️ NOTHING may come between the list of what is being
+                    bought and the button. "Unmittelbar bevor" is not a figure
+                    of speech: an advert, a newsletter box or a delivery note
+                    between the two makes the order revocable. The legal notice
+                    and the tick box sit above the details on purpose, not
+                    between them and the button.
+
+                    The checksum travels as a hidden field and is compared
+                    against a freshly calculated state at the click (7.3). A
+                    basket changed in another tab therefore never buys quietly
+                    at the old price.
+                #}
+                <div class="consho-checkout__block consho-checkout__block--review">
+                    <h3>{{ "CONSHO.checkout.review"|trans({}, "contao_default") }}</h3>
+
+                    {% if purchase_problem|default(null) %}
+                        <p class="consho-checkout__purchase-problem" role="alert">
+                            {{ ("CONSHO.checkout.purchase." ~ purchase_problem)|trans({}, "contao_default") }}
+                        </p>
+                    {% endif %}
+
+                    <form method="post">
+                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                        <input type="hidden" name="consho_checkout_block" value="review">
+                        <input type="hidden" name="consho_fingerprint" value="{{ fingerprint|default('') }}">
+
+                        {% if legal_texts|default({}) is not empty or privacy_url|default(null) or warranty_url|default(null) %}
+                            <p class="consho-checkout__legal">
+                                {{ "CONSHO.checkout.legal.intro"|trans({}, "contao_default") }}
+                                {% for kind, text in legal_texts %}
+                                    {% if text.url %}
+                                        <a href="{{ text.url }}" target="_blank" rel="noopener noreferrer">
+                                            {{- ("CONSHO.checkout.legal." ~ kind)|trans({}, "contao_default") -}}
+                                            {#
+                                                WCAG 3.2.5 / G201: Dass ein neues Fenster aufgeht,
+                                                muss man vorher wissen können — sichtbar UND für
+                                                Screenreader. Das Fenster selbst bleibt: Wer die AGB
+                                                liest, soll den ausgefüllten Checkout nicht verlieren.
+                                            #}
+                                            <span class="consho-checkout__new-window">{{ "CONSHO.checkout.legal.newWindow"|trans({}, "contao_default") }}</span></a>
+                                    {% else %}
+                                        {{ ("CONSHO.checkout.legal." ~ kind)|trans({}, "contao_default") }}
+                                    {% endif %}
+                                    {% if not loop.last %} · {% endif %}
+                                {% endfor %}
+                                {#
+                                    Die harmonisierte Gewährleistungs-Mitteilung
+                                    (§ 4 Abs 1 Z 12 FAGG, DVO (EU) 2025/1960). Die
+                                    Guidelines (2.3) nennen die Checkout-Seite
+                                    ausdrücklich als zulässigen Ort und verlangen
+                                    einen KLICKBAREN Link zum selben Ziel wie der
+                                    QR-Code — den trägt die verlinkte Seite.
+                                #}
+                                {% if warranty_url|default(null) %}
+                                    · <a href="{{ warranty_url }}" target="_blank" rel="noopener noreferrer">
+                                        {{- "CONSHO.checkout.legal.warranty"|trans({}, "contao_default") -}}
+                                        <span class="consho-checkout__new-window">{{ "CONSHO.checkout.legal.newWindow"|trans({}, "contao_default") }}</span></a>
+                                {% endif %}
+
+                                {% if privacy_url|default(null) %}
+                                    · <a href="{{ privacy_url }}" target="_blank" rel="noopener noreferrer">
+                                        {{- "CONSHO.checkout.legal.privacy"|trans({}, "contao_default") -}}
+                                        <span class="consho-checkout__new-window">{{ "CONSHO.checkout.legal.newWindow"|trans({}, "contao_default") }}</span></a>
+                                {% endif %}
+                            </p>
+                        {% endif %}
+
+                        {% if terms_required|default(false) %}
+                            <p class="consho-checkout__terms">
+                                <input type="checkbox" name="consho_terms" id="consho_terms_{{ element_id }}" value="1" required>
+                                <label for="consho_terms_{{ element_id }}">
+                                    {{- "CONSHO.checkout.terms_accept"|trans({}, "contao_default") -}}
+                                    <span class="consho-checkout__required" aria-hidden="true">*</span>
+                                </label>
+                            </p>
+                        {% endif %}
+
+                        {#
+                            F-3, F15: consent and confirmation in ONE box, the
+                            wording close to § 356 Abs. 6 BGB / § 18 Abs. 1
+                            Z 11 FAGG. Not required (F16): without it the
+                            digital lines are released after the withdrawal
+                            period. The text lives in the language file, where
+                            the operator can change it.
+                        #}
+                        {#
+                            The hint on a line of its own (acceptance on c5,
+                            2026-09-29): inline it read as part of the consent.
+                        #}
+                        {#
+                            Abo-2, P14 (A12): still ONE box and one tick, worded
+                            after the withdrawal kinds of the digital lines —
+                            content (§ 356 Abs. 6 BGB, § 18 Abs. 1 Z 11 FAGG),
+                            service (§ 356 Abs. 5 Nr. 2 BGB, § 10 FAGG), or both
+                            sentences. No kinds known means content, as in F-3.
+                            The hint names the service case only when there is
+                            nothing else in the box.
+                        #}
+                        {% if digital_consent|default(false) %}
+                            {% set consent_kinds = digital_consent_kinds|default([]) is empty ? ['content'] : digital_consent_kinds %}
+                            <div class="consho-checkout__digital-consent">
+                                <p>
+                                    <input type="checkbox" name="consho_digital_consent" id="consho_digital_consent_{{ element_id }}" value="1" aria-describedby="consho_digital_consent_hint_{{ element_id }}">
+                                    <label for="consho_digital_consent_{{ element_id }}">
+                                        {%- for kind in consent_kinds -%}
+                                            {{- (kind == 'service' ? "CONSHO.checkout.digitalConsentService" : "CONSHO.checkout.digitalConsent")|trans({}, "contao_default") -}}
+                                            {%- if not loop.last %} {% endif -%}
+                                        {%- endfor -%}
+                                    </label>
+                                </p>
+                                <p class="consho-checkout__hint" id="consho_digital_consent_hint_{{ element_id }}"><small>{{ (consent_kinds == ['service'] ? "CONSHO.checkout.digitalConsentHintService" : ('service' in consent_kinds ? "CONSHO.checkout.digitalConsentHintMixed" : "CONSHO.checkout.digitalConsentHint"))|trans({}, "contao_default") }}</small></p>
+                                {#- Abo-7b (review S5): a renewal waits for the consent too. #}
+                                {% if renewal_consent_hint|default(false) %}
+                                    <p class="consho-checkout__hint consho-checkout__hint--renewal"><small>{{ "CONSHO.checkout.renewalConsentHint"|trans({}, "contao_default") }}</small></p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        {% if state.minimumAge > 0 %}
+                            <p class="consho-checkout__age">
+                                {{ "CONSHO.checkout.age"|trans([state.minimumAge], "contao_default") }}
+                            </p>
+                        {% endif %}
+
+                        {#
+                            From here to the button: only what § 8 FAGG asks
+                            for. Add nothing below this comment.
+                        #}
+                        <div class="consho-checkout__essentials">
+                            <ul class="consho-checkout__review-lines">
+                                {% for line in review_lines|default([]) %}
+                                    <li>
+                                        <span class="consho-checkout__review-quantity">{{ line.quantity }} ×</span>
+                                        <span class="consho-checkout__review-title">
+                                            {{- line.title|default("CONSHO.cart.unknownArticle"|trans({}, "contao_default")) -}}
+                                            {#
+                                                Die Artikelnummer steht dabei, weil CartTitles den Titel des
+                                                HAUPTPRODUKTS liefert: Zwei Varianten desselben Produkts läsen
+                                                sich sonst gleich — ausgerechnet dort, wo § 8 FAGG die
+                                                wesentlichen Merkmale verlangt. Dieselbe Regel wie im
+                                                Warenkorb seit C-3.
+                                            #}
+                                            {%- if line.sku %} <span class="consho-checkout__review-sku">{{ line.sku }}</span>
+                                            {%- else %} <span class="consho-checkout__review-position">#{{ line.position }}</span>{% endif -%}
+                                        </span>
+                                        <span class="consho-checkout__review-amount">{{ line.amount }}{% if review_net|default(false) %} <small class="consho-checkout__review-tax">{{ "CONSHO.checkout.reviewNet"|trans({}, "contao_default") }}</small>{% endif %}</span>
+                                        {#- The term and what follows it (Abo-2, A10) — § 8 FAGG
+                                           asks for the duration right here. #}
+                                        {% if line.terms|default(null) %}
+                                            <small class="consho-checkout__review-terms">{{ line.terms }}</small>
+                                        {% endif %}
+                                        {% if line.renews|default('') %}
+                                            <small class="consho-checkout__review-renews">{{ "CONSHO.cart.renews"|trans([line.renews], "contao_default") }}</small>
+                                        {% endif %}
+                                        {#- Block GARAN: § 8 Abs. 1 FAGG names Z 12a among what
+                                           stands right before the button. #}
+                                        {% if line.garan|default(null) %}
+                                            {% include "@Contao/consho/garan_label.html.twig" with {garan: line.garan} only %}
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+
+                            <dl class="consho-checkout__totals">
+                                {#
+                                    ⚠️ Mit BETRAG, nicht nur mit Namen. § 8 Abs. 2 FAGG verweist auf
+                                    § 4 Abs. 1 Z 4: Gesamtpreis samt Steuern UND allen Fracht-, Liefer-
+                                    und Versandkosten; § 312j Abs. 2 BGB sagt dasselbe über
+                                    Art. 246a EGBGB. Die erste Fassung nannte nur „Paket" — die
+                                    Differenz zwischen den Zeilensummen und dem Gesamtbetrag blieb
+                                    unerklärt (Review 2026-09-22).
+                                #}
+                                {% if review_shipping|default(null) %}
+                                    <dt>{{ "CONSHO.checkout.shipping"|trans({}, "contao_default") }}</dt>
+                                    <dd>
+                                        {{- review_shipping.title }}:
+                                        {% if review_shipping.free %}{{ "CONSHO.checkout.free"|trans({}, "contao_default") }}
+                                        {%- else %}{{ review_shipping.amount }}{% endif -%}
+                                    </dd>
+                                {% endif %}
+
+                                {#- Block H (H-4): the cart rule — its amount is part of
+                                    the difference to the total above it. A typed code
+                                    that does not apply here says why (W5: a guest's
+                                    address may have used it already). #}
+                                {% if review_discount|default(null) %}
+                                    {% if review_discount.title %}
+                                        <dt>{{ review_discount.title }}{% if review_discount.code %} ({{ review_discount.code }}){% endif %}</dt>
+                                        <dd>{{ review_discount.freeShipping ? "CONSHO.cart.discount.freeShipping"|trans({}, "contao_default") : review_discount.amount }}</dd>
+                                    {% endif %}
+                                    {% if review_discount.status not in ['none', 'applied', 'superseded'] %}
+                                        <dd class="consho-checkout__code-status" role="status">{{ ("CONSHO.cart.discount.status." ~ review_discount.status)|trans([discount_code|default(''), review_discount.missing|default('')], "contao_default") }}</dd>
+                                    {% endif %}
+                                {% endif %}
+
+                                {% if review_payment|default(null) %}
+                                    <dt>{{ "CONSHO.checkout.payment"|trans({}, "contao_default") }}</dt>
+                                    <dd>
+                                        {{- review_payment.title }}
+                                        {%- if not review_payment.free %}: {{ review_payment.amount }}{% endif -%}
+                                    </dd>
+                                {% endif %}
+
+                                {% if state.reverseCharge %}
+                                    <dt>{{ "CONSHO.checkout.total.net"|trans({}, "contao_default") }}</dt>
+                                    <dd>{{ net_total }}</dd>
+                                    <dd class="consho-checkout__reverse-charge">{{ "CONSHO.checkout.reverse_charge"|trans({}, "contao_default") }}</dd>
+                                {% elseif untaxed|default(false) %}
+                                    {#- Acceptance WG-7: not taxable — no net line, no "incl. VAT". #}
+                                    <dt>{{ "CONSHO.checkout.total.plain"|trans({}, "contao_default") }}</dt>
+                                    <dd><strong>{{ total }}</strong></dd>
+                                {% else %}
+                                    <dt>{{ "CONSHO.checkout.total.net"|trans({}, "contao_default") }}</dt>
+                                    <dd>{{ net_total }}</dd>
+                                    <dt>{{ "CONSHO.checkout.total.gross"|trans({}, "contao_default") }}</dt>
+                                    <dd><strong>{{ total }}</strong></dd>
+                                {% endif %}
+
+                                {#- Wertgutscheine (WG-5, E3): payments, below the total. #}
+                                {% if review_vouchers|default([]) is not empty %}
+                                    {% for voucher in review_vouchers %}
+                                        {% if voucher.pays %}
+                                            <dt>{{ "CONSHO.cart.voucher.applied"|trans([voucher.code], "contao_default") }}</dt>
+                                            <dd>{{ voucher.amount }} <span class="consho-checkout__voucher-after">{{ "CONSHO.cart.voucher.after"|trans([voucher.code, voucher.after], "contao_default") }}</span></dd>
+                                        {% elseif voucher.status != 'usable' %}
+                                            <dd class="consho-checkout__code-status" role="status">{{ ("CONSHO.cart.voucher.status." ~ voucher.status)|trans([voucher.code, voucher.balance], "contao_default") }}</dd>
+                                        {% endif %}
+                                    {% endfor %}
+                                    <dt>{{ "CONSHO.cart.voucher.payable"|trans({}, "contao_default") }}</dt>
+                                    <dd><strong>{{ payable }}</strong></dd>
+                                    {% if cart_url|default('') %}
+                                        <dd><a href="{{ cart_url }}">{{ "CONSHO.cart.voucher.change"|trans({}, "contao_default") }}</a></dd>
+                                    {% endif %}
+                                {% endif %}
+                            </dl>
+
+                            {#
+                                Der Knopf nur, wenn auch gekauft werden kann.
+                                Ein Kaufknopf neben einer Meldung wie „Bitte
+                                vervollständigen Sie Ihre Adresse" wirft bei
+                                jedem Klick an dieselbe Stelle zurück — er sähe
+                                aus wie ein Ausweg und wäre keiner. Was fehlt,
+                                steht oben in der Problem-Region.
+                            #}
+                            {% if is_ready %}
+                                <button type="submit" class="consho-checkout__buy">
+                                    {{ buy_label|trans({}, "contao_default") }}
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endblock %}

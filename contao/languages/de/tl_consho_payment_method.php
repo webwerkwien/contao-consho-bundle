@@ -1,0 +1,43 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['title'] = ['Bezeichnung', 'So erscheint die Zahlungsart im Checkout und auf der Rechnung.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['type'] = ['Typ', 'Der Code hinter der Zahlungsart. Ein Zahlungsmodul bringt weitere Typen mit.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['types'] = ['cod' => 'Nachnahme', 'invoice' => 'Auf Rechnung', 'prepayment' => 'Vorkasse', 'test' => 'Test-Anbieter (kein Geld)'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['description'] = ['Beschreibung', 'Erscheint im Checkout unter der Bezeichnung.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['instructions'] = ['Zahlungshinweis', 'Erscheint nach der Bestellung und in der Bestätigung, bei Vorkasse zusammen mit der Bankverbindung — etwa „Bitte überweisen Sie binnen 7 Tagen unter Angabe der Bestellnummer."'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['accountHolder'] = ['Kontoinhaber', 'Genau so, wie die Bank das Konto führt. Banken gleichen seit 9. Oktober 2025 Name und IBAN ab; ein abweichender Name löst beim Kunden eine Warnung aus. Höchstens 70 Zeichen (SEPA).'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['iban'] = ['IBAN', 'Wird beim Speichern mit der Prüfziffer geprüft und ohne Leerzeichen gespeichert.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['bic'] = ['BIC', 'Innerhalb des SEPA-Raums nicht nötig.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['bankName'] = ['Bank', 'Name der Bank.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['giroCode'] = ['Giro-Code auf der Rechnung', 'Druckt einen QR-Code, den Banking-Apps als Überweisung übernehmen: Kontoinhaber, IBAN, BIC, Betrag und Rechnungsnummer. Nur bei Rechnungen in Euro ab 0,01 €. Sonst — oder wenn die Bankverbindung unvollständig ist — fehlt der Code, die Rechnung bleibt gleich.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxMode'] = ['Steuer auf eine Gebühr', 'Nur wenn die Zahlungsart eine Gebühr verlangt. „Anteilig" teilt sie auf die Steuersätze der Ware auf wie den Versand, „fest" versteuert sie mit einer Steuerklasse. Ob eine Zahlungsgebühr Nebenleistung zur Ware oder eine eigene Leistung ist, entscheidet Consho nicht — klären Sie es mit Ihrer Steuerberatung. Ohne Auswahl wird eine Zahlungsart mit Gebühr nicht angeboten.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxModes'] = ['proportional' => 'anteilig nach Warenwert', 'fixed' => 'feste Steuerklasse'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxClass'] = ['Steuerklasse der Gebühr', 'Nur bei „fest". Ohne Steuerklasse wird eine Zahlungsart mit Gebühr nicht angeboten.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['dueDays'] = ['Zahlungsziel (Tage)', 'Die Rechnung entsteht beim Versand und nennt „Zahlbar bis" — so viele Tage nach ihrem Datum. Leer: 14 Tage.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['allowedGroups'] = ['Nur für Kundengruppen', 'Leer: alle, auch Gäste. Mit Auswahl nur Mitglieder dieser Gruppen — Gäste dann nicht.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['maxNet'] = ['Höchstbetrag netto', 'Ware und Versand netto. Darüber wird „Auf Rechnung" nicht angeboten. Leer: ohne Grenze.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['maxNetCurrency'] = ['Währung des Höchstbetrags', 'Etwa EUR. In jeder anderen Währung wird „Auf Rechnung" nicht angeboten, solange ein Höchstbetrag eingetragen ist.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['sameCountry'] = ['Nur bei gleichem Land', 'Nur anbieten, wenn Rechnungs- und Lieferadresse im selben Land liegen.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['notHandedOutAtOnce'] = ['Nicht für digitale Güter', 'Nicht anbieten, wenn Downloads, Lizenzschlüssel oder Wertgutscheine im Warenkorb sind. Sie gelten mit der Freigabe als geliefert und sind sofort nutzbar; wer erst das Geld will, verkauft sie per Vorkasse.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['graceDays'] = ['Nachfrist (Tage)', 'Ist die Rechnung so viele Tage nach dem Zahlungsziel noch offen, ruhen die digitalen Güter der Bestellung, bis die Zahlung erfasst ist. Leer: 14 Tage.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['fee'] = ['Gebühr netto', 'Leer: keine Gebühr. Ob und wie eine Gebühr für eine Zahlungsart verlangt werden darf, verantworten Sie. Zum Nachlesen: § 56 Abs. 3 ZaDiG 2018 („Die Erhebung von Entgelten durch den Zahlungsempfänger im Falle der Nutzung eines bestimmten Zahlungsinstrumentes ist unzulässig.") und § 270a BGB (unwirksam ist ein Entgelt für SEPA-Basis- und -Firmenlastschrift, SEPA-Überweisung und — soweit die VO (EU) 2015/751 anwendbar ist, bei Verbrauchern — Zahlungskarte).'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeCurrency'] = ['Währung der Gebühr', 'Etwa EUR. In jeder anderen Währung wird die Nachnahme nicht angeboten, solange eine Gebühr eingetragen ist.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['published'] = ['Veröffentlicht', 'Nur veröffentlichte Zahlungsarten werden im Checkout angeboten, auch wenn ein Shop sie ausgewählt hat.'];
+
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['title_legend'] = 'Bezeichnung und Typ';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['fee_legend'] = 'Gebühr';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['invoice_legend'] = 'Auf Rechnung';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['cod_legend'] = 'Nachnahme';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['bank_legend'] = 'Bankverbindung';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['test_legend'] = 'Test-Anbieter';
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResult'] = ['Folgezahlung', 'Was eine Abbuchung einer Abo-Folgebestellung ergibt. „Ausstehend“ bekommt keine Antwort und geht nach 7 Tagen „Auf Rechnung“.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResults'] = ['paid' => 'bezahlt', 'pending' => 'ausstehend', 'failed' => 'fehlgeschlagen'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testSecret'] = ['Geheimnis', 'Unterschreibt die Nachrichten des Test-Anbieters. Mindestens 16 Zeichen. Den Test-Anbieter gibt es nur mit CONSHO_TEST_PAYMENT=1, und er nimmt nie Geld an.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['publish_legend'] = 'Veröffentlichung';
+
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['new'] = ['Neue Zahlungsart', 'Zahlungsart anlegen'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['edit'] = ['Bearbeiten', 'Zahlungsart ID %s bearbeiten'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['copy'] = ['Duplizieren', 'Zahlungsart ID %s duplizieren'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['delete'] = ['Löschen', 'Zahlungsart ID %s löschen'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['toggle'] = ['Veröffentlichen', 'Zahlungsart ID %s veröffentlichen oder verbergen'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['show'] = ['Details', 'Details der Zahlungsart ID %s anzeigen'];

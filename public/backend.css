@@ -1,0 +1,672 @@
+/*
+ * Consho — Symbole für die drei Backend-Menügruppen.
+ *
+ * Contao vergibt jeder Gruppe die Klasse `group-<gruppenname>` (BackendUser::
+ * navigation()). Die Modul-Einträge darunter tragen keine Symbole — in Contao 5
+ * setzt `menu_level_1` nur Einrückung. Symbole gibt es also ausschließlich auf
+ * Gruppenebene.
+ *
+ * ── Warum `mask` und nicht `background-image` ─────────────────────────────
+ *
+ * Contaos eigene Gruppensymbole sind grau — `--nav-group`, dieselbe Farbe wie
+ * die Beschriftung daneben. Die übrigen Symbole im Ordner sind eingefärbt:
+ * `store` orange, `copy` grün, `info` blau. Direkt als Hintergrundbild gesetzt,
+ * bringen sie ihre Farbe mit und stehen bunt neben Contaos grauen.
+ *
+ * `mask` dreht das um: Die Datei liefert nur noch die FORM, die Farbe kommt aus
+ * `background-color`. Damit lässt sich jedes Symbol des Ordners in exakt der
+ * Menüfarbe zeichnen — und weil `--nav-group` im dunklen Schema von selbst auf
+ * #9fa4a8 wechselt, entfällt jede eigene Dark-Mode-Regel.
+ *
+ * Die Maske sitzt auf einem `::before`, nicht auf dem Link selbst: Eine Maske
+ * auf dem `<a>` würde auch dessen Text ausstanzen.
+ *
+ * ── 🔴 Die Falle mit `var()` und relativen Pfaden ─────────────────────────
+ *
+ * Contao stellt für seine Gruppensymbole Variablen bereit (`--icon-wrench`).
+ * Aus einer FREMDEN Datei sind die unbrauchbar: Ihr Wert ist ein relativer
+ * Pfad, und der wird gegen das Stylesheet aufgelöst, das die Variable BENUTZT.
+ * Aus dieser Datei heraus zeigt `--icon-wrench` auf
+ * `bundles/contaoconsho/icons/wrench.svg` — ein 404, ohne jede Meldung.
+ * Belegt am 2026-09-09 auf dem Testserver.
+ *
+ * Eigene Variablen sind davon nicht betroffen: `--consho-icon` wird hier
+ * deklariert UND hier benutzt, der Pfad löst also gegen diese Datei auf.
+ *
+ * ⚠️ Deshalb `../../` und nicht `/system/…` — so trifft es auch, wenn Contao
+ * in einem Unterverzeichnis installiert ist.
+ */
+
+#tl_navigation .menu_level_0 a[class^="group-consho"] {
+    position: relative;
+}
+
+#tl_navigation .menu_level_0 a[class^="group-consho"]::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 3px;
+    width: 13px;
+    height: 13px;
+    transform: translateY(-50%);
+    background-color: var(--nav-group, #6c7174);
+    -webkit-mask: var(--consho-icon) center / 13px 13px no-repeat;
+    mask: var(--consho-icon) center / 13px 13px no-repeat;
+}
+
+/* Betrieb — Bestellungen. Der Einkaufswagen. */
+#tl_navigation .group-consho {
+    --consho-icon: url("../../system/themes/flexible/icons/store.svg");
+}
+
+/* Stammdaten — Produkte, Hersteller. */
+#tl_navigation .group-consho_data {
+    --consho-icon: url("../../system/themes/flexible/icons/modules.svg");
+}
+
+/* Einrichtung — dasselbe Symbol wie Contaos eigene Systemgruppe. */
+#tl_navigation .group-consho_setup {
+    --consho-icon: url("../../system/themes/flexible/icons/wrench.svg");
+}
+
+/*
+ * ── Statussignale in der Bestellliste ────────────────────────────────────
+ *
+ * Dieselbe Maskentechnik wie oben, hier aber mit vier Farben statt einer:
+ * Das SYMBOL sagt, worum es geht (Bestellung, Zahlung, Lieferung), die FARBE
+ * sagt, wie es steht.
+ *
+ * Die Farben sind Contaos eigene semantische Variablen, nicht die Hex-Werte
+ * seiner Symbole. Jede davon ist im dunklen Schema neu gesetzt — ein festes
+ * #c7241f bliebe dort ein dunkles Rot auf dunklem Grund.
+ *
+ * Die Signale stehen am ZEILENANFANG, nicht am Ende. Am Ende säßen sie neben
+ * den Operator-Knöpfen: bunte Zeichen neben bunten Zeichen, die einen bedeuten
+ * „Zustand", die anderen „hier klicken". Vorn bilden sie eine Spalte, die sich
+ * nach unten abscannen lässt.
+ */
+
+.consho-signals {
+    display: inline-flex;
+    gap: 5px;
+    margin-right: 10px;
+    vertical-align: -2px;
+}
+
+.consho-signal {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    -webkit-mask: var(--consho-icon) center / 14px 14px no-repeat;
+    mask: var(--consho-icon) center / 14px 14px no-repeat;
+}
+
+.consho-signal--store {
+    --consho-icon: url("../../system/themes/flexible/icons/store.svg");
+}
+
+.consho-signal--sync {
+    --consho-icon: url("../../system/themes/flexible/icons/sync.svg");
+}
+
+/*
+ * Lieferung: das Duplizieren-Symbol — zwei versetzte Kästen, die als Pakete
+ * lesbar sind. Contao hat weder Lastwagen noch Paket in der passenden
+ * Strichstärke; `archive` wäre wörtlicher, ist aber mit stroke-width 1.5
+ * gezeichnet und wirkt neben den anderen zu dünn.
+ */
+.consho-signal--copy {
+    --consho-icon: url("../../system/themes/flexible/icons/copy.svg");
+}
+
+/* Der Widerruf (D-3): der Rückgängig-Pfeil — die Liste „Widerrufe" dreht die
+ * drei Symbole der Bestellung um (Gesamt, Rücksendung, Rückzahlung). */
+.consho-signal--undo {
+    --consho-icon: url("../../system/themes/flexible/icons/undo.svg");
+}
+
+.consho-signal--open { background-color: var(--gray, #747476); }
+.consho-signal--progress { background-color: var(--orange, #e67300); }
+.consho-signal--attention { background-color: var(--red, #c7241f); }
+.consho-signal--done { background-color: var(--green, #49840b); }
+
+/*
+ * ── Der Sortierhinweis der Bilderauswahl ──────────────────────────────────
+ *
+ * Contaos Hinweis wird ausgeblendet — der Satz steht bei uns in der
+ * Feldhilfe.
+ *
+ * Drei Versuche, ihn zu platzieren, drei neue Überlappungen: über den
+ * Bildern, unter der Feldhilfe, wieder über den Bildern. Der Absatz ist auf
+ * `top: -50px` gebaut, also auf die Annahme, dass über dem Dateibaum genau
+ * eine Feldbeschriftung steht — jede Palette, die anders aussieht, bringt
+ * ihn durcheinander.
+ *
+ * Der Hinweis existiert, weil eine DCA im Allgemeinen keine Feldhilfe zum
+ * Sortieren hat. Unsere hat eine. Damit ist der Absatz nicht falsch
+ * positioniert, sondern überflüssig.
+ */
+#tl_consho_product .selector_container p.sort_hint {
+    display: none;
+}
+
+/*
+ * ── Der Knopf an einem Hinweis ────────────────────────────────────────────
+ *
+ * Klein und zurückhaltend: Er steht in einer Meldungsbox, und ein
+ * vollwertiger Knopf würde dort mehr Gewicht bekommen als die Meldung
+ * selbst. Warnungen tragen ihn nicht — siehe BackendSystemMessagesListener.
+ */
+.consho-ack {
+    display: inline;
+    margin: 0;
+}
+
+.consho-ack__button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+    opacity: .75;
+}
+
+.consho-ack__button:hover,
+.consho-ack__button:focus-visible {
+    opacity: 1;
+}
+
+/*
+ * Tabs über den Übersetzungsabschnitten — gesetzt von backend-tabs.js.
+ *
+ * Alle Regeln hängen an Klassen, die erst das Script vergibt. Ohne JavaScript
+ * greift hier also nichts, und die Abschnitte bleiben gewöhnliche aufklappbare
+ * Fieldsets.
+ *
+ * Die Farben kommen aus Contaos eigenen Variablen, damit das dunkle Schema
+ * ohne eigene Regel mitzieht — dasselbe Prinzip wie bei den Menüsymbolen oben.
+ */
+.consho-translation-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 18px 15px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.consho-translation-tabs [role="tab"] {
+    margin-bottom: -1px;
+    padding: 6px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.consho-translation-tabs [role="tab"][aria-selected="true"] {
+    border-color: var(--border);
+    border-bottom-color: var(--content-bg);
+    background: var(--content-bg);
+    font-weight: 600;
+}
+
+/* Im Tab-Modus benennt der Tab den Abschnitt; die Legende mit ihrem
+   Aufklappknopf wäre doppelt und würde den Abschnitt wieder zuklappen lassen. */
+fieldset.consho-translation-panel > legend {
+    display: none;
+}
+
+/*
+ * ── „Widerruf bearbeiten" (D-3, F12) ──────────────────────────────────────
+ *
+ * Kopf mit den drei Symbolen der Liste, zwei Spalten für Erklärung und
+ * Fristen, die Knöpfe nebeneinander. Farben und Schriften bleiben Contaos:
+ * nur Anordnung, keine eigene Optik.
+ */
+.consho-withdrawal-page {
+    padding: 0 15px 15px;
+}
+
+.consho-withdrawal-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    padding: 15px 0 5px;
+}
+
+.consho-withdrawal-head h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.consho-withdrawal-head__order {
+    font-weight: normal;
+}
+
+.consho-withdrawal-head__state {
+    margin: 0;
+}
+
+.consho-withdrawal-columns {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 10px 30px;
+    align-items: start;
+}
+
+.consho-withdrawal-box .tl_help {
+    margin-top: 10px;
+}
+
+.consho-withdrawal-items {
+    margin-bottom: 5px;
+}
+
+.consho-withdrawal .consho-quantity,
+.consho-withdrawal-page .consho-quantity {
+    width: 7em;
+}
+
+.consho-withdrawal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 0 0;
+}
+
+.consho-withdrawal-reject {
+    margin-top: 15px;
+}
+
+.consho-withdrawal-reject > summary {
+    cursor: pointer;
+    color: var(--red, #c7241f);
+}
+
+.consho-overdue {
+    color: var(--red, #c7241f);
+}
+
+/*
+ * Dashboard (Block Dashboard): Kopf, dann je Shop ein Block, höchstens zwei
+ * nebeneinander (Michael, 2026-10-07, D2), auf schmalen Bildschirmen
+ * untereinander. Farben nur aus Contaos Variablen — das dunkle Schema setzt
+ * sie selbst um.
+ */
+.consho-dashboard__header {
+    margin: 0 0 20px;
+    padding: 18px 20px;
+    border-radius: var(--border-radius-lg, 0.75rem);
+    background: linear-gradient(135deg, var(--contao, #f47c00), var(--orange, #e67300));
+    color: var(--white, #fff);
+}
+
+.consho-dashboard__header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.consho-dashboard__shops {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(max(320px, calc(50% - 10px)), 1fr));
+    gap: 20px;
+}
+
+.consho-dashboard__shop {
+    padding: 16px;
+    border: 1px solid var(--content-border, #e0e0e2);
+    border-radius: var(--border-radius-lg, 0.75rem);
+    background: var(--nested-bg, #fbfbfd);
+}
+
+.consho-dashboard__shop-title {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+}
+
+.consho-dashboard__caption {
+    margin: 0 0 6px;
+    color: var(--gray, #747476);
+}
+
+.consho-dashboard__figures {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.consho-dashboard__figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px 14px;
+    border-radius: var(--border-radius, 0.375rem);
+    border-top: 3px solid var(--contao, #f47c00);
+    background: var(--content-bg, #fff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.consho-dashboard__figure .consho-dashboard__count {
+    font-size: 1.8rem;
+    line-height: 1.2;
+}
+
+.consho-dashboard__total {
+    color: var(--gray, #747476);
+}
+
+.consho-dashboard__tax {
+    margin: 12px 0 0;
+}
+
+.consho-dashboard__level--near {
+    color: var(--orange, #e67300);
+}
+
+.consho-dashboard__level--over {
+    color: var(--red, #c7241f);
+    font-weight: 700;
+}
+
+.consho-dashboard__shop .consho-dashboard__heading {
+    margin: 18px 0 8px;
+}
+
+/*
+ * Flex statt Raster: vier Karten teilen sich die ganze Breite, kommt die
+ * fünfte (Reklamationen) dazu, rücken alle zusammen — kein leerer Platz für
+ * eine Karte, die meist fehlt (Michael, 2026-10-07).
+ */
+.consho-dashboard__tiles {
+    display: flex;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.consho-dashboard__tile {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 8px;
+    border: 1px solid var(--content-border, #e0e0e2);
+    border-radius: var(--border-radius, 0.375rem);
+    background: var(--content-bg, #fff);
+    text-align: center;
+}
+
+.consho-dashboard__tile > a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: inherit;
+}
+
+.consho-dashboard__box {
+    display: block;
+    margin-top: 20px;
+    padding: 12px 16px;
+    border: 1px solid var(--content-border, #e0e0e2);
+    border-left: 4px solid var(--contao, #f47c00);
+    border-radius: var(--border-radius, 0.375rem);
+    background: var(--nested-bg, #fbfbfd);
+}
+
+a.consho-dashboard__box {
+    font-weight: 600;
+}
+
+a.consho-dashboard__box:hover {
+    color: var(--contao, #f47c00);
+}
+
+.consho-dashboard__box h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+}
+
+.consho-dashboard__tile > a:hover .consho-dashboard__count {
+    color: var(--contao, #f47c00);
+}
+
+.consho-dashboard__tile .consho-dashboard__count {
+    display: block;
+    font-size: 1.6rem;
+    line-height: 1.2;
+}
+
+.consho-dashboard__label {
+    display: block;
+    color: var(--gray, #747476);
+}
+
+.consho-dashboard__tile--empty .consho-dashboard__count {
+    color: var(--form-text-disabled, #bbbbbd);
+}
+
+.consho-dashboard__note {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.9em;
+    color: var(--gray, #747476);
+}
+
+.consho-dashboard__stock ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.consho-dashboard__stock p {
+    margin: 6px 0 0;
+}
+
+/*
+ * Einrichtung (Block I): dieselben Kästen wie das Dashboard, die Schritte als
+ * nummerierte Liste mit Zustand. Grün erledigt, Rot offen, Orange prüfen —
+ * dieselben Variablen wie die Signale der Produktliste.
+ */
+.consho-setup__intro {
+    margin: 0 0 16px;
+    color: var(--gray, #747476);
+}
+
+.consho-setup__shop {
+    margin-bottom: 20px;
+}
+
+.consho-setup__state {
+    margin: 0 0 12px;
+    font-weight: 600;
+}
+
+.consho-setup__state--ready { color: var(--green, #49840b); }
+.consho-setup__state--open { color: var(--red, #c7241f); }
+
+.consho-setup__steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.consho-setup__step {
+    margin: 0 0 10px;
+    padding: 10px 14px;
+    border: 1px solid var(--content-border, #e0e0e2);
+    border-left: 4px solid var(--gray, #747476);
+    border-radius: var(--border-radius, 0.375rem);
+    background: var(--content-bg, #fff);
+}
+
+.consho-setup__step--done { border-left-color: var(--green, #49840b); }
+.consho-setup__step--open { border-left-color: var(--red, #c7241f); }
+.consho-setup__step--attention { border-left-color: var(--orange, #e67300); }
+
+.consho-setup__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.consho-setup__number {
+    color: var(--gray, #747476);
+}
+
+.consho-setup__badge {
+    margin-left: auto;
+    font-size: 0.9em;
+}
+
+.consho-setup__badge--done { color: var(--green, #49840b); }
+.consho-setup__badge--open { color: var(--red, #c7241f); }
+.consho-setup__badge--attention { color: var(--orange, #e67300); }
+
+.consho-setup__help,
+.consho-setup__finding,
+.consho-setup__links {
+    margin: 6px 0 0;
+}
+
+.consho-setup__help {
+    color: var(--gray, #747476);
+}
+
+.consho-setup__action {
+    display: inline-block;
+    margin: 8px 8px 0 0;
+}
+
+/* Der Cache ist neutral: kein Zustand, keine Warnfarbe am Kasten (I4b). */
+.consho-setup__cache {
+    margin-top: 16px;
+}
+
+.consho-setup__measured {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.consho-setup__measured--failed { color: var(--red, #c7241f); }
+
+/*
+ * Warnungen und Hinweise als zwei zählende Kästen rechts vom Kopfbalken
+ * (Michael, 2026-10-09, DB1: „rechts vom Headerbalken"): grau bei 0, rot bzw.
+ * blau ab 1; die Liste öffnet sich als Dialog. Auf schmalen Bildschirmen
+ * rutschen die Kästen unter den Balken.
+ */
+.consho-dashboard__top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
+    margin: 0 0 20px;
+}
+
+/*
+ * Wachstum 999 : 1 — in einer Zeile bekommt der Balken praktisch den ganzen
+ * freien Platz; rutschen die Kästen auf eine eigene Zeile, füllen sie sie
+ * (Michael, 2026-10-09: „dann sollten die zwei Boxen die gesamte Breite
+ * ausfüllen"). Ohne Media-Query, also ohne geratene Umbruchbreite.
+ */
+.consho-dashboard__top .consho-dashboard__header {
+    flex: 999 1 320px;
+    margin: 0;
+}
+
+.consho-dashboard__findings {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 10px;
+}
+
+.consho-dashboard__finding {
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    gap: 8px;
+    min-width: 160px;
+    margin: 0;
+    padding: 10px 16px;
+    border: 1px solid var(--content-border, #e0e0e2);
+    border-left: 4px solid var(--form-text-disabled, #bbbbbd);
+    border-radius: var(--border-radius, 0.375rem);
+    background: var(--content-bg, #fff);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+
+button.consho-dashboard__finding {
+    cursor: pointer;
+}
+
+.consho-dashboard__finding .consho-dashboard__count {
+    font-size: 1.6rem;
+    line-height: 1.2;
+}
+
+.consho-dashboard__finding .consho-dashboard__label {
+    display: inline;
+}
+
+.consho-dashboard__finding--warnings { border-left-color: var(--red, #c7241f); }
+.consho-dashboard__finding--warnings .consho-dashboard__count { color: var(--red, #c7241f); }
+.consho-dashboard__finding--notes { border-left-color: var(--blue, #006494); }
+.consho-dashboard__finding--notes .consho-dashboard__count { color: var(--blue, #006494); }
+.consho-dashboard__finding--empty .consho-dashboard__count { color: var(--form-text-disabled, #bbbbbd); }
+
+button.consho-dashboard__finding:hover,
+button.consho-dashboard__finding:focus-visible {
+    background: var(--nested-bg, #fbfbfd);
+}
+
+.consho-dashboard__dialog {
+    width: min(760px, calc(100vw - 32px));
+    max-height: calc(100vh - 64px);
+    padding: 0 20px 16px;
+    border: 1px solid var(--content-border, #e0e0e2);
+    border-radius: var(--border-radius-lg, 0.75rem);
+    background: var(--content-bg, #fff);
+    color: var(--text, inherit);
+}
+
+.consho-dashboard__dialog::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.consho-dashboard__dialog-head {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 10px;
+    background: var(--content-bg, #fff);
+}
+
+.consho-dashboard__dialog-head h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.consho-dashboard__dialog-close {
+    padding: 0 6px;
+    border: 0;
+    background: none;
+    color: var(--gray, #747476);
+    font-size: 1.6rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* Contaos Meldungen bringen eigene Ränder mit; im Dialog genügt sein Abstand. */
+.consho-dashboard__dialog > :last-child {
+    margin-bottom: 0;
+}

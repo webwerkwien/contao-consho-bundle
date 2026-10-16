@@ -1,0 +1,81 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    "Meine Bestellungen" (D-4, K3).
+
+    Variables: signedIn, email (the account's address), orders (number, date,
+    total, guest, url), guestConfirmed, notice (a key of CONSHO.myOrders or
+    ''), confirm (null, or the state of a confirmation link: login, invalid,
+    otherAccount, pending, confirmed), token (the link's token).
+
+    Every order links back to this page, which checks it and forwards to the
+    order page — no order is shown here beyond number, date and total.
+
+    No JavaScript. Everything works with the keyboard alone.
+#}
+
+{% block content %}
+    {% set t = 'CONSHO.myOrders.' %}
+
+    {% if notice %}
+        <p class="consho-my-orders__notice" role="status">{{ (t ~ 'notice.' ~ notice)|trans([email], 'contao_default') }}</p>
+    {% endif %}
+
+    {% if confirm and confirm != 'confirmed' %}
+        {# The mail's link lands here (MyOrdersFlow::ANCHOR): on a page with
+           other forms above, the box would otherwise sit out of sight
+           (acceptance D-4). #}
+        <div class="consho-my-orders__confirm" id="consho-confirm">
+            {% if confirm == 'pending' %}
+                <p>{{ (t ~ 'confirmIntro')|trans([email], 'contao_default') }}</p>
+                <form method="post">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <input type="hidden" name="consho_confirm_token" value="{{ token }}">
+                    <button type="submit" name="consho_my_orders_action" value="confirm">{{ (t ~ 'confirmButton')|trans({}, 'contao_default') }}</button>
+                </form>
+            {% else %}
+                <p role="alert">{{ (t ~ 'confirmState.' ~ confirm)|trans({}, 'contao_default') }}</p>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% if signedIn %}
+        {% if orders is empty %}
+            <p class="consho-my-orders__empty">{{ (t ~ 'empty')|trans({}, 'contao_default') }}</p>
+        {% else %}
+            <table class="consho-my-orders__list">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ (t ~ 'colOrder')|trans({}, 'contao_default') }}</th>
+                        <th scope="col">{{ (t ~ 'colDate')|trans({}, 'contao_default') }}</th>
+                        <th scope="col">{{ (t ~ 'colTotal')|trans({}, 'contao_default') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for order in orders %}
+                    {# data-cellheadline: themes that stack a table on narrow
+                       screens (the Contao demo theme among them) print it
+                       before each cell — without it only ": " is left
+                       (acceptance D-4). #}
+                    <tr>
+                        <td data-cellheadline="{{ (t ~ 'colOrder')|trans({}, 'contao_default') }}"><a href="{{ order.url }}">{{ order.number }}</a>{% if order.guest %} <span class="consho-my-orders__guest">{{ (t ~ 'asGuest')|trans({}, 'contao_default') }}</span>{% endif %}</td>
+                        <td data-cellheadline="{{ (t ~ 'colDate')|trans({}, 'contao_default') }}">{{ order.date }}</td>
+                        <td data-cellheadline="{{ (t ~ 'colTotal')|trans({}, 'contao_default') }}">{{ order.total }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {# Not while a confirmation link is open: two buttons about the same
+           thing, and the wrong one further down, is what the acceptance
+           tripped over. #}
+        {% if not guestConfirmed and not confirm %}
+            <form method="post" class="consho-my-orders__guest-request">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <p>{{ (t ~ 'guestHint')|trans([email], 'contao_default') }}</p>
+                <button type="submit" name="consho_my_orders_action" value="request">{{ (t ~ 'guestButton')|trans({}, 'contao_default') }}</button>
+            </form>
+        {% endif %}
+    {% endif %}
+{% endblock %}

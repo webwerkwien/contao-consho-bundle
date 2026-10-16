@@ -1,0 +1,15 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{# Back end only — in the front end the listing shows the pinned product as a
+   tile, and this element renders nothing (ProductPinController).
+
+   Positional parameters: Contao's translator runs the contao_* domains through
+   sprintf, so a named %product% ends in "Unknown format specifier" — measured
+   on the test server on 2026-09-13. #}
+{% block content %}
+    {% if label is not null %}
+        <p class="consho-pin">{{ "CONSHO.pinLabel"|trans([label], "contao_default") }}</p>
+    {% else %}
+        <p class="consho-pin consho-pin--missing">{{ "CONSHO.pinMissing"|trans([productId], "contao_default") }}</p>
+    {% endif %}
+{% endblock %}

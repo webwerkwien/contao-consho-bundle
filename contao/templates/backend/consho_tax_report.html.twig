@@ -1,0 +1,76 @@
+{#
+  "Steuermeldung" (block R, R6, R7), rendered inside the back end frame by
+  TaxReportBackendController: per business (shops with one VAT ID) the OSS
+  threshold this year and last, and the quarterly export as CSV.
+
+  Contao's own list markup, so the page follows the back end's look and its
+  dark scheme without rules of its own.
+#}
+{% set l = lang %}
+{# DB6: a view of the dashboard, so the way back leads there. #}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+</div>
+
+<div class="tl_listing_container consho-tax-report">
+    <p class="tl_help tl_tip">{{ l.intro|default('')|format(threshold) }}</p>
+
+    {% for business in businesses %}
+    <h2 class="consho-tax-report__business">
+        {{ business.label }}
+        <span class="tl_gray">{{ business.shops }}</span>
+    </h2>
+    <p>
+        {{ business.atDestination ? l.atDestinationOn|default('Steuer im Bestimmungsland: eingeschaltet') : l.atDestinationOff|default('Steuer im Bestimmungsland: ausgeschaltet') }}
+    </p>
+
+    <table class="tl_listing showColumns">
+        <thead>
+            <tr>
+                <th class="tl_folder_tlist">{{ l.colYear|default('Jahr') }}</th>
+                <th class="tl_folder_tlist">{{ l.colCounted|default('Fernverkäufe netto') }}</th>
+                <th class="tl_folder_tlist">{{ l.colShare|default('Anteil an der Schwelle') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for year in business.years %}
+            <tr class="{{ cycle(['even', 'odd'], loop.index0) }}">
+                <td class="tl_file_list">{{ year.year }}</td>
+                <td class="tl_file_list">
+                    {% for sum in year.sums %}
+                        {{ sum.amount }}{% if not sum.counts %} <span class="tl_gray">({{ l.notConverted|default('nicht umgerechnet') }})</span>{% endif %}{% if not loop.last %}<br>{% endif %}
+                    {% else %}
+                        —
+                    {% endfor %}
+                </td>
+                <td class="tl_file_list">{{ year.percent }} %</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="tl_listing showColumns">
+        <thead>
+            <tr>
+                <th class="tl_folder_tlist">{{ l.colQuarter|default('Quartal') }}</th>
+                <th class="tl_folder_tlist">{{ l.colExport|default('Export (CSV)') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for quarter in business.quarters %}
+            <tr class="{{ cycle(['even', 'odd'], loop.index0) }} hover-row">
+                <td class="tl_file_list">{{ quarter.label }}</td>
+                <td class="tl_file_list">
+                    <a href="{{ quarter.summary }}">{{ l.summary|default('Meldung') }}</a> ·
+                    <a href="{{ quarter.records }}">{{ l.records|default('Belegliste') }}</a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="tl_empty">{{ l.noShops|default('Noch keine Shop-Konfiguration.') }}</p>
+    {% endfor %}
+
+    <p class="tl_help tl_tip">{{ l.exportNote|default('') }}</p>
+</div>

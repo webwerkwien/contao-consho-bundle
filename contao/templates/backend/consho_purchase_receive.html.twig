@@ -1,0 +1,54 @@
+{#
+  "Eingang" of a purchase list (Block G, G-7, E3): what came now, per line —
+  prefilled with what is still open, so a complete delivery is one click —
+  and "nicht lieferbar" for a rest the supplier cannot deliver. Booked into
+  stock as movements "receipt" (PurchaseLists::receive()).
+#}
+{% set l = lang %}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+</div>
+
+{{ messages|raw }}
+
+<div class="tl_formbody_edit consho-purchase-page">
+    <h2 class="sub_headline">{{ list.number }}</h2>
+
+    <form action="{{ action }}" method="post">
+        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+        <table class="tl_listing consho-purchase-lines">
+            <thead><tr>
+                <th class="tl_folder_tlist">{{ l.colArticle|default('Artikel') }}</th>
+                <th class="tl_folder_tlist">{{ l.colSupplier|default('Lieferant') }}</th>
+                <th class="tl_folder_tlist">{{ l.colOrderedPieces|default('bestellt') }}</th>
+                <th class="tl_folder_tlist">{{ l.colReceived|default('erhalten') }}</th>
+                <th class="tl_folder_tlist">{{ l.colReceiveNow|default('jetzt erhalten') }}</th>
+                <th class="tl_folder_tlist">{{ l.colUnavailable|default('Rest nicht lieferbar') }}</th>
+            </tr></thead>
+            <tbody>
+            {% for item in items %}
+                <tr>
+                    <td class="tl_file_list">{{ item.title }}{% if item.sku %}<br><small>{{ item.sku }}</small>{% endif %}</td>
+                    <td class="tl_file_list">{{ item.supplier }}</td>
+                    <td class="tl_file_list">{{ item.quantity }}</td>
+                    <td class="tl_file_list">{{ item.received }}{% if item.done %}<br><small>{{ itemStates[item.state]|default(item.state) }}</small>{% endif %}</td>
+                    {% if item.done %}
+                        <td class="tl_file_list"></td>
+                        <td class="tl_file_list"></td>
+                    {% else %}
+                        <td class="tl_file_list"><input type="text" inputmode="decimal" class="tl_text consho-quantity" name="received[{{ item.id }}]" value="{{ item.rest }}" aria-label="{{ l.colReceiveNow|default('jetzt erhalten') }}: {{ item.title }}"></td>
+                        <td class="tl_file_list"><input type="checkbox" class="tl_checkbox" name="unavailable[{{ item.id }}]" value="1" onchange="if (this.checked) { this.form.elements['received[{{ item.id }}]'].value = '0'; }" aria-label="{{ l.colUnavailable|default('Rest nicht lieferbar') }}: {{ item.title }}"></td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <p class="tl_help">{{ l.receiveHint|default('Vorbelegt ist, was noch offen ist. „Rest nicht lieferbar" schließt die Zeile; der Artikel erscheint im nächsten Einkauf wieder.') }}</p>
+
+        <div class="tl_submit_container">
+            <button type="submit" class="tl_submit">{{ l.receiveButton|default('Eingang buchen') }}</button>
+        </div>
+    </form>
+</div>

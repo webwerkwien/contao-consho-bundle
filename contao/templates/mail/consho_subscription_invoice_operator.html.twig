@@ -1,0 +1,47 @@
+{#
+  The operator's copy of "Rechnung zum Abo" (Abo-4, P30), in the language of
+  the shop: a follow-up order was created and billed "on account".
+
+  Loaded as @Contao/mail/consho_subscription_invoice_operator.html.twig.
+
+  Variables:
+    order         the order in InvoiceView's shape, in the shop's language
+    customer      {name, email}
+    subscription  the subscription number
+    periodFrom    first day of the period, formatted
+    periodUntil   end of the period, formatted
+    invoice       the invoice number, attached; '' where none was issued
+    charged       the day the amount was charged (Abo-4b, P97); '' for "on account"
+    paymentMethod the payment method of the order
+#}
+{% block subject %}{{ 'CONSHO.mail.subscriptionInvoice.operator.subject'|trans([order.orderNumber, subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+{% if charged %}
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.subscriptionInvoice.operator.introCharged'|trans([order.orderNumber, subscription, paymentMethod, charged, periodFrom, periodUntil], 'contao_default') }}</p>
+{% else %}
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.subscriptionInvoice.operator.intro'|trans([order.orderNumber, subscription, periodFrom, periodUntil], 'contao_default') }}</p>
+{% endif %}
+
+<p style="margin: 0 0 16px 0;">
+    {{ customer.name }}<br>
+    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+</p>
+
+{% if invoice %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionInvoice.invoiceAttached'|trans([invoice], 'contao_default') }}</p>
+{% endif %}
+
+<p style="margin: 16px 0 0 0;">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}: <strong>{{ order.grandTotal }}</strong></p>
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

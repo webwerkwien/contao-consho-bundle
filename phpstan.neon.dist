@@ -1,0 +1,33 @@
+# PHPStan configuration.
+#
+# ⚠️ PHPStan 1.x is not PHP 8.4 compatible in its worker processes. Below roughly
+# a hundred files it never forks, so the problem stays invisible and a run that
+# aborted looks like a run that found four errors. This package pins 2.x from the
+# start — see the sibling contao-ai-core-bundle, where that lesson was paid for.
+#
+# 🎯 The lesson is not the version. It is that an abort prints a count, and a
+# small count reads like quality.
+includes:
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
+
+parameters:
+    level: 6
+
+    paths:
+        - src
+        - tests
+
+    ignoreErrors:
+        # Level 6 wants a value type for every array parameter. For DCA rows and
+        # decoded payloads the shape is not known until runtime, and an
+        # annotation that says `mixed` adds no information while making the
+        # signature look considered. Where a shape IS known, write it out.
+        - identifier: missingType.iterableValue
+        # contao-ai's command contract. PHP resolves an attribute class only on
+        # newInstance(), and contao-ai reads the arguments without it — so the
+        # free core declares it without requiring contao-ai (CLI coverage E1).
+        # Only this one class: any other missing attribute is still an error.
+        -
+            identifier: attribute.notFound
+            message: '#^Attribute class Webwerkwien\\ContaoAiCoreBundle\\Attribute\\AiContract does not exist\.$#'

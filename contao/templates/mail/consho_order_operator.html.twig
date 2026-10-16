@@ -1,0 +1,62 @@
+{#
+  The operator's copy of a new order (C-9), in the language of the shop.
+
+  Short on purpose: the operator has the back end for everything else. No
+  legal texts — the operator wrote them. The invoice PDF rides along, because
+  it is the document the bookkeeping wants.
+
+  Loaded as @Contao/mail/consho_order_operator.html.twig (the folder is part
+  of the name, see consho_order_confirmation.html.twig).
+
+  Variables:
+    order        the order in InvoiceView's shape, in the shop's language
+    customer     name and e-mail of the buyer
+    attachments  {invoice: bool}
+#}
+{% block subject %}{{ 'CONSHO.mail.operator.subject'|trans([order.orderNumber, order.grandTotal], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{# The same frame as the customer's confirmation: one column, inline styles. #}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+{% set cell = 'padding: 6px 8px; border-bottom: 1px solid #e2e2e2; vertical-align: top;' %}
+{% set num = 'text-align: right; white-space: nowrap;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.operator.intro'|trans([order.orderNumber, order.orderDate], 'contao_default') }}</p>
+
+<p style="margin: 0 0 16px 0;">
+    {{ customer.name }}<br>
+    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+    {% for line in order.lines %}
+    <tr>
+        <td style="{{ cell }} {{ num }} width: 40px;">{{ line.quantity }} ×</td>
+        <td style="{{ cell }}">{{ line.name }}{% if line.terms|default('') %}<br><small style="color: #555555;">{{ line.terms }}</small>{% endif %}</td>
+        <td style="{{ cell }} {{ num }}">{{ line.total }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+        <th scope="row" colspan="2" style="padding: 8px; text-align: right; border-top: 2px solid #222222;">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th>
+        <td style="padding: 8px; border-top: 2px solid #222222; font-weight: bold; {{ num }}">{{ order.grandTotal }}</td>
+    </tr>
+</table>
+
+<p style="margin: 16px 0 0 0; color: #555555;">
+    {% if order.shippingMethod %}{{ 'CONSHO.invoice.shippingMethod'|trans({}, 'contao_default') }}: {{ order.shippingMethod }}<br>{% endif %}
+    {{ 'CONSHO.invoice.paymentMethod'|trans({}, 'contao_default') }}: {{ order.paymentMethod }}
+</p>
+
+{% if attachments.invoice %}
+<p style="margin: 16px 0 0 0; color: #555555;">{{ 'CONSHO.mail.confirmation.invoiceAttached'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

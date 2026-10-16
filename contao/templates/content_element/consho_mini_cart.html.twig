@@ -1,0 +1,44 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    The mini basket (C10).
+
+    Variables: line_count (int), total (formatted string), cart_page (string or
+    null).
+
+    The amount arrives formatted — MoneyFormatter did the rounding and the
+    currency, not this file. There is deliberately no currency of its own to
+    append: in English the symbol goes in front of the amount.
+
+    line_count counts LINES, not pieces. See MiniCartController: a quantity is a
+    decimal and would read as "2.5 articles", and it leaves out the lines that
+    could not be priced — which are the ones a visitor has to act on.
+
+    No link when there is no basket page. The finding in C-6 nags about that in
+    the back end; a dead link would not help the visitor in the meantime.
+
+    The element renders even when the basket is empty. One that disappeared
+    would move the rest of the header the moment the first article goes in.
+#}
+
+{% block content %}
+    <div class="consho-mini-cart{% if line_count == 0 %} consho-mini-cart--empty{% endif %}">
+        {% if cart_page %}<a class="consho-mini-cart__link" href="{{ cart_page }}">{% endif %}
+            <span class="invisible">{{ "CONSHO.miniCart.label"|trans({}, "contao_default") }}</span>
+            <span class="consho-mini-cart__count">
+                {{- line_count -}}
+                <span class="invisible"> {{ "CONSHO.miniCart.lines"|trans({}, "contao_default") }}</span>
+            </span>
+            {#
+                Netto oder brutto entscheidet der Controller (C-4). Der Zusatz
+                steht hier ausgeschrieben nur für Lesegeräte: Ein Mini-Warenkorb
+                hat Platz für eine Zahl, aber eine Zahl ohne Angabe, ob die
+                Steuer darin ist, ist keine Preisangabe.
+            #}
+            <span class="consho-mini-cart__total">
+                {{- total -}}
+                <span class="invisible"> {{ untaxed|default(false) ? ((shipped ?? true) ? "CONSHO.priceShippingOnly"|trans({}, "contao_default") : "") : ("CONSHO." ~ ((shipped ?? true) ? "priceTaxNotice" : "priceTaxOnly") ~ (showsNet|default(false) ? "Net" : ""))|trans({}, "contao_default") }}</span>
+            </span>
+        {% if cart_page %}</a>{% endif %}
+    </div>
+{% endblock %}

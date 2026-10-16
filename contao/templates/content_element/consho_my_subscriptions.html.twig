@@ -1,0 +1,122 @@
+{% extends "@Contao/content_element/_base.html.twig" %}
+
+{#
+    "Meine Abos" (Abo-7, P60).
+
+    Variables:
+      result         the recorded cancellation for the result page, or null
+      form           show the confirmation page of a cancellation
+      contract       its contract's label; subscription: its id
+      input, error, until, earliest — see component/_consho_cancellation_form.html.twig
+      notice         a key of CONSHO.mySubscriptions.notice or '' (expired: a
+                     result page past its 90 days)
+      subscriptions  list of {number, product, model, state: active|suspended|
+                     paused|ending|ended|upcoming, nextBilling, endsAt, startsAt, pending, orderUrl,
+                     cancelUrl ('' once ended), id, renew (Abo-7b: the
+                     conditions at today's price, or null — no button),
+                     renewedBy (the number of the subscription that carries
+                     the licence on, or ''), pauseUntil (formatted, or ''),
+                     pauseAnnounced (the first day of an announced pause, or
+                     ''), pauseWithdrawable (it can still be taken back),
+                     pauseUrl ('' where no pause can be chosen)}
+      pause          the page to choose a pause (Abo pausieren, P101), or
+                     null: {contract, subscription, from, options: list of
+                     {months, until}, back}
+
+    No JavaScript. Everything works with the keyboard alone.
+#}
+
+{% block content %}
+    {% if pause %}
+        <form method="post" class="consho-subscription-pause">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <input type="hidden" name="consho_pause_action" value="confirm">
+            <input type="hidden" name="consho_pause_subscription" value="{{ pause.subscription }}">
+            <h2>{{ 'CONSHO.mySubscriptions.pauseTitle'|trans({}, 'contao_default') }}</h2>
+            <p>{{ 'CONSHO.cancellation.contract'|trans({}, 'contao_default') }}: {{ pause.contract }}</p>
+            <p>{{ 'CONSHO.mySubscriptions.pauseIntro'|trans([pause.from], 'contao_default') }}</p>
+            <fieldset>
+                <legend>{{ 'CONSHO.mySubscriptions.pauseLength'|trans({}, 'contao_default') }}</legend>
+                {% for option in pause.options %}
+                    <label>
+                        <input type="radio" name="consho_pause_months" value="{{ option.months }}" required{% if loop.first %} checked{% endif %}>
+                        {{ ('CONSHO.mySubscriptions.' ~ (option.months == 1 ? 'pauseOptionOne' : 'pauseOptionMany'))|trans([option.months, option.until], 'contao_default') }}
+                    </label><br>
+                {% endfor %}
+            </fieldset>
+            <p><small>{{ 'CONSHO.mySubscriptions.pauseWithdrawHint'|trans({}, 'contao_default') }}</small></p>
+            <button type="submit">{{ 'CONSHO.mySubscriptions.pauseConfirm'|trans({}, 'contao_default') }}</button>
+            <a href="{{ pause.back }}">{{ 'CONSHO.mySubscriptions.back'|trans({}, 'contao_default') }}</a>
+        </form>
+    {% elseif result %}
+        {% include '@Contao/component/_consho_cancellation_result.html.twig' with {result: result} only %}
+    {% elseif form %}
+        {% include '@Contao/component/_consho_cancellation_form.html.twig' with {
+            element_id: data.id|default(''),
+            identify: false,
+            contract: contract,
+            subscription: subscription,
+            input: input,
+            error: error,
+            until: until,
+            earliest: earliest,
+        } only %}
+    {% else %}
+        {% if notice %}
+            <p class="consho-subscriptions__notice" role="status">{{ ('CONSHO.mySubscriptions.notice.' ~ notice)|trans({}, 'contao_default') }}</p>
+        {% endif %}
+
+        {% if subscriptions is empty %}
+            <p>{{ 'CONSHO.mySubscriptions.empty'|trans({}, 'contao_default') }}</p>
+        {% else %}
+            <table class="consho-subscriptions">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'CONSHO.mySubscriptions.number'|trans({}, 'contao_default') }}</th>
+                        <th scope="col">{{ 'CONSHO.mySubscriptions.product'|trans({}, 'contao_default') }}</th>
+                        <th scope="col">{{ 'CONSHO.mySubscriptions.state'|trans({}, 'contao_default') }}</th>
+                        <th scope="col">{{ 'CONSHO.mySubscriptions.nextBilling'|trans({}, 'contao_default') }}</th>
+                        <th scope="col"><span class="invisible">{{ 'CONSHO.mySubscriptions.actions'|trans({}, 'contao_default') }}</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {# data-cellheadline like "Meine Bestellungen": themes that
+                       hide th on narrow screens put it before each cell
+                       (acceptance Abo-7). #}
+                    {% for subscription in subscriptions %}
+                        <tr>
+                            <td data-cellheadline="{{ 'CONSHO.mySubscriptions.number'|trans({}, 'contao_default') }}"><a href="{{ subscription.orderUrl }}">{{ subscription.number }}</a></td>
+                            <td data-cellheadline="{{ 'CONSHO.mySubscriptions.product'|trans({}, 'contao_default') }}">{{ subscription.product }}{% if subscription.model %}<br><small>{{ subscription.model }}</small>{% endif %}</td>
+                            <td data-cellheadline="{{ 'CONSHO.mySubscriptions.state'|trans({}, 'contao_default') }}">
+                                {{ ('CONSHO.mySubscriptions.states.' ~ subscription.state)|trans([subscription.state == 'upcoming' ? subscription.startsAt : (subscription.state == 'paused' ? subscription.pauseUntil : subscription.endsAt)], 'contao_default') }}
+                                {% if subscription.pauseAnnounced %}<br><small>{{ 'CONSHO.mySubscriptions.pauseAnnounced'|trans([subscription.pauseAnnounced, subscription.pauseUntil], 'contao_default') }}</small>{% endif %}
+                                {% if subscription.pending %}<br><small>{{ 'CONSHO.mySubscriptions.pending'|trans({}, 'contao_default') }}</small>{% endif %}
+                                {% if subscription.renewedBy %}<br><small>{{ 'CONSHO.mySubscriptions.renewedBy'|trans([subscription.renewedBy], 'contao_default') }}</small>{% endif %}
+                            </td>
+                            <td data-cellheadline="{{ 'CONSHO.mySubscriptions.nextBilling'|trans({}, 'contao_default') }}">{{ subscription.nextBilling ?: '—' }}</td>
+                            <td data-cellheadline="{{ 'CONSHO.mySubscriptions.actions'|trans({}, 'contao_default') }}">
+                                {% if subscription.cancelUrl %}<a href="{{ subscription.cancelUrl }}">{{ 'CONSHO.mySubscriptions.cancel'|trans({}, 'contao_default') }}</a>{% endif %}
+                                {% if subscription.pauseUrl %}<br><a href="{{ subscription.pauseUrl }}">{{ 'CONSHO.mySubscriptions.pause'|trans({}, 'contao_default') }}</a>{% endif %}
+                                {# P107: a POST — it changes the subscription. #}
+                                {% if subscription.pauseWithdrawable %}
+                                    <form method="post" class="consho-subscriptions__withdraw-pause">
+                                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                        <button type="submit" name="consho_withdraw_pause" value="{{ subscription.id }}">{{ 'CONSHO.mySubscriptions.withdrawPause'|trans({}, 'contao_default') }}</button>
+                                    </form>
+                                {% endif %}
+                                {# Abo-7b (P67): a POST — it puts a line into the basket. #}
+                                {% if subscription.renew %}
+                                    <form method="post" class="consho-subscriptions__renew">
+                                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                        <button type="submit" name="consho_renew_subscription" value="{{ subscription.id }}">{{ 'CONSHO.mySubscriptions.renew'|trans({}, 'contao_default') }}</button>
+                                        <br><small>{{ subscription.renew }}</small>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    {% endif %}
+{% endblock %}

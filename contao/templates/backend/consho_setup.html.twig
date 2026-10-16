@@ -1,0 +1,87 @@
+{#
+  "Einrichtung" (block I), a view of the dashboard rendered by
+  SetupBackendController. Per shop: ready or not, then the steps in order,
+  each with its findings, the masks that put it right, and — for
+  administrators — the button that creates what can be created (I1).
+  The page cache below the steps: optional, never blocking (I4b).
+#}
+{% set l = lang %}
+<div id="tl_buttons">
+    <a href="{{ dashboardUrl }}" class="header_back" accesskey="b">{{ l.back|default('Zurück zum Dashboard') }}</a>
+</div>
+
+<div class="tl_listing_container consho-dashboard consho-setup">
+    <header class="consho-dashboard__header">
+        <h2>{{ l.title|default('Einrichtung') }}</h2>
+    </header>
+
+    {{ messages|raw }}
+
+    <p class="consho-setup__intro">{{ l.intro|default('') }}</p>
+
+    {% if shops is empty %}
+        <section class="consho-dashboard__box">
+            <p>{{ l.noShop|default('Es gibt noch keine Shop-Konfiguration.') }}</p>
+            <p><a href="{{ createShopUrl }}">{{ l.createShop|default('Shop-Konfiguration anlegen') }}</a></p>
+        </section>
+    {% endif %}
+
+    {% for shop in shops %}
+        <section class="consho-dashboard__shop consho-setup__shop" id="shop-{{ shop.id }}">
+            {% if showShopTitles %}<h3 class="consho-dashboard__shop-title">{{ shop.title }}</h3>{% endif %}
+
+            <p class="consho-setup__state consho-setup__state--{{ shop.ready ? 'ready' : 'open' }}">
+                {{ shop.ready ? l.ready|default('Bereit — dieser Shop verkauft.') : l.notReady|default('Noch nicht bereit — dieser Shop verkauft nicht.') }}
+            </p>
+
+            <ol class="consho-setup__steps">
+            {% for step in shop.steps %}
+                <li class="consho-setup__step consho-setup__step--{{ step.status }}">
+                    <div class="consho-setup__head">
+                        <span class="consho-setup__number">{{ step.number }}</span>
+                        <strong class="consho-setup__title">{{ step.title }}</strong>
+                        <span class="consho-setup__badge consho-setup__badge--{{ step.status }}">{{ l.status[step.status]|default(step.status) }}</span>
+                    </div>
+                    <p class="consho-setup__help">{{ step.help }}</p>
+
+                    {% for sentence in step.sentences %}
+                        <p class="consho-setup__finding">{{ sentence|raw }}</p>
+                    {% endfor %}
+
+                    <p class="consho-setup__links">
+                    {% for link in step.links %}
+                        <a href="{{ link.url }}">{{ link.label }}</a>{% if not loop.last %} · {% endif %}
+                    {% endfor %}
+                    </p>
+
+                    {% for action in step.actions|default([]) %}
+                        {# data-turbo="false": Turbo follows the redirect by fetch and drops #shop-N. #}
+                        <form method="post" class="consho-setup__action" data-turbo="false">
+                            <input type="hidden" name="FORM_SUBMIT" value="consho_setup">
+                            <input type="hidden" name="REQUEST_TOKEN" value="{{ requestToken }}">
+                            <input type="hidden" name="consho_setup_action" value="{{ action.name }}">
+                            <input type="hidden" name="consho_setup_target" value="{{ action.target }}">
+                            <button type="submit" class="tl_submit">{{ action.label }}</button>
+                        </form>
+                    {% endfor %}
+                </li>
+            {% endfor %}
+            </ol>
+
+            {% if shop.cache|default(null) %}
+                {% include '@Contao/backend/consho_setup_cache.html.twig' with {cache: shop.cache, l: l, requestToken: requestToken, isAdmin: isAdmin} only %}
+            {% endif %}
+
+            {% if not isAdmin %}
+                <p class="tl_gray">{{ l.adminOnly|default('') }}</p>
+            {% endif %}
+
+            {% if shop.others is not empty %}
+                <h4 class="consho-dashboard__heading">{{ l.others|default('Weitere Warnungen dieses Shops') }}</h4>
+                {% for sentence in shop.others %}
+                    <p class="consho-setup__finding">{{ sentence|raw }}</p>
+                {% endfor %}
+            {% endif %}
+        </section>
+    {% endfor %}
+</div>

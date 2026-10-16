@@ -1,0 +1,19 @@
+{#
+  The cancellation as it was declared (§ 312k Abs. 2 Nr. 1 BGB), shared by the
+  confirmation and the operator's copy.
+
+  Variables: cancellation (see consho_cancellation_received.html.twig), font,
+  label.
+#}
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 0 12px 0; {{ font }}">
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.receivedAt'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;"><strong>{{ cancellation.receivedAt }}</strong></td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.number'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ cancellation.number }}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.contract'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ cancellation.subscription }}{% if cancellation.product %} — {{ cancellation.product }}{% endif %}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.kind'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ ('CONSHO.mail.cancellation.kinds.' ~ cancellation.kind)|trans({}, 'contao_default') }}</td></tr>
+    {% if cancellation.kind == 'extraordinary' and cancellation.reason %}
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.reason'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ cancellation.reason|nl2br }}</td></tr>
+    {% endif %}
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.name'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ cancellation.name }}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.email'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ cancellation.email }}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.cancellation.requestedAt'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ cancellation.requestedAt ?: 'CONSHO.mail.cancellation.earliest'|trans({}, 'contao_default') }}</td></tr>
+</table>

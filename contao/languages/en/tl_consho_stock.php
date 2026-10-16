@@ -1,0 +1,20 @@
+<?php declare(strict_types=1);
+
+$GLOBALS['TL_LANG']['tl_consho_stock']['stock_legend'] = 'Stock';
+$GLOBALS['TL_LANG']['tl_consho_stock']['article'] = ['Article', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['main'] = ['Product', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['source'] = ['Source', 'Kept by hand, or a key pool.'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['quantity'] = ['Stock', 'For keys: free codes less open orders.'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['availableFrom'] = ['Available again from', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['supplier'] = ['Supplier', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['active'] = ['Active', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['skuColumn'] = ['Item number', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['orderedColumn'] = ['On order', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['stateColumn'] = ['State', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['noticesColumn'] = ['Notifications', ''];
+$GLOBALS['TL_LANG']['tl_consho_stock']['keysFree'] = '%s free';
+$GLOBALS['TL_LANG']['tl_consho_stock']['purchase'] = ['Purchase', 'Put together a purchase list from the reorder level'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['purchaseLists'] = ['Purchase lists', 'Saved purchase lists, output and receipt'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['product'] = ['Edit article', 'Edit the article of stock ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['movements'] = ['Movements', 'Movements of stock ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_stock']['show'] = ['Details', 'Show the details of stock ID %s'];

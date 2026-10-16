@@ -1,0 +1,35 @@
+{#
+  "Saldo korrigieren" at a voucher (block Wertgutscheine, WG13): an amount up
+  or down, and the reason, which the booking keeps.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.back|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+<form action="{{ action }}" method="post" class="tl_form">
+    <div class="tl_formbody_edit">
+        <input type="hidden" name="FORM_SUBMIT" value="consho_voucher_correct">
+        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+        <fieldset class="tl_box">
+            <legend>{{ lang.correctLegend|default('Saldo korrigieren') }}: {{ code }}</legend>
+            <p class="tl_info">{{ lang.correctBalance|default('Saldo: %s')|format(balance) }}</p>
+            <div class="widget w50">
+                <h3><label for="ctrl_consho_voucher_amount">{{ lang.correctAmount|default('Betrag') }}</label></h3>
+                <input type="text" name="consho_voucher_amount" id="ctrl_consho_voucher_amount" class="tl_text" inputmode="decimal" required>
+                <p class="tl_help tl_tip">{{ lang.correctAmountHelp|default('') }}</p>
+            </div>
+            <div class="widget clr">
+                <h3><label for="ctrl_consho_voucher_note">{{ lang.correctNote|default('Grund') }}</label></h3>
+                <textarea name="consho_voucher_note" id="ctrl_consho_voucher_note" class="tl_textarea" rows="3" required></textarea>
+            </div>
+        </fieldset>
+    </div>
+    <div class="tl_formbody_submit">
+        <div class="tl_submit_container">
+            <button type="submit" class="tl_submit">{{ lang.correctSubmit|default('Buchen') }}</button>
+        </div>
+    </div>
+</form>

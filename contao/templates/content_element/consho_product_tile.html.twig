@@ -1,0 +1,122 @@
+{#
+    One product in a listing.
+
+    Overridable per listing element (conshoTileTemplate) rather than per
+    product: the same article appears as a tile, on a detail page and in a
+    basket, so a template chosen at the record could serve only one of them.
+
+    Title and teaser come input encoded from the database. Templates in the
+    @Contao namespace are escaped with Contao's own strategy, which does not
+    encode "&amp;" a second time — the filter element relies on the same.
+
+    Variables: product (ProductTile), imageSize, showsNet, garan (nested GARAN
+    label or null, GA8).
+
+    showsNet is a statement about the VISITOR, not about the article, which is
+    why it is passed in rather than read off the tile: whether a price carries
+    the tax is the same answer for every tile on the page (C-4).
+#}
+{% use "@Contao/component/_figure.html.twig" %}
+
+<article class="consho-tile" data-product="{{ product.id }}">
+    {# figure() and Contao's figure component, not an <img> built by hand —
+       contao_figure() is deprecated since 5.0. Consho brings no image handling
+       of its own; the size comes from the element. A deleted file yields no
+       figure and no empty frame. #}
+    {% set figure = product.image ? figure(product.image, imageSize) : null %}
+    {% if figure %}
+        {{ block("figure_component") }}
+    {% endif %}
+
+    {# Without a product page in the shop the url is empty — the tile then
+       stays a tile rather than linking nowhere. #}
+    <h3 class="consho-tile__title">
+        {%- if product.url -%}
+            <a href="{{ product.url }}">{{ product.title }}</a>
+        {%- else -%}
+            {{ product.title }}
+        {%- endif -%}
+    </h3>
+
+    {% if product.teaser %}
+        <p class="consho-tile__teaser">{{ product.teaser }}</p>
+    {% endif %}
+
+    {#- GA8: the nested GARAN label, only where the operator set one; the
+        full label stays on the product page (GA3). -#}
+    {% if garan|default(null) %}
+        {% include "@Contao/consho/garan_nested.html.twig" with {garan: garan} only %}
+    {% endif %}
+
+    {% if product.formattedPrice %}
+        {#- Block H (H-2): a promotion below the lowest price of the 30 days
+            before it began — the badge, and that price struck through. Only
+            then: a promotion that is not below it reduces nothing (B). -#}
+        {% if product.formattedCompare|default('') %}
+            <p class="consho-tile__badge consho-tile__badge--promotion">{{ "CONSHO.promotion.badge"|trans({}, "contao_default") }}</p>
+        {% endif %}
+        <p class="consho-tile__price">
+            {#- "ab" only when the variants genuinely differ in price. Writing it
+                where they do not suggests a cheaper one exists. -#}
+            {% if product.isFrom %}{{ "CONSHO.priceFrom"|trans({}, "contao_default") }} {% endif %}
+            {#- Rounded and formatted in the page's language (MoneyFormatter).
+                product.price holds the raw decimal for templates of their own. -#}
+            {{ product.formattedPrice }}
+        </p>
+        {% if product.formattedCompare|default('') %}
+            <p class="consho-tile__reference"><del>{{ product.formattedCompare }}</del> {{ "CONSHO.promotion.reference"|trans({}, "contao_default") }}</p>
+        {% endif %}
+        {# Which of the two sentences appears is decided in the controller and
+           travels on showsNet — the template never asks who is logged in. #}
+        {% if not untaxed|default(false) or (shipped ?? true) %}<p class="consho-tile__tax">{{ untaxed|default(false) ? "CONSHO.priceShippingOnly"|trans({}, "contao_default") : ("CONSHO." ~ ((shipped ?? true) ? "priceTaxNotice" : "priceTaxOnly") ~ (showsNet|default(false) ? "Net" : ""))|trans({}, "contao_default") }}</p>{% endif %}
+        {#- Abo-2b, P89: the figure is the one-time price, and the product can
+            also be had as a plan — which one and for how much, the product
+            page says. After the tax notice, which belongs to the price
+            (acceptance Abo-2b). -#}
+        {#- Block G (G7): only where stock is kept, never the number. #}
+        {% if product.stock|default('') %}
+            <p class="consho-tile__stock consho-tile__stock--{{ product.stock }}">{{ ("CONSHO.stock." ~ product.stock)|trans({}, "contao_default") }}</p>
+        {% endif %}
+        {% if product.alsoSubscription|default(false) %}
+            <p class="consho-tile__subscription">{{ "CONSHO.tile.alsoSubscription"|trans({}, "contao_default") }}</p>
+        {% endif %}
+
+        {#
+            Kaufknopf auf der Kachel, am Listenelement eingeschaltet
+            (Michael, 2026-09-22). Drei Bedingungen, und alle drei müssen sein:
+
+            - `tilePurchase` — der Betreiber hat es an dieser Liste gewollt.
+              Ab Werk aus, damit eine Übersicht nicht ungefragt zum Kaufregal
+              wird.
+            - `product.isBuyable` — kein Hauptprodukt MIT Varianten. Dort gibt
+              es keinen kaufbaren Artikel, solange niemand gewählt hat; die
+              Kachel verlinkt dann wie bisher auf die Detailseite.
+            - `product.formattedPrice` — ohne Preis gibt es kein Angebot, und
+              ein Kaufknopf über einer leeren Preiszeile ist eines.
+
+            ⚠️ Menge OHNE Feld: die Mindestmenge des Produkts, still. Wer eine
+            andere will, geht auf die Detailseite oder ändert sie im Warenkorb.
+            Ein Zahlenfeld je Kachel machte jede Kachel höher und brächte die
+            Schrittweite mit, die dort niemand sieht.
+
+            ⚠️ KEIN CSRF-Feld, anders als im Warenkorb und im Checkout: Die
+            Add-Route ist ausgenommen (`_token_check: false`, C11) und über
+            `SameSite=Lax` plus Origin-Prüfung geschützt. Genau deshalb — eine
+            Liste ist geteilt gecacht, und ein Token darin wäre das eines
+            fremden Besuchers.
+        #}
+        {% if tilePurchase|default(false) and product.isBuyable and product.formattedPrice and product.stock|default('') != 'unavailable' %}
+            <form class="consho-tile__purchase" method="post" action="{{ path("consho_cart_add") }}">
+                <input type="hidden" name="article" value="{{ product.id }}">
+                <input type="hidden" name="page" value="{{ purchasePage|default(0) }}">
+                <input type="hidden" name="quantity" value="{{ product.purchaseQuantity }}">
+                <button type="submit" class="consho-tile__purchase-submit">
+                    {#- Der Titel gehört in die Beschriftung: Auf einer Seite
+                        mit zwölf Kacheln liest ein Screenreader sonst zwölfmal
+                        „In den Warenkorb" ohne Unterschied. -#}
+                    {{ "CONSHO.tile.purchase"|trans([product.title], "contao_default") }}
+                </button>
+            </form>
+        {% endif %}
+    {% endif %}
+</article>

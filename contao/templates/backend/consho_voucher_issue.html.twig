@@ -1,0 +1,56 @@
+{#
+  "Gutschein ausstellen" (block Wertgutscheine, WG13). Rendered inside the back
+  end frame by VoucherBackendController; posts back to the same address with
+  Contao's request token.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.back|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+{% if targets is empty %}
+    <div class="tl_formbody_edit">
+        <fieldset class="tl_box">
+            <legend>{{ lang.issueLegend|default('Gutschein ausstellen') }}</legend>
+            <p class="tl_info">{{ lang.issueNoShop|default('') }}</p>
+        </fieldset>
+    </div>
+{% else %}
+    <form action="{{ action }}" method="post" class="tl_form">
+        <div class="tl_formbody_edit">
+            <input type="hidden" name="FORM_SUBMIT" value="consho_voucher_issue">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <fieldset class="tl_box">
+                <legend>{{ lang.issueLegend|default('Gutschein ausstellen') }}</legend>
+                <div class="widget w50">
+                    <h3><label for="ctrl_consho_voucher_target">{{ lang.issueTarget|default('Shop und Währung') }}</label></h3>
+                    <select name="consho_voucher_target" id="ctrl_consho_voucher_target" class="tl_select">
+                        {% for value, label in targets %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="widget w50">
+                    <h3><label for="ctrl_consho_voucher_value">{{ lang.issueValue|default('Betrag') }}</label></h3>
+                    <input type="text" name="consho_voucher_value" id="ctrl_consho_voucher_value" class="tl_text" inputmode="decimal" required>
+                </div>
+                <div class="widget w50 clr">
+                    <h3><label for="ctrl_consho_voucher_valid_until">{{ lang.issueValidUntil|default('Gültig bis') }}</label></h3>
+                    <input type="date" name="consho_voucher_valid_until" id="ctrl_consho_voucher_valid_until" class="tl_text">
+                    <p class="tl_help tl_tip">{{ lang.issueValidUntilHelp|default('') }}</p>
+                </div>
+                <div class="widget clr">
+                    <h3><label for="ctrl_consho_voucher_note">{{ lang.issueNote|default('Notiz') }}</label></h3>
+                    <textarea name="consho_voucher_note" id="ctrl_consho_voucher_note" class="tl_textarea" rows="3"></textarea>
+                </div>
+            </fieldset>
+        </div>
+        <div class="tl_formbody_submit">
+            <div class="tl_submit_container">
+                <button type="submit" class="tl_submit">{{ lang.issueSubmit|default('Ausstellen') }}</button>
+            </div>
+        </div>
+    </form>
+{% endif %}

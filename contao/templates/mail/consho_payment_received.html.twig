@@ -1,0 +1,54 @@
+{#
+  "Zahlung erhalten" (D-1, decision Z3), to the customer, in the language of
+  the order. Sent once, when the payment balance first comes out settled —
+  not for a part payment.
+
+  Loaded as @Contao/mail/consho_payment_received.html.twig (the folder is part
+  of the name, see consho_order_confirmation.html.twig). Parameters are a
+  LIST: Contao fills contao_default strings with vsprintf. Until D-1 this
+  template used keys `consho.mail.*` that existed nowhere and named
+  placeholders vsprintf does not know (spec C, C-8 open point).
+
+  Variables:
+    order      the order in InvoiceView's shape, in the order's language
+    customer   {name, email}
+    invoice    the number of the invoice issued by this payment and attached,
+               '' where none was issued now
+    viewUrl    the order page, with a token
+    digitalReady  what the payment released (F-7, DL3): '', digital, service or mixed
+#}
+{% block subject %}{{ 'CONSHO.mail.paymentReceived.subject'|trans([order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.paymentReceived.intro'|trans([order.orderNumber], 'contao_default') }}</p>
+
+{# D-7, M7: the order it is about — the three-line version went to spam. #}
+{% include '@Contao/mail/_order_context.html.twig' with {order: order, font: font} only %}
+
+{% if invoice %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.paymentReceived.invoiceAttached'|trans([invoice], 'contao_default') }}</p>
+{% endif %}
+{% if digitalReady|default('') %}
+<p style="margin: 0 0 8px 0;">{{ ('CONSHO.mail.paymentReceived.ready.' ~ digitalReady)|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+<p style="margin: 12px 0 0 0;">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}: <strong>{{ order.grandTotal }}</strong></p>
+
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

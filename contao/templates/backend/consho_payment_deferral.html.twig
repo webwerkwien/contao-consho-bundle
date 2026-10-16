@@ -1,0 +1,40 @@
+{#
+  "Zahlungsziel verschieben" at an order (E8). Rendered inside the back end
+  frame by PaymentDeferralBackendController; the form posts back to the same
+  address with Contao's request token.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.deferBack|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+{% if not deferrable %}
+    <div class="tl_formbody_edit">
+        <fieldset class="tl_box">
+            <legend>{{ lang.deferLegend|default('Zahlungsziel') }}: {{ number }}</legend>
+            <p class="tl_info">{{ lang.deferNotPossible|default('') }}</p>
+        </fieldset>
+    </div>
+{% else %}
+    <form action="{{ action }}" method="post" class="tl_form">
+        <div class="tl_formbody_edit">
+            <input type="hidden" name="FORM_SUBMIT" value="consho_payment_deferral">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <fieldset class="tl_box">
+                <legend>{{ lang.deferLegend|default('Zahlungsziel') }}: {{ number }}</legend>
+                <div class="widget w50">
+                    <h3><label for="ctrl_consho_due_date">{{ lang.deferDate|default('Neues Zahlungsziel') }}</label></h3>
+                    <input type="date" name="consho_due_date" id="ctrl_consho_due_date" class="tl_text" min="{{ min }}" value="{{ min }}" required>
+                    <p class="tl_help tl_tip">{{ lang.deferHelp|default('%s')|format(currentLabel) }}</p>
+                </div>
+            </fieldset>
+        </div>
+        <div class="tl_formbody_submit">
+            <div class="tl_submit_container">
+                <button type="submit" class="tl_submit">{{ lang.deferSubmit|default('Verschieben') }}</button>
+            </div>
+        </div>
+    </form>
+{% endif %}
