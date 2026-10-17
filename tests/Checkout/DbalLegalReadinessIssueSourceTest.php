@@ -159,6 +159,22 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         self::assertSame([], $this->issues());
     }
 
+    /**
+     * N1 (Nachlese Stufe 2): für die Einrichtungsseite auch unveröffentlichte.
+     */
+    public function testFuerDieEinrichtungZaehltAuchEinUnveroeffentlichterStartpunkt(): void
+    {
+        $this->connection->insert('tl_page', [
+            'id' => 60, 'title' => 'Testpunkt', 'type' => 'root', 'published' => 0, 'consho_shop' => 1,
+        ]);
+
+        $issues = (new DbalLegalReadinessIssueSource($this->connection, $this->handlers()))->issuesForSetup();
+        $findings = array_map(static fn ($i): string => $i->finding->value, $issues);
+
+        self::assertContains('privacyPageMissing', $findings);
+        self::assertSame([], $this->issues(), 'der normale Weg bleibt bei veröffentlichten');
+    }
+
     public function testEinZeitlichUnerreichbarerStartpunktWirdNichtGemeldet(): void
     {
         $this->connection->insert('tl_page', [

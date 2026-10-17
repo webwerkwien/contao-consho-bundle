@@ -15,6 +15,7 @@ use Webwerkwien\ContaoConshoBundle\Config\AcknowledgementStore;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
 use Webwerkwien\ContaoConshoBundle\EventListener\BackendSystemMessagesListener;
 
 class BackendSystemMessagesListenerTest extends TestCase
@@ -459,6 +460,26 @@ class BackendSystemMessagesListenerTest extends TestCase
     /**
      * @param list<ConfigurationIssue> $issues
      */
+    /**
+     * N1: Die Einrichtungsseite liest die Startpunkt-Befunde auch von
+     * unveröffentlichten Startpunkten; issues() bleibt bei den veröffentlichten,
+     * auch nach einem Aufruf von issuesForSetup().
+     */
+    public function testFuerDieEinrichtungFragtErDieVarianteDerQuelle(): void
+    {
+        $live = new ConfigurationIssue(ConfigurationFinding::CurrencyMissing, [], 1);
+        $prepared = new ConfigurationIssue(ConfigurationFinding::CartPageMissing, [], 1);
+
+        $setup = $this->createMock(SetupIssueSource::class);
+        $setup->method('issues')->willReturn([]);
+        $setup->method('issuesForSetup')->willReturn([$prepared]);
+
+        $listener = new BackendSystemMessagesListener([$this->sourceOf([$live]), $setup], $this->store());
+
+        self::assertSame([$live, $prepared], $listener->issuesForSetup());
+        self::assertSame([$live], $listener->issues());
+    }
+
     private function sourceOf(array $issues): ConfigurationIssueSource
     {
         $source = $this->createMock(ConfigurationIssueSource::class);

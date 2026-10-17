@@ -744,6 +744,7 @@ $GLOBALS['TL_LANG']['CONSHO']['setup'] = [
     'createPages' => 'Fehlende Shopseiten anlegen',
     'pagesCreated' => 'Unter „%s" angelegt: %s. Die Seiten sind veröffentlicht und nicht in der Navigation.',
     'pagesNone' => 'Es fehlte keine Shopseite.',
+    'unpublishedOnly' => 'Betrifft nur Startpunkte, die noch nicht veröffentlicht sind — gesperrt wird dadurch nichts.',
     'pageTitles' => [
         'cart' => 'Warenkorb',
         'checkout' => 'Kasse',

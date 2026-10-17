@@ -19,6 +19,7 @@ use Symfony\Contracts\Service\ResetInterface;
 use Webwerkwien\ContaoConshoBundle\Config\AcknowledgementStore;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
 
 /**
  * Puts Consho's findings into the "Hinweise" box of the back end start page.
@@ -107,10 +108,26 @@ class BackendSystemMessagesListener implements ResetInterface
      */
     public function issues(): array
     {
-        if (null !== $this->issues) {
-            return $this->issues;
-        }
+        return $this->issues ??= $this->collect(false);
+    }
 
+    /**
+     * The same, with the start point findings read from every start point
+     * that names a shop, published or not — for the setup page only (N1,
+     * SetupIssueSource). Not kept: one page asks, once.
+     *
+     * @return list<ConfigurationIssue>
+     */
+    public function issuesForSetup(): array
+    {
+        return $this->collect(true);
+    }
+
+    /**
+     * @return list<ConfigurationIssue>
+     */
+    private function collect(bool $forSetup): array
+    {
         $issues = [];
 
         foreach ($this->sources as $source) {
@@ -122,13 +139,13 @@ class BackendSystemMessagesListener implements ResetInterface
              * pages an operator needs to see what is wrong. Logged, skipped.
              */
             try {
-                $issues = [...$issues, ...$source->issues()];
+                $issues = [...$issues, ...($forSetup && $source instanceof SetupIssueSource ? $source->issuesForSetup() : $source->issues())];
             } catch (\Throwable $e) {
                 $this->logger->error(\sprintf('The configuration check %s failed: %s', $source::class, $e->getMessage()), ['exception' => $e]);
             }
         }
 
-        return $this->issues = $issues;
+        return $issues;
     }
 
     /**

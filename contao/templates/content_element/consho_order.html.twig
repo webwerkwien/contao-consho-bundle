@@ -407,7 +407,7 @@
                                     <li class="consho-order__item">
                                         <span class="consho-order__item-label">{{ item.label }}</span>
                                         {% if item.text is not null %}
-                                            <code class="consho-order__item-text">{{ item.text }}</code>
+                                            <code class="consho-order__item-text">{{ item.text|nl2br }}</code>
                                         {% endif %}
                                         {% if item.download %}
                                             <form method="post" class="consho-order__retrieve">

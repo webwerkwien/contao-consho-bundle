@@ -2,6 +2,7 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Tests\Controller\Backend;
 
+use Contao\CoreBundle\Csrf\ContaoCsrfTokenManager;
 use Contao\CoreBundle\Exception\RedirectResponseException;
 use Contao\CoreBundle\Framework\Adapter;
 use Contao\CoreBundle\Framework\ContaoFramework;
@@ -27,7 +28,7 @@ use Twig\Loader\FilesystemLoader;
 use Webwerkwien\ContaoConshoBundle\Config\AcknowledgementStore;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
-use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
 use Webwerkwien\ContaoConshoBundle\Controller\Backend\SetupBackendController;
 use Webwerkwien\ContaoConshoBundle\EventListener\BackendSystemMessagesListener;
 use Webwerkwien\ContaoConshoBundle\Setup\NumberRangeSetup;
@@ -74,7 +75,9 @@ final class SetupBackendControllerTest extends TestCase
         $html = $this->controller()();
 
         self::assertStringContainsString('Es gibt noch keine Shop-Konfiguration.', $html);
-        self::assertStringContainsString('href="/contao?do=consho_shop&amp;act=create"', $html, 'I3a: über die Maske, nicht selbst angelegt');
+        // Mit Anfrage-Token (Abnahme Stufe 2, 2026-10-17): ohne fragte Contao mit
+        // „Ungültiges Token" nach — act=create prüft es, act=edit nicht.
+        self::assertStringContainsString('href="/contao?do=consho_shop&amp;act=create&amp;rt=token-value"', $html, 'I3a: über die Maske, nicht selbst angelegt');
         self::assertStringNotContainsString('consho-setup__step', $html);
     }
 
@@ -134,6 +137,31 @@ final class SetupBackendControllerTest extends TestCase
         self::assertMatchesRegularExpression('/consho-setup__step--open">.*?Zahlungsart/s', $html);
         self::assertStringNotContainsString('Keine Zahlungsart.', $html);
         self::assertStringContainsString('Das Anlegen auf Knopfdruck steht Administratoren zur Verfügung.', $html);
+    }
+
+    /**
+     * Abnahme N1 auf c5 (2026-10-17): „Bereit — dieser Shop verkauft" und
+     * darunter „… und der Checkout dieses Shops ist gesperrt" — der Satz
+     * stammt von der Startseite und stimmt für einen Befund, der nur
+     * unveröffentlichte Startpunkte betrifft, nicht. Michael: „1 ja".
+     */
+    public function testEinBefundNurAusUnveroeffentlichtenStartpunktenSagtDass(): void
+    {
+        $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
+        $this->connection->insert('tl_page', ['id' => 5, 'title' => 'Shop DE', 'type' => 'root', 'consho_shop' => 1, 'published' => 1]);
+        $GLOBALS['TL_LANG']['CONSHO']['findings']['cartPageMissing'] = 'Ohne Warenkorb: %pages%.';
+
+        $prepared = new ConfigurationIssue(ConfigurationFinding::CartPageMissing, ['count' => '1', 'pages' => 'Entwurf'], 1);
+        $note = 'Betrifft nur Startpunkte, die noch nicht veröffentlicht sind';
+
+        $html = $this->controller([], setupIssues: [$prepared])();
+        self::assertStringContainsString('Ohne Warenkorb: Entwurf. '.$note, $html);
+
+        // Gegenprobe: Meldet die Startseite denselben Befund für den Shop
+        // (ein veröffentlichter Startpunkt ist dabei), stimmt der Satz.
+        $live = new ConfigurationIssue(ConfigurationFinding::CartPageMissing, ['count' => '1', 'pages' => 'Shop DE'], 1);
+        $mixed = new ConfigurationIssue(ConfigurationFinding::CartPageMissing, ['count' => '2', 'pages' => 'Shop DE, Entwurf'], 1);
+        self::assertStringNotContainsString($note, $this->controller([$live], setupIssues: [$mixed])());
     }
 
     public function testNummernkreiseAufKnopfdruck(): void
@@ -196,16 +224,52 @@ final class SetupBackendControllerTest extends TestCase
     }
 
     /**
-     * Ein erreichbarer Startpunkt eines anderen Shops ist kein Fremdziel: Der
-     * Shop wird aus dem Startpunkt gelesen, nicht aus dem Formular.
+     * N1 (Nachlese Stufe 2): Ein Shop in Vorbereitung hat nur unveröffentlichte
+     * Startpunkte — bis 0.1.2 bekamen sie weder Befund noch Knopf, und die
+     * Einrichtungsseite meldete „erledigt". Jetzt bekommen sie beides.
      */
-    public function testEinUnveroeffentlichterStartpunktBekommtNichts(): void
+    public function testEinUnveroeffentlichterStartpunktBekommtSeineSeiten(): void
+    {
+        $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
+        $this->connection->insert('tl_page', ['id' => 6, 'title' => 'Entwurf', 'type' => 'root', 'consho_shop' => 1, 'published' => 0]);
+
+        self::assertStringContainsString('name="consho_setup_target" value="6"', $this->controller()());
+
+        try {
+            $this->controller(request: $this->post('pages', 6))();
+            self::fail('Umleitung erwartet');
+        } catch (RedirectResponseException) {
+        }
+
+        self::assertSame('addConfirmation', $this->messages[0][0] ?? null);
+    }
+
+    /**
+     * Was kein Startpunkt eines Shops ist, bekommt nichts: Der Shop wird aus
+     * dem Startpunkt gelesen, nicht aus dem Formular.
+     */
+    public function testEineSeiteOhneShopBekommtNichts(): void
+    {
+        $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
+        $this->connection->insert('tl_page', ['id' => 6, 'title' => 'Andere Site', 'type' => 'root', 'consho_shop' => 0, 'published' => 1]);
+
+        $this->expectException(BadRequestHttpException::class);
+        $this->controller(request: $this->post('pages', 6))();
+    }
+
+    /**
+     * Fable-Review (2026-10-17): Seit N1 darf der Seiten-Knopf an einem
+     * unveröffentlichten Startpunkt handeln — der Cache-Knopf nicht, die Seite
+     * bietet ihn dort nicht an. Bis hierher prüfte das nur SetupGuideTest, der
+     * Controller nie.
+     */
+    public function testDerCacheKnopfHandeltNichtAnEinemUnveroeffentlichtenStartpunkt(): void
     {
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
         $this->connection->insert('tl_page', ['id' => 6, 'title' => 'Entwurf', 'type' => 'root', 'consho_shop' => 1, 'published' => 0]);
 
         $this->expectException(BadRequestHttpException::class);
-        $this->controller(request: $this->post('pages', 6))();
+        $this->controller(request: $this->post('cache', 6))();
     }
 
     public function testDerCacheZeigtDieEinstellungUndMisstAufWunsch(): void
@@ -276,7 +340,11 @@ final class SetupBackendControllerTest extends TestCase
     /**
      * @param list<ConfigurationIssue> $issues
      */
-    private function controller(array $issues = [], Security|null $security = null, Request|null $request = null, float $probeBudget = SetupBackendController::PROBE_BUDGET): SetupBackendController
+    /**
+     * @param list<ConfigurationIssue>      $issues      what issues() reports — the published start points
+     * @param list<ConfigurationIssue>|null $setupIssues what issuesForSetup() reports, when it differs (N1)
+     */
+    private function controller(array $issues = [], Security|null $security = null, Request|null $request = null, float $probeBudget = SetupBackendController::PROBE_BUDGET, array|null $setupIssues = null): SetupBackendController
     {
         $requests = new RequestStack();
         $requests->push($request ?? Request::create('/contao'));
@@ -318,17 +386,23 @@ final class SetupBackendControllerTest extends TestCase
         $router = $this->createMock(UrlGeneratorInterface::class);
         $router->method('generate')->willReturnCallback(static fn (string $name, array $parameters): string => '/contao?'.http_build_query($parameters));
 
-        $source = new class($issues) implements ConfigurationIssueSource {
+        $source = new class($issues, $setupIssues ?? $issues) implements SetupIssueSource {
             /**
              * @param list<ConfigurationIssue> $issues
+             * @param list<ConfigurationIssue> $setupIssues
              */
-            public function __construct(private readonly array $issues)
+            public function __construct(private readonly array $issues, private readonly array $setupIssues)
             {
             }
 
             public function issues(): array
             {
                 return $this->issues;
+            }
+
+            public function issuesForSetup(): array
+            {
+                return $this->setupIssues;
             }
         };
 
@@ -344,8 +418,16 @@ final class SetupBackendControllerTest extends TestCase
             $framework,
             $requests,
             $security,
-            null,
+            $this->tokens(),
             $probeBudget,
         );
+    }
+
+    private function tokens(): ContaoCsrfTokenManager
+    {
+        $tokens = $this->createMock(ContaoCsrfTokenManager::class);
+        $tokens->method('getDefaultTokenValue')->willReturn('token-value');
+
+        return $tokens;
     }
 }

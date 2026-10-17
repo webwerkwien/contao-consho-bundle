@@ -8,6 +8,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Address;
+use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 use Symfony\Component\Mime\Email;
 use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityGuarantees;
 use Webwerkwien\ContaoConshoBundle\Catalog\GuaranteeYears;
@@ -212,7 +213,7 @@ final class OrderConfirmation implements OrderConfirmationInterface
             $transportRow = $shop['transport'] ?? throw new \RuntimeException('the shop has no mail configuration');
 
             $transport = $this->transports->create($transportRow);
-            $from = new Address((string) ($transportRow['senderAddress'] ?? ''), (string) ($transportRow['senderName'] ?? ''));
+            $from = SenderAddress::of($transportRow);
 
             $invoice = $this->source->invoice($orderId);
             $pdf = null === $invoice ? null : $this->pdfs->pdf($invoice['id']);

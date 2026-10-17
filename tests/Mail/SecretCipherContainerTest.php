@@ -38,9 +38,20 @@ class SecretCipherContainerTest extends TestCase
         }
     }
 
-    public function testWithoutTheVariableTheContainerStillBuildsIt(): void
+    /**
+     * N2: Ohne CONSHO_SECRET_KEY aus APP_SECRET (kernel.secret) — der Weg, den
+     * ein frisch über den Contao Manager installierter Shop nimmt.
+     */
+    public function testWithoutTheVariableTheKeyComesFromTheKernelSecret(): void
     {
-        $cipher = $this->cipher();
+        $cipher = $this->cipher('kernel-secret-of-this-installation');
+
+        self::assertSame('hunter2', $cipher->decrypt($cipher->encrypt('hunter2')));
+    }
+
+    public function testWithoutTheVariableAndWithoutASecretItStillBuilds(): void
+    {
+        $cipher = $this->cipher('');
 
         self::assertSame('', $cipher->encrypt(''), 'nothing to protect, nothing refused');
 
@@ -58,17 +69,19 @@ class SecretCipherContainerTest extends TestCase
         self::assertSame('hunter2', $cipher->decrypt($cipher->encrypt('hunter2')));
     }
 
-    private function cipher(): SecretCipher
+    private function cipher(string $kernelSecret = 'kernel-secret'): SecretCipher
     {
-        /** @var array{services: array<string, array{arguments: array{'$key': string}}>} $config */
+        /** @var array{services: array<string, array{arguments: array{'$key': string, '$fallbackSecret': string}}>} $config */
         $config = Yaml::parseFile(\dirname(__DIR__, 2).'/config/services.yaml');
-        $argument = $config['services'][SecretCipher::class]['arguments']['$key'];
+        $arguments = $config['services'][SecretCipher::class]['arguments'];
 
-        self::assertStringContainsString(self::VARIABLE, $argument, 'the definition this test is about');
+        self::assertStringContainsString(self::VARIABLE, $arguments['$key'], 'the definition this test is about');
 
         $container = new ContainerBuilder();
+        $container->setParameter('kernel.secret', $kernelSecret);
         $container->register(SecretCipher::class, SecretCipher::class)
-            ->setArgument('$key', $argument)
+            ->setArgument('$key', $arguments['$key'])
+            ->setArgument('$fallbackSecret', $arguments['$fallbackSecret'])
             ->setPublic(true);
         $container->compile(true);
 

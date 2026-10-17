@@ -116,6 +116,31 @@ class SetupGuideTest extends TestCase
         self::assertSame([], (new SetupGuide($this->connection))->liveRoots(1, self::NOW));
     }
 
+    /**
+     * N1: Die Einrichtungsseite liest ihre Schritte auch von unveröffentlichten
+     * Startpunkten. Ob der Shop verkauft, entscheiden die veröffentlichten —
+     * ein halbfertiger Zusatz-Startpunkt nimmt einem laufenden Shop nicht das
+     * „bereit".
+     */
+    public function testDieSchritteLesenAlleStartpunkteBereitNurDieVeroeffentlichten(): void
+    {
+        $this->page(['id' => 1, 'title' => 'Shop DE', 'type' => 'root', 'language' => 'de', 'consho_shop' => 1, 'sorting' => 1]);
+        $this->page(['id' => 2, 'title' => 'Vorbereitung', 'type' => 'root', 'language' => 'en', 'consho_shop' => 1, 'published' => 0, 'sorting' => 2]);
+
+        $prepared = [new ConfigurationIssue(ConfigurationFinding::CheckoutPageMissing, [], 1)];
+        $setup = (new SetupGuide($this->connection))->forShop(1, 'Shop DE', $prepared, self::NOW, []);
+
+        self::assertTrue($setup->ready);
+        self::assertSame(StepState::OPEN, $this->stepStatus($setup->steps, SetupStep::ShopPages));
+        self::assertSame([1], array_column($setup->roots, 'id'));
+        self::assertSame([1, 2], array_column($setup->assigned, 'id'));
+
+        // Der Knopf „Seiten anlegen" darf am unveröffentlichten handeln, der Cache nicht.
+        $guide = new SetupGuide($this->connection);
+        self::assertNull($guide->root(2, self::NOW));
+        self::assertSame(1, $guide->root(2, self::NOW, assigned: true)['shop'] ?? null);
+    }
+
     public function testEinSperrenderBefundOeffnetSeinenSchrittUndNimmtDieBereitschaft(): void
     {
         $this->page(['id' => 1, 'type' => 'root', 'consho_shop' => 1]);

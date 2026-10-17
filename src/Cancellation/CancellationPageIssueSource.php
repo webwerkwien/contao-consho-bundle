@@ -5,7 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Cancellation;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
-use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
 
 /**
  * A shop that sells subscriptions without a reachable "Verträge hier
@@ -24,14 +24,31 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * the button "unmittelbar und leicht zugänglich", and a subscription always
  * has an account, so a login is exactly what the law keeps out of the way.
  */
-final class CancellationPageIssueSource implements ConfigurationIssueSource
+final class CancellationPageIssueSource implements SetupIssueSource
 {
+    private bool $forSetup = false;
+
     public function __construct(private readonly Connection $connection)
     {
     }
 
+    public function issuesForSetup(): array
+    {
+        $copy = clone $this;
+        $copy->forSetup = true;
+
+        return $copy->issues();
+    }
+
     public function issues(): array
     {
+        // For the setup page every start point with a shop (N1).
+        $root = $this->forSetup
+            ? '1 = 1'
+            : "root.published = 1
+                    AND (root.start = '' OR root.start <= :now)
+                    AND (root.stop = '' OR root.stop > :now)";
+
         $rows = $this->connection->fetchAllAssociative(
             \sprintf(
                 "SELECT root.title, s.id AS shop, s.title AS shopTitle
@@ -43,9 +60,7 @@ final class CancellationPageIssueSource implements ConfigurationIssueSource
                     AND (target.start = '' OR target.start <= :now)
                     AND (target.stop = '' OR target.stop > :now)
                   WHERE root.type IN ('root', 'rootfallback')
-                    AND root.published = 1
-                    AND (root.start = '' OR root.start <= :now)
-                    AND (root.stop = '' OR root.stop > :now)
+                    AND %5\$s
                     AND (
                         EXISTS (SELECT 1 FROM tl_consho_subscription a WHERE a.shop = s.id AND a.state IN ('active', 'suspended', 'paused'))
                         OR EXISTS (
@@ -75,6 +90,7 @@ final class CancellationPageIssueSource implements ConfigurationIssueSource
                 self::visible('c', 'invisible = 0'),
                 self::visible('nested', 'invisible = 0'),
                 self::visible('outer_element', 'invisible = 0'),
+                $root,
             ),
             // The full minute, the way Contao compares start/stop.
             ['now' => (string) (intdiv(time(), 60) * 60)],

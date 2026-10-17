@@ -107,4 +107,66 @@ class SecretCipherTest extends TestCase
             self::assertStringContainsString('CONSHO_SECRET_KEY', $e->getMessage());
         }
     }
+
+    /**
+     * N2 (Nachlese Stufe 2, Michael 2026-10-17: „ja, ableiten"): Ohne
+     * CONSHO_SECRET_KEY kommt der Schlüssel aus APP_SECRET, das Contao bei der
+     * Installation selbst anlegt — ein Betreiber ohne SSH kam sonst nie zu
+     * einem SMTP-Passwort.
+     */
+    public function testOhneEigenenSchluesselLeitetErAusAppSecretAb(): void
+    {
+        $cipher = new SecretCipher(null, 'app-secret-of-this-installation');
+
+        $stored = $cipher->encrypt('hunter2');
+
+        self::assertSame('hunter2', (new SecretCipher(null, 'app-secret-of-this-installation'))->decrypt($stored), 'derselbe Schlüssel bei jedem Aufbau');
+        self::assertNull((new SecretCipher(null, 'ein anderes'))->decrypt($stored), 'ein neues APP_SECRET liest nichts mehr');
+    }
+
+    /**
+     * Fable-Review (2026-10-17): Zweckangabe, Hash und Länge der Ableitung
+     * waren durch keinen Test festgelegt — „v1" → „v2" überlebte die ganze
+     * Suite. Jede solche Änderung ist eine stille Schlüsselrotation: alle aus
+     * APP_SECRET abgeleiteten Passwörter wären unlesbar. Dieser Chiffretext
+     * entstand einmal mit der Ableitung von 0.1.3 und muss lesbar bleiben.
+     */
+    public function testEinMitDerAbleitungVon013GespeicherterWertBleibtLesbar(): void
+    {
+        self::assertSame(
+            'hunter2',
+            (new SecretCipher(null, 'known-answer-secret'))->decrypt('BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcH+tYcq/GTwDNga0KKe4TUVGdeZg54nSM='),
+        );
+    }
+
+    public function testDerEigeneSchluesselHatVorrang(): void
+    {
+        $own = new SecretCipher(str_repeat('k', 32), 'app-secret');
+
+        self::assertSame('hunter2', (new SecretCipher(str_repeat('k', 32)))->decrypt($own->encrypt('hunter2')), 'APP_SECRET spielt keine Rolle');
+    }
+
+    /**
+     * Ein gesetzter, aber falscher Consho-Schlüssel fällt NICHT still auf
+     * APP_SECRET zurück: Die gespeicherten Passwörter wären dann unlesbar, und
+     * niemand wüsste, warum.
+     */
+    public function testEinFalscherEigenerSchluesselFaelltNichtZurueck(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('CONSHO_SECRET_KEY');
+
+        (new SecretCipher('too short', 'app-secret'))->encrypt('hunter2');
+    }
+
+    public function testOhneBeidesNenntDieMeldungBeide(): void
+    {
+        try {
+            (new SecretCipher(null, ''))->encrypt('hunter2');
+            self::fail('ohne Schlüssel nichts verschlüsseln');
+        } catch (\InvalidArgumentException $e) {
+            self::assertStringContainsString('CONSHO_SECRET_KEY', $e->getMessage());
+            self::assertStringContainsString('APP_SECRET', $e->getMessage());
+        }
+    }
 }

@@ -5,6 +5,33 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.3] – 2026-10-17
+
+### Geändert
+
+- **Der Mailschlüssel kommt ohne Handarbeit aus `APP_SECRET`:** Fehlt `CONSHO_SECRET_KEY`, leitet Consho den Schlüssel
+  für SMTP-Passwörter per HKDF aus dem `APP_SECRET` ab, das Contao bei der Installation selbst anlegt. Ein eigener
+  `CONSHO_SECRET_KEY` hat Vorrang; ist er gesetzt und falsch, gibt es einen Fehler statt eines stillen Rückfalls. Ein
+  Wechsel der Quelle macht die gespeicherten Passwörter unlesbar — Einzelheiten in `docs/rollout.md`. (Nachlese Stufe 2, N2)
+- **Die Einrichtungsseite prüft auch unveröffentlichte Startpunkte:** Ein Shop in Vorbereitung meldete bei „Shopseiten"
+  und „Rechtstexte" erledigt, obwohl nichts angelegt war. Jetzt stehen die Befunde dort, mit dem Zusatz, dass sie
+  nichts sperren; „Fehlende Shopseiten anlegen" und die Links gelten für jeden Startpunkt des Shops. „Bereit",
+  Startseite und Checkout bleiben bei den veröffentlichten. (Nachlese Stufe 2, N1)
+
+### Behoben
+
+- **Der Link „Shop-Konfiguration anlegen" auf der Einrichtungsseite** führte ohne Anfrage-Token auf Contaos Seite
+  „Ungültiges Token". (Nachlese Stufe 2)
+- **Absendername und Testmail mit Contaos Eingabekodierung:** Ein Absendername wie „Müller & Co" kam in jeder Kundenmail
+  als `Müller &amp; Co` an, die Testmail zeigte Klammern im Titel als `&#40;…&#41;`. Beides geht jetzt dekodiert hinaus.
+  (Nachlese Stufe 2)
+- **Fehlalarm „Bestellung scheitert an der Steuerberechnung" für EU-Länder:** Mit „Steuer im Bestimmungsland" aus rechnet
+  Consho EU-Privatkunden mit dem Satz des Shoplands; die Prüfung verlangte trotzdem einen Satz je Lieferland. (Nachlese Stufe 2)
+- **Jede Anfrage baute die Zahlungs- und Kündigungsdienste mit**, über zwei Listener am Ende der Anfrage — bis hinunter
+  zum Mailschlüssel. Jetzt erst, wenn eine Zahlung oder Kündigung wirklich zu bearbeiten ist. (Nachlese Stufe 2)
+- **Mehrzeilige Texte eines Auslieferungsmoduls auf der Bestellseite** liefen in eine Zeile (etwa der zweizeilige
+  Composer-Zugang des Lizenz-Pakets). (Nachlese Stufe 2)
+
 ## [0.1.2] – 2026-10-16
 
 ### Behoben

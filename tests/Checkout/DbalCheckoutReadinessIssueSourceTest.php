@@ -78,6 +78,30 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         self::assertSame([], $this->issues());
     }
 
+    /**
+     * N1 (Nachlese Stufe 2): Die Einrichtungsseite fragt auch unveröffentlichte
+     * Startpunkte — ein Shop in Vorbereitung meldete dort sonst „erledigt",
+     * obwohl keine Shopseite angelegt war. Startseite und Checkout bleiben bei
+     * den veröffentlichten (Test darüber).
+     */
+    public function testFuerDieEinrichtungZaehltAuchEinUnveroeffentlichterStartpunkt(): void
+    {
+        $this->vollstaendig();
+        $this->connection->insert('tl_page', [
+            'id' => 50, 'title' => 'Test-Startpunkt', 'type' => 'root',
+            'published' => 0, 'start' => (string) (time() + 86_400), 'consho_shop' => 1, 'consho_checkoutPage' => 0,
+        ]);
+
+        $findings = array_map(
+            static fn (ConfigurationIssue $issue): ConfigurationFinding => $issue->finding,
+            (new DbalCheckoutReadinessIssueSource($this->connection, new ConfigurationCheck()))->issuesForSetup(),
+        );
+
+        self::assertContains(ConfigurationFinding::CheckoutPageMissing, $findings);
+        self::assertContains(ConfigurationFinding::CartPageMissing, $findings);
+        self::assertSame([], $this->issues(), 'der normale Weg bleibt bei veröffentlichten');
+    }
+
     public function testEinZeitlichUnerreichbarerStartpunktWirdNichtGemeldet(): void
     {
         // Dieselbe Regel wie bei den Kundengruppen in C-4: Was ausserhalb

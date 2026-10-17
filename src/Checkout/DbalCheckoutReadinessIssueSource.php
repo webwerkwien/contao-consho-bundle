@@ -7,7 +7,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationCheck;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
-use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
 use Webwerkwien\ContaoConshoBundle\Shipping\DbalShippingMethodRepository;
 
 /**
@@ -35,12 +35,22 @@ use Webwerkwien\ContaoConshoBundle\Shipping\DbalShippingMethodRepository;
  * tag, but they are cleared by different people.
  */
 #[AutoconfigureTag('consho.checkout_readiness_source')]
-final class DbalCheckoutReadinessIssueSource implements ConfigurationIssueSource
+final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
 {
+    private bool $forSetup = false;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly ConfigurationCheck $check,
     ) {
+    }
+
+    public function issuesForSetup(): array
+    {
+        $copy = clone $this;
+        $copy->forSetup = true;
+
+        return $copy->issues();
     }
 
     public function issues(): array
@@ -101,17 +111,19 @@ final class DbalCheckoutReadinessIssueSource implements ConfigurationIssueSource
          * `start`/`stop` are in as well, for the same reason C-4 read
          * MemberGroupModel::findAllActive(): a page outside its window is as
          * unreachable as an unpublished one.
+         *
+         * The setup page asks for every start point (N1, issuesForSetup()):
+         * there the finding blocks nothing, and a shop in preparation needs it.
          */
         $without = $this->connection->fetchAllAssociative(
-            "SELECT p.title, p.consho_shop AS shop
-             FROM tl_page p
-             WHERE p.type IN ('root', 'rootfallback')
-               AND p.consho_shop > 0
-               AND p.published = 1
-               AND (p.start = '' OR p.start <= :now)
-               AND (p.stop = '' OR p.stop > :now)
-               AND (p.consho_checkoutPage = 0 OR p.consho_checkoutPage IS NULL)
-             ORDER BY p.id",
+            \sprintf(
+                'SELECT p.title, p.consho_shop AS shop
+                 FROM tl_page p
+                 WHERE %s
+                   AND (p.consho_checkoutPage = 0 OR p.consho_checkoutPage IS NULL)
+                 ORDER BY p.id',
+                $this->liveRoot('p'),
+            ),
             ['now' => $this->minute()],
         );
 
@@ -150,11 +162,7 @@ final class DbalCheckoutReadinessIssueSource implements ConfigurationIssueSource
             "SELECT target.title, root.consho_shop AS shop
              FROM tl_page root
              JOIN tl_page target ON target.id = root.consho_checkoutPage
-             WHERE root.type IN ('root', 'rootfallback')
-               AND root.consho_shop > 0
-               AND root.published = 1
-               AND (root.start = '' OR root.start <= :now)
-               AND (root.stop = '' OR root.stop > :now)
+             WHERE ".$this->liveRoot('root')."
                AND target.published = 1
                AND NOT EXISTS (
                    SELECT 1 FROM tl_content c
@@ -224,7 +232,7 @@ final class DbalCheckoutReadinessIssueSource implements ConfigurationIssueSource
                       WHERE %1$s
                         AND (p.%2$s = 0 OR p.%2$s IS NULL)
                       ORDER BY p.id',
-                    self::liveRoot('p'),
+                    $this->liveRoot('p'),
                     $field,
                 ),
                 ['now' => $this->minute()],
@@ -272,7 +280,7 @@ final class DbalCheckoutReadinessIssueSource implements ConfigurationIssueSource
                               AND %7\$s
                         )
                       ORDER BY target.id",
-                    self::liveRoot('root'),
+                    $this->liveRoot('root'),
                     $field,
                     self::visible('c', 'invisible = 0'),
                     self::visible('a', 'published = 1'),
@@ -315,8 +323,13 @@ final class DbalCheckoutReadinessIssueSource implements ConfigurationIssueSource
         );
     }
 
-    private static function liveRoot(string $alias): string
+    private function liveRoot(string $alias): string
     {
+        // For the setup page every start point with a shop (N1, issuesForSetup()).
+        if ($this->forSetup) {
+            return \sprintf("%1\$s.type IN ('root', 'rootfallback') AND %1\$s.consho_shop > 0", $alias);
+        }
+
         return \sprintf(
             "%1\$s.type IN ('root', 'rootfallback')
              AND %1\$s.consho_shop > 0

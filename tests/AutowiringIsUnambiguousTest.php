@@ -95,7 +95,16 @@ class AutowiringIsUnambiguousTest extends TestCase
      */
     private function isTagged(string $interface): bool
     {
-        return [] !== (new \ReflectionClass($interface))->getAttributes(AutoconfigureTag::class);
+        // Eine Unter-Schnittstelle einer getaggten ist ebenso Mehrzahl
+        // (SetupIssueSource, N1): ihre Klassen kommen über das Tag der
+        // Eltern-Schnittstelle, nie einzeln.
+        foreach ([$interface, ...(class_implements($interface) ?: [])] as $candidate) {
+            if ([] !== (new \ReflectionClass($candidate))->getAttributes(AutoconfigureTag::class)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

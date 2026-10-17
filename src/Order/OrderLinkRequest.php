@@ -7,6 +7,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mime\Address;
+use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
@@ -113,7 +114,7 @@ class OrderLinkRequest
             ], $language, $frame);
 
             $email = (new Email())
-                ->from(new Address((string) ($transportRow['senderAddress'] ?? ''), (string) ($transportRow['senderName'] ?? '')))
+                ->from(SenderAddress::of($transportRow))
                 ->to(new Address((string) $order['email'], $name))
                 ->subject($mail->subject)
                 ->html($mail->body)

@@ -47,6 +47,20 @@ class OrderTemplateTest extends TestCase
     }
 
     /**
+     * Nachlese Stufe 2: Der Composer-Zugang des Lizenz-Pakets ist zweizeilig
+     * (Repository, dann Anmeldung). In einem `<code>` ohne Umbruch liefen beide
+     * Befehle in eine Zeile — kopiert ein Befehl, der nicht geht. `nl2br`
+     * escapt vorher, der Text bleibt fremder Text.
+     */
+    public function testEinMehrzeiligerModultextBehaeltSeineZeilen(): void
+    {
+        self::assertStringContainsString('<code class="consho-order__item-text">{{ item.text|nl2br }}</code>', (string) file_get_contents(self::TEMPLATE));
+
+        $twig = new \Twig\Environment(new \Twig\Loader\ArrayLoader(['t' => '{{ text|nl2br }}']));
+        self::assertSame("a &lt;b&gt;<br />\nc", $twig->render('t', ['text' => "a <b>\nc"]));
+    }
+
+    /**
      * @return iterable<string, array{string}>
      */
     public static function tabellen(): iterable

@@ -142,15 +142,51 @@ class DeliveryCountryProviderTest extends TestCase
     }
 
     /**
+     * Nachlese Stufe 2: Beim Speichern der Shop-Konfiguration des Verkaufsshops
+     * kamen 26 Meldungen „Bestellung scheitert an der Steuerberechnung" für
+     * EU-Länder. Mit „Steuer im Bestimmungsland" aus rechnen Checkout,
+     * Bestellung und Katalog einen EU-Privatkunden aber mit dem Satz des
+     * Shoplands (TaxPlace::forDistanceSale) — der Satz des Lieferlands wird
+     * nie gefragt. Drittländer schon, und mit dem Schalter an auch die EU.
+     */
+    public function testOhneSteuerImBestimmungslandBrauchenEuLaenderKeinenEigenenSatz(): void
+    {
+        $repository = $this->createMock(TaxRateRepositoryInterface::class);
+        $repository->method('findTaxClassIdsUsedByShop')->willReturn([1]);
+        $repository->method('findConfiguredCountries')->willReturnMap([[1, 1_757_000_000, ['AT']]]);
+
+        $provider = new DeliveryCountryProvider($repository, $this->countryProvider());
+
+        self::assertSame(['CH' => [1]], $provider->incompleteFor($this->shop(['AT', 'DE', 'IT', 'CH'], 'AT'), 1_757_000_000));
+        self::assertSame(
+            ['DE' => [1], 'IT' => [1], 'CH' => [1]],
+            $provider->incompleteFor($this->shop(['AT', 'DE', 'IT', 'CH'], 'AT', taxAtDestination: true), 1_757_000_000),
+        );
+    }
+
+    public function testEinShopAusserhalbDerEuBrauchtJedenSatz(): void
+    {
+        // Ohne EU-Heimat gibt es keine Fernverkaufsschwelle (TaxPlace).
+        $repository = $this->createMock(TaxRateRepositoryInterface::class);
+        $repository->method('findTaxClassIdsUsedByShop')->willReturn([1]);
+        $repository->method('findConfiguredCountries')->willReturnMap([[1, 1_757_000_000, ['CH']]]);
+
+        $provider = new DeliveryCountryProvider($repository, $this->countryProvider());
+
+        self::assertSame(['DE' => [1]], $provider->incompleteFor($this->shop(['CH', 'DE'], 'CH'), 1_757_000_000));
+    }
+
+    /**
      * @param list<string> $whitelist
      */
-    private function shop(array $whitelist, string $country = ''): ShopModel
+    private function shop(array $whitelist, string $country = '', bool $taxAtDestination = false): ShopModel
     {
         $shop = $this->createMock(ShopModel::class);
         $shop->method('__get')->willReturnMap([
             ['id', 3],
             ['deliveryCountries', serialize($whitelist)],
             ['country', $country],
+            ['taxAtDestination', $taxAtDestination ? '1' : ''],
         ]);
 
         return $shop;

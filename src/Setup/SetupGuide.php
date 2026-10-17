@@ -69,9 +69,13 @@ final class SetupGuide
     }
 
     /**
-     * @param list<ConfigurationIssue> $issues every finding, of every shop
+     * @param list<ConfigurationIssue>      $issues every finding, of every shop — the steps read them
+     * @param list<ConfigurationIssue>|null $live   the findings "ready" reads, when they differ: the
+     *                                              setup page reads its steps from every start point
+     *                                              (N1), but whether the shop sells is decided by the
+     *                                              published ones, as the checkout decides it
      */
-    public function forShop(int $shopId, string $title, array $issues, int $now): ShopSetup
+    public function forShop(int $shopId, string $title, array $issues, int $now, array|null $live = null): ShopSetup
     {
         $roots = $this->liveRoots($shopId, $now);
 
@@ -96,7 +100,10 @@ final class SetupGuide
             $steps[] = new StepState($step, $status, $found);
         }
 
-        $ready = [] !== $roots && [] === array_filter($mine, $stops);
+        $ready = [] !== $roots && [] === self::stopping($shopId, null === $live ? $mine : array_values(array_filter(
+            $live,
+            static fn (ConfigurationIssue $issue): bool => $issue->finding->isWarning() && (0 === $issue->shopId || $issue->shopId === $shopId),
+        )));
 
         return new ShopSetup(
             $shopId,
@@ -105,6 +112,7 @@ final class SetupGuide
             $roots,
             $steps,
             array_values(array_filter($mine, static fn (ConfigurationIssue $issue): bool => null === SetupStep::of($issue->finding))),
+            $this->assignedRoots($shopId),
         );
     }
 
@@ -137,13 +145,16 @@ final class SetupGuide
      * shop it names — the same set the page offers buttons for, so a forged
      * id gets nothing the page would not have offered.
      *
+     * With $assigned, any start point of the shop, published or not — the
+     * pages button works where the setup page shows its findings (N1).
+     *
      * @return array{id: int, title: string, language: string, shop: int}|null
      */
-    public function root(int $rootId, int $now): array|null
+    public function root(int $rootId, int $now, bool $assigned = false): array|null
     {
         $shopId = (int) $this->connection->fetchOne("SELECT consho_shop FROM tl_page WHERE id = ? AND type IN ('root', 'rootfallback')", [$rootId]);
 
-        foreach ($shopId > 0 ? $this->liveRoots($shopId, $now) : [] as $root) {
+        foreach ($shopId > 0 ? ($assigned ? $this->assignedRoots($shopId) : $this->liveRoots($shopId, $now)) : [] as $root) {
             if ($root['id'] === $rootId) {
                 return [...$root, 'shop' => $shopId];
             }
@@ -173,6 +184,31 @@ final class SetupGuide
             ['shop' => $shopId, 'now' => $minute],
         );
 
+        return self::rows($rows);
+    }
+
+    /**
+     * Every start point naming the shop, published or not (N1).
+     *
+     * @return list<array{id: int, title: string, language: string}>
+     */
+    public function assignedRoots(int $shopId): array
+    {
+        return self::rows($this->connection->fetchAllAssociative(
+            "SELECT id, title, language FROM tl_page
+              WHERE type IN ('root', 'rootfallback') AND consho_shop = ?
+              ORDER BY sorting, id",
+            [$shopId],
+        ));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return list<array{id: int, title: string, language: string}>
+     */
+    private static function rows(array $rows): array
+    {
         return array_map(
             static fn (array $row): array => ['id' => (int) $row['id'], 'title' => (string) $row['title'], 'language' => (string) $row['language']],
             $rows,

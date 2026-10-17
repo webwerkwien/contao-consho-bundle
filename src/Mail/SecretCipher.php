@@ -12,16 +12,31 @@ namespace Webwerkwien\ContaoConshoBundle\Mail;
  * detectable at all. A fresh nonce per encryption means two shops with the same
  * password do not end up with identical ciphertexts: without that, a dump would
  * reveal which shops share a password without decrypting a single byte.
+ *
+ * ── Without CONSHO_SECRET_KEY: derived from APP_SECRET (N2) ──────────────
+ *
+ * Michael, 2026-10-17: „ja, ableiten". An operator had to generate a key and
+ * write it into `.env.local` — hardly possible without SSH, and learnt only at
+ * the first SMTP password. APP_SECRET is written by Contao at installation and
+ * also lives in the environment, never in the database, so the reason above
+ * holds. HKDF with a fixed purpose, so this key is not the secret Symfony
+ * signs with. The own key wins where set; set and wrong, it fails rather than
+ * falling back — the stored passwords would be unreadable, and nobody would
+ * know why.
  */
 final class SecretCipher
 {
+    /** HKDF info: what the derived key is for, versioned. */
+    public const PURPOSE = 'consho-mail-credentials-v1';
+
     private readonly string $key;
 
     /**
-     * @param string|null $key null when CONSHO_SECRET_KEY is not set — what
-     *                         `%env(base64:default::…)%` hands over then
+     * @param string|null $key            null when CONSHO_SECRET_KEY is not set — what
+     *                                    `%env(base64:default::…)%` hands over then
+     * @param string      $fallbackSecret APP_SECRET (kernel.secret)
      */
-    public function __construct(string|null $key)
+    public function __construct(string|null $key, private readonly string $fallbackSecret = '')
     {
         /*
          * Checked at use, not here (v0.1.2). Consho's terminate listeners
@@ -83,10 +98,15 @@ final class SecretCipher
      */
     private function key(): string
     {
+        if ('' === $this->key && '' !== $this->fallbackSecret) {
+            return hash_hkdf('sha256', $this->fallbackSecret, SODIUM_CRYPTO_SECRETBOX_KEYBYTES, self::PURPOSE);
+        }
+
         if (SODIUM_CRYPTO_SECRETBOX_KEYBYTES !== \strlen($this->key)) {
             throw new \InvalidArgumentException(\sprintf(
-                'The encryption key must be exactly %d bytes: set CONSHO_SECRET_KEY in .env.local to %d base64-encoded random bytes (php -r "echo base64_encode(random_bytes(%d));").',
-                SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
+                '' === $this->key
+                    ? 'No encryption key for mail passwords: neither CONSHO_SECRET_KEY nor APP_SECRET is set. Set CONSHO_SECRET_KEY in .env.local to %2$d base64-encoded random bytes (php -r "echo base64_encode(random_bytes(%2$d));").'
+                    : 'The encryption key must be exactly %1$d bytes: set CONSHO_SECRET_KEY in .env.local to %2$d base64-encoded random bytes (php -r "echo base64_encode(random_bytes(%2$d));").',
                 SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
                 SODIUM_CRYPTO_SECRETBOX_KEYBYTES,
             ));

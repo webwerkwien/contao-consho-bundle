@@ -134,6 +134,26 @@ class MailTransportTestControllerTest extends TestCase
     }
 
     /**
+     * Nachlese Stufe 2: Auf dem Verkaufsshop kam die Bezeichnung als
+     * „&#40;…&#41;" in Betreff und Text, sobald die Maske einmal gespeichert
+     * hatte — Contaos Eingabekodierung. Betreibertexte gehen dekodiert hinaus.
+     */
+    public function testBezeichnungUndAbsenderKommenDekodiert(): void
+    {
+        $this->connection->update('tl_consho_mail_transport', ['title' => 'Versand &#40;Hermes&#41;', 'senderName' => 'Müller &amp; Co'], ['id' => 1]);
+
+        $this->redirectOf(fn () => $this->controller($this->post('empfang@example.net'))($this->dc(1)));
+
+        $mail = $this->transport->sent[0];
+        self::assertSame('Consho: Testmail — Versand (Hermes)', $mail->getSubject());
+        self::assertStringContainsString('„Versand (Hermes)"', (string) $mail->getTextBody());
+        self::assertSame('Müller & Co', $mail->getFrom()[0]->getName());
+
+        $html = $this->controller(Request::create('/contao?do=consho_mail&key=testMail&id=1'))($this->dc(1));
+        self::assertStringNotContainsString('&amp;#40;', $html, 'auf der Seite nicht doppelt kodiert');
+    }
+
+    /**
      * Genau dafür ist sie da: die Antwort des Servers in der Meldung.
      */
     public function testDieAntwortDesServersStehtInDerMeldung(): void

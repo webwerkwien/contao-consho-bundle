@@ -66,12 +66,24 @@ final class DeliveryCountryProvider
      * The answer the back end check of section 7 needs, and the one an operator
      * asks when an order from abroad fails: which country, and which class.
      *
+     * Only countries whose rate is ever asked for: with "Steuer im
+     * Bestimmungsland" off, an EU consumer is taxed at the shop's rate
+     * (TaxPlace::forDistanceSale(), the rule checkout, order and catalogue
+     * use), so that country needs no rate of its own. Found on the sales shop
+     * (Nachlese Stufe 2): 26 warnings "Bestellung scheitert" for orders that
+     * would have gone through.
+     *
      * @return array<string, list<int>> ISO code => tax class ids without a rate
      */
     public function incompleteFor(ShopModel $shop, int $timestamp): array
     {
-        $whitelist = $this->whitelistOf($shop);
         $home = $this->countries->normalise((string) $shop->country);
+        $taxAtDestination = (bool) $shop->taxAtDestination;
+
+        $whitelist = array_values(array_filter(
+            $this->whitelistOf($shop),
+            static fn (string $country): bool => strtoupper(TaxPlace::forDistanceSale($country, $home, $taxAtDestination)) === $country,
+        ));
 
         if ('' !== $home && !\in_array($home, $whitelist, true)) {
             $whitelist[] = $home;

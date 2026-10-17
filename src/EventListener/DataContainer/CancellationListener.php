@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Attribute\AutowireServiceClosure;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -31,6 +32,10 @@ use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationDecision;
  * onsubmit: CancellationDecision applies it once and mails the customer —
  * after Contao's transaction where "Mehrere bearbeiten" opened one (see
  * PaymentRecordListener).
+ *
+ * CancellationDecision as a closure, built only when a decision is applied —
+ * the terminate listener exists on every request and console command (see
+ * PaymentRecordListener).
  */
 class CancellationListener
 {
@@ -39,10 +44,14 @@ class CancellationListener
     /** @var array<int, true> */
     private array $deferred = [];
 
+    /**
+     * @param \Closure(): CancellationDecision $decision
+     */
     public function __construct(
         private readonly Connection $connection,
         private readonly RequestStack $requests,
-        private readonly CancellationDecision $decision,
+        #[AutowireServiceClosure(CancellationDecision::class)]
+        private readonly \Closure $decision,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
@@ -128,7 +137,7 @@ class CancellationListener
             return;
         }
 
-        $this->decision->apply($id, time());
+        ($this->decision)()->apply($id, time());
     }
 
     /**
@@ -155,7 +164,7 @@ class CancellationListener
 
         foreach ($ids as $id) {
             try {
-                $this->decision->apply($id, time());
+                ($this->decision)()->apply($id, time());
             } catch (\Throwable $e) {
                 $this->logger->error(\sprintf('The decision on cancellation %d could not be applied: %s', $id, $e->getMessage()), ['exception' => $e]);
             }

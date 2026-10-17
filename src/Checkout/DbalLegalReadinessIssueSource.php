@@ -6,7 +6,7 @@ use Doctrine\DBAL\Connection;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
-use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 
 /**
@@ -42,7 +42,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
  * pages too — an unpublished terms page is a missing terms page.
  */
 #[AutoconfigureTag('consho.checkout_readiness_source')]
-final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
+final class DbalLegalReadinessIssueSource implements SetupIssueSource
 {
     /**
      * The invoice sender fields that have to be filled in, and the order they
@@ -51,10 +51,20 @@ final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
      */
     private const SENDER_FIELDS = ['invoiceCompany', 'invoiceStreet', 'invoicePostal', 'invoiceCity', 'invoiceCountry'];
 
+    private bool $forSetup = false;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly PaymentHandlers $handlers,
     ) {
+    }
+
+    public function issuesForSetup(): array
+    {
+        $copy = clone $this;
+        $copy->forSetup = true;
+
+        return $copy->issues();
     }
 
     public function issues(): array
@@ -103,7 +113,7 @@ final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
                     )
                   ORDER BY p.id",
                 $field,
-                self::liveRoot('p'),
+                $this->liveRoot('p'),
             ),
             ['now' => $this->minute()],
         );
@@ -134,7 +144,7 @@ final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
                   WHERE %s
                     AND f.id IS NULL
                   ORDER BY p.id",
-                self::liveRoot('p'),
+                $this->liveRoot('p'),
             ),
             ['now' => $this->minute()],
         );
@@ -217,7 +227,7 @@ final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
                         )
                       ORDER BY p.id",
                     $field,
-                    self::liveRoot('p'),
+                    $this->liveRoot('p'),
                 ),
                 ['now' => $this->minute()],
             );
@@ -324,7 +334,7 @@ final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
                         )
                     )
                   ORDER BY root.id",
-                self::liveRoot('root'),
+                $this->liveRoot('root'),
                 self::visible('a', 'published = 1'),
                 self::visible('c', 'invisible = 0'),
                 self::visible('nested', 'invisible = 0'),
@@ -568,9 +578,15 @@ final class DbalLegalReadinessIssueSource implements ConfigurationIssueSource
      * A root page that actually serves somebody: published, in its window, and
      * with a shop on it. Written once — four queries use it, and four copies
      * would be four chances to forget `published` again (C-5's acceptance).
+     *
+     * For the setup page every start point with a shop (N1, issuesForSetup()).
      */
-    private static function liveRoot(string $alias): string
+    private function liveRoot(string $alias): string
     {
+        if ($this->forSetup) {
+            return \sprintf("%1\$s.type IN ('root', 'rootfallback') AND %1\$s.consho_shop > 0", $alias);
+        }
+
         return \sprintf(
             "%1\$s.type IN ('root', 'rootfallback')
              AND %1\$s.consho_shop > 0

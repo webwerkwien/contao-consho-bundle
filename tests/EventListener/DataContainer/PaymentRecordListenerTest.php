@@ -84,7 +84,24 @@ final class PaymentRecordListenerTest extends TestCase
             }
         });
 
-        return new PaymentRecordListener($recorded, $this->connection, $logger ?? $this->createStub(LoggerInterface::class));
+        return new PaymentRecordListener(static fn (): PaymentRecorded => $recorded, $this->connection, $logger ?? $this->createStub(LoggerInterface::class));
+    }
+
+    /**
+     * Nachlese Stufe 2: Der Terminate-Listener entsteht bei jeder Anfrage und
+     * jedem Konsolenbefehl. PaymentRecorded (Belege, Mail, SecretCipher) wird
+     * erst gebaut, wenn wirklich eine Zahlung erfasst wurde.
+     */
+    public function testOhneZahlungWirdPaymentRecordedNieGebaut(): void
+    {
+        $listener = new PaymentRecordListener(
+            static fn (): PaymentRecorded => throw new \LogicException('gebaut'),
+            $this->connection,
+            $this->createStub(LoggerInterface::class),
+        );
+
+        $listener->onTerminate();
+        $this->addToAssertionCount(1);
     }
 
     private function dc(int $orderId): DataContainer

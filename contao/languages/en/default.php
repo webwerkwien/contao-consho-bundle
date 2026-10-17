@@ -733,6 +733,7 @@ $GLOBALS['TL_LANG']['CONSHO']['setup'] = [
     'createPages' => 'Create the missing shop pages',
     'pagesCreated' => 'Created below "%s": %s. The pages are published and not in the navigation.',
     'pagesNone' => 'No shop page was missing.',
+    'unpublishedOnly' => 'Only start points that are not published yet are concerned — this blocks nothing.',
     'pageTitles' => [
         'cart' => 'Basket',
         'checkout' => 'Checkout',

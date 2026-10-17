@@ -9,6 +9,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\DependencyInjection\Attribute\AutowireServiceClosure;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
@@ -30,14 +31,26 @@ use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
  * D-1, S2). There the orders are noted and handled at kernel.terminate, when
  * the transaction is decided either way; PaymentRecorded then reads only
  * what was really stored.
+ *
+ * ── PaymentRecorded as a closure (Nachlese Stufe 2) ───────────────────────
+ *
+ * The terminate listener is built on EVERY request and every console command,
+ * and with it whatever it takes in its constructor — PaymentRecorded pulls in
+ * documents and mail, down to SecretCipher. Found when a missing
+ * CONSHO_SECRET_KEY broke `contao-setup` on the sales shop (v0.1.2). Built
+ * only when a payment was actually recorded.
  */
 class PaymentRecordListener
 {
     /** @var array<int, true> */
     private array $deferred = [];
 
+    /**
+     * @param \Closure(): PaymentRecorded $recorded
+     */
     public function __construct(
-        private readonly PaymentRecorded $recorded,
+        #[AutowireServiceClosure(PaymentRecorded::class)]
+        private readonly \Closure $recorded,
         private readonly Connection $connection,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
@@ -59,7 +72,7 @@ class PaymentRecordListener
             return;
         }
 
-        $this->recorded->handle($orderId, false, time());
+        ($this->recorded)()->handle($orderId, false, time());
     }
 
     /**
@@ -79,7 +92,7 @@ class PaymentRecordListener
 
         foreach ($orders as $orderId) {
             try {
-                $this->recorded->handle($orderId, false, time());
+                ($this->recorded)()->handle($orderId, false, time());
             } catch (\Throwable $e) {
                 $this->logger->error(\sprintf('The consequences of a payment of order %d failed: %s', $orderId, $e->getMessage()), ['exception' => $e]);
             }

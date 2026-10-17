@@ -528,18 +528,24 @@ grep -n "<neue Zeile>" vendor/webwerkwien/contao-consho-bundle/<datei>
 
 Consho verschlüsselt SMTP-Passwörter in der Datenbank. Der Schlüssel gehört **in die Umgebung, nicht in die Datenbank** — sonst läge er neben dem, was er schützt, und ein Auszug gäbe beides auf einmal her.
 
+**Ohne eigenes Zutun** leitet Consho den Schlüssel aus `APP_SECRET` ab, das Contao bei der Installation selbst in die `.env.local` schreibt (HKDF mit festem Zweck, also nicht derselbe Wert). Für eine Installation über den Contao Manager ist damit nichts zu tun.
+
+**Wer einen eigenen Schlüssel will** — etwa damit ein Wechsel von `APP_SECRET` die Mailpasswörter nicht berührt:
+
 ```bash
 php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
 ```
 
-Den Wert als `CONSHO_SECRET_KEY` in die `.env.local` schreiben, dann `cache:clear`.
+Den Wert als `CONSHO_SECRET_KEY` in die `.env.local` schreiben, dann `cache:clear`. Er hat Vorrang vor `APP_SECRET`.
 
 | | |
 |---|---|
-| **Nicht gesetzt** | Der Container baut normal, das Backend läuft. Erst wenn etwas eine Mail versenden will, meldet Consho „Der Schlüssel muss genau 32 Byte lang sein" |
-| **Gedreht** | ⚠️ **Alle gespeicherten Passwörter sind danach unlesbar** und müssen neu eingegeben werden. Kein Routinevorgang |
+| **`CONSHO_SECRET_KEY` nicht gesetzt** | Schlüssel aus `APP_SECRET` (das Contao ohnehin verlangt — ohne startet die Installation nicht) |
+| **`CONSHO_SECRET_KEY` gesetzt, aber falsch** | Fehler beim ersten Passwort, **kein** stiller Rückfall auf `APP_SECRET` — die gespeicherten Passwörter wären sonst unlesbar, ohne dass jemand wüsste, warum |
+| ⚠️ **`CONSHO_SECRET_KEY` leer** (`CONSHO_SECRET_KEY=`) oder kein Base64 | Gilt als **nicht gesetzt** → Schlüssel aus `APP_SECRET`. Symfonys Env-Prozessoren unterscheiden leer nicht von fehlend. Wer einen eigenen Schlüssel hatte und die Zeile leert, macht die gespeicherten Passwörter unlesbar |
+| **Gedreht** (der eigene Schlüssel, oder `APP_SECRET`, wo er die Quelle ist) | ⚠️ **Alle gespeicherten Passwörter sind danach unlesbar** und müssen neu eingegeben werden. Kein Routinevorgang. Ebenso beim **nachträglichen Setzen** von `CONSHO_SECRET_KEY`, wenn vorher aus `APP_SECRET` abgeleitet wurde |
 
-> Der Schlüssel steht als 44 Base64-Zeichen in der Datei und wird über den `base64`-Env-Prozessor zu 32 Byte. **Einen `hex2bin`-Prozessor gibt es in Symfony nicht** — ein Hexschlüssel ergäbe hier 48 Byte Unsinn und scheiterte erst beim Versandversuch. `default::` sorgt dafür, dass eine fehlende Variable eine leere Zeichenkette ergibt statt einer `EnvNotFoundException` beim Bauen des Containers — der Fehler taucht dort auf, wo er hingehört: beim Versandversuch.
+> Der Schlüssel steht als 44 Base64-Zeichen in der Datei und wird über den `base64`-Env-Prozessor zu 32 Byte. **Einen `hex2bin`-Prozessor gibt es in Symfony nicht** — ein Hexschlüssel ergäbe hier 48 Byte Unsinn und scheiterte erst beim Versandversuch. `default::` sorgt dafür, dass eine fehlende Variable `null` ergibt statt einer `EnvNotFoundException` beim Bauen des Containers — dann greift `APP_SECRET`.
 
 ### 🔴 Öffentliche Dateien brauchen einen eigenen Schritt
 

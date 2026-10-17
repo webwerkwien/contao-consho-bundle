@@ -82,11 +82,18 @@ services:
     # Generating one:  php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
     # Storing it:      CONSHO_SECRET_KEY=<44 base64 characters> in .env.local
     #
-    # ⚠️ Rotating this key makes every stored password undecryptable. They have
-    # to be re-entered, so it is not a routine operation.
+    # Without CONSHO_SECRET_KEY the key is derived from APP_SECRET (kernel.secret),
+    # which Contao writes itself at installation (N2, Nachlese Stufe 2): an
+    # operator without SSH never got to store an SMTP password before. Set, the
+    # own key wins — and a wrong one fails rather than falling back.
+    #
+    # ⚠️ Rotating this key — or APP_SECRET, where it is the source — makes every
+    # stored password undecryptable. They have to be re-entered, so it is not a
+    # routine operation.
     Webwerkwien\ContaoConshoBundle\Mail\SecretCipher:
         arguments:
             $key: '%env(base64:default::CONSHO_SECRET_KEY)%'
+            $fallbackSecret: '%kernel.secret%'
 
     # The same env variable ContaoCache hands to StripQueryParametersSubscriber
     # (manager-bundle, HttpKernel/ContaoCache.php). Read here only to report an

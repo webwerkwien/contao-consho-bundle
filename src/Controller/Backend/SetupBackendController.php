@@ -72,7 +72,10 @@ final class SetupBackendController
         $this->framework->initialize();
 
         $lang = $GLOBALS['TL_LANG']['CONSHO']['setup'] ?? [];
-        $issues = $this->findings->issues();
+        // The steps read every start point of a shop, published or not (N1) —
+        // "ready" stays with the published ones, as the checkout decides it.
+        $issues = $this->findings->issuesForSetup();
+        $live = $this->findings->issues();
         $now = time();
 
         $this->handleAction($issues, $lang, $now);
@@ -81,12 +84,22 @@ final class SetupBackendController
         // administrators all the same — it sends requests from the server.
         $probed = $this->isAdmin() ? $this->requests->getCurrentRequest()?->query->getInt('probe') ?? 0 : 0;
 
+        // Finding and shop the start page reports too: there a published start
+        // point is involved. What only the setup page sees concerns unpublished
+        // ones alone, and the start page's sentence ("… der Checkout ist
+        // gesperrt") is not true for it (acceptance N1 on c5).
+        $published = [];
+
+        foreach ($live as $issue) {
+            $published[$issue->finding->value.'|'.$issue->shopId] = true;
+        }
+
         $shops = [];
 
         foreach ($this->guide->shops() as $shopId => $title) {
-            $setup = $this->guide->forShop($shopId, $title, $issues, $now);
+            $setup = $this->guide->forShop($shopId, $title, $issues, $now, $live);
             $shops[] = [
-                ...$this->shop($setup, $issues, $lang),
+                ...$this->shop($setup, $issues, $lang, $published),
                 'cache' => $this->cache($setup, $probed === $shopId, $lang),
             ];
         }
@@ -95,7 +108,8 @@ final class SetupBackendController
             'lang' => $lang,
             'shops' => $shops,
             'showShopTitles' => \count($shops) > 1,
-            'createShopUrl' => $this->url(['do' => 'consho_shop', 'act' => 'create']),
+            // act=create without rt ends in Contao's "invalid request token" page.
+            'createShopUrl' => $this->url(['do' => 'consho_shop', 'act' => 'create'] + (null === $this->tokens ? [] : ['rt' => $this->tokens->getDefaultTokenValue()])),
             'dashboardUrl' => $this->url(['do' => 'consho_dashboard']),
             'isAdmin' => $this->isAdmin(),
             'requestToken' => $this->tokens?->getDefaultTokenValue() ?? '',
@@ -225,7 +239,7 @@ final class SetupBackendController
      */
     private function createPages(int $rootId, array $issues, array $lang, int $now): int
     {
-        $root = $this->guide->root($rootId, $now);
+        $root = $this->guide->root($rootId, $now, assigned: true);
 
         if (null === $root) {
             throw new BadRequestHttpException();
@@ -277,11 +291,16 @@ final class SetupBackendController
     /**
      * @param list<ConfigurationIssue> $issues
      * @param array<string, mixed>     $lang
+     * @param array<string, true>      $published "finding|shop" the start page reports as well
      *
      * @return array<string, mixed>
      */
-    private function shop(ShopSetup $setup, array $issues, array $lang): array
+    private function shop(ShopSetup $setup, array $issues, array $lang, array $published = []): array
     {
+        $note = (string) ($lang['unpublishedOnly'] ?? 'Only start points that are not published yet are concerned; this blocks nothing.');
+        $sentence = fn (ConfigurationIssue $issue): string => $this->findings->sentence($issue)
+            .(isset($published[$issue->finding->value.'|'.$issue->shopId]) ? '' : ' '.StringUtil::specialchars($note));
+
         $steps = [];
 
         foreach ($setup->steps as $index => $state) {
@@ -296,7 +315,7 @@ final class SetupBackendController
                 // Only who may put a finding right reads it (H2), as on the
                 // dashboard; the status stays for everyone.
                 'sentences' => array_map(
-                    $this->findings->sentence(...),
+                    $sentence,
                     array_values(array_filter($state->issues, $this->findings->maySee(...))),
                 ),
                 'links' => $this->links($state, $setup, $lang['links'] ?? []),
@@ -338,9 +357,10 @@ final class SetupBackendController
                 static fn (array $root): array => [
                     'name' => 'pages',
                     'target' => $root['id'],
-                    'label' => (string) ($lang['createPages'] ?? 'createPages').(\count($setup->roots) > 1 ? ' — '.StringUtil::decodeEntities($root['title']) : ''),
+                    'label' => (string) ($lang['createPages'] ?? 'createPages').(\count($setup->assigned) > 1 ? ' — '.StringUtil::decodeEntities($root['title']) : ''),
                 ],
-                array_filter($setup->roots, fn (array $root): bool => [] !== $this->pages->missing($root['id'], $setup->shopId, $issues)),
+                // Unpublished ones too (N1): a shop in preparation has nothing else.
+                array_filter($setup->assigned, fn (array $root): bool => [] !== $this->pages->missing($root['id'], $setup->shopId, $issues)),
             )),
             default => [],
         };
@@ -366,11 +386,13 @@ final class SetupBackendController
                 'label' => \sprintf($lang['rootEdit'] ?? 'Startpunkt „%s" bearbeiten', StringUtil::decodeEntities($root['title'])),
                 'url' => $this->url(['do' => 'page', 'act' => 'edit', 'id' => $root['id']]),
             ],
-            $setup->roots,
+            // Unpublished ones too (N1): the findings name them, and publishing
+            // one is itself a step of the setup.
+            $setup->assigned,
         );
 
         return match ($state->step) {
-            SetupStep::Shop => [] === $setup->roots ? [$pages] : $rootEdits,
+            SetupStep::Shop => [] === $rootEdits ? [$pages] : $rootEdits,
             SetupStep::Basics => [$shopEdit],
             SetupStep::Mail => [['label' => $lang['mail'] ?? 'Mailversand', 'url' => $this->url(['do' => 'consho_mail'])], $shopEdit],
             SetupStep::Shipping => [['label' => $lang['shipping'] ?? 'Versandarten', 'url' => $this->url(['do' => 'consho_shipping'])], $shopEdit],

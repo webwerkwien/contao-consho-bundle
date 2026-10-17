@@ -172,7 +172,24 @@ final class CancellationListenerTest extends TestCase
             return true;
         });
 
-        return new CancellationListener($this->connection, $requests, $decision);
+        return new CancellationListener($this->connection, $requests, static fn (): CancellationDecision => $decision);
+    }
+
+    /**
+     * Nachlese Stufe 2: gebaut erst, wenn eine Entscheidung anzuwenden ist —
+     * der Terminate-Listener entsteht bei jeder Anfrage.
+     */
+    public function testOhneEntscheidungWirdCancellationDecisionNieGebaut(): void
+    {
+        $listener = new CancellationListener(
+            $this->connection,
+            new RequestStack(),
+            static fn (): CancellationDecision => throw new \LogicException('gebaut'),
+        );
+
+        $listener->onTerminate();
+        $listener->onLoad();
+        $this->addToAssertionCount(1);
     }
 
     private function dc(int $id): DataContainer

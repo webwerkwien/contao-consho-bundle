@@ -91,6 +91,22 @@ final class CancellationPageIssueSourceTest extends TestCase
         self::assertCount(1, $this->issues());
     }
 
+    /**
+     * N1 (Nachlese Stufe 2): Ein unveröffentlichter Startpunkt meldet nichts,
+     * für die Einrichtungsseite aber schon.
+     */
+    public function testUnveroeffentlichterStartpunktNurFuerDieEinrichtung(): void
+    {
+        $this->connection->update('tl_page', ['consho_cancellationPage' => 0, 'published' => 0], ['id' => 1]);
+
+        self::assertSame([], $this->issues());
+
+        $issues = (new CancellationPageIssueSource($this->connection))->issuesForSetup();
+
+        self::assertCount(1, $issues);
+        self::assertSame(ConfigurationFinding::CancellationPageMissing, $issues[0]->finding);
+    }
+
     public function testEineEbeneTieferInEinemContainer(): void
     {
         $this->connection->update('tl_content', ['type' => 'element_group'], ['id' => 30]);

@@ -7,6 +7,7 @@ use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Address;
+use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 use Symfony\Component\Mime\Email;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
@@ -717,7 +718,7 @@ class OrderEventMail
         $shop = $this->source->shop((int) ($order['shop'] ?? 0)) ?? throw new \RuntimeException('the shop does not exist');
         $transportRow = $shop['transport'] ?? throw new \RuntimeException('the shop has no mail configuration');
         $transport = $this->transports->create($transportRow);
-        $from = new Address((string) ($transportRow['senderAddress'] ?? ''), (string) ($transportRow['senderName'] ?? ''));
+        $from = SenderAddress::of($transportRow);
 
         $invoice = null === $invoiceId ? null : $this->source->document($orderId, $invoiceId);
         $payload = (new OrderMailPayload($this->source, $this->payloads))->of($order, $invoice ?? $this->source->invoice($orderId));

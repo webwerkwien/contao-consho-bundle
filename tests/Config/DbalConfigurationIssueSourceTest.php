@@ -78,6 +78,17 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
+     * Nachlese Stufe 2: Mit dem Schalter aus rechnet ein EU-Privatkunde zum
+     * Satz des Shoplands — Dänemark braucht dann keinen eigenen.
+     */
+    public function testOhneSteuerImBestimmungslandKeinBefundFuerEuLaender(): void
+    {
+        $this->shop(1, deliveryCountries: ['AT', 'DK'], country: 'AT', taxAtDestination: false);
+
+        self::assertSame([], $this->issues(configured: ['AT']));
+    }
+
+    /**
      * 🔴 **Der Befund trägt den Shop durch — seit 2026-09-23.**
      *
      * Er war als Einziger der drei ohne: `mailTransportMissing` sagt „Die
@@ -176,7 +187,12 @@ class DbalConfigurationIssueSourceTest extends TestCase
     /**
      * @param list<string> $deliveryCountries
      */
-    private function shop(int $id, array $deliveryCountries, string $country, string $vatId = ''): void
+    /**
+     * „Steuer im Bestimmungsland" an, wenn nichts anderes gesagt ist: Diese
+     * Tests stammen aus der Zeit vor dem Schalter und meinen „jedes Lieferland
+     * braucht seinen Satz" — seit der Nachlese Stufe 2 gilt das nur so.
+     */
+    private function shop(int $id, array $deliveryCountries, string $country, string $vatId = '', bool $taxAtDestination = true): void
     {
         $this->connection->insert('tl_consho_shop', [
             'id' => $id,
@@ -184,6 +200,7 @@ class DbalConfigurationIssueSourceTest extends TestCase
             'vatId' => $vatId,
             'deliveryCountries' => serialize($deliveryCountries),
             'country' => $country,
+            'taxAtDestination' => $taxAtDestination ? 1 : 0,
         ]);
     }
 
@@ -234,6 +251,7 @@ class DbalConfigurationIssueSourceTest extends TestCase
                     ['title', 'Testshop '.$args[0]],
                     ['country', (string) $this->connection->fetchOne('SELECT country FROM tl_consho_shop WHERE id = ?', [$args[0]])],
                     ['deliveryCountries', (string) $this->connection->fetchOne('SELECT deliveryCountries FROM tl_consho_shop WHERE id = ?', [$args[0]])],
+                    ['taxAtDestination', (string) $this->connection->fetchOne('SELECT taxAtDestination FROM tl_consho_shop WHERE id = ?', [$args[0]])],
                 ]);
 
                 return $shop;

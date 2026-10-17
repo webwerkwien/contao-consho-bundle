@@ -17,11 +17,11 @@ use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Twig\Environment;
 use Webwerkwien\ContaoConshoBundle\Mail\DeliverabilityChecker;
 use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
+use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 
 /**
  * "Testmail senden" at a mail configuration (C-9, Michael 2026-09-25:
@@ -110,7 +110,8 @@ final class MailTransportTestController
              * 2026-09-25: „keine optische Bestätigung im BE").
              */
             'messages' => (string) $this->framework->getAdapter(Message::class)->generate(),
-            'title' => (string) $row['title'],
+            // Decoded: Twig escapes, and "&#40;" would show as such.
+            'title' => SenderAddress::decode((string) $row['title']),
             'sender' => (string) $row['senderAddress'],
             'recipient' => $user instanceof BackendUser ? (string) $user->email : '',
             'action' => null === $request ? '' : $request->getUri(),
@@ -167,18 +168,21 @@ final class MailTransportTestController
      */
     private function send(array $row, string $recipient): string|null
     {
+        // Contao stores the title with its input encoding; a mail is plain text.
+        $title = SenderAddress::decode((string) $row['title']);
+
         try {
             $this->transports->create($row)->send(
                 (new Email())
-                    ->from(new Address((string) $row['senderAddress'], (string) $row['senderName']))
+                    ->from(SenderAddress::of($row))
                     ->to($recipient)
-                    ->subject(\sprintf('Consho: Testmail — %s', (string) $row['title']))
+                    ->subject(\sprintf('Consho: Testmail — %s', $title))
                     ->text(\sprintf(
                         "Diese Testmail kam über die Mail-Konfiguration „%s\" (%s), gesendet am %s.\n\nThis test mail came through the mail configuration \"%s\".\n",
-                        (string) $row['title'],
+                        $title,
                         (string) $row['type'],
                         date('d.m.Y H:i:s'),
-                        (string) $row['title'],
+                        $title,
                     )),
             );
         } catch (\Throwable $e) {
