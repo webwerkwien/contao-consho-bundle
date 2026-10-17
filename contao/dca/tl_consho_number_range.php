@@ -66,8 +66,15 @@ $GLOBALS['TL_DCA']['tl_consho_number_range'] = [
             'search' => true,
             'options' => ['order', 'invoice', 'deliveryNote', 'creditNote', 'cancellation'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_number_range']['types'],
-            'eval' => ['mandatory' => true, 'tl_class' => 'w50'],
-            'sql' => ['type' => 'string', 'length' => 32, 'default' => 'order'],
+            'eval' => ['mandatory' => true, 'includeBlankOption' => true, 'tl_class' => 'w50'],
+            /*
+             * NULL until chosen (issue #3). Contao inserts the draft of "Neu"
+             * at once, with the column defaults — with 'order' here every new
+             * range of a shop that already had an order range collided with it
+             * on `pid,type`. NULL may repeat in a unique key, so open drafts
+             * pass and two real order ranges are still refused.
+             */
+            'sql' => ['type' => 'string', 'length' => 32, 'notnull' => false, 'default' => null],
         ],
         'prefix' => [
             'inputType' => 'text',

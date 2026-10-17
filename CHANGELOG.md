@@ -5,6 +5,19 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.4] – 2026-10-17
+
+### Behoben
+
+- **Fehlende Beschriftungen in der Maske** ([#2](https://github.com/webwerkwien/contao-consho-bundle/issues/2)):
+  `conshoSort` und `conshoPerPage` an der Produktliste zeigten ihre Feldnamen, ebenso `conshoSteps` am Checkout und die
+  Felder von Lieferpositionen, Verfügbarkeitsmeldungen und Widerrufspositionen. Jetzt beschriftet, auf Deutsch und
+  Englisch; ein Test verlangt das für jedes Eingabefeld, das Consho anlegt.
+- **Ein neuer Nummernkreis scheiterte an `Duplicate entry '1-order'`**
+  ([#3](https://github.com/webwerkwien/contao-consho-bundle/issues/3)), sobald der Shop schon eine Bestellnummer hatte:
+  Contao legt bei „Neu" sofort einen Entwurf an, und dessen Art stand auf „Bestellnummer". Die Art ist jetzt leer, bis
+  sie gewählt wird; zwei Bestellnummern im selben Shop bleiben ausgeschlossen. `contao:migrate` stellt die Spalte um.
+
 ## [0.1.3] – 2026-10-17
 
 ### Geändert
