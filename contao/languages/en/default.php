@@ -440,6 +440,17 @@ $GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'] = [
     'cancellation' => 'Cancellation number',
 ];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['deliveryNote'] = 'Delivery note';
+// dev#2: the delivery note (consho_delivery_note.html.twig).
+$GLOBALS['TL_LANG']['CONSHO']['deliveryNote'] = [
+    'number' => 'Delivery note number',
+    'date' => 'Date',
+    'shippedAt' => 'Shipping date',
+    'carrier' => 'Carrier',
+    'trackingNumber' => 'Tracking number',
+    'partial' => 'Partial delivery — the remaining items follow separately.',
+    'lines' => 'Contents of this shipment',
+    'rest' => 'To follow separately',
+];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['number'] = 'Invoice number';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['date'] = 'Invoice date';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['correction']['number'] = 'Correction number';

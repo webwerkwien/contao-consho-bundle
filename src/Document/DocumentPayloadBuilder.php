@@ -36,6 +36,18 @@ final class DocumentPayloadBuilder
     ];
 
     /**
+     * A delivery note's part of the order (dev#2): no amounts, no payment, no
+     * VAT ID — what a parcel needs, nothing an invoice would.
+     */
+    private const DELIVERY_NOTE_ORDER_FIELDS = [
+        'orderNumber', 'salutation', 'firstname', 'lastname', 'company',
+        'billingStreet', 'billingPostal', 'billingCity', 'billingState', 'billingCountry',
+        'shippingCompany', 'shippingFirstname', 'shippingLastname',
+        'shippingStreet', 'shippingPostal', 'shippingCity', 'shippingState', 'shippingCountry',
+        'language', 'createdAt', 'shippingMethodTitle',
+    ];
+
+    /**
      * 🔴 `lineType` is in here since C-7 (F6 of the review of 2026-09-23).
      *
      * Before C-7 every line was an article and the list did not need to say
@@ -121,6 +133,9 @@ final class DocumentPayloadBuilder
      *
      * InvoiceView reads every version; a version 1 snapshot is
      * shown with what it has, never completed from today's shop.
+     *
+     * A delivery note (dev#2) carries the same number but a shape of its
+     * own, without a single amount — see deliveryNote().
      */
     private const FORMAT_VERSION = 10;
 
@@ -342,6 +357,49 @@ final class DocumentPayloadBuilder
         unset($payload['cancels']);
 
         return $payload;
+    }
+
+    /**
+     * The snapshot of a delivery note (dev#2): what is in THIS parcel, and
+     * what follows separately — never a price.
+     *
+     * The order part keeps the names and both addresses (the billing one is
+     * where a parcel goes when the order has no delivery address), the order
+     * number and date, the language and the shipping method — the same keys
+     * as on an invoice, so OrderAnonymizer finds them. Issuer, logo and footer
+     * as the shop has them today, like an invoice issued today.
+     *
+     * `partial` is frozen with the rest: a note printed for the first parcel
+     * keeps saying what was still to come then, whatever followed.
+     *
+     * @param array<string, string>                                          $order
+     * @param array{issuer?: array<string, string>, logo?: array{uuid: string, hash: string}|null, notes?: array{footer?: string}} $context
+     * @param list<array{productName: string, sku: string, quantity: string}> $lines
+     * @param list<array{productName: string, sku: string, quantity: string}> $rest
+     * @param array{shippedAt: string, carrier: string, trackingNumber: string} $shipment shippedAt as Y-m-d
+     *
+     * @return array<string, mixed>
+     */
+    public function deliveryNote(array $order, array $context, array $lines, array $rest, array $shipment): array
+    {
+        $capturedOrder = [];
+
+        foreach (self::DELIVERY_NOTE_ORDER_FIELDS as $field) {
+            $capturedOrder[$field] = (string) ($order[$field] ?? '');
+        }
+
+        return [
+            'formatVersion' => self::FORMAT_VERSION,
+            'order' => $capturedOrder,
+            'items' => $lines,
+            'rest' => $rest,
+            'partial' => [] !== $rest,
+            'shipment' => $shipment,
+            'issuer' => $context['issuer'] ?? [],
+            'logo' => $context['logo'] ?? null,
+            'notes' => ['footer' => $context['notes']['footer'] ?? '', 'reverseCharge' => ''],
+            'eInvoice' => false,
+        ];
     }
 
     /**

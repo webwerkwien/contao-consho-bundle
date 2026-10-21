@@ -39,6 +39,8 @@ $GLOBALS['TL_DCA']['tl_consho_document'] = [
                 'pid' => 'index',
                 'shop,type,documentNumber' => 'unique',
                 'pid,type' => 'index',
+                // dev#2: the delivery list asks per row (DeliveryListener).
+                'delivery' => 'index',
             ],
         ],
     ],
@@ -100,6 +102,11 @@ $GLOBALS['TL_DCA']['tl_consho_document'] = [
             'sorting' => true,
             'flag' => 8,
             'eval' => ['rgxp' => 'datim'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
+        ],
+        // dev#2: the parcel a delivery note belongs to — one per delivery, 0 on
+        // every other document.
+        'delivery' => [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
         ],
         'relatedDocument' => [

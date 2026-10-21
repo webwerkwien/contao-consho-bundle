@@ -3,7 +3,7 @@
 $GLOBALS['TL_LANG']['tl_consho_document']['documentNumber'] = ['Belegnummer', 'Lückenlos je Shop und Belegart.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['type'] = ['Belegart', ''];
 $GLOBALS['TL_LANG']['tl_consho_document']['issuedAt'] = ['Ausgestellt am', ''];
-$GLOBALS['TL_LANG']['tl_consho_document']['relatedDocument'] = ['Bezieht sich auf', 'Bei Gutschrift und Storno der Beleg, der korrigiert wird.'];
+$GLOBALS['TL_LANG']['tl_consho_document']['relatedDocument'] = ['Bezieht sich auf', 'Bei Rechnungskorrektur und Storno der Beleg, der korrigiert wird.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['payload'] = ['Inhalt', 'Momentaufnahme zum Zeitpunkt der Ausstellung. Bewusst unveränderlich.'];
 
 $GLOBALS['TL_LANG']['tl_consho_document']['types'] = [

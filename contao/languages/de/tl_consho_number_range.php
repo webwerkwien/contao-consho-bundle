@@ -8,7 +8,7 @@ $GLOBALS['TL_LANG']['tl_consho_number_range']['current'] = ['Zuletzt vergeben', 
 $GLOBALS['TL_LANG']['tl_consho_number_range']['range_legend'] = 'Nummernkreis';
 
 $GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['issued'] = 'Die Nummer %s ist bereits vergeben. Der Zähler darf nicht darunter liegen, sonst entstünde eine Nummer doppelt. Für einen Neubeginn bei 0 ein neues Präfix wählen, z. B. mit der Jahreszahl.';
-$GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['shared'] = 'Das Präfix „%s" verwendet schon der Nummernkreis für %s. Zwei Belegarten mit einem Präfix vergeben früher oder später dieselbe Nummer — und eine Gutschrift oder ein Storno ist steuerlich auch eine Rechnung. Ein eigenes Präfix wählen, z. B. „GS-".';
+$GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['shared'] = 'Das Präfix „%s" verwendet schon der Nummernkreis für %s. Zwei Belegarten mit einem Präfix vergeben früher oder später dieselbe Nummer — und eine Rechnungskorrektur oder ein Storno ist steuerlich auch eine Rechnung. Ein eigenes Präfix wählen, z. B. „RK-".';
 
 $GLOBALS['TL_LANG']['tl_consho_number_range']['types'] = [
     'order' => 'Bestellnummer (Lücken erlaubt)',

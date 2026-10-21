@@ -1,0 +1,135 @@
+{#
+  Delivery note (dev#2) — the PDF and the accessible HTML version from one
+  template, like the invoice (consho_invoice.html.twig): the same page, the
+  same styles, no amounts.
+
+  ⚠️ This template LAYS OUT, it never supplies data (8.1). Everything arrives
+  formatted from DeliveryNoteView.
+
+  dompdf renders CSS 2.1 only: tables for layout, no flex, no grid.
+
+  Variables: note (DeliveryNoteView::build), logo (data: URI or null),
+  regenerated (bool), paged (bool)
+#}
+<!DOCTYPE html>
+<html lang="{{ note.language }}">
+<head>
+<meta charset="utf-8">
+<title>{{ ('CONSHO.invoice.types.' ~ note.type)|trans({}, 'contao_default') }} {{ note.number }}</title>
+<style>
+    @page { margin: 18mm 16mm 20mm 16mm; }
+    body { font-family: "DejaVu Sans", sans-serif; font-size: 9pt; color: #111; line-height: 1.35; }
+    h1 { font-size: 15pt; margin: 0 0 4mm 0; }
+    h2 { font-size: 9pt; margin: 0 0 1mm 0; text-transform: uppercase; letter-spacing: 0.04em; color: #444; }
+    table { border-collapse: collapse; width: 100%; }
+    .head td { vertical-align: top; padding: 0; }
+    .logo { max-height: 22mm; max-width: 60mm; }
+    .issuer { text-align: right; font-size: 8pt; }
+    .addresses { margin: 8mm 0 6mm 0; }
+    .addresses td { vertical-align: top; width: 50%; padding: 0 4mm 0 0; }
+    .addresses td.facts-cell { padding-right: 0; }
+    .facts th { text-align: left; font-weight: normal; color: #444; padding: 0 3mm 0.5mm 0; width: 35mm; white-space: nowrap; }
+    .facts td { padding: 0 0 0.5mm 0; width: auto; }
+    .facts-right { width: auto; margin-left: auto; margin-right: 0; }
+    .facts-right th { width: auto; }
+    .partial { font-weight: bold; margin: 0 0 3mm 0; }
+    .section { margin-top: 6mm; }
+    .lines thead th { text-align: left; border-bottom: 0.3mm solid #111; padding: 1mm 1.5mm; font-size: 8pt; }
+    .lines td, .lines tbody th { border-bottom: 0.2mm solid #ccc; padding: 1.2mm 1.5mm; vertical-align: top; text-align: left; font-weight: normal; font-size: 9pt; }
+    .lines .num { text-align: right; white-space: nowrap; }
+    caption { text-align: left; font-weight: bold; padding-bottom: 1mm; }
+    .regenerated { border: 0.4mm solid #b00; color: #b00; padding: 2mm; margin-bottom: 5mm; }
+    .footer { margin-top: 10mm; border-top: 0.2mm solid #999; padding-top: 2mm; font-size: 7.5pt; color: #333; }
+</style>
+</head>
+<body>
+{% if regenerated %}
+<p class="regenerated" role="note">{{ 'CONSHO.invoice.regenerated'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+<table class="head" role="presentation">
+    <tr>
+        <td>{% if logo %}<img class="logo" src="{{ logo }}" alt="{{ note.issuer|first|default('') }}">{% endif %}</td>
+        <td class="issuer">{% for line in note.issuer %}{{ line }}<br>{% endfor %}</td>
+    </tr>
+</table>
+
+<table class="addresses" role="presentation">
+    <tr>
+        <td>
+            <h2>{{ 'CONSHO.invoice.shippingAddress'|trans({}, 'contao_default') }}</h2>
+            {% for line in note.address %}{{ line }}<br>{% endfor %}
+        </td>
+        <td class="facts-cell">
+            <table class="facts facts-right">
+                <tr><th scope="row">{{ 'CONSHO.deliveryNote.number'|trans({}, 'contao_default') }}</th><td>{{ note.number }}</td></tr>
+                <tr><th scope="row">{{ 'CONSHO.deliveryNote.date'|trans({}, 'contao_default') }}</th><td>{{ note.issuedAt }}</td></tr>
+                <tr><th scope="row">{{ 'CONSHO.invoice.orderNumber'|trans({}, 'contao_default') }}</th><td>{{ note.orderNumber }}</td></tr>
+                {% if note.orderDate %}<tr><th scope="row">{{ 'CONSHO.invoice.orderDate'|trans({}, 'contao_default') }}</th><td>{{ note.orderDate }}</td></tr>{% endif %}
+                {% if note.shippedAt %}<tr><th scope="row">{{ 'CONSHO.deliveryNote.shippedAt'|trans({}, 'contao_default') }}</th><td>{{ note.shippedAt }}</td></tr>{% endif %}
+                {% if note.shippingMethod %}<tr><th scope="row">{{ 'CONSHO.invoice.shippingMethod'|trans({}, 'contao_default') }}</th><td>{{ note.shippingMethod }}</td></tr>{% endif %}
+                {% if note.carrier %}<tr><th scope="row">{{ 'CONSHO.deliveryNote.carrier'|trans({}, 'contao_default') }}</th><td>{{ note.carrier }}</td></tr>{% endif %}
+                {% if note.trackingNumber %}<tr><th scope="row">{{ 'CONSHO.deliveryNote.trackingNumber'|trans({}, 'contao_default') }}</th><td>{{ note.trackingNumber }}</td></tr>{% endif %}
+            </table>
+        </td>
+    </tr>
+</table>
+
+<h1>{{ ('CONSHO.invoice.types.' ~ note.type)|trans({}, 'contao_default') }} {{ note.number }}</h1>
+
+{% if note.partial %}
+<p class="partial">{{ 'CONSHO.deliveryNote.partial'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+<table class="lines">
+    <caption>{{ 'CONSHO.deliveryNote.lines'|trans({}, 'contao_default') }}</caption>
+    <thead>
+        <tr>
+            <th scope="col">{{ 'CONSHO.invoice.position'|trans({}, 'contao_default') }}</th>
+            <th scope="col">{{ 'CONSHO.invoice.item'|trans({}, 'contao_default') }}</th>
+            <th scope="col">{{ 'CONSHO.invoice.sku'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.quantity'|trans({}, 'contao_default') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for line in note.lines %}
+        <tr>
+            <td>{{ line.position }}</td>
+            <th scope="row">{{ line.name }}</th>
+            <td>{{ line.sku }}</td>
+            <td class="num">{{ line.quantity }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{# What is still open after this parcel, frozen with the note (Michael, 2026-10-21). #}
+{% if note.rest is not empty %}
+<div class="section">
+<table class="lines">
+    <caption>{{ 'CONSHO.deliveryNote.rest'|trans({}, 'contao_default') }}</caption>
+    <thead>
+        <tr>
+            <th scope="col">{{ 'CONSHO.invoice.item'|trans({}, 'contao_default') }}</th>
+            <th scope="col">{{ 'CONSHO.invoice.sku'|trans({}, 'contao_default') }}</th>
+            <th scope="col" class="num">{{ 'CONSHO.invoice.quantity'|trans({}, 'contao_default') }}</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for line in note.rest %}
+        <tr>
+            <th scope="row">{{ line.name }}</th>
+            <td>{{ line.sku }}</td>
+            <td class="num">{{ line.quantity }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+{% if note.footer %}
+<div class="footer">{{ note.footer|nl2br }}</div>
+{% endif %}
+</body>
+</html>

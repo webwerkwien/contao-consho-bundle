@@ -92,6 +92,11 @@ $GLOBALS['TL_LANG']['tl_consho_order']['statusUnmet'] = [
     'deliverySettled' => 'not reported shipped: %s',
     'nothingShipped' => 'goods have already shipped — that is a withdrawal or a return, not a cancellation',
 ];
+// dev#1: a cancellation cancels the invoice too — only where that works whole and numbered.
+$GLOBALS['TL_LANG']['tl_consho_order']['cancelInvoiceRefused'] = [
+    'corrected' => 'the invoice already has an invoice correction. A cancellation would reverse the whole invoice and credit the corrected part a second time — settle the remaining items through "Withdrawals"',
+    'numberRangeMissing' => 'the shop has no number range for cancellation numbers, so the invoice would stay standing. Create one under "Shop configurations → Number ranges" or with "Create the missing number ranges" on the setup page',
+];
 $GLOBALS['TL_LANG']['tl_consho_order']['resendAnonymized'] = 'The confirmation of order %s was not sent: the customer data has been anonymised after the retention period.';
 $GLOBALS['TL_LANG']['tl_consho_order']['resendNoOrderPage'] = 'The confirmation of order %s was not sent: the start point of the shop has no order page, and the mail would link nowhere.';
 
@@ -130,4 +135,4 @@ $GLOBALS['TL_LANG']['tl_consho_order']['servicePeriodUntil'] = ['Service period 
 $GLOBALS['TL_LANG']['tl_consho_order']['subscription'] = ['Follow-up order of subscription', 'Empty for a purchase. Set when the order bills a period of a subscription.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['businessCustomer'] = ['Business customer', 'Counted as a business at the purchase: net price group or verified VAT ID. No consent is asked of a business customer.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['entitlements'] = ['Entitlements', 'Entitlements from the digital lines of order ID %s'];
-$GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Some customer and address details are read-only: the delivery address is on a recorded delivery or a delivery note, the customer and billing address on an invoice. An invoice is corrected by a credit note, not here.';
+$GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Some customer and address details are read-only: the delivery address is on a recorded delivery or a delivery note, the customer and billing address on an invoice. An invoice is corrected by an invoice correction, not here.';

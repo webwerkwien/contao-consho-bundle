@@ -7,10 +7,13 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Twig\Environment;
 use Webwerkwien\ContaoConshoBundle\Document\EInvoice\ZugferdInvoice;
 use Webwerkwien\ContaoConshoBundle\Document\Pdf\PdfRendererInterface;
+use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
  * An invoice as HTML or PDF — both from the same snapshot, the same view and
- * the same template (8.2, 4.3), in the language of the order.
+ * the same template (8.2, 4.3), in the language of the order. The delivery
+ * note (dev#2) goes through here as well, with its own view and template, so
+ * archive, download and handover need no second path.
  *
  * `logoMissing` tells the caller that the snapshot named a logo that could not
  * be printed (InvoiceLogo). The document itself does not say so: it is the
@@ -24,6 +27,9 @@ class InvoiceRenderer
      */
     public const TEMPLATE = '@Contao/document/consho_invoice.html.twig';
 
+    // dev#2: the delivery note has a page of its own — no amounts, no tax.
+    public const DELIVERY_NOTE_TEMPLATE = '@Contao/document/consho_delivery_note.html.twig';
+
     public function __construct(
         private readonly Environment $twig,
         private readonly TranslatorInterface $translator,
@@ -33,6 +39,8 @@ class InvoiceRenderer
         // Block R (R9): the ZUGFeRD XML in the PDF. Optional for the tests
         // built by hand; the container always wires it.
         private readonly ZugferdInvoice|null $eInvoice = null,
+        // dev#2; optional likewise.
+        private readonly DeliveryNoteView|null $deliveryNoteView = null,
     ) {
     }
 
@@ -76,14 +84,23 @@ class InvoiceRenderer
     private function render(array $document, bool $regenerated, bool $paged): array
     {
         $payload = $this->payloadOf($document);
-        $invoice = $this->view->build($document, $payload);
         $logo = $this->logo->resolve(\is_array($payload['logo'] ?? null) ? $payload['logo'] : null);
 
-        $previous = $this->switchLocale((string) $invoice['language']);
+        if (DocumentType::DeliveryNote->value === ($document['type'] ?? '')) {
+            $template = self::DELIVERY_NOTE_TEMPLATE;
+            $view = ($this->deliveryNoteView ?? new DeliveryNoteView(new MoneyFormatter()))->build($document, $payload);
+            $name = 'note';
+        } else {
+            $template = self::TEMPLATE;
+            $view = $this->view->build($document, $payload);
+            $name = 'invoice';
+        }
+
+        $previous = $this->switchLocale((string) $view['language']);
 
         try {
-            $html = $this->twig->render(self::TEMPLATE, [
-                'invoice' => $invoice,
+            $html = $this->twig->render($template, [
+                $name => $view,
                 'logo' => $logo['src'],
                 'regenerated' => $regenerated,
                 'paged' => $paged,

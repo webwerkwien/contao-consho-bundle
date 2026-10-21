@@ -3,7 +3,7 @@
 $GLOBALS['TL_LANG']['tl_consho_document']['documentNumber'] = ['Document number', 'Unbroken per shop and document type.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['type'] = ['Document type', ''];
 $GLOBALS['TL_LANG']['tl_consho_document']['issuedAt'] = ['Issued at', ''];
-$GLOBALS['TL_LANG']['tl_consho_document']['relatedDocument'] = ['Refers to', 'For credit notes and cancellations, the document being corrected.'];
+$GLOBALS['TL_LANG']['tl_consho_document']['relatedDocument'] = ['Refers to', 'For invoice corrections and cancellations, the document being corrected.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['payload'] = ['Content', 'Snapshot taken when the document was issued. Deliberately immutable.'];
 
 $GLOBALS['TL_LANG']['tl_consho_document']['types'] = [

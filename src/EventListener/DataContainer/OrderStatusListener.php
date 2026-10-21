@@ -8,6 +8,7 @@ use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\DataContainer;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
+use Webwerkwien\ContaoConshoBundle\Order\CancellationInvoice;
 use Webwerkwien\ContaoConshoBundle\Order\DbalOrderStatusRepository;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalance;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
@@ -42,6 +43,8 @@ class OrderStatusListener
         private readonly OrderCancellation|null $cancellation = null,
         // Who cancelled, for the stock movement (Abnahme G-8); optional likewise.
         private readonly Security|null $security = null,
+        // dev#1: whether the open invoice can be cancelled with the order.
+        private readonly CancellationInvoice|null $invoice = null,
     ) {
     }
 
@@ -81,6 +84,18 @@ class OrderStatusListener
         }
 
         $unmet = StatusRequirement::unmet($flags, $balance);
+
+        // dev#1: a cancellation reverses the whole invoice — refused where that
+        // would credit a corrected part twice, or where it cannot be numbered.
+        $refusal = $flags->isCancelled && [] === $unmet ? $this->invoice?->refusal($orderId) : null;
+
+        if (null !== $refusal) {
+            throw new \RuntimeException(\sprintf(
+                $GLOBALS['TL_LANG']['tl_consho_order']['statusRefused'] ?? '%s: %s',
+                $flags->title,
+                $GLOBALS['TL_LANG']['tl_consho_order']['cancelInvoiceRefused'][$refusal->value] ?? $refusal->value,
+            ));
+        }
 
         if ([] === $unmet) {
             return $value;

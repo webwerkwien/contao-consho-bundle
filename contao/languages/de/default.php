@@ -446,6 +446,17 @@ $GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'] = [
 // D-3, F2: nicht „Gutschrift" — die ist steuerlich die Abrechnung durch den Empfänger (§ 14 Abs. 2 UStG, § 11 Abs. 7 UStG 1994).
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['creditNote'] = 'Rechnungskorrektur';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['deliveryNote'] = 'Lieferschein';
+// dev#2: der Lieferschein (consho_delivery_note.html.twig).
+$GLOBALS['TL_LANG']['CONSHO']['deliveryNote'] = [
+    'number' => 'Lieferscheinnummer',
+    'date' => 'Datum',
+    'shippedAt' => 'Versanddatum',
+    'carrier' => 'Versanddienst',
+    'trackingNumber' => 'Sendungsnummer',
+    'partial' => 'Teillieferung — die übrigen Artikel folgen separat.',
+    'lines' => 'Inhalt dieser Sendung',
+    'rest' => 'Folgt separat',
+];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['number'] = 'Rechnungsnummer';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['date'] = 'Rechnungsdatum';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['correction']['number'] = 'Nummer der Rechnungskorrektur';

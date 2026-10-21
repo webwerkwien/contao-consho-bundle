@@ -92,6 +92,11 @@ $GLOBALS['TL_LANG']['tl_consho_order']['statusUnmet'] = [
     'deliverySettled' => 'nicht als versandt gemeldet: %s',
     'nothingShipped' => 'es ist bereits Ware versandt — das ist ein Widerruf oder eine Retoure, keine Stornierung',
 ];
+// dev#1: ein Storno storniert die Rechnung mit — nur wo das ganz und nummeriert geht.
+$GLOBALS['TL_LANG']['tl_consho_order']['cancelInvoiceRefused'] = [
+    'corrected' => 'zur Rechnung gibt es schon eine Rechnungskorrektur. Ein Storno höbe die ganze Rechnung auf und schriebe den korrigierten Teil ein zweites Mal gut — die übrigen Positionen über „Widerrufe“ abwickeln',
+    'numberRangeMissing' => 'der Shop hat keinen Nummernkreis für Stornonummern, die Rechnung bliebe stehen. Unter „Shop-Konfigurationen → Nummernkreise“ anlegen oder auf der Seite „Einrichtung“ „Fehlende Nummernkreise anlegen“',
+];
 $GLOBALS['TL_LANG']['tl_consho_order']['resendAnonymized'] = 'Die Bestätigung der Bestellung %s wurde nicht gesendet: Die Kundendaten sind nach Ablauf der Aufbewahrungsfrist anonymisiert.';
 $GLOBALS['TL_LANG']['tl_consho_order']['resendNoOrderPage'] = 'Die Bestätigung der Bestellung %s wurde nicht gesendet: Der Startpunkt des Shops hat keine Bestellseite, der Link in der Mail zeigte ins Leere.';
 

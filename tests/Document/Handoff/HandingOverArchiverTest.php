@@ -83,6 +83,22 @@ class HandingOverArchiverTest extends TestCase
         self::assertStringContainsString('RE-00003: sevDesk antwortet nicht', $errors[0]);
     }
 
+    /**
+     * dev#2, Review: Der Lieferschein wird abgelegt, aber nicht übergeben —
+     * den Modulen sind Rechnung, Korrektur und Storno versprochen, und ein
+     * Beleg ohne Betrag bucht nichts.
+     */
+    public function testDerLieferscheinWirdAbgelegtAberNichtUebergeben(): void
+    {
+        $this->connection->insert('tl_consho_document', ['id' => 4, 'pid' => 7, 'tstamp' => 1, 'shop' => 2, 'type' => 'deliveryNote', 'documentNumber' => 'LS-00001', 'payload' => '{}']);
+        $handler = $this->handler('buchhaltung', static function (): void {
+        });
+
+        $this->archiver([$handler])->archive(4);
+
+        self::assertSame(['archive 4'], $this->calls);
+    }
+
     public function testOhneModulWirdNichtsGelesen(): void
     {
         $this->connection->delete('tl_consho_document', ['id' => 3]);

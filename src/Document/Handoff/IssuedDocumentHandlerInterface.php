@@ -8,7 +8,8 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
  * The seam for accounting modules (block R, R13): every invoice, credit note
  * and cancellation Consho issues, once, after the transaction that issued it
  * has committed — for a module that passes it on to sevDesk, Lexware Office
- * or a tax adviser's mailbox.
+ * or a tax adviser's mailbox. Not the delivery note (dev#2): it carries no
+ * amount and books nothing.
  *
  * Consho keeps issuing the documents; a module receives them, it does not
  * replace them. Which shops it serves is the module's own setting.

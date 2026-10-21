@@ -39,6 +39,10 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
             // D-1. POST like "Erneut senden": it mails the customer. Hidden
             // once reported (DeliveryListener).
             'report' => ['href' => 'key=reportDelivery', 'icon' => 'ok.svg', 'method' => 'POST', 'primary' => true],
+
+            // dev#2: the parcel's delivery note, shown only where there is one
+            // (DeliveryListener).
+            'deliveryNote' => ['href' => 'key=deliveryNotePdf', 'icon' => 'theme_export.svg', 'primary' => true],
             'edit',
             '!delete',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],

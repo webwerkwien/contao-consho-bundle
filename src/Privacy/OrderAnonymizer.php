@@ -108,6 +108,12 @@ class OrderAnonymizer
                         }
                     }
 
+                    // A delivery note (dev#2) keeps the tracking number,
+                    // which the delivery itself loses below.
+                    if (\is_array($payload['shipment'] ?? null) && \array_key_exists('trackingNumber', $payload['shipment'])) {
+                        $payload['shipment']['trackingNumber'] = '';
+                    }
+
                     $update['payload'] = json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
                 }
 

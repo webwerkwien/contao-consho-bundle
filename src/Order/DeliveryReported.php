@@ -10,6 +10,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Webwerkwien\ContaoConshoBundle\Document\DeferredArchive;
+use Webwerkwien\ContaoConshoBundle\Document\DeliveryNoteIssuer;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
@@ -34,8 +36,10 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  *  3. the invoice, if the payment method issues it on shipment (Z2) — with
  *     the FIRST reported delivery, over the whole order
  *  4. the automatic status change
- *  5. after the commit: archive, and the mail "Versendet" with this parcel's
- *     items and the invoice if it was issued now (Z4)
+ *  5. the delivery note of this parcel, where the shop issues them (dev#2)
+ *  6. after the commit: archive, and the mail "Versendet" with this parcel's
+ *     items and the invoice if it was issued now (Z4) — not the delivery
+ *     note, which travels in the parcel
  */
 class DeliveryReported
 {
@@ -57,6 +61,10 @@ class DeliveryReported
         // K1); optional for tests that do not look at it.
         private readonly ContaoFramework|null $framework = null,
         private readonly UrlGeneratorInterface|null $router = null,
+        // dev#2: the parcel's delivery note, archived when nothing can roll it
+        // back. Optional for tests that do not look at it.
+        private readonly DeliveryNoteIssuer|null $deliveryNotes = null,
+        private readonly DeferredArchive|null $archive = null,
     ) {
     }
 
@@ -68,6 +76,7 @@ class DeliveryReported
     public function report(int $deliveryId, int $now, bool $mail = true): DeliveryReport
     {
         $invoiceId = null;
+        $deliveryNoteId = null;
 
         $this->connection->beginTransaction();
 
@@ -128,6 +137,10 @@ class DeliveryReported
             $this->statuses->advance($orderId, OrderEvent::DeliveryReported, $now);
             $after = $this->balances->of($orderId);
 
+            // dev#2: with what is still open after THIS parcel, the same
+            // balance that tells the mail whether the order is complete.
+            $deliveryNoteId = $this->deliveryNotes?->issue($deliveryId, $after->openGoods ?? []);
+
             $this->connection->commit();
         } catch (\Throwable $e) {
             if ($this->connection->isTransactionActive()) {
@@ -150,6 +163,13 @@ class DeliveryReported
 
         if (null !== $invoiceId && !$nested) {
             $this->archiver->archive($invoiceId);
+        }
+
+        // Not handed to the caller like the invoice: the callers that report
+        // inside their own transaction carry nothing physical, so they get no
+        // note — and should one ever do, DeferredArchive waits for its commit.
+        if (null !== $deliveryNoteId) {
+            $this->archive?->after($deliveryNoteId);
         }
 
         if (!$mail) {

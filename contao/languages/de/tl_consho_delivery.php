@@ -11,7 +11,8 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['items'] = ['Inhalt', 'Inhalt der Lief
 $GLOBALS['TL_LANG']['tl_consho_delivery']['edit'] = ['Bearbeiten', 'Lieferung ID %s bearbeiten'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['delete'] = ['Löschen', 'Lieferung ID %s löschen'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['show'] = ['Details', 'Details der Lieferung ID %s anzeigen'];
-$GLOBALS['TL_LANG']['tl_consho_delivery']['report'] = ['Als versandt melden', 'Lieferung ID %s als versandt melden: Der Kunde bekommt eine Mail mit dem Inhalt des Pakets, bei Versand-Zahlarten entsteht die Rechnung. Danach ist die Lieferung gesperrt.'];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['report'] = ['Als versandt melden', 'Lieferung ID %s als versandt melden: Der Kunde bekommt eine Mail mit dem Inhalt des Pakets, bei Versand-Zahlarten entsteht die Rechnung, mit einem Nummernkreis „Lieferscheinnummer" der Lieferschein. Danach ist die Lieferung gesperrt.'];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['deliveryNote'] = ['Lieferschein', 'Lieferschein der Lieferung ID %s als PDF öffnen'];
 
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notReported'] = 'noch nicht gemeldet';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['reportedOn'] = 'gemeldet am %s';

@@ -96,6 +96,16 @@ class DeliveryListener
         }
     }
 
+    #[AsCallback(table: 'tl_consho_delivery', target: 'list.operations.deliveryNote.button')]
+    public function deliveryNoteButton(DataContainerOperation $operation): void
+    {
+        $id = (int) ($operation->getRecord()['id'] ?? 0);
+
+        if (false === $this->connection->fetchOne("SELECT 1 FROM tl_consho_document WHERE delivery = ? AND type = 'deliveryNote'", [$id])) {
+            $operation->hide();
+        }
+    }
+
     /**
      * @param array<string, mixed> $row
      */

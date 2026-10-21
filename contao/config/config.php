@@ -129,6 +129,9 @@ $conshoBackendModules = [
             'invoicePdf' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DocumentBackendController::class, 'pdf'],
             'invoiceHtml' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DocumentBackendController::class, 'html'],
 
+            // "Lieferschein" at a delivery (dev#2).
+            'deliveryNotePdf' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DocumentBackendController::class, 'deliveryNotePdf'],
+
             // "Erneut senden" at an order (C-9).
             'resendConfirmation' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\OrderConfirmationBackendController::class, 'resend'],
 

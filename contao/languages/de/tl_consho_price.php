@@ -13,7 +13,7 @@ $GLOBALS['TL_LANG']['tl_consho_price']['validTo'] = ['Gültig bis', 'Ab diesem Z
 
 $GLOBALS['TL_LANG']['tl_consho_price']['subscriptionRule'] = ['Verkauft als', 'Einmalkauf oder eine der Aboregeln, die am Produkt angehakt sind. Beim Abo ist der Betrag der je Zahlung — beim Monatsabo der Monatsbetrag.'];
 $GLOBALS['TL_LANG']['tl_consho_price']['oneTimeSale'] = 'Einmalkauf';
-$GLOBALS['TL_LANG']['tl_consho_price']['ruleNotOffered'] = 'Das Produkt wird so nicht angeboten. Am Produkt unter „Digitale Auslieferung und Verkauf" die Verkaufsart oder Aboregel anhaken.';
+$GLOBALS['TL_LANG']['tl_consho_price']['ruleNotOffered'] = 'Das Produkt wird so nicht angeboten. Am Produkt unter „Auslieferung und Gültigkeit" die Verkaufsart oder Aboregel anhaken.';
 
 $GLOBALS['TL_LANG']['tl_consho_price']['price_legend'] = 'Preis';
 $GLOBALS['TL_LANG']['tl_consho_price']['scope_legend'] = 'Geltungsbereich';

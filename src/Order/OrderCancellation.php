@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
 
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartDiscounts;
+use Webwerkwien\ContaoConshoBundle\Document\DeferredArchive;
 use Webwerkwien\ContaoConshoBundle\Stock\StockReturn;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPurchaseCancellation;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
@@ -22,6 +23,12 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
  * fails takes `cancelledAt` with it, or the guard would never let it run
  * again. Nested in a caller's transaction, it is a savepoint.
  *
+ * The cancellation invoice (dev#1) is issued in the same transaction — a
+ * cancellation that rolls back must not leave a cancellation document — and
+ * archived only after the commit, as every other document (review Abo-4, S2).
+ * Nested in a caller's transaction the commit is only a savepoint; then
+ * DeferredArchive files it when the caller's transaction is decided.
+ *
  * The collaborators are optional for tests built by hand; the container wires
  * them all.
  */
@@ -37,6 +44,9 @@ class OrderCancellation
         private readonly CartDiscounts|null $discounts = null,
         // Block Wertgutscheine (WG-6, D2): vouchers paid back, bought ones blocked.
         private readonly VoucherReturn|null $vouchers = null,
+        // dev#1: the open invoice is cancelled with the order.
+        private readonly CancellationInvoice|null $invoice = null,
+        private readonly DeferredArchive|null $archive = null,
     ) {
     }
 
@@ -47,7 +57,9 @@ class OrderCancellation
      */
     public function record(int $orderId, int $now, int $userId = 0): bool
     {
-        return $this->connection->transactional(function () use ($orderId, $now, $userId): bool {
+        $documentId = null;
+
+        $cancelled = $this->connection->transactional(function () use ($orderId, $now, $userId, &$documentId): bool {
             $cancelled = (int) $this->connection->executeStatement(
                 'UPDATE tl_consho_order SET cancelledAt = ? WHERE id = ? AND cancelledAt IS NULL',
                 [$now, $orderId],
@@ -61,8 +73,17 @@ class OrderCancellation
             $this->stock?->afterCancellation($orderId, $now, $userId);
             $this->discounts?->afterCancellation($orderId, $now);
             $this->vouchers?->afterCancellation($orderId, $now);
+            $documentId = $this->invoice?->issue($orderId);
 
             return true;
         });
+
+        if (null !== $documentId) {
+            // Now, or — inside Contao's "Mehrere bearbeiten" or an automatic
+            // change — once the caller's transaction is decided.
+            $this->archive?->after($documentId);
+        }
+
+        return $cancelled;
     }
 }

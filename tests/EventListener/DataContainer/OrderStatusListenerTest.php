@@ -8,7 +8,10 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Webwerkwien\ContaoConshoBundle\Document\DbalDocumentRepository;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\OrderStatusListener;
+use Webwerkwien\ContaoConshoBundle\Order\CancellationInvoice;
 use Webwerkwien\ContaoConshoBundle\Order\DbalOrderStatusRepository;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReader;
@@ -307,6 +310,60 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
+     * dev#1: Storniert die Bestellung die offene Rechnung mit, darf der Status
+     * nur stehen, wenn der Stornobeleg auch ausgestellt werden kann.
+     */
+    public function testStornoMitRechnungskorrekturWirdAbgelehnt(): void
+    {
+        $this->invoiceSchema();
+        $this->connection->insert('tl_consho_document', ['id' => 30, 'pid' => self::ORDER, 'shop' => 1, 'type' => 'invoice', 'documentNumber' => 'R-1']);
+        $this->connection->insert('tl_consho_document', ['id' => 31, 'pid' => self::ORDER, 'shop' => 1, 'type' => 'creditNote', 'relatedDocument' => 30, 'documentNumber' => 'RK-1']);
+
+        $this->expectExceptionMessage('„Storniert" kann nicht gesetzt werden: es gibt bereits eine Rechnungskorrektur.');
+
+        $this->listener($this->invoiceNeverCancelled())->save(self::CANCELLED, $this->dc());
+    }
+
+    public function testStornoOhneStornoNummernkreisWirdAbgelehnt(): void
+    {
+        $this->invoiceSchema();
+        $this->connection->executeStatement('DELETE FROM tl_consho_number_range');
+        $this->connection->insert('tl_consho_document', ['id' => 30, 'pid' => self::ORDER, 'shop' => 1, 'type' => 'invoice', 'documentNumber' => 'R-1']);
+
+        $this->expectExceptionMessage('„Storniert" kann nicht gesetzt werden: kein Nummernkreis für Stornos.');
+
+        $this->listener($this->invoiceNeverCancelled())->save(self::CANCELLED, $this->dc());
+    }
+
+    public function testStornoMitOffenerRechnungGeht(): void
+    {
+        $this->invoiceSchema();
+        $this->connection->insert('tl_consho_document', ['id' => 30, 'pid' => self::ORDER, 'shop' => 1, 'type' => 'invoice', 'documentNumber' => 'R-1']);
+
+        // Der Speicher-Callback prüft nur; ausgestellt wird erst im onsubmit (OrderCancellation).
+        self::assertSame(self::CANCELLED, $this->listener($this->invoiceNeverCancelled())->save(self::CANCELLED, $this->dc()));
+    }
+
+    private function invoiceSchema(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_document');
+        DcaSchema::create($this->connection, 'tl_consho_number_range');
+        $this->connection->insert('tl_consho_number_range', ['id' => 1, 'pid' => 1, 'type' => 'cancellation', 'prefix' => 'ST-']);
+        $GLOBALS['TL_LANG']['tl_consho_order']['cancelInvoiceRefused'] = [
+            'corrected' => 'es gibt bereits eine Rechnungskorrektur',
+            'numberRangeMissing' => 'kein Nummernkreis für Stornos',
+        ];
+    }
+
+    private function invoiceNeverCancelled(): CancellationInvoice
+    {
+        $issuer = $this->createMock(DocumentIssuerInterface::class);
+        $issuer->expects(self::never())->method('cancel');
+
+        return new CancellationInvoice($this->connection, new DbalDocumentRepository($this->connection), $issuer);
+    }
+
+    /**
      * Wie DC_Table: Speicher-Callback, Schreiben, dann onsubmit.
      */
     private function storeStatus(int $status): void
@@ -317,13 +374,14 @@ final class OrderStatusListenerTest extends TestCase
         $listener->recordCancellation($this->dc());
     }
 
-    private function listener(): OrderStatusListener
+    private function listener(CancellationInvoice|null $invoice = null): OrderStatusListener
     {
         return new OrderStatusListener(
             $this->connection,
             new DbalOrderStatusRepository($this->connection),
             new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator()),
             new MoneyFormatter(),
+            invoice: $invoice,
         );
     }
 

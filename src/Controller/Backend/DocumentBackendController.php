@@ -60,7 +60,26 @@ final class DocumentBackendController
 
     public function pdf(DataContainer $dc): never
     {
-        $row = $this->readableRow($dc);
+        $this->pdfOf($this->readableRow((int) $dc->id));
+    }
+
+    /**
+     * "Lieferschein" at a delivery (dev#2): the note of THIS parcel, found by
+     * the delivery — the button is shown only where there is one
+     * (DeliveryListener).
+     */
+    public function deliveryNotePdf(DataContainer $dc): never
+    {
+        $id = $this->connection->fetchOne("SELECT id FROM tl_consho_document WHERE delivery = ? AND type = 'deliveryNote'", [(int) $dc->id]);
+
+        $this->pdfOf($this->readableRow(false === $id ? 0 : (int) $id));
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function pdfOf(array $row): never
+    {
         $delivered = $this->delivery->pdf((int) $row['id']) ?? throw new NotFoundHttpException();
 
         $this->warn($delivered['archiveProblem'], $delivered['logoMissing'], (string) $row['documentNumber']);
@@ -73,7 +92,7 @@ final class DocumentBackendController
 
     public function html(DataContainer $dc): never
     {
-        $row = $this->readableRow($dc);
+        $row = $this->readableRow((int) $dc->id);
         $rendered = $this->delivery->html((int) $row['id']) ?? throw new NotFoundHttpException();
 
         // The document NUMBER in the message, not the id or the file name —
@@ -86,9 +105,8 @@ final class DocumentBackendController
     /**
      * @return array<string, mixed>
      */
-    private function readableRow(DataContainer $dc): array
+    private function readableRow(int $id): array
     {
-        $id = (int) $dc->id;
         $row = $id > 0 ? $this->connection->fetchAssociative('SELECT * FROM tl_consho_document WHERE id = ?', [$id]) : false;
 
         if (false === $row) {

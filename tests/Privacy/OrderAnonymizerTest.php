@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Privacy;
 use Contao\CoreBundle\Filesystem\VirtualFilesystemInterface;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Privacy\OrderAnonymizer;
 
 /**
@@ -110,6 +111,31 @@ final class OrderAnonymizerTest extends TestCase
         // Die andere Bestellung derselben Person bleibt unberührt.
         self::assertSame('erika@example.org', $this->connection->fetchOne('SELECT email FROM tl_consho_order WHERE id = 8'));
         self::assertStringContainsString('erika@example.org', (string) $this->connection->fetchOne('SELECT payload FROM tl_consho_document WHERE id = 2'));
+    }
+
+    /**
+     * dev#2: Der Lieferschein trägt Name, Lieferadresse und Sendungsnummer —
+     * alle drei gehen mit, die Positionen bleiben.
+     */
+    public function testDerLieferscheinVerliertAdresseUndSendungsnummer(): void
+    {
+        $payload = (new DocumentPayloadBuilder())->deliveryNote(
+            ['orderNumber' => 'WEB-7', 'firstname' => 'Erika', 'shippingStreet' => 'Nebenweg 2', 'shippingCountry' => 'AT'],
+            [],
+            [['productName' => 'Kräutersalz', 'sku' => 'KS', 'quantity' => '1.0000']],
+            [],
+            ['shippedAt' => '2026-10-21', 'carrier' => 'Post AT', 'trackingNumber' => '1Z999'],
+        );
+        $this->connection->insert('tl_consho_document', ['id' => 3, 'pid' => 7, 'type' => 'deliveryNote', 'documentNumber' => 'LS-1', 'payload' => json_encode($payload)]);
+
+        $this->anonymizer()->anonymize(7, self::NOW);
+
+        $anonymized = json_decode((string) $this->connection->fetchOne('SELECT payload FROM tl_consho_document WHERE id = 3'), true);
+        self::assertIsArray($anonymized);
+        self::assertSame(['', '', 'AT', 'WEB-7'], [$anonymized['order']['firstname'], $anonymized['order']['shippingStreet'], $anonymized['order']['shippingCountry'], $anonymized['order']['orderNumber']]);
+        self::assertSame('', $anonymized['shipment']['trackingNumber']);
+        self::assertSame('Post AT', $anonymized['shipment']['carrier']);
+        self::assertSame('Kräutersalz', $anonymized['items'][0]['productName']);
     }
 
     public function testZweimalIstEinmal(): void

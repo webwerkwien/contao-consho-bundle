@@ -11,6 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Webwerkwien\ContaoConshoBundle\Document\DeferredArchive;
+use Webwerkwien\ContaoConshoBundle\Document\DeliveryNoteIssuer;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
@@ -229,6 +231,37 @@ final class DeliveryReportedTest extends TestCase
     }
 
     /**
+     * dev#2: Der Lieferschein entsteht in der Meldung, mit dem, was NACH
+     * diesem Paket offen ist, und wird nach dem Commit abgelegt.
+     */
+    public function testDieMeldungStelltDenLieferscheinAusMitDemRest(): void
+    {
+        $this->parcel(1, [1 => '2']);
+        $notes = $this->createMock(DeliveryNoteIssuer::class);
+        $notes->expects(self::once())->method('issue')
+            ->willReturnCallback(function (int $deliveryId, array $openGoods): int {
+                self::assertSame(1, $deliveryId);
+                self::assertSame([2], array_keys(array_filter($openGoods, static fn (string $q): bool => (float) $q > 0)), 'der Rucksack folgt');
+                self::assertTrue($this->connection->isTransactionActive(), 'in der Transaktion der Meldung');
+
+                return 77;
+            });
+
+        $this->reported($notes)->report(1, 100);
+
+        self::assertSame([55, 77], $this->archived, 'Rechnung und Lieferschein, nach dem Commit');
+    }
+
+    public function testEineAbgelehnteMeldungStelltKeinenLieferscheinAus(): void
+    {
+        $this->parcel(1, [1 => '3']);
+        $notes = $this->createMock(DeliveryNoteIssuer::class);
+        $notes->expects(self::never())->method('issue');
+
+        self::assertSame('tooMuch', $this->reported($notes)->report(1, 100)->outcome);
+    }
+
+    /**
      * @param array<int, string> $items
      */
     private function parcel(int $id, array $items, string $carrier = '', string $tracking = ''): void
@@ -240,7 +273,7 @@ final class DeliveryReportedTest extends TestCase
         }
     }
 
-    private function reported(): DeliveryReported
+    private function reported(DeliveryNoteIssuer|null $notes = null): DeliveryReported
     {
         $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
         $orders->method('lockOrder')->willReturnCallback(function (int $id): array|null {
@@ -301,6 +334,8 @@ final class DeliveryReportedTest extends TestCase
             $this->createStub(LoggerInterface::class),
             $this->framework(),
             $this->createStub(UrlGeneratorInterface::class),
+            $notes,
+            new DeferredArchive($this->connection, static fn () => $archiver),
         );
     }
 

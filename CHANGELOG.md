@@ -5,6 +5,31 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.5] – 2026-10-21
+
+### Hinzugefügt
+
+- **Lieferscheine**: „Als versandt melden" stellt für das Paket einen Lieferschein aus — einen je Lieferung, also
+  auch je Teillieferung, mit eigener Nummer. Er nennt Lieferadresse, Versanddatum, Versanddienst und Sendungsnummer,
+  die Positionen dieses Pakets mit Menge und Artikelnummer und unter „Folgt separat" die noch offenen Artikel; keine
+  Preise. Nur wo der Shop einen Nummernkreis „Lieferscheinnummer" hat — ohne ihn bleibt alles wie bisher. Nur
+  physische Ware: die elektronische Freigabe und Abo-Folgebestellungen bekommen keinen. Im Backend als „Lieferschein"
+  an der Lieferung und in der Belegliste; nicht als Anhang der Mail „Versendet", er liegt dem Paket bei, und nicht an
+  die Buchhaltungsmodule — er trägt keinen Betrag. (dev#2)
+
+### Behoben
+
+- **Hilfetexte sprachen noch von „Gutschrift" und schlugen „GS-" vor**: Die Meldung zum geteilten Präfix eines
+  Nummernkreises und das Feld „Bezieht sich auf" am Beleg nennen jetzt die Rechnungskorrektur und das Präfix „RK-",
+  das auch die Einrichtung anlegt; im Englischen „invoice correction" statt „credit note". (Entscheidung F2)
+- **Der Hinweis „wird so nicht angeboten" in der Preismaske** verwies auf einen Abschnitt „Digitale Auslieferung und
+  Verkauf"; er heißt „Auslieferung und Gültigkeit".
+- **Ein Storno über den Status ließ die Rechnung stehen**: Ein Status mit „Storniert" stellt jetzt zur offenen
+  Rechnung einen Stornobeleg aus, in derselben Transaktion wie die übrigen Rücknahmen, abgelegt nach dem Commit —
+  über „Mehrere bearbeiten" am Ende der Anfrage, damit auch die Buchhaltungsmodule ihn bekommen. Abgelehnt wird der
+  Status, wenn schon eine Rechnungskorrektur besteht (sie würde doppelt gutgeschrieben) oder der Shop keinen
+  Nummernkreis für Stornos hat; eine schon stornierte Bestellung nicht. Keine Mail an den Kunden. (dev#1)
+
 ## [0.1.4] – 2026-10-17
 
 ### Behoben

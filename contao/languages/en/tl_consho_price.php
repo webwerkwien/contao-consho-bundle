@@ -13,7 +13,7 @@ $GLOBALS['TL_LANG']['tl_consho_price']['validTo'] = ['Valid until', 'From this m
 
 $GLOBALS['TL_LANG']['tl_consho_price']['subscriptionRule'] = ['Sold as', 'One-time sale or one of the subscription rules ticked at the product. For a subscription the amount is per payment — the monthly amount for a monthly subscription.'];
 $GLOBALS['TL_LANG']['tl_consho_price']['oneTimeSale'] = 'One-time sale';
-$GLOBALS['TL_LANG']['tl_consho_price']['ruleNotOffered'] = 'The product is not offered this way. Tick the sale mode or rule at the product under "Digital delivery and sale".';
+$GLOBALS['TL_LANG']['tl_consho_price']['ruleNotOffered'] = 'The product is not offered this way. Tick the sale mode or rule at the product under "Delivery and validity".';
 
 $GLOBALS['TL_LANG']['tl_consho_price']['price_legend'] = 'Price';
 $GLOBALS['TL_LANG']['tl_consho_price']['scope_legend'] = 'Scope';

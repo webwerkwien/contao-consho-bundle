@@ -85,7 +85,7 @@ final class DocumentArchiver implements DocumentArchiverInterface
             $this->store->markArchived($documentId, $path, hash('sha256', $pdf));
         } catch (\Throwable $e) {
             $this->store->markArchiveFailed($documentId);
-            $this->logger->error(\sprintf('Invoice %s could not be archived: %s', (string) $document['documentNumber'], $e->getMessage()), ['exception' => $e]);
+            $this->logger->error(\sprintf('Document %s could not be archived: %s', (string) $document['documentNumber'], $e->getMessage()), ['exception' => $e]);
         }
     }
 

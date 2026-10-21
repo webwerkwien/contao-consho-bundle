@@ -11,7 +11,8 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['items'] = ['Contents', 'Edit the cont
 $GLOBALS['TL_LANG']['tl_consho_delivery']['edit'] = ['Edit', 'Edit delivery ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['delete'] = ['Delete', 'Delete delivery ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['show'] = ['Details', 'Show details of delivery ID %s'];
-$GLOBALS['TL_LANG']['tl_consho_delivery']['report'] = ['Report as shipped', 'Report delivery ID %s as shipped: the customer gets a mail with the contents of the parcel, and payment methods that invoice on shipment issue the invoice. The delivery is locked afterwards.'];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['report'] = ['Report as shipped', 'Report delivery ID %s as shipped: the customer gets a mail with the contents of the parcel, and payment methods that invoice on shipment issue the invoice, and a shop with a delivery note number range issues the delivery note. The delivery is locked afterwards.'];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['deliveryNote'] = ['Delivery note', 'Open the delivery note of delivery ID %s as PDF'];
 
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notReported'] = 'not reported yet';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['reportedOn'] = 'reported on %s';

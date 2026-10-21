@@ -405,6 +405,88 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
+     * dev#2: Der Lieferschein hat eine eigene Vorlage — was im Paket ist, was
+     * separat folgt, kein Betrag. Die Adresse ist die Lieferadresse.
+     */
+    public function testDerLieferscheinNenntPaketUndRestOhnePreise(): void
+    {
+        $html = $this->renderer()->html($this->deliveryNote(self::versionTwo()))['html'];
+
+        self::assertStringContainsString('Lieferschein LS-00003', $html);
+        self::assertStringContainsString('<th scope="row">Lieferscheinnummer</th><td>LS-00003</td>', $html);
+        self::assertStringContainsString('Teillieferung', $html);
+        self::assertStringContainsString('Inhalt dieser Sendung', $html);
+        self::assertStringContainsString('Folgt separat', $html);
+        self::assertStringContainsString('Wanderstock', $html);
+        self::assertStringContainsString('Rucksack', $html);
+        self::assertStringContainsString('CA1AT', $html);
+        self::assertStringContainsString('Lieferweg 3', $html);
+        self::assertStringNotContainsString('€', $html, 'kein Betrag auf dem Lieferschein');
+        self::assertStringNotContainsString('Rechnungsnummer', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
+    public function testDerVollstaendigeLieferscheinHatKeinenRest(): void
+    {
+        $html = $this->renderer()->html($this->deliveryNote(self::versionTwo(), complete: true))['html'];
+
+        self::assertStringNotContainsString('Teillieferung', $html);
+        self::assertStringNotContainsString('Folgt separat', $html);
+    }
+
+    public function testDerLieferscheinIstAuchEnglischVollstaendig(): void
+    {
+        $GLOBALS['TL_LANG'] = [];
+        require __DIR__.'/../../contao/languages/en/default.php';
+
+        $html = $this->renderer()->html($this->deliveryNote(self::versionTwo(), language: 'en'))['html'];
+
+        self::assertStringContainsString('Delivery note LS-00003', $html);
+        self::assertStringContainsString('To follow separately', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
+    public function testDerLieferscheinWirdZumPdf(): void
+    {
+        $cache = sys_get_temp_dir().'/consho-note-'.bin2hex(random_bytes(4));
+
+        try {
+            $pdf = $this->renderer(new DompdfRenderer($cache))->pdf($this->deliveryNote(self::versionTwo()))['pdf'];
+        } finally {
+            foreach (glob($cache.'/*') ?: [] as $file) {
+                @unlink($file);
+            }
+
+            @rmdir($cache);
+        }
+
+        self::assertStringStartsWith('%PDF-', $pdf);
+    }
+
+    /**
+     * @param array<string, mixed> $invoice a snapshot of the same order, for its customer
+     *
+     * @return array<string, mixed>
+     */
+    private function deliveryNote(array $invoice, bool $complete = false, string $language = 'de'): array
+    {
+        $order = array_merge($invoice['order'], ['shippingFirstname' => 'Erika', 'shippingLastname' => 'Muster', 'shippingStreet' => 'Lieferweg 3', 'shippingPostal' => '1100', 'shippingCity' => 'Wien', 'shippingCountry' => 'at']);
+        $order['language'] = $language;
+        $payload = (new DocumentPayloadBuilder())->deliveryNote(
+            $order,
+            ['issuer' => $invoice['issuer'] ?? [], 'logo' => null, 'notes' => ['footer' => 'Danke']],
+            [['productName' => 'Wanderstock', 'sku' => 'WS-1', 'quantity' => '2']],
+            $complete ? [] : [['productName' => 'Rucksack', 'sku' => 'RS-1', 'quantity' => '1']],
+            ['shippedAt' => '2026-10-21', 'carrier' => 'Post AT', 'trackingNumber' => 'CA1AT'],
+        );
+
+        return [
+            'id' => 9, 'type' => 'deliveryNote', 'documentNumber' => 'LS-00003', 'issuedAt' => 1790100000, 'orderLanguage' => $language,
+            'payload' => json_encode($payload, JSON_THROW_ON_ERROR),
+        ];
+    }
+
+    /**
      * Und als PDF — mit dem echten Renderer, einmal.
      */
     public function testDieRechnungWirdZumPdf(): void
