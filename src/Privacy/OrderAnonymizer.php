@@ -44,6 +44,9 @@ class OrderAnonymizer
         'dateOfBirth', 'vatId', 'vatIdRequestIdentifier',
     ];
 
+    /** WA, A6: how long a withdrawal without an order is kept. */
+    public const UNASSIGNED_WITHDRAWAL_YEARS = 3;
+
     /** Versions of these tables, by the order or by its children. */
     private const VERSIONED_CHILDREN = ['tl_consho_payment', 'tl_consho_delivery', 'tl_consho_complaint', 'tl_consho_withdrawal'];
 
@@ -247,6 +250,45 @@ class OrderAnonymizer
 
         foreach ($ids as $id) {
             $this->connection->transactional(fn () => $this->anonymizeSubscription($id, $now));
+        }
+
+        return \count($ids);
+    }
+
+    /**
+     * Withdrawals that never found their order (WA, A6): no order, so no
+     * order's period to follow. Kept three years (Michael, 2026-10-22), from
+     * the end of the year of receipt like the regular limitation period
+     * (§ 195, § 199 Abs. 1 BGB), as proof of what was declared and when, then
+     * emptied like an anonymised order's.
+     *
+     * Number, receipt, shop and state stay: the number range stays unbroken,
+     * and the record no longer names anybody.
+     *
+     * @return int how many withdrawals were anonymised
+     */
+    public function anonymizeUnassignedWithdrawals(int $now): int
+    {
+        $ids = [];
+
+        foreach ($this->connection->fetchAllAssociative(
+            "SELECT id, receivedAt FROM tl_consho_withdrawal
+              WHERE pid = 0 AND (name <> '' OR email <> '' OR orderReference <> '' OR part IS NOT NULL OR message IS NOT NULL OR reason IS NOT NULL)
+              ORDER BY id",
+        ) as $row) {
+            if (RetentionPolicy::endOf((int) $row['receivedAt'], self::UNASSIGNED_WITHDRAWAL_YEARS) < $now) {
+                $ids[] = (int) $row['id'];
+            }
+        }
+
+        foreach ($ids as $id) {
+            $this->connection->transactional(function () use ($id, $now): void {
+                $this->connection->executeStatement(
+                    "UPDATE tl_consho_withdrawal SET name = '', email = '', orderReference = '', part = NULL, message = NULL, reason = NULL, tstamp = ? WHERE id = ? AND pid = 0",
+                    [$now, $id],
+                );
+                $this->connection->delete('tl_version', ['fromTable' => 'tl_consho_withdrawal', 'pid' => $id]);
+            });
         }
 
         return \count($ids);

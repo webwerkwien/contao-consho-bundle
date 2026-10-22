@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Dashboard;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Symfony\Contracts\Service\ResetInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
@@ -38,6 +39,11 @@ final class OpenWorkReader implements ResetInterface
     public const UNDECIDED = 'undecided';
 
     public const REFUND_OPEN = 'refundOpen';
+
+    // The shop of a withdrawal: its order's, or — not assigned yet (WA) —
+    // the one it came in through. Withdrawals from before WA have shop 0
+    // and always an order.
+    private const WITHDRAWAL_SHOP = 'CASE WHEN w.pid = 0 THEN w.shop ELSE o.shop END';
 
     /** @var array<int, array{shop: int, dueAt: int, unpaid: bool, toDeliver: bool}>|null */
     private array|null $orders = null;
@@ -79,10 +85,13 @@ final class OpenWorkReader implements ResetInterface
             }
         }
 
+        // WA (A5): a withdrawal without an order yet counts for the shop it
+        // came in through — undecided, like any other just received.
         foreach ($this->connection->fetchAllAssociative(
-            'SELECT o.shop, w.state, w.receivedAt FROM tl_consho_withdrawal w
-               INNER JOIN tl_consho_order o ON o.id = w.pid
-              WHERE w.state = :received OR (w.state = :accepted AND w.refundedAt IS NULL)',
+            'SELECT '.self::WITHDRAWAL_SHOP.' AS shop, w.state, w.receivedAt FROM tl_consho_withdrawal w
+               LEFT JOIN tl_consho_order o ON o.id = w.pid
+              WHERE (o.id IS NOT NULL OR w.pid = 0)
+                AND (w.state = :received OR (w.state = :accepted AND w.refundedAt IS NULL))',
             ['received' => 'received', 'accepted' => 'accepted'],
         ) as $row) {
             $shop = $work[(int) $row['shop']] ?? null;
@@ -146,9 +155,10 @@ final class OpenWorkReader implements ResetInterface
                 $shop,
             ),
             self::UNDECIDED => $this->column(
-                'SELECT w.id FROM tl_consho_withdrawal w INNER JOIN tl_consho_order o ON o.id = w.pid WHERE w.state = :state',
+                'SELECT w.id FROM tl_consho_withdrawal w LEFT JOIN tl_consho_order o ON o.id = w.pid WHERE (o.id IS NOT NULL OR w.pid = 0) AND w.state = :state',
                 ['state' => 'received'],
                 $shop,
+                self::WITHDRAWAL_SHOP,
             ),
             self::REFUND_OPEN => $this->column(
                 'SELECT w.id FROM tl_consho_withdrawal w INNER JOIN tl_consho_order o ON o.id = w.pid WHERE w.state = :state AND w.refundedAt IS NULL',
@@ -160,18 +170,22 @@ final class OpenWorkReader implements ResetInterface
     }
 
     /**
-     * @param array<string, string> $params
+     * @param array<string, string|int> $params
      *
      * @return list<int>
      */
-    private function column(string $sql, array $params, int $shop): array
+    private function column(string $sql, array $params, int $shop, string $shopColumn = 'o.shop'): array
     {
+        $types = [];
+
         if ($shop > 0) {
-            $sql .= ' AND o.shop = :shop';
+            $sql .= ' AND '.$shopColumn.' = :shop';
             $params['shop'] = $shop;
+            // Bound as text, a CASE expression (no column affinity) never equals it.
+            $types['shop'] = ParameterType::INTEGER;
         }
 
-        $ids = array_map(intval(...), $this->connection->fetchFirstColumn($sql, $params));
+        $ids = array_map(intval(...), $this->connection->fetchFirstColumn($sql, $params, $types));
         sort($ids);
 
         return $ids;

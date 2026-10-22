@@ -87,6 +87,9 @@
                 <input type="hidden" name="consho_order_action" value="withdrawStart">
                 <button type="submit">{{ 'CONSHO.withdrawal.button'|trans({}, 'contao_default') }}</button>
             </form>
+            {% if withdrawal.late %}
+                <p class="consho-order__withdraw-late">{{ 'CONSHO.withdrawal.late'|trans({}, 'contao_default') }}</p>
+            {% endif %}
         {% endif %}
     {% elseif withdrawal.form %}
 
@@ -100,6 +103,10 @@
 
     <h2 class="consho-order__title">{{ 'CONSHO.withdrawal.title'|trans({}, 'contao_default') }}</h2>
     <p>{{ 'CONSHO.withdrawal.intro'|trans({}, 'contao_default') }}</p>
+    {# WA, B2: after the window's estimated end the declaration is still taken. #}
+    {% if withdrawal.late %}
+        <p class="consho-order__withdraw-late">{{ 'CONSHO.withdrawal.late'|trans({}, 'contao_default') }}</p>
+    {% endif %}
 
     <form method="post" class="consho-withdrawal">
         <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
@@ -211,14 +218,9 @@
             <input type="hidden" name="consho_withdraw" value="1">
             <button type="submit">{{ 'CONSHO.withdrawal.button'|trans({}, 'contao_default') }}</button>
         </form>
-    {% elseif withdrawal.state == 'expired' %}
-        <p class="consho-order__withdraw-expired">
-            {% if withdrawal.contact %}
-                {{ 'CONSHO.withdrawal.expired'|trans([withdrawal.contact], 'contao_default') }}
-            {% else %}
-                {{ 'CONSHO.withdrawal.expiredNoContact'|trans({}, 'contao_default') }}
-            {% endif %}
-        </p>
+        {% if withdrawal.late %}
+            <p class="consho-order__withdraw-late">{{ 'CONSHO.withdrawal.late'|trans({}, 'contao_default') }}</p>
+        {% endif %}
     {% endif %}
 
     {% if withdrawal.received is not empty %}

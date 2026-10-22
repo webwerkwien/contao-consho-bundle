@@ -48,6 +48,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'withdrawalFunctionMissing' => 'Start points without a reachable "withdraw from contract" function: %count% (%pages%). In Germany since 19.06.2026 (§ 356a BGB), in Austria from 01.10.2026 (§ 13a FAGG), a shop has to offer the withdrawal function, easily accessible, for the whole withdrawal period (Art. 11a Directive 2011/83/EU) — to buyers without the order mail as well. Create a page with the "withdraw from contract" content element, publish it and select it on the start point under ""Withdraw from contract" page". Best link it from every page, in the footer for instance.',
     'withdrawalFunctionAdvised' => 'Start points without a "withdraw from contract" function: %count% (%pages%). The shop has a withdrawal period but is established outside the EU and the EEA; the checkout stays open. Selling to consumers in the EU may still oblige you to offer it. If so, create a page with the "withdraw from contract" element and select it on the start point.',
     'withdrawalsOpen' => 'Open withdrawals in the shop "%shop%": %count% (%numbers%). The first refund falls due on %due% at the latest (14 days from receipt). Process them under "Withdrawals".',
+    'withdrawalsUnassigned' => 'Withdrawals without an order in the shop "%shop%": %count% (%numbers%). The order number and e-mail address from the withdrawal form matched no order, or one that cannot be withdrawn from through the form; they have been received all the same. Assign them to an order under "Withdrawals" or dismiss them without an order — the first refund would fall due on %due% at the latest.',
     'retentionPeriodMissing' => 'The shop configuration "%shop%" has no retention period. Without one nothing is anonymised, and an erasure request can only be noted. Enter the period in the section "Retention and data protection".',
     'anonymizationDue' => 'In the shop "%shop%" the retention period of %count% orders ends within the next 30 days (%numbers%). Their customer data will then be anonymised automatically; numbers and amounts remain.',
     'customerGroupMissing' => 'The shop configuration "%shop%" has no base group for its customers, or the chosen group no longer exists. Accounts without an order are therefore missing from "Customers". Choose the group in the section "Customer groups".',
@@ -609,6 +610,13 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['all'] = 'the whole order';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['message'] = 'Your message';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['statement'] = 'Your declaration as received:';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['message'] = 'Customer\'s message';
+// WA (A3): a declaration that matched no order — no order data in the mail.
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['unassigned']['subject'] = 'Confirmation of receipt: withdrawal %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['unassigned']['intro'] = 'we confirm receipt of your withdrawal. We will match it to your order and get in touch if we need anything else from you.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['unassigned']['orderReference'] = 'Order number given';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['subject'] = 'Withdrawal received, not assigned: %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['intro'] = 'A withdrawal came in through the withdrawal form whose order number and e-mail address match no order. Please assign it to an order under "Withdrawals".';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['unconfirmed'] = 'The confirmation of receipt to the customer did not go out — please confirm it by hand.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['subject'] = 'Your withdrawal %s from order %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['intro'] = 'we cannot accept your withdrawal %s from order %s. The reason:';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['subject'] = 'Your withdrawal %s from order %s: refund';
@@ -942,25 +950,27 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'whole' => '%s (subscription, %s — whole only)',
     'message' => 'Message (optional)',
     'back' => 'Back to the order',
-    'expired' => 'The withdrawal period for this order has expired. If you have any questions, you can reach us at %s.',
-    'expiredNoContact' => 'The withdrawal period for this order has expired.',
+    // WA, B2 (Michael, 2026-10-22).
+    'late' => 'According to our records the withdrawal period has expired. The withdrawal will be reviewed accordingly.',
     'received' => 'Withdrawals received',
     'receivedEntry' => '%s, received %s',
     'confirmed' => 'confirmation of receipt sent by e-mail',
     'unconfirmed' => 'confirmation of receipt by e-mail pending',
 
     // The element for buyers without the order mail (W1, E6).
-    'formIntro' => 'Enter your order number, the e-mail address of the order and your name. You will receive a confirmation of receipt by e-mail straight away.',
+    // WA (2026-10-22): the confirmation goes to the order's address where
+    // they match, else to the one typed here.
+    'formIntro' => 'Enter your order number, your e-mail address and your name. You will receive a confirmation of receipt by e-mail straight away.',
     'orderNumber' => 'Order number',
-    'orderEmail' => 'E-mail address of the order',
+    'orderEmail' => 'E-mail address (preferably the one of the order)',
     'partOptional' => 'Only part of the order? Then name it here (optional)',
-    'notFound' => 'We found no order with this order number and e-mail address. Please check your details.',
     'tooMany' => 'Too many attempts. Please try again in a quarter of an hour.',
     'missing' => 'Please fill in order number, e-mail address and name.',
-    'done' => 'Your withdrawal %s has been received. We have sent the confirmation of receipt to the e-mail address of the order.',
-    'doneUnconfirmed' => 'Your withdrawal %s has been received and stored. The confirmation of receipt could not be sent by e-mail; we will make up for it.',
-    'closed' => 'This order can no longer be withdrawn from through this form.',
-    'closedContact' => 'This order can no longer be withdrawn from through this form. If you have any questions, you can reach us at %s.',
+    'emailInvalid' => 'Please enter a valid e-mail address — the confirmation of receipt goes there.',
+    // Review WA, S1/B1: one answer for every case — no number (its shape told
+    // whether the order was found) and no "not sent" (only the path without
+    // an order has a mail limit).
+    'done' => 'Your withdrawal has been received and stored. The confirmation of receipt with the number of the withdrawal goes to the e-mail address you gave.',
 
     // In the finding "withdrawal period under 14 days" where no delivery countries are chosen.
     'allCountries' => 'all countries',

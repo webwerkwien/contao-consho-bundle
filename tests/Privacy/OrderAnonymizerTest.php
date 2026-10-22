@@ -201,6 +201,30 @@ final class OrderAnonymizerTest extends TestCase
         self::assertSame('Erika Muster', $this->connection->fetchOne('SELECT name FROM tl_consho_cancellation WHERE pid = 20'));
     }
 
+    /**
+     * WA, A6: ohne Bestellung keine Frist der Bestellung — drei Jahre ab Ende
+     * des Eingangsjahres, dann bleibt nur, was niemanden nennt.
+     */
+    public function testNichtZugeordneterWiderrufNachDreiJahren(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 30, 'pid' => 0, 'shop' => 1, 'number' => 'W-00030', 'state' => 'received', 'receivedAt' => strtotime('2023-06-01 10:00'), 'name' => 'Erika Muster', 'email' => 'erika@example.org', 'orderReference' => 'WEB-77', 'part' => 'das Salz', 'message' => 'Grüße', 'reason' => 'nicht gefunden']);
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 31, 'pid' => 0, 'shop' => 1, 'number' => 'W-00031', 'state' => 'received', 'receivedAt' => strtotime('2024-01-02 10:00'), 'name' => 'Max', 'email' => 'max@example.org', 'orderReference' => 'WEB-78']);
+        $this->connection->insert('tl_version', ['fromTable' => 'tl_consho_withdrawal', 'pid' => 30, 'data' => 'a:0:{}']);
+
+        // 31.12.2026 23:59:59 ist das Ende für 2023 — eine Sekunde davor bleibt alles.
+        self::assertSame(0, $this->anonymizer()->anonymizeUnassignedWithdrawals(strtotime('2026-12-31 23:59:59')));
+        self::assertSame(1, $this->anonymizer()->anonymizeUnassignedWithdrawals(strtotime('2027-01-01 00:00:00')));
+
+        self::assertSame(
+            ['W-00030', 1, 'received', strtotime('2023-06-01 10:00'), '', '', '', null, null, null],
+            array_values($this->connection->fetchAssociative('SELECT number, shop, state, receivedAt, name, email, orderReference, part, message, reason FROM tl_consho_withdrawal WHERE id = 30') ?: []),
+        );
+        self::assertSame(0, (int) $this->connection->fetchOne("SELECT COUNT(*) FROM tl_version WHERE fromTable = 'tl_consho_withdrawal' AND pid = 30"));
+        self::assertSame('Max', $this->connection->fetchOne('SELECT name FROM tl_consho_withdrawal WHERE id = 31'), 'Eingang 2024: bis Ende 2027');
+        self::assertSame('Erika Muster', $this->connection->fetchOne('SELECT name FROM tl_consho_withdrawal WHERE id = 3'), 'zugeordnet folgt der Bestellung');
+        self::assertSame(0, $this->anonymizer()->anonymizeUnassignedWithdrawals(strtotime('2027-01-01 00:00:00')), 'zweimal ist einmal');
+    }
+
     private function subscription(int $id, string $state): void
     {
         $this->connection->insert('tl_consho_subscription', ['id' => $id, 'subscriptionNumber' => 'WEB-7-1', 'member' => 5, 'firstOrder' => 7, 'ruleTitle' => 'Monatsabo', 'terms' => 'Bedingungen', 'state' => $state, 'mandate' => 'cus_1|pm_2', 'mandateMethod' => 8]);

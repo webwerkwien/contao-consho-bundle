@@ -65,6 +65,8 @@
                 </tbody>
             </table>
         </div>
+        {# WA, B3: the declaration came in after the window's estimated end. #}
+        {% if withdrawal.afterWindow %}<p class="tl_info">{{ l.afterWindowHint|default('') }}</p>{% endif %}
         <p class="tl_help">{{ l.datesHelp|default('') }}</p>
     </fieldset>
 

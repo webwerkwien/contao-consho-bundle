@@ -48,6 +48,11 @@ final class WithdrawalControllerTest extends TestCase
     /** @var list<int> the order of each confirmation that went out */
     private array $confirmed = [];
 
+    /** @var list<array{int, string, string}> shop, address and language of each unassigned confirmation */
+    private array $unassigned = [];
+
+    private bool $mailWorks = true;
+
     protected function setUp(): void
     {
         $this->connection = SqliteWithoutRowLocks::connection(); // the withdrawal locks its order (K2)
@@ -83,7 +88,7 @@ final class WithdrawalControllerTest extends TestCase
         $redirect = $this->post(['consho_withdrawal_orderNumber' => ' WEB-00073 ', 'consho_withdrawal_email' => 'kundin@example.org', 'consho_withdrawal_name' => 'Erika Muster', 'consho_withdrawal_part' => 'nur der Stock']);
 
         self::assertInstanceOf(RedirectResponseException::class, $redirect);
-        self::assertSame(self::URL.'?consho_withdrawal=done&consho_withdrawal_number=WEB-00073-W1', $redirect->getResponse()->headers->get('Location'));
+        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'), 'ohne Nummer (Review WA, S1)');
 
         $row = $this->connection->fetchAssociative('SELECT source, scope, part, email FROM tl_consho_withdrawal');
 
@@ -92,8 +97,11 @@ final class WithdrawalControllerTest extends TestCase
     }
 
     /**
-     * W2: dieselbe Meldung, ob die Nummer fehlt, die Adresse nicht passt
-     * oder die Bestellung zu einem anderen Shop gehört — und keine Mail.
+     * WA, A1 (Michael, 2026-10-22): Passen Nummer und Adresse nicht — die
+     * Nummer gibt es nicht, die Adresse passt nicht, die Bestellung gehört zu
+     * einem anderen Shop —, wird der Widerruf trotzdem gespeichert, ohne
+     * Bestellung, und an die eingegebene Adresse bestätigt. Bis dahin: „nicht
+     * gefunden", nichts gespeichert (W2).
      *
      * @return iterable<string, array{string, string}>
      */
@@ -107,27 +115,34 @@ final class WithdrawalControllerTest extends TestCase
     /**
      * @dataProvider mismatches
      */
-    public function testNichtGefundenOhneUnterschiedUndOhneMail(string $number, string $email): void
+    public function testNichtGefundenWirdNichtZugeordnetGespeichert(string $number, string $email): void
     {
-        $data = $this->submit(['consho_withdrawal_orderNumber' => $number, 'consho_withdrawal_email' => $email, 'consho_withdrawal_name' => 'E']);
+        $redirect = $this->post(['consho_withdrawal_orderNumber' => $number, 'consho_withdrawal_email' => $email, 'consho_withdrawal_name' => 'E', 'consho_withdrawal_message' => 'bitte']);
 
-        self::assertSame('notFound', $data['error']);
-        self::assertTrue($data['form']);
-        self::assertSame($number, $data['input']['orderNumber'], 'das Eingegebene bleibt stehen');
-        self::assertSame([], $this->confirmed);
+        self::assertInstanceOf(RedirectResponseException::class, $redirect);
+        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'), 'dieselbe Antwort wie bei einem Treffer');
+
+        $row = $this->connection->fetchAssociative('SELECT pid, shop, orderReference, email, message FROM tl_consho_withdrawal');
+
+        self::assertSame(
+            ['pid' => 0, 'shop' => self::SHOP, 'orderReference' => $number, 'email' => $email, 'message' => 'bitte'],
+            \is_array($row) ? ['pid' => (int) $row['pid'], 'shop' => (int) $row['shop'], 'orderReference' => $row['orderReference'], 'email' => $row['email'], 'message' => $row['message']] : null,
+        );
+        self::assertSame([], $this->confirmed, 'keine Mail über eine Bestellung');
+        self::assertSame([[self::SHOP, $email, 'de']], $this->unassigned);
     }
 
-    /** E4: 5 Versuche je IP in 15 Minuten — gezählt wird jeder, nicht nur die Fehlgriffe. */
+    /** E4: 5 Versuche je IP in 15 Minuten — gezählt wird jeder, auch die gespeicherten. */
     public function testDerSechsteVersuchWirdAbgewiesen(): void
     {
         for ($i = 0; $i < 5; ++$i) {
-            self::assertSame('notFound', $this->submit(['consho_withdrawal_orderNumber' => 'X', 'consho_withdrawal_email' => 'a@b.c', 'consho_withdrawal_name' => 'E'])['error']);
+            self::assertInstanceOf(RedirectResponseException::class, $this->post(['consho_withdrawal_orderNumber' => 'X', 'consho_withdrawal_email' => 'a@example.net', 'consho_withdrawal_name' => 'E']));
         }
 
         $data = $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'kundin@example.org', 'consho_withdrawal_name' => 'E']);
 
         self::assertSame('tooMany', $data['error']);
-        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
+        self::assertSame(5, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
     }
 
     public function testFehlendeAngaben(): void
@@ -135,24 +150,98 @@ final class WithdrawalControllerTest extends TestCase
         self::assertSame('missing', $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => '', 'consho_withdrawal_name' => 'E'])['error']);
     }
 
-    public function testNachFristendeMitDerAdresseDesShops(): void
+    /** An die eingegebene Adresse geht jetzt die Bestätigung — sie muss eine sein. */
+    public function testUngueltigeAdresse(): void
+    {
+        $data = $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'keine-adresse', 'consho_withdrawal_name' => 'E']);
+
+        self::assertSame('emailInvalid', $data['error']);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
+    }
+
+    /**
+     * Review WA, S4: was nicht in die Spalte passt, darf auf MySQL nicht als
+     * 500 enden — ein langer Name wird gekürzt. Die Adresse braucht das nicht:
+     * FILTER_VALIDATE_EMAIL nimmt höchstens 254 Zeichen.
+     */
+    public function testLangerNameWirdGekuerzt(): void
+    {
+        // Gültig gebaut (Labels höchstens 63 Zeichen), damit nur die Länge
+        // entscheidet (zweites Review WA): 254 geht durch, 255 nicht.
+        $address = static fn (int $last): string => str_repeat('a', 64).'@'.implode('.', [str_repeat('b', 63), str_repeat('c', 63), str_repeat('d', $last)]).'.at';
+        self::assertSame(254, \strlen($address(58)));
+        self::assertNotFalse(filter_var($address(58), \FILTER_VALIDATE_EMAIL));
+        self::assertSame('emailInvalid', $this->submit(['consho_withdrawal_orderNumber' => 'X', 'consho_withdrawal_email' => $address(59), 'consho_withdrawal_name' => 'E'])['error'], 'über 254 Zeichen keine Adresse');
+
+        self::assertInstanceOf(RedirectResponseException::class, $this->post(['consho_withdrawal_orderNumber' => 'X', 'consho_withdrawal_email' => 'e@example.org', 'consho_withdrawal_name' => str_repeat('ä', 300)]));
+
+        self::assertSame(255, mb_strlen((string) $this->connection->fetchOne('SELECT name FROM tl_consho_withdrawal')));
+    }
+
+    /**
+     * WA, B1: Nach dem Fenster wird gespeichert und markiert, nicht mehr
+     * abgelehnt — die Antwort an den Kunden ist dieselbe wie im Fenster.
+     */
+    public function testNachFensterendeGespeichertWieImFenster(): void
     {
         $shipped = time() - 40 * 86400;
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => 7, 'shippedAt' => $shipped, 'reportedAt' => $shipped]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => '1']);
 
-        $data = $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'kundin@example.org', 'consho_withdrawal_name' => 'E']);
+        $redirect = $this->post(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'kundin@example.org', 'consho_withdrawal_name' => 'E']);
 
-        self::assertSame('closed', $data['error']);
-        self::assertSame('office@shop.example', $data['contact']);
+        self::assertInstanceOf(RedirectResponseException::class, $redirect);
+        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT afterWindow FROM tl_consho_withdrawal'));
+    }
+
+    /**
+     * Review WA, S1 (Michael, 2026-10-22: „wie empfohlen"): Lehnt die Bestellung
+     * ab — hier Frist 0 —, antwortet das Formular nicht mehr „nicht mehr
+     * möglich": das verriet einem Fremden, dass es die Bestellung gibt. Es
+     * speichert nicht zugeordnet, wie ohne Treffer; der Betreiber ordnet zu
+     * und lehnt mit Begründung ab.
+     */
+    public function testLehntDieBestellungAbGleicheAntwortWieOhneTreffer(): void
+    {
+        $this->connection->update('tl_consho_shop', ['withdrawalDays' => 0], ['id' => self::SHOP]);
+
+        $redirect = $this->post(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'kundin@example.org', 'consho_withdrawal_name' => 'E']);
+
+        self::assertInstanceOf(RedirectResponseException::class, $redirect);
+        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'));
+        self::assertSame(['0', 'WEB-00073'], array_map('strval', $this->connection->fetchNumeric('SELECT pid, orderReference FROM tl_consho_withdrawal') ?: []));
+        self::assertSame([], $this->confirmed, 'keine Mail mit Bestelldaten');
+        self::assertSame([[self::SHOP, 'kundin@example.org', 'de']], $this->unassigned);
+    }
+
+    /**
+     * Zweites Review WA, B1: Nur der Weg ohne Bestellung hat eine
+     * Mail-Grenze. Hieße es dann „nicht bestätigt", verrieten ein paar
+     * Versuche, welche Paare treffen — also dieselbe Antwort, ob die Mail
+     * hinausging oder nicht (gestanden wird das im Log und im Backend).
+     */
+    public function testOhneMailDieselbeAntwortWieMitMail(): void
+    {
+        $this->mailWorks = false;
+
+        foreach ([['WEB-00073', 'kundin@example.org'], ['WEB-99999', 'jemand@example.org']] as [$number, $email]) {
+            $redirect = $this->post(['consho_withdrawal_orderNumber' => $number, 'consho_withdrawal_email' => $email, 'consho_withdrawal_name' => 'E']);
+
+            self::assertInstanceOf(RedirectResponseException::class, $redirect);
+            self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'), $number);
+        }
+
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal WHERE confirmationSentAt IS NULL'), 'gespeichert, als unbestätigt erkennbar');
+        self::assertNull($this->render('?consho_withdrawal=doneUnconfirmed')['done'], 'die alte Meldung gibt es nicht mehr');
     }
 
     public function testDieBestaetigungNachDemUmleiten(): void
     {
-        $data = $this->render('?consho_withdrawal=done&consho_withdrawal_number=WEB-00073-W1');
+        $data = $this->render('?consho_withdrawal=done');
 
         self::assertSame('done', $data['done']);
-        self::assertSame('WEB-00073-W1', $data['number']);
+        self::assertArrayNotHasKey('number', $data);
     }
 
     /**
@@ -225,7 +314,12 @@ final class WithdrawalControllerTest extends TestCase
         $mail->method('withdrawalReceived')->willReturnCallback(function (int $orderId): bool {
             $this->confirmed[] = $orderId;
 
-            return true;
+            return $this->mailWorks;
+        });
+        $mail->method('withdrawalReceivedUnassigned')->willReturnCallback(function (int $shopId, string $email, string $language): bool {
+            $this->unassigned[] = [$shopId, $email, $language];
+
+            return $this->mailWorks;
         });
 
         $links = $this->createStub(OrderPageLink::class);

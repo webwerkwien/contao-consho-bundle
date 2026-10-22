@@ -123,10 +123,22 @@ class WithdrawalListListener
             $amount = trim(number_format((float) $row['refundAmount'], 2, ',', '.').' '.StringUtil::specialchars((string) $order['currency']));
         }
 
+        $lang = $GLOBALS['TL_LANG']['tl_consho_withdrawal'] ?? [];
+
+        // WA: no order yet (A4), or in after the window's end (B3) — said in
+        // the order column, where the operator looks for the order.
+        $orderCell = false === $order
+            ? '<em>'.StringUtil::specialchars((string) ($lang['unassigned'] ?? 'nicht zugeordnet')).'</em>'
+            : StringUtil::specialchars((string) $order['orderNumber']);
+
+        if ((bool) ($row['afterWindow'] ?? false)) {
+            $orderCell .= ' <span class="tl_gray" title="'.StringUtil::specialchars((string) ($lang['afterWindow'][1] ?? '')).'">('.StringUtil::specialchars((string) ($lang['afterWindow'][0] ?? 'nach Fensterende')).')</span>';
+        }
+
         return [
             WithdrawalSignals::html($this->signals->of($row, time())),
             StringUtil::specialchars((string) ($row['number'] ?? '')),
-            false === $order ? '' : StringUtil::specialchars((string) $order['orderNumber']),
+            $orderCell,
             StringUtil::specialchars((string) ($row['name'] ?? '')),
             StringUtil::specialchars(BackendDate::withTime($received)),
             $dueCell,
@@ -163,6 +175,11 @@ class WithdrawalListListener
 
         if (\is_string($order) && '' !== $order) {
             array_splice($parts, 1, 0, [StringUtil::specialchars($order)]);
+        }
+
+        // WA, B3.
+        if ((bool) ($row['afterWindow'] ?? false)) {
+            $parts[] = StringUtil::specialchars((string) ($lang['afterWindow'][0] ?? 'nach Fensterende eingegangen'));
         }
 
         return implode(' — ', $parts);

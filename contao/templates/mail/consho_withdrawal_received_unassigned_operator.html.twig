@@ -1,0 +1,48 @@
+{#
+  The operator's copy of a withdrawal that matched no order (WA, A3), in the
+  language of the shop: it has to be assigned in the back end before it can
+  be accepted or rejected (A4).
+
+  Loaded as @Contao/mail/consho_withdrawal_received_unassigned_operator.html.twig.
+
+  Variables: withdrawal as in consho_withdrawal_received_unassigned.html.twig;
+  confirmed — whether the consumer's confirmation went out.
+#}
+{% block subject %}{{ 'CONSHO.mail.withdrawal.operator.unassigned.subject'|trans([withdrawal.number], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+{% set label = 'padding: 2px 16px 2px 0; text-align: left; vertical-align: top; font-weight: normal; color: #555555;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.withdrawal.operator.unassigned.intro'|trans({}, 'contao_default') }}</p>
+{% if not confirmed %}
+<p style="margin: 0 0 12px 0; color: #b00020;">{{ 'CONSHO.mail.withdrawal.operator.unassigned.unconfirmed'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0 0 12px 0; {{ font }}">
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.receivedAt'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;"><strong>{{ withdrawal.receivedAt }}</strong></td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.number'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ withdrawal.number }}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.unassigned.orderReference'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ withdrawal.orderReference }}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.name'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ withdrawal.name }}</td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.email'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;"><a href="mailto:{{ withdrawal.email }}">{{ withdrawal.email }}</a></td></tr>
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.scope'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">
+        {% if withdrawal.scope == 'part' %}
+            {{ withdrawal.part|nl2br }}
+        {% else %}
+            {{ 'CONSHO.mail.withdrawal.all'|trans({}, 'contao_default') }}
+        {% endif %}
+    </td></tr>
+    {% if withdrawal.message %}
+    <tr><th scope="row" style="{{ label }}">{{ 'CONSHO.mail.withdrawal.operator.message'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ withdrawal.message|nl2br }}</td></tr>
+    {% endif %}
+</table>
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

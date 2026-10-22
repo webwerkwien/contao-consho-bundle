@@ -16,6 +16,15 @@
  *
  * `number` is derived from the order number (decision E3, 2026-09-27): a
  * missing number range must never make a withdrawal fail.
+ *
+ * ── Not assigned (WA, 2026-10-22) ─────────────────────────────────────────
+ *
+ * `pid` 0: a declaration from the form whose order number and e-mail matched
+ * no order. It is stored anyway (§ 356a Abs. 2 BGB: the consumer gives
+ * "Angaben zur Identifizierung des Vertrags", not a key the shop insists on)
+ * and assigned by the operator later. `shop` says which shop it came in
+ * through, `number` is "W-00042" and stays after the assignment — the
+ * customer's confirmation names it.
  */
 $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
     'config' => [
@@ -29,7 +38,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         'notDeletable' => true,
         // Unique per ORDER, not globally: order numbers are unique per shop
         // only, and two shops may both have a WEB-00073.
-        'sql' => ['keys' => ['id' => 'primary', 'pid,number' => 'unique', 'number' => 'index']],
+        'sql' => ['keys' => ['id' => 'primary', 'pid,number' => 'unique', 'number' => 'index', 'shop' => 'index']],
     ],
 
     'list' => [
@@ -49,7 +58,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         ],
     ],
 
-    'palettes' => ['default' => '{withdrawal_legend},number,receivedAt,source,name,email,scope,part,message;{confirmation_legend},confirmationSentAt;{state_legend},state,decidedAt,reason,returnReceivedAt,refundShipping,valueCompensation,refundAmount,refundedAt'],
+    'palettes' => ['default' => '{withdrawal_legend},number,receivedAt,afterWindow,source,name,orderReference,email,scope,part,message;{confirmation_legend},confirmationSentAt;{state_legend},state,decidedAt,reason,returnReceivedAt,refundShipping,valueCompensation,refundAmount,refundedAt'],
 
     'fields' => [
         'id' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'autoincrement' => true]],
@@ -61,6 +70,10 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],
         'tstamp' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
+
+        // The shop it came in through. Written for every new withdrawal; the
+        // one way to place a declaration that has no order yet (pid 0).
+        'shop' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
 
         /*
          * Virtual columns of the list "Widerrufe" (D-3, F12) — like the order
@@ -88,6 +101,18 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
         ],
 
+        /*
+         * WA, B1: received after "last shipment + period + grace". Stored and
+         * confirmed like any other — the window counts from SHIPPING, the
+         * period from RECEIPT, so the shop cannot know it was late; the
+         * operator judges (D-3). A hint, never a refusal.
+         */
+        'afterWindow' => [
+            'inputType' => 'checkbox',
+            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12'],
+            'sql' => ['type' => 'boolean', 'default' => false],
+        ],
+
         // `orderPage` | `form` — through the token link or the withdrawal form.
         'source' => [
             'inputType' => 'select',
@@ -101,6 +126,15 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'inputType' => 'text',
             'eval' => ['readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 255, 'default' => ''],
+        ],
+
+        // WA: the order number as the consumer typed it on the form — their
+        // "Angaben zur Identifizierung des Vertrags" (§ 356a Abs. 2 Nr. 2
+        // BGB), kept even when it matched nothing.
+        'orderReference' => [
+            'inputType' => 'text',
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'string', 'length' => 80, 'default' => ''],
         ],
 
         // Where the confirmation went. On the form it has to match the order

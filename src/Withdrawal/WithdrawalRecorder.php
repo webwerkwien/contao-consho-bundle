@@ -9,6 +9,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
 
@@ -27,8 +28,18 @@ use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
  *
  * No number range (decision E3): the number is the order number and a count.
  * No order page: the confirmation goes out without the button. What can
- * refuse a withdrawal is only what the customer can see — the window
- * closed — or a tampered form.
+ * refuse a withdrawal is only an order without a withdrawal function (period
+ * 0, cancelled before shipping, a subscription's follow-up, released digital
+ * content) or a tampered form.
+ *
+ * ── Accepted, then judged (WA, 2026-10-22) ────────────────────────────────
+ *
+ * The window ends at "last shipment + period + grace" — an estimate, since
+ * the period runs from RECEIPT. A declaration after that end is stored and
+ * confirmed with `afterWindow` set (B1); the operator decides. A declaration
+ * from the form that matches no order is stored as well, unassigned (A1,
+ * recordUnassigned()), and confirmed to the address the consumer gave
+ * (§ 356a Abs. 2 Nr. 3 BGB).
  *
  * ── The number under concurrency ─────────────────────────────────────────
  *
@@ -42,6 +53,13 @@ final class WithdrawalRecorder
 {
     private const ATTEMPTS = 3;
 
+    /**
+     * Free text from an unassigned declaration is cut to this many characters
+     * before it is stored and mailed (A3): the confirmation goes to an
+     * address anyone can type, and must not carry a letter of their own.
+     */
+    public const UNASSIGNED_TEXT_LIMIT = 2000;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly WithdrawalWindowReader $windows,
@@ -50,6 +68,11 @@ final class WithdrawalRecorder
         private readonly OrderPageLink $links,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
+        // A3: confirmations of unassigned declarations, per shop and per address.
+        #[Autowire(service: 'consho.rate_limit.withdrawal_unassigned_shop')]
+        private readonly RateLimiterFactoryInterface|null $perShop = null,
+        #[Autowire(service: 'consho.rate_limit.withdrawal_unassigned_address')]
+        private readonly RateLimiterFactoryInterface|null $perAddress = null,
     ) {
     }
 
@@ -64,7 +87,10 @@ final class WithdrawalRecorder
             return new WithdrawalResult(WithdrawalOutcome::UnknownOrder);
         }
 
-        if (!$this->windows->of($declaration->orderId)?->isOpenAt($now)) {
+        $window = $this->windows->of($declaration->orderId);
+        $late = null !== $window && $window->isLateAt($now);
+
+        if (!$late && !$window?->isOpenAt($now)) {
             return new WithdrawalResult(WithdrawalOutcome::Closed);
         }
 
@@ -89,7 +115,7 @@ final class WithdrawalRecorder
                 return new WithdrawalResult(WithdrawalOutcome::InvalidItems);
             }
 
-            [$id, $number] = $this->insert($declaration, $order, $items, $now);
+            [$id, $number] = $this->insert($declaration, $order, $items, $now, $late);
 
             $this->connection->commit();
         } catch (\Throwable $e) {
@@ -124,7 +150,95 @@ final class WithdrawalRecorder
             $this->logger->error(\sprintf('Withdrawal %s was recorded, but its confirmation of receipt did not go out. It has to be confirmed by hand.', $number));
         }
 
+        return new WithdrawalResult(WithdrawalOutcome::Recorded, $id, $number, $now, $confirmed, $late);
+    }
+
+    /**
+     * A declaration from the form that matched no order (A1). Stored with
+     * pid 0 and the shop it came in through, numbered "W-00042" (A2), and
+     * confirmed to the address the consumer typed (A3) — unless the limits
+     * per shop or per address are used up: then it stands unconfirmed and
+     * the operator confirms it by hand, as after a failed mail.
+     */
+    public function recordUnassigned(int $shopId, string $language, string $orderReference, string $email, string $name, string $part, string $message, int $now): WithdrawalResult
+    {
+        $orderReference = mb_substr(trim($orderReference), 0, 80);
+        $part = self::cut($part);
+        $message = self::cut($message);
+
+        $this->connection->beginTransaction();
+
+        try {
+            $this->connection->insert('tl_consho_withdrawal', [
+                'pid' => 0,
+                'shop' => $shopId,
+                'tstamp' => $now,
+                // Unique for the moment it takes to learn the ID.
+                'number' => 'W-'.bin2hex(random_bytes(8)),
+                'receivedAt' => $now,
+                'source' => WithdrawalSource::Form->value,
+                'name' => trim($name),
+                'orderReference' => $orderReference,
+                'email' => trim($email),
+                'scope' => '' !== $part ? 'part' : 'all',
+                'part' => '' !== $part ? $part : null,
+                'message' => '' !== $message ? $message : null,
+                'state' => 'received',
+            ]);
+
+            $id = (int) $this->connection->lastInsertId();
+            $number = \sprintf('W-%05d', $id);
+            $this->connection->update('tl_consho_withdrawal', ['number' => $number], ['id' => $id]);
+
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
+
+            throw $e;
+        }
+
+        $confirmed = false;
+
+        // The address first: a flood on one address must not use up the
+        // shop's allowance as well (review WA, K2).
+        $limited = !$this->allowed($this->perAddress, 'address-'.mb_strtolower(trim($email))) || !$this->allowed($this->perShop, 'shop-'.$shopId);
+
+        if (!$limited) {
+            $confirmed = $this->mail->withdrawalReceivedUnassigned($shopId, trim($email), $language, [
+                'number' => $number,
+                'receivedAt' => $now,
+                'name' => trim($name),
+                'orderReference' => $orderReference,
+                'email' => trim($email),
+                'scope' => '' !== $part ? 'part' : 'all',
+                'part' => $part,
+                'message' => $message,
+            ]);
+        }
+
+        if ($confirmed) {
+            $this->connection->update('tl_consho_withdrawal', ['confirmationSentAt' => time()], ['id' => $id]);
+        } elseif ($limited) {
+            // Wanted, not a failure: in a wave of them twenty errors an hour
+            // would bury the real ones (review WA, K3).
+            $this->logger->warning(\sprintf('Withdrawal %s (not assigned to an order) was recorded; its confirmation of receipt was held back by the mail limit per shop or per address. Confirm it by hand if it is genuine.', $number));
+        } else {
+            $this->logger->error(\sprintf('Withdrawal %s (not assigned to an order) was recorded, but its confirmation of receipt did not go out. It has to be confirmed by hand.', $number));
+        }
+
         return new WithdrawalResult(WithdrawalOutcome::Recorded, $id, $number, $now, $confirmed);
+    }
+
+    private function allowed(RateLimiterFactoryInterface|null $factory, string $key): bool
+    {
+        return null === $factory || $factory->create($key)->consume()->isAccepted();
+    }
+
+    private static function cut(string $text): string
+    {
+        return mb_substr(trim($text), 0, self::UNASSIGNED_TEXT_LIMIT);
     }
 
     /**
@@ -133,7 +247,7 @@ final class WithdrawalRecorder
      *
      * @return array{0: int, 1: string}
      */
-    private function insert(WithdrawalDeclaration $declaration, array $order, array $items, int $now): array
+    private function insert(WithdrawalDeclaration $declaration, array $order, array $items, int $now, bool $late): array
     {
         for ($attempt = 1; ; ++$attempt) {
             $count = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal WHERE pid = ?', [$declaration->orderId]);
@@ -144,13 +258,16 @@ final class WithdrawalRecorder
             try {
                 $this->connection->insert('tl_consho_withdrawal', [
                     'pid' => $declaration->orderId,
+                    'shop' => (int) $order['shop'],
                     'tstamp' => $now,
                     'number' => $number,
                     'receivedAt' => $now,
+                    'afterWindow' => $late ? 1 : 0,
                     'source' => $declaration->source->value,
                     'name' => trim($declaration->name),
                     'email' => (string) $order['email'],
                     'scope' => $declaration->scope(),
+                    'orderReference' => (string) $order['orderNumber'],
                     'part' => 'part' === $declaration->scope() ? trim($declaration->part) : null,
                     'message' => '' !== trim($declaration->message) ? trim($declaration->message) : null,
                     'state' => 'received',

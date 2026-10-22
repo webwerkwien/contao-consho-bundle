@@ -80,15 +80,21 @@ final class AiContractsTest extends TestCase
     }
 
     /**
-     * Endgültig ist nur das Löschen der alten Adressen – und das muss der
-     * Vertrag sagen, damit der Chat vorher fragt.
+     * Endgültig sind das Löschen der alten Adressen und das Nachholen der
+     * Archivierung (`document:verify --retry`, AiContract-Prüfung 2026-10-22:
+     * eine archivierte Datei wird nie überschrieben) – und das muss der
+     * Vertrag sagen. Seit contao-ai backend v0.22.1 laufen sie nicht im Chat.
      */
-    public function testNurDasLoeschenDerAdressenIstEndgueltig(): void
+    public function testNurDasLoeschenDerAdressenUndDasArchivSindEndgueltig(): void
     {
-        self::assertNotEmpty(self::contract(UrlPruneCommand::class)['irreversible'] ?? null);
+        $endgueltig = [UrlPruneCommand::class, \Webwerkwien\ContaoConshoBundle\Command\DocumentVerifyCommand::class];
+
+        foreach ($endgueltig as $class) {
+            self::assertNotEmpty(self::contract($class)['irreversible'] ?? null, $class);
+        }
 
         foreach (self::mitVertrag() as [$class]) {
-            if (UrlPruneCommand::class !== $class) {
+            if (!\in_array($class, $endgueltig, true)) {
                 self::assertArrayNotHasKey('irreversible', self::contract($class) ?? [], $class);
             }
         }

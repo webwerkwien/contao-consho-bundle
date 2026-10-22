@@ -4,6 +4,11 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Withdrawal;
 
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryStateCalculator;
@@ -36,6 +41,9 @@ final class WithdrawalRecorderTest extends TestCase
 
     /** @var list<array{orderId: int, withdrawal: array<string, mixed>, viewUrl: string}> */
     private array $mails = [];
+
+    /** @var list<array{shopId: int, email: string, language: string, withdrawal: array<string, mixed>}> */
+    private array $unassignedMails = [];
 
     private bool $mailWorks = true;
 
@@ -202,16 +210,126 @@ final class WithdrawalRecorderTest extends TestCase
         self::assertSame([], $this->mails);
     }
 
-    public function testNachFristendeGeschlossen(): void
+    /**
+     * WA, B1 (Michael, 2026-10-22): Das Fenster rechnet ab Versand, die Frist
+     * ab Erhalt. Was danach eingeht, wird gespeichert, bestätigt und markiert
+     * — nicht mehr abgelehnt. Bis dahin: Closed, nichts gespeichert.
+     */
+    public function testNachFensterendeGespeichertUndMarkiert(): void
     {
-        $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => self::ORDER, 'shippedAt' => self::NOW - 40 * 86400, 'reportedAt' => self::NOW - 40 * 86400]);
-        $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => '2']);
-        $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 2, 'quantity' => '1']);
+        $this->shipEverything(self::NOW - 40 * 86400);
+
+        $result = $this->recorder()->record(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::OrderPage, 'E'), self::NOW);
+
+        self::assertSame(WithdrawalOutcome::Recorded, $result->outcome);
+        self::assertTrue($result->afterWindow);
+        self::assertTrue($result->confirmed);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT afterWindow FROM tl_consho_withdrawal'));
+    }
+
+    public function testImFensterNichtMarkiert(): void
+    {
+        $this->shipEverything(self::NOW - 3 * 86400);
+
+        $result = $this->recorder()->record(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::OrderPage, 'E'), self::NOW);
+
+        self::assertFalse($result->afterWindow);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT afterWindow FROM tl_consho_withdrawal'));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT shop FROM tl_consho_withdrawal'), 'der Shop der Bestellung');
+        self::assertSame('WEB-00073', $this->connection->fetchOne('SELECT orderReference FROM tl_consho_withdrawal'));
+    }
+
+    /**
+     * B1: Nur der zeitliche Schluss wird zur Markierung. Ohne Widerrufsfunktion
+     * (Frist 0) bleibt es eine Ablehnung — da ist nichts abgelaufen.
+     */
+    public function testOhneWiderrufsfunktionWeiterAbgelehnt(): void
+    {
+        $this->connection->update('tl_consho_shop', ['withdrawalDays' => 0], ['id' => 1]);
 
         $result = $this->recorder()->record(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::OrderPage, 'E'), self::NOW);
 
         self::assertSame(WithdrawalOutcome::Closed, $result->outcome);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
+    }
+
+    /**
+     * WA, A1–A3: Passt keine Bestellung, wird trotzdem gespeichert — ohne
+     * Bestellung, mit dem Shop, der eingetippten Bestellnummer und der
+     * eingegebenen Adresse; bestätigt wird an diese Adresse.
+     */
+    public function testNichtZugeordnetWirdGespeichertUndAnDieEingegebeneAdresseBestaetigt(): void
+    {
+        $result = $this->recorder()->recordUnassigned(1, 'de', ' WEB-0007 ', ' jemand@example.net ', 'Erika Muster', '', 'bitte rasch', self::NOW);
+
+        self::assertSame(WithdrawalOutcome::Recorded, $result->outcome);
+        self::assertSame('W-00001', $result->number);
+        self::assertTrue($result->confirmed);
+
+        $row = $this->connection->fetchAssociative('SELECT * FROM tl_consho_withdrawal');
+
+        self::assertIsArray($row);
+        self::assertSame(
+            ['pid' => 0, 'shop' => 1, 'number' => 'W-00001', 'orderReference' => 'WEB-0007', 'email' => 'jemand@example.net', 'scope' => 'all', 'source' => 'form', 'state' => 'received'],
+            ['pid' => (int) $row['pid'], 'shop' => (int) $row['shop'], 'number' => $row['number'], 'orderReference' => $row['orderReference'], 'email' => $row['email'], 'scope' => $row['scope'], 'source' => $row['source'], 'state' => $row['state']],
+        );
+        self::assertNotNull($row['confirmationSentAt']);
+
+        self::assertSame([], $this->mails, 'keine Mail über eine Bestellung');
+        self::assertSame(1, $this->unassignedMails[0]['shopId']);
+        self::assertSame('jemand@example.net', $this->unassignedMails[0]['email']);
+        self::assertSame('WEB-0007', $this->unassignedMails[0]['withdrawal']['orderReference']);
+    }
+
+    public function testNichtZugeordnetMitTeilUndGekuerztemText(): void
+    {
+        $this->recorder()->recordUnassigned(1, 'de', 'X', 'a@example.net', 'E', str_repeat('ä', WithdrawalRecorder::UNASSIGNED_TEXT_LIMIT + 50), '', self::NOW);
+
+        $row = $this->connection->fetchAssociative('SELECT scope, part FROM tl_consho_withdrawal');
+
+        self::assertIsArray($row);
+        self::assertSame('part', $row['scope']);
+        self::assertSame(WithdrawalRecorder::UNASSIGNED_TEXT_LIMIT, mb_strlen((string) $row['part']));
+    }
+
+    /**
+     * A3: Ist die Obergrenze verbraucht, wird trotzdem gespeichert — nur die
+     * Mail fällt aus, wie bei einem ausgefallenen Mailserver.
+     */
+    public function testUeberDerObergrenzeGespeichertAberNichtBestaetigt(): void
+    {
+        $limits = new RateLimiterFactory(['id' => 'test', 'policy' => 'fixed_window', 'limit' => 1, 'interval' => '1 hour'], new InMemoryStorage());
+        $recorder = $this->recorder($limits);
+
+        self::assertTrue($recorder->recordUnassigned(1, 'de', 'X', 'a@example.net', 'E', '', '', self::NOW)->confirmed);
+
+        $second = $recorder->recordUnassigned(1, 'de', 'Y', 'b@example.net', 'E', '', '', self::NOW);
+
+        self::assertSame(WithdrawalOutcome::Recorded, $second->outcome);
+        self::assertFalse($second->confirmed);
+        self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
+        self::assertCount(1, $this->unassignedMails);
+    }
+
+    /**
+     * A3: Je Adresse begrenzt, nicht für alle zusammen — sonst sperrte ein
+     * Fremder mit seinen Versuchen die Bestätigung eines anderen.
+     */
+    public function testDieObergrenzeJeAdresseZaehltJedeAdresseFuerSich(): void
+    {
+        $limits = new RateLimiterFactory(['id' => 'test', 'policy' => 'fixed_window', 'limit' => 1, 'interval' => '1 hour'], new InMemoryStorage());
+        $recorder = $this->recorder(perAddress: $limits);
+
+        self::assertTrue($recorder->recordUnassigned(1, 'de', 'X', 'a@example.net', 'E', '', '', self::NOW)->confirmed);
+        self::assertFalse($recorder->recordUnassigned(1, 'de', 'X', 'A@Example.net', 'E', '', '', self::NOW)->confirmed, 'dieselbe Adresse, andere Schreibung');
+        self::assertTrue($recorder->recordUnassigned(1, 'de', 'X', 'b@example.net', 'E', '', '', self::NOW)->confirmed);
+    }
+
+    private function shipEverything(int $at): void
+    {
+        $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => self::ORDER, 'shippedAt' => $at, 'reportedAt' => $at]);
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => '2']);
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 2, 'quantity' => '1']);
     }
 
     public function testUnbekannteBestellung(): void
@@ -242,11 +360,50 @@ final class WithdrawalRecorderTest extends TestCase
         self::assertSame('', $this->mails[0]['viewUrl']);
     }
 
-    private function recorder(): WithdrawalRecorder
+    /**
+     * Review WA, K2 und K3: eine Flut auf EINE Adresse zehrt das Kontingent
+     * des Shops nicht auf, und die Grenze ist eine Warnung, kein Fehler.
+     */
+    public function testDieAdresseZuerstUndDieGrenzeAlsWarnung(): void
+    {
+        $perShop = new RateLimiterFactory(['id' => 'shop', 'policy' => 'fixed_window', 'limit' => 2, 'interval' => '1 hour'], new InMemoryStorage());
+        $perAddress = new RateLimiterFactory(['id' => 'address', 'policy' => 'fixed_window', 'limit' => 1, 'interval' => '1 hour'], new InMemoryStorage());
+        $logger = new class extends AbstractLogger {
+            /** @var list<string> */
+            public array $levels = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                $this->levels[] = (string) $level;
+            }
+        };
+        $recorder = $this->recorder($perShop, $perAddress, $logger);
+
+        self::assertTrue($recorder->recordUnassigned(1, 'de', 'X', 'a@example.net', 'E', '', '', self::NOW)->confirmed);
+        self::assertFalse($recorder->recordUnassigned(1, 'de', 'X', 'a@example.net', 'E', '', '', self::NOW)->confirmed);
+        self::assertTrue($recorder->recordUnassigned(1, 'de', 'X', 'b@example.net', 'E', '', '', self::NOW)->confirmed, 'die zweite Mail des Shops ist noch frei');
+        self::assertSame(['warning'], $logger->levels);
+
+        $this->mailWorks = false;
+        $recorder->recordUnassigned(1, 'de', 'X', 'c@example.net', 'E', '', '', self::NOW);
+
+        self::assertSame(['warning', 'warning'], $logger->levels, 'Shop-Grenze erreicht');
+
+        $this->recorder(logger: $logger)->recordUnassigned(1, 'de', 'X', 'd@example.net', 'E', '', '', self::NOW);
+
+        self::assertSame(['warning', 'warning', 'error'], $logger->levels, 'die Mail scheiterte wirklich');
+    }
+
+    private function recorder(RateLimiterFactory|null $perShop = null, RateLimiterFactory|null $perAddress = null, LoggerInterface|null $logger = null): WithdrawalRecorder
     {
         $mail = $this->createMock(OrderEventMail::class);
         $mail->method('withdrawalReceived')->willReturnCallback(function (int $orderId, array $withdrawal, string $viewUrl): bool {
             $this->mails[] = ['orderId' => $orderId, 'withdrawal' => $withdrawal, 'viewUrl' => $viewUrl];
+
+            return $this->mailWorks;
+        });
+        $mail->method('withdrawalReceivedUnassigned')->willReturnCallback(function (int $shopId, string $email, string $language, array $withdrawal): bool {
+            $this->unassignedMails[] = ['shopId' => $shopId, 'email' => $email, 'language' => $language, 'withdrawal' => $withdrawal];
 
             return $this->mailWorks;
         });
@@ -260,6 +417,9 @@ final class WithdrawalRecorderTest extends TestCase
             new DbalWithdrawalRepository($this->connection),
             $mail,
             $links,
+            logger: $logger ?? new NullLogger(),
+            perShop: $perShop,
+            perAddress: $perAddress,
         );
     }
 }

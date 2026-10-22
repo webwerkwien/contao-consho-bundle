@@ -84,6 +84,8 @@ enum ConfigurationFinding: string
     // D-3: open withdrawals (F11), number ranges for refunds (F9).
     case WithdrawalsOpen = 'withdrawalsOpen';
     case RefundRangeMissing = 'refundRangeMissing';
+    // WA (A5, 2026-10-22): withdrawals from the form that match no order yet.
+    case WithdrawalsUnassigned = 'withdrawalsUnassigned';
 
     // D-4: the base group of the customers (K5).
     case CustomerGroupMissing = 'customerGroupMissing';
@@ -264,7 +266,7 @@ enum ConfigurationFinding: string
             self::SubscriptionSameTermOpen => ['consho_subscription_rule'],
             self::ManufacturerEmailMissing, self::ManufacturerEuResponsibleMissing => ['consho_manufacturer'],
             self::StockLow => ['consho_stock'],
-            self::WithdrawalsOpen => ['consho_withdrawal'],
+            self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
             self::InvoiceArchiveFailed, self::ConfirmationNotSent, self::AnonymizationDue,
             self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid => ['consho_order'],
             // The tax report is order data (review A1); the switch "Steuer im
@@ -633,7 +635,7 @@ enum ConfigurationFinding: string
              * CheckoutReadiness::BLOCKING): selling has nothing to do with
              * either.
              */
-            self::WithdrawalsOpen, self::RefundRangeMissing => true,
+            self::WithdrawalsOpen, self::RefundRangeMissing, self::WithdrawalsUnassigned => true,
 
             /*
              * D-4 (K5). The field is mandatory, but only a save asks for it —

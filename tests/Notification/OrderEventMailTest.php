@@ -311,6 +311,53 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('CONSHO.', (string) $copy->getHtmlBody());
     }
 
+    /**
+     * WA, A3: Ein Widerruf, der zu keiner Bestellung passt, wird an die
+     * EINGEGEBENE Adresse bestätigt — mit Erklärung, Datum und Uhrzeit, aber
+     * ohne ein Wort über eine Bestellung: die Adresse kann jeder eingetippt
+     * haben.
+     */
+    public function testNichtZugeordneterWiderrufOhneBestelldaten(): void
+    {
+        self::assertTrue($this->mail()->withdrawalReceivedUnassigned(1, 'fremd@example.net', 'de', [
+            'number' => 'W-00042',
+            'receivedAt' => 1_790_000_000,
+            'name' => 'Erika <b>Muster</b>',
+            'orderReference' => 'WEB-0005',
+            'email' => 'fremd@example.net',
+            'scope' => 'all',
+            'part' => '',
+            'message' => "Bitte rasch.\n<script>",
+        ]));
+
+        self::assertCount(2, $this->transport->sent, 'mit Kopie an den Betreiber');
+
+        $mail = $this->transport->sent[0];
+        $html = (string) $mail->getHtmlBody();
+
+        self::assertSame('fremd@example.net', $mail->getTo()[0]->getAddress(), 'die eingegebene Adresse, nicht die einer Bestellung');
+        self::assertSame('Eingangsbestätigung: Widerruf W-00042', $mail->getSubject());
+        self::assertStringContainsString('WEB-0005', $html, 'die eingetippte Bestellnummer');
+        self::assertStringContainsString('Erika &lt;b&gt;Muster&lt;/b&gt;', $html);
+        self::assertStringNotContainsString('<script>', $html);
+        // Review WA, S3: jede Stelle mit dem Namen, nicht nur die Anrede.
+        self::assertStringNotContainsString('<b>', $html);
+        self::assertStringNotContainsString('WEB-00054', $html, 'nichts aus einer Bestellung');
+        self::assertStringNotContainsString('Lieferadresse', $html);
+        self::assertStringNotContainsString('kundin@example.org', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+
+        $copy = $this->transport->sent[1];
+
+        self::assertSame('office@web.example.net', $copy->getTo()[0]->getAddress());
+        self::assertSame('Widerruf eingegangen, nicht zugeordnet: W-00042', $copy->getSubject());
+        self::assertStringContainsString('Erika &lt;b&gt;Muster&lt;/b&gt;', (string) $copy->getHtmlBody());
+        self::assertStringNotContainsString('<b>', (string) $copy->getHtmlBody());
+        self::assertStringNotContainsString('<script>', (string) $copy->getHtmlBody());
+        self::assertStringNotContainsString('nicht hinausgegangen', (string) $copy->getHtmlBody());
+        self::assertStringNotContainsString('CONSHO.', (string) $copy->getHtmlBody());
+    }
+
     public function testWiderrufOhneBestellseiteGehtTrotzdemHinaus(): void
     {
         self::assertTrue($this->mail()->withdrawalReceived(7, $this->withdrawal(1_790_000_000, ['scope' => 'part', 'part' => 'nur die Schuhe']), ''));

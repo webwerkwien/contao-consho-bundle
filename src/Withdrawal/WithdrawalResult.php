@@ -10,6 +10,8 @@ final class WithdrawalResult
         public readonly string $number = '',
         public readonly int|null $receivedAt = null,
         public readonly bool $confirmed = false,
+        // WA, B1: stored after the window's estimated end.
+        public readonly bool $afterWindow = false,
     ) {
     }
 }

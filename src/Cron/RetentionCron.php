@@ -38,5 +38,9 @@ class RetentionCron
 
         // Contracts that ended after their last order was anonymised (Abo-DSGVO, P85).
         $this->anonymizer->anonymizeEndedSubscriptions($now);
+
+        // Withdrawals that never found their order (WA, A6) — in every shop:
+        // no voucher to keep, so no operator's choice to wait for.
+        $this->anonymizer->anonymizeUnassignedWithdrawals($now);
     }
 }

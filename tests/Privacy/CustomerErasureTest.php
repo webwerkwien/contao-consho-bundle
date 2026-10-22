@@ -142,6 +142,16 @@ final class CustomerErasureTest extends TestCase
         self::assertSame(['', ''], $this->connection->fetchNumeric('SELECT name, email FROM tl_consho_cancellation WHERE pid = 41') ?: []);
     }
 
+    /** WA, A6: ohne Bestellung kein Beleg — der Cron leert sie auch ohne Automatik. */
+    public function testDerCronLeertNichtZugeordneteWiderrufe(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00001', 'receivedAt' => strtotime('2023-03-01'), 'name' => 'Erika Muster', 'email' => 'erika@example.org']);
+
+        $this->cron(strtotime('2027-01-01 00:00'))();
+
+        self::assertSame(['', ''], $this->connection->fetchNumeric("SELECT name, email FROM tl_consho_withdrawal WHERE number = 'W-00001'") ?: []);
+    }
+
     public function testMitAutomatikAuchOhneAntrag(): void
     {
         $this->connection->update('tl_consho_shop', ['autoAnonymize' => 1], ['id' => 1]);

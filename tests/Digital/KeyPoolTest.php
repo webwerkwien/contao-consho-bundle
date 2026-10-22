@@ -24,6 +24,19 @@ class KeyPoolTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         DcaSchema::create($this->connection, 'tl_consho_key');
         DcaSchema::create($this->connection, 'tl_consho_product');
+        // As vendor/contao/core-bundle/contao/dca/tl_undo.php.
+        $this->connection->executeStatement(
+            "CREATE TABLE tl_undo (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pid INTEGER NOT NULL DEFAULT 0,
+                tstamp INTEGER NOT NULL DEFAULT 0,
+                fromTable TEXT NOT NULL DEFAULT '',
+                query TEXT NULL,
+                affectedRows INTEGER NOT NULL DEFAULT 0,
+                data BLOB NULL,
+                preview BLOB NULL
+            )",
+        );
     }
 
     public function testEinfuegenUeberspringtLeerzeilenUndDoppelte(): void
@@ -107,7 +120,7 @@ class KeyPoolTest extends TestCase
         $listener->import("A\nB", $this->dc(7));
         (new KeyPoolHandler($this->connection))->release($this->entitlement(1, '1.0000'));
 
-        $listener->deletePool($this->dc(7));
+        $listener->deletePool($this->dc(7), $this->undo(7));
         self::assertSame(['A'], $this->codes(7), 'mit dem Artikel gehen nur die freien');
 
         $this->expectException(\RuntimeException::class);
@@ -129,11 +142,61 @@ class KeyPoolTest extends TestCase
         $listener->import('B', $this->dc(8));
         $listener->import('C', $this->dc(9));
 
-        $listener->deletePool($this->dc(7));
+        $undoId = $this->undo(7);
+        $listener->deletePool($this->dc(7), $undoId);
 
         self::assertSame([], $this->codes(7));
         self::assertSame([], $this->codes(8));
         self::assertSame(['C'], $this->codes(9));
+
+        // AiContract-Prüfung (2026-10-22): die freien Codes gehen in den
+        // Undo-Eintrag des Artikels, „Wiederherstellen" bringt sie zurück.
+        $undo = $this->connection->fetchAssociative('SELECT data, affectedRows FROM tl_undo WHERE id = ?', [$undoId]);
+        self::assertIsArray($undo);
+        $data = unserialize((string) $undo['data']);
+        self::assertSame(['A', 'B'], array_column($data['tl_consho_key'], 'code'));
+        self::assertSame([7], array_map(intval(...), array_column($data['tl_consho_product'], 'id')), 'der Artikel bleibt vorn');
+        self::assertSame(1 + 2, (int) $undo['affectedRows']);
+    }
+
+    /**
+     * Ohne freie Codes bleibt der Undo-Eintrag unberührt; ohne Undo-Eintrag
+     * wird nichts gelöscht — gekaufte Codes gingen sonst endgültig verloren.
+     */
+    public function testOhneUndoEintragBleibtDerVorrat(): void
+    {
+        $listener = new KeyPoolListener($this->connection, new KeyPool($this->connection));
+        $undoId = $this->undo(7);
+        $before = $this->connection->fetchAssociative('SELECT * FROM tl_undo WHERE id = ?', [$undoId]);
+
+        $listener->deletePool($this->dc(7), $undoId);
+        self::assertSame($before, $this->connection->fetchAssociative('SELECT * FROM tl_undo WHERE id = ?', [$undoId]));
+
+        $listener->import('A', $this->dc(7));
+
+        try {
+            $listener->deletePool($this->dc(7), 999);
+            self::fail('nicht abgelehnt');
+        } catch (\RuntimeException) {
+        }
+
+        self::assertSame(['A'], $this->codes(7));
+    }
+
+    /**
+     * The undo entry DC_Table writes before the ondelete callbacks: the
+     * article itself.
+     */
+    private function undo(int $productId): int
+    {
+        $this->connection->insert('tl_undo', [
+            'fromTable' => 'tl_consho_product',
+            'query' => 'DELETE FROM tl_consho_product WHERE id='.$productId,
+            'affectedRows' => 1,
+            'data' => serialize(['tl_consho_product' => [['id' => $productId, 'pid' => 0]]]),
+        ]);
+
+        return (int) $this->connection->lastInsertId();
     }
 
     private function dc(int $id): DataContainer

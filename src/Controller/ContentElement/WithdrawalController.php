@@ -23,12 +23,20 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSource;
 /**
  * "Vertrag widerrufen" for a buyer without the mail (D-2, W1, W2, E4, E6).
  *
- * ── Identified by order number AND e-mail ─────────────────────────────────
+ * ── Matched, or stored unassigned (WA, 2026-10-22) ────────────────────────
  *
- * Both have to match an order of THIS shop, or the answer is "nicht
- * gefunden" — the same sentence whether the number does not exist or the
- * address does not fit (W2). The confirmation goes to the address of the
- * order, never to one typed here: otherwise the form sends mail to anyone.
+ * Do order number AND e-mail match an order of THIS shop, the withdrawal
+ * belongs to it and is confirmed as on the order page. Do they not, it is
+ * stored anyway — without an order, with the number as typed — and
+ * confirmed to the address typed here (WithdrawalRecorder::recordUnassigned).
+ * The law asks for "Angaben zur Identifizierung des Vertrags" and the means
+ * of the confirmation (§ 356a Abs. 2 BGB, § 13a Abs. 3 FAGG), not for a key
+ * the shop insists on; until WA a typo meant "nicht gefunden" and nothing
+ * stored (W2). The answer is the same either way — no number, no "no longer
+ * possible" (review WA, S1) — so the form tells a stranger nothing; what
+ * limits the mail to a typed address is the cap per shop and per address in
+ * the recorder.
+ *
  * The name is recorded as declared, not matched — "Erika Muster" and "E.
  * Muster" are the same buyer.
  *
@@ -47,15 +55,13 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSource;
  *
  * "Vertrag widerrufen" (a GET, `consho_withdraw=1`) → the declaration →
  * "Widerruf bestätigen" (POST). A correctable error renders the form again
- * with what was typed; the recorded withdrawal redirects (303) with its
- * number, so a reload does not declare it twice.
+ * with what was typed; the recorded withdrawal redirects (303), so a reload
+ * does not declare it twice.
  */
 #[AsContentElement(type: 'consho_withdrawal', category: 'consho')]
 class WithdrawalController extends AbstractContentElementController
 {
     public const NOTICE_PARAM = 'consho_withdrawal';
-
-    public const NUMBER_PARAM = 'consho_withdrawal_number';
 
     public function __construct(
         private readonly ShopResolver $shops,
@@ -85,18 +91,16 @@ class WithdrawalController extends AbstractContentElementController
                 $input[$field] = trim($request->request->getString('consho_withdrawal_'.$field));
             }
 
-            $error = $this->declare($shopId, $input, $request);
+            $error = $this->declare($shopId, (string) $page->language, $input, $request);
             $form = true;
         }
 
         $notice = $request->query->getString(self::NOTICE_PARAM);
 
-        $template->set('done', \in_array($notice, ['done', 'doneUnconfirmed'], true) ? $notice : null);
-        $template->set('number', $request->query->getString(self::NUMBER_PARAM));
+        $template->set('done', 'done' === $notice ? $notice : null);
         $template->set('form', $form);
         $template->set('input', $input);
         $template->set('error', $error);
-        $template->set('contact', 'closed' === $error ? (string) $this->connection->fetchOne('SELECT operatorAddress FROM tl_consho_shop WHERE id = ?', [$shopId]) : '');
 
         $response = $template->getResponse();
         $response->setPrivate();
@@ -110,7 +114,7 @@ class WithdrawalController extends AbstractContentElementController
      *
      * @param array{orderNumber: string, email: string, name: string, part: string, message: string} $input
      */
-    private function declare(int $shopId, array $input, Request $request): string
+    private function declare(int $shopId, string $language, array $input, Request $request): string
     {
         if (!$this->limiter->create('ip-'.($request->getClientIp() ?? 'unknown'))->consume()->isAccepted()) {
             return 'tooMany';
@@ -120,16 +124,22 @@ class WithdrawalController extends AbstractContentElementController
             return 'missing';
         }
 
+        // The confirmation may now go to this address: it has to be one.
+        // FILTER_VALIDATE_EMAIL takes at most 254 characters, so it fits the
+        // column (255); the name has no such check and is cut to it — on MySQL
+        // in strict mode it would otherwise be a 500 (review WA, S4).
+        if (false === filter_var($input['email'], \FILTER_VALIDATE_EMAIL)) {
+            return 'emailInvalid';
+        }
+
+        $input['name'] = mb_substr($input['name'], 0, 255);
+
         $orderId = $this->connection->fetchOne(
             'SELECT id FROM tl_consho_order WHERE shop = ? AND orderNumber = ? AND LOWER(email) = LOWER(?)',
             [$shopId, $input['orderNumber'], $input['email']],
         );
 
-        if (false === $orderId) {
-            return 'notFound';
-        }
-
-        $result = $this->recorder->record(new WithdrawalDeclaration(
+        $result = false === $orderId ? null : $this->recorder->record(new WithdrawalDeclaration(
             (int) $orderId,
             WithdrawalSource::Form,
             $input['name'],
@@ -138,14 +148,24 @@ class WithdrawalController extends AbstractContentElementController
             $input['message'],
         ), time());
 
-        return match ($result->outcome) {
-            WithdrawalOutcome::Recorded => throw new RedirectResponseException($this->pageAddress($request, [
-                self::NOTICE_PARAM => $result->confirmed ? 'done' : 'doneUnconfirmed',
-                self::NUMBER_PARAM => $result->number,
-            ]), Response::HTTP_SEE_OTHER),
-            WithdrawalOutcome::Closed => 'closed',
-            WithdrawalOutcome::UnknownOrder, WithdrawalOutcome::InvalidItems => 'notFound',
-        };
+        // Whatever the order refuses — no withdrawal right, cancelled before
+        // shipping, a follow-up order, released content — is stored as not
+        // assigned instead of answered: a "no longer possible" told a
+        // stranger that the order exists (review WA, S1; Michael, 2026-10-22).
+        // The operator assigns it and rejects it with a reason.
+        if (WithdrawalOutcome::Recorded !== $result?->outcome) {
+            $result = $this->recorder->recordUnassigned($shopId, $language, $input['orderNumber'], $input['email'], $input['name'], $input['part'], $input['message'], time());
+        }
+
+        // Without the number: its shape (WEB-00073-W1 or W-00001) said whether
+        // the order was found. It is in the confirmation mail. And one answer
+        // whether the mail went out or not: only the unassigned path has a
+        // mail limit, so "not confirmed" after a few tries told a miss from a
+        // hit (second review WA, B1). A mail that did not go out is in the
+        // log and in the back end (confirmationSentAt).
+        throw new RedirectResponseException($this->pageAddress($request, [
+            self::NOTICE_PARAM => 'done',
+        ]), Response::HTTP_SEE_OTHER);
     }
 
     /**

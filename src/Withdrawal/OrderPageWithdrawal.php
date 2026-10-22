@@ -4,7 +4,6 @@ namespace Webwerkwien\ContaoConshoBundle\Withdrawal;
 
 use Brick\Math\BigDecimal;
 use Brick\Math\Exception\MathException;
-use Doctrine\DBAL\Connection;
 use Symfony\Component\HttpFoundation\InputBag;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
@@ -34,7 +33,6 @@ class OrderPageWithdrawal
     public const FORM_PARAM = 'consho_withdraw';
 
     public function __construct(
-        private readonly Connection $connection,
         private readonly WithdrawalWindowReader $windows,
         private readonly DbalWithdrawalRepository $withdrawals,
         private readonly WithdrawalRecorder $recorder,
@@ -45,21 +43,29 @@ class OrderPageWithdrawal
     /**
      * What the template gets.
      *
-     * `state`: `open` (button or form), `expired` (a sentence with the shop's
-     * address), null (no function: period 0, or cancelled before shipping —
-     * nothing is said then, there is nothing to withdraw from).
+     * `state`: `open` (button or form), null (no function: period 0, or
+     * cancelled before shipping — nothing is said then, there is nothing to
+     * withdraw from).
+     *
+     * `late` (WA, B2, 2026-10-22): the window's estimated end has passed. The
+     * button stays — the window counts from shipping, the period from
+     * receipt — with the sentence "Nach unseren Daten ist die Frist
+     * abgelaufen. Der Widerruf wird entsprechend geprüft." (Michael's wording,
+     * neutral between du and Sie). Until then it was an `expired` state with
+     * the shop's address instead of the button.
      *
      * @param array<string, string> $order a row of tl_consho_order
      *
-     * @return array{state: string|null, form: bool, name: string, email: string, items: list<array{id: int, name: string, left: string, max: string, whole: bool}>, received: list<array{number: string, receivedAt: string, confirmed: bool}>, contact: string}
+     * @return array{state: string|null, late: bool, form: bool, name: string, email: string, items: list<array{id: int, name: string, left: string, max: string, whole: bool}>, received: list<array{number: string, receivedAt: string, confirmed: bool}>}
      */
     public function view(int $orderId, array $order, bool $wantsForm, string $language, int $now): array
     {
         $window = $this->windows->of($orderId);
+        $late = null !== $window && $window->isLateAt($now);
         $state = match (true) {
             null === $window, WindowState::Open !== $window->state => null,
-            $window->isOpenAt($now) => 'open',
-            default => 'expired',
+            $late, $window->isOpenAt($now) => 'open',
+            default => null,
         };
 
         $items = [];
@@ -90,6 +96,7 @@ class OrderPageWithdrawal
 
         return [
             'state' => $state,
+            'late' => 'open' === $state && $late,
             'form' => 'open' === $state && $wantsForm,
             'name' => trim(($order['firstname'] ?? '').' '.($order['lastname'] ?? '')),
             'email' => (string) ($order['email'] ?? ''),
@@ -102,7 +109,6 @@ class OrderPageWithdrawal
                 ],
                 $this->withdrawals->received($orderId),
             ),
-            'contact' => 'expired' === $state ? (string) $this->connection->fetchOne('SELECT operatorAddress FROM tl_consho_shop WHERE id = ?', [(int) ($order['shop'] ?? 0)]) : '',
         ];
     }
 

@@ -587,21 +587,24 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         $lastSecond = $this->recorder->record($this->wholeOrder(), self::at('2026-10-22 23:59:59'));
         self::assertSame(WithdrawalOutcome::Recorded, $lastSecond->outcome);
 
-        // Die erste Sekunde danach: zu, nichts gespeichert, keine Mail.
+        // Die erste Sekunde danach: seit WA (B1, 2026-10-22) nicht mehr zu,
+        // sondern gespeichert und markiert — das Fenster rechnet ab Versand,
+        // die Frist ab Erhalt; ob es rechtzeitig war, entscheidet der Betreiber.
         $late = $this->recorder->record($this->wholeOrder(), self::at('2026-10-23 00:00:00'));
-        self::assertSame(WithdrawalOutcome::Closed, $late->outcome);
-        self::assertNull($late->id);
+        self::assertSame(WithdrawalOutcome::Recorded, $late->outcome);
+        self::assertTrue($late->afterWindow);
+        self::assertFalse($lastSecond->afterWindow, 'die letzte Sekunde des Puffers ist noch im Fenster');
 
         self::assertSame(
-            [['WEB-00075-W1', self::at('2026-10-15 23:59:59')], ['WEB-00075-W2', self::at('2026-10-22 23:59:59')]],
+            [['WEB-00075-W1', self::at('2026-10-15 23:59:59'), 0], ['WEB-00075-W2', self::at('2026-10-22 23:59:59'), 0], ['WEB-00075-W3', self::at('2026-10-23 00:00:00'), 1]],
             array_map(
-                static fn (array $row): array => [(string) $row['number'], (int) $row['receivedAt']],
-                $this->connection->fetchAllAssociative('SELECT number, receivedAt FROM tl_consho_withdrawal WHERE pid = ? ORDER BY id', [self::ORDER]),
+                static fn (array $row): array => [(string) $row['number'], (int) $row['receivedAt'], (int) $row['afterWindow']],
+                $this->connection->fetchAllAssociative('SELECT number, receivedAt, afterWindow FROM tl_consho_withdrawal WHERE pid = ? ORDER BY id', [self::ORDER]),
             ),
         );
         $sent = $this->transport->sent();
         self::assertSame(
-            ['Eingangsbestätigung: Widerruf zur Bestellung WEB-00075', 'Widerruf eingegangen: Bestellung WEB-00075', 'Eingangsbestätigung: Widerruf zur Bestellung WEB-00075', 'Widerruf eingegangen: Bestellung WEB-00075'],
+            array_merge(...array_fill(0, 3, ['Eingangsbestätigung: Widerruf zur Bestellung WEB-00075', 'Widerruf eingegangen: Bestellung WEB-00075'])),
             array_map(static fn (Email $mail): string => (string) $mail->getSubject(), $sent),
         );
         self::assertStringContainsString('22. Oktober 2026', (string) $sent[2]->getHtmlBody());

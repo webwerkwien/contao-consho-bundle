@@ -152,6 +152,27 @@ final class CustomerExportTest extends TestCase
         self::assertStringNotContainsString('WEB-9-1', $files['daten.json']);
     }
 
+    /**
+     * WA, A6: Erklärungen über das Formular ohne passende Bestellung — über
+     * die eingegebene Adresse, nur im eigenen Shop.
+     */
+    public function testNichtZugeordneteWiderrufeUeberDieAdresse(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00011', 'source' => 'form', 'name' => 'Erika Muster', 'email' => 'Erika@Example.org', 'orderReference' => 'WEB-77', 'message' => 'Bitte zurück', 'receivedAt' => strtotime('2026-09-23 09:00')]);
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 2, 'number' => 'W-00012', 'name' => 'Erika Muster', 'email' => 'erika@example.org', 'orderReference' => 'ANDERER-SHOP']);
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00013', 'name' => 'Fremd', 'email' => 'fremd@example.org', 'orderReference' => 'FREMD-1']);
+
+        $data = json_decode($this->unzip($this->export()->export(1, 'm:5', strtotime('2026-09-28 12:00'))['zip'] ?? '')['daten.json'], true);
+
+        self::assertIsArray($data);
+        self::assertSame([[
+            'number' => 'W-00011', 'receivedAt' => date(\DATE_ATOM, strtotime('2026-09-23 09:00')), 'source' => 'form', 'name' => 'Erika Muster', 'email' => 'Erika@Example.org',
+            'orderReference' => 'WEB-77', 'scope' => 'all', 'message' => 'Bitte zurück', 'state' => 'received',
+        ]], $data['unassignedWithdrawals']);
+        self::assertStringNotContainsString('ANDERER-SHOP', json_encode($data, JSON_THROW_ON_ERROR));
+        self::assertStringNotContainsString('FREMD-1', json_encode($data, JSON_THROW_ON_ERROR));
+    }
+
     public function testEinGastOhneKonto(): void
     {
         $data = json_decode($this->unzip($this->export()->export(1, 'g:fremd@example.org', 1)['zip'] ?? '')['daten.json'], true);

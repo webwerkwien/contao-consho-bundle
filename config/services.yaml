@@ -124,6 +124,26 @@ services:
             - '@consho.rate_limit.withdrawal_form_storage'
             - '@?lock_factory'
 
+    # WA (A3, 2026-10-22): the confirmation of a declaration that matched no
+    # order goes to the address the consumer typed. Twenty per shop in an hour
+    # is more than any real wave of withdrawals and caps what the form can be
+    # made to send; three per address in an hour, like the confirmation mail
+    # (K3), keeps one mailbox from being flooded through many IPs. Over the
+    # limit the declaration is still stored — only the mail waits.
+    consho.rate_limit.withdrawal_unassigned_shop:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_withdrawal_unassigned_shop, policy: fixed_window, limit: 20, interval: 1 hour }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    consho.rate_limit.withdrawal_unassigned_address:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_withdrawal_unassigned_address, policy: fixed_window, limit: 3, interval: 1 hour }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
     # Abo-7 (P58): "Verträge hier kündigen", like the withdrawal form — five
     # attempts per IP in 15 minutes; a mistyped number must not lock anyone
     # out of cancelling.

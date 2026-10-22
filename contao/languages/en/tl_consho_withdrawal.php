@@ -4,6 +4,8 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['number'] = ['Withdrawal number', 'D
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['receivedAt'] = ['Received', 'Moment of receipt by the server clock — as stated in the confirmation.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['source'] = ['Channel', 'Through the order page (link from the mail) or the withdrawal form.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['name'] = ['Name', 'As given or confirmed by the customer.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['orderReference'] = ['Order number given', 'As the customer typed it into the withdrawal form — even where it matched no order.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'] = ['Received after the window', 'Received after "last shipment + period + grace". The window counts from shipping, the period from receipt — whether the withdrawal was in time is your decision.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['email'] = ['E-mail', 'The address the confirmation of receipt went to.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scope'] = ['Scope', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['part'] = ['Part withdrawn', 'In the customer\'s words.'];
@@ -12,7 +14,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['confirmationSentAt'] = ['Confirmati
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['state'] = ['State', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['states'] = ['received' => 'received', 'accepted' => 'accepted', 'rejected' => 'rejected'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['decidedAt'] = ['Decided', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['reason'] = ['Reason for rejection', 'Sent to the customer verbatim.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['reason'] = ['Reason for rejection', 'When rejected on an order, it went to the customer verbatim; when dismissed without an order, it stayed internal.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['returnReceivedAt'] = ['Return received', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundShipping'] = ['Delivery costs refunded', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['valueCompensation'] = ['Value compensation', 'Kept back for a service (§ 357a(2) BGB): proposed at acceptance, set with the refund.'];
@@ -116,7 +118,30 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
     'voucherChangedByHand' => 'The balance of withdrawn gift vouchers was changed by hand: %s. Whether and how much goes back is your decision. Nothing was booked.',
     'numberRangeMissing' => 'The number range "%s" is missing in the shop configuration. Nothing was booked.',
     'unknown' => 'This withdrawal does not exist (any more).',
+    // WA, A4: "Assign to an order".
+    'assigned' => 'Withdrawal %s is assigned to order %s and can be processed now.',
+    'assignedLate' => 'Withdrawal %s is assigned to order %s. It arrived after the end of that order\'s withdrawal window — whether it was in time is your decision.',
+    // Review WA, K4: one message for "does not exist" and "not yours".
+    'assignNotFound' => 'There is no order with this number in this shop that you may edit.',
+    'assignAlready' => 'This withdrawal is already assigned to an order.',
+    // Review WA, S2: "Dismiss without an order".
+    'dismissed' => 'Withdrawal %s dismissed without an order. The customer was not notified.',
+    'dismissReasonMissing' => 'Please give a reason — it stays internal.',
 ];
+
+// WA (2026-10-22): a withdrawal without an order, and the late receipt.
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassigned'] = 'not assigned';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedTitle'] = 'Withdrawal %s — not assigned to an order';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedHelp'] = 'The order number and e-mail address from the withdrawal form match no order of this shop — or one that cannot be withdrawn from through the form (for instance without a right of withdrawal, or cancelled before shipping). The withdrawal has nevertheless been received and confirmed to the address given. Assign it to the order it is about — then you can accept it or reject it with a reason. The declaration itself does not change.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['assignLegend'] = 'Assign to an order';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['assignOrderNumber'] = 'Order number';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['assignSubmit'] = 'Assign';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissLegend'] = 'Dismiss without an order';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissReason'] = 'Reason (internal)';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissHelp'] = 'For declarations that belong to no order — nonsense, a duplicate. The withdrawal then counts as rejected and leaves the open work; the declaration stays stored. The customer is not notified: the address is not verified.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissSubmit'] = 'Dismiss';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissedLegend'] = 'Dismissed without an order';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindowHint'] = 'Received after the end of the withdrawal window. The window counts from shipping, the period from receipt — whether the withdrawal was in time is your decision.';
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'] = ['orderPage' => 'Order page', 'form' => 'Withdrawal form'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scopes'] = ['all' => 'whole order', 'items' => 'single items', 'part' => 'part (free text)'];

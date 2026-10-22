@@ -1,0 +1,81 @@
+{#
+  A withdrawal that matched no order (WA, A4), rendered by
+  WithdrawalBackendController instead of "Widerruf bearbeiten" while its pid
+  is 0: the declaration as it arrived, and one action — assign it to an order.
+  Accepting, rejecting and refunding need the order; they come after.
+
+  The declaration is shown, never edited: the confirmation of receipt
+  confirmed it.
+#}
+{% set l = lang %}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+</div>
+
+{{ messages|raw }}
+
+<div class="tl_formbody_edit consho-withdrawal-page">
+
+    <div class="consho-withdrawal-head">
+        <h2>{{ withdrawal.number }} <span class="consho-withdrawal-head__order">{{ l.unassigned|default('nicht zugeordnet') }}</span></h2>
+    </div>
+
+    <fieldset class="tl_tbox consho-withdrawal-box">
+        <legend>{{ l.declarationLegend|default('Erklärung und Fristen') }}</legend>
+        <table class="tl_show">
+            <tbody>
+                <tr><td class="tl_label">{{ l.receivedAt.0|default('Eingegangen am') }}</td><td>{{ withdrawal.receivedAt }} ({{ withdrawal.source }})</td></tr>
+                <tr><td class="tl_label">{{ l.orderReference.0|default('Angegebene Bestellnummer') }}</td><td>{{ withdrawal.orderReference }}</td></tr>
+                <tr><td class="tl_label">{{ l.name.0|default('Name') }}</td><td>{{ withdrawal.name }}</td></tr>
+                <tr><td class="tl_label">{{ l.email.0|default('E-Mail') }}</td><td>{{ withdrawal.email }}</td></tr>
+                <tr><td class="tl_label">{{ l.scope.0|default('Umfang') }}</td><td>{{ l.scopes[withdrawal.scope]|default(withdrawal.scope) }}</td></tr>
+                {% if withdrawal.part %}<tr><td class="tl_label">{{ l.part.0|default('Teil') }}</td><td>{{ withdrawal.part|nl2br }}</td></tr>{% endif %}
+                {% if withdrawal.message %}<tr><td class="tl_label">{{ l.message.0|default('Nachricht') }}</td><td>{{ withdrawal.message|nl2br }}</td></tr>{% endif %}
+                <tr><td class="tl_label">{{ l.refundDueAt|default('Erstattung fällig bis') }}</td><td>{{ refundDueAt }}</td></tr>
+            </tbody>
+        </table>
+        {% if not withdrawal.dismissed %}<p class="tl_help">{{ l.unassignedHelp|default('') }}</p>{% endif %}
+    </fieldset>
+
+    {% if withdrawal.dismissed %}
+        <fieldset class="tl_tbox consho-withdrawal-box">
+            <legend>{{ l.dismissedLegend|default('Ohne Bestellung abgewiesen') }}</legend>
+            <table class="tl_show">
+                <tbody>
+                    <tr><td class="tl_label">{{ l.decidedAt.0|default('Entschieden am') }}</td><td>{{ withdrawal.decidedAt }}</td></tr>
+                    <tr><td class="tl_label">{{ l.reason.0|default('Begründung') }}</td><td>{{ withdrawal.reason|nl2br }}</td></tr>
+                </tbody>
+            </table>
+        </fieldset>
+    {% else %}
+        <fieldset class="tl_tbox consho-withdrawal-box">
+            <legend>{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.assignLegend|default('Bestellung zuordnen') }}</legend>
+            <form action="{{ action }}" method="post">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <div class="widget">
+                    <h3><label for="consho-assign-number">{{ l.assignOrderNumber|default('Bestellnummer') }}</label></h3>
+                    <input type="text" name="orderNumber" id="consho-assign-number" class="tl_text" value="{{ withdrawal.orderReference }}" required>
+                </div>
+                <div class="tl_submit_container">
+                    <button type="submit" name="consho_action" value="assign" class="tl_submit">{{ l.assignSubmit|default('Zuordnen') }}</button>
+                </div>
+            </form>
+        </fieldset>
+
+        {# Review WA, S2: what belongs to no order leaves the open work here. #}
+        <fieldset class="tl_tbox consho-withdrawal-box">
+            <legend>{{ l.dismissLegend|default('Ohne Bestellung abweisen') }}</legend>
+            <form action="{{ action }}" method="post">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <div class="widget">
+                    <h3><label for="consho-dismiss-reason">{{ l.dismissReason|default('Begründung (intern)') }}</label></h3>
+                    <textarea name="reason" id="consho-dismiss-reason" class="tl_textarea" rows="3" required></textarea>
+                    <p class="tl_help tl_tip">{{ l.dismissHelp|default('') }}</p>
+                </div>
+                <div class="tl_submit_container">
+                    <button type="submit" name="consho_action" value="dismiss" class="tl_submit">{{ l.dismissSubmit|default('Abweisen') }}</button>
+                </div>
+            </form>
+        </fieldset>
+    {% endif %}
+</div>

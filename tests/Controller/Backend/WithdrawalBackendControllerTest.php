@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Controller\Backend;
 use Contao\CoreBundle\Exception\RedirectResponseException;
 use Contao\CoreBundle\Framework\Adapter;
 use Contao\CoreBundle\Framework\ContaoFramework;
+use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\DataContainer;
 use Contao\Message;
 use Doctrine\DBAL\Connection;
@@ -32,6 +33,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalProcessing;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\ValueCompensation;
+use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalAssignment;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -151,6 +153,100 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertSame([['addError', 'Der Wertersatz muss zwischen 0 und 17.80 liegen.']], $this->messages);
     }
 
+    /**
+     * WA, A4: Ein Widerruf ohne Bestellung zeigt die Erklärung und nur eine
+     * Aktion — „Bestellung zuordnen", vorbelegt mit der eingetippten Nummer.
+     * Danach ist es der gewöhnliche Widerruf der Bestellung.
+     */
+    public function testNichtZugeordnetZuordnenUndDanachBearbeiten(): void
+    {
+        $this->unassignedWithdrawal('WEB-0077');
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
+
+        self::assertStringContainsString('W-00001', $html);
+        self::assertStringContainsString('nicht zugeordnet', $html);
+        self::assertMatchesRegularExpression('#name="orderNumber"[^>]*value="WEB-0077"#', $html);
+        self::assertStringNotContainsString('name="accepted[', $html, 'Annehmen erst nach dem Zuordnen');
+
+        // Vertippt — gibt es nicht.
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'assign', 'orderNumber' => 'WEB-0077']))($this->dc()));
+        self::assertSame([['addError', 'Zu dieser Bestellnummer gibt es in diesem Shop keine Bestellung, die Sie bearbeiten dürfen.']], $this->messages);
+
+        $this->messages = [];
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'assign', 'orderNumber' => ' WEB-00077 ']))($this->dc()));
+        self::assertSame([['addConfirmation', 'Widerruf W-00001 ist der Bestellung WEB-00077 zugeordnet und kann jetzt bearbeitet werden.']], $this->messages);
+
+        $row = $this->connection->fetchAssociative('SELECT pid, number, orderReference, email FROM tl_consho_withdrawal WHERE id = 1');
+        self::assertSame(['pid' => 7, 'number' => 'W-00001', 'orderReference' => 'WEB-0077', 'email' => 'fremd@example.net'], \is_array($row) ? ['pid' => (int) $row['pid']] + $row : null, 'nur die Bestellung ändert sich');
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
+        self::assertStringContainsString('name="accepted[', $html);
+    }
+
+    /**
+     * A4: Zuordnen ist ein Ändern der Bestellung — ohne dieses Recht nicht.
+     * Review WA, K4: mit derselben Meldung wie „gibt es nicht", sonst erführe
+     * man, dass es die Nummer im Shop gibt.
+     */
+    public function testZuordnenNurMitDemRechtAnDerBestellung(): void
+    {
+        $this->unassignedWithdrawal('WEB-00077');
+
+        $security = $this->createMock(Security::class);
+        $security->method('isGranted')->willReturnCallback(static fn (string $attribute): bool => ContaoCorePermissions::USER_CAN_ACCESS_MODULE === $attribute);
+
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'assign', 'orderNumber' => 'WEB-00077']), security: $security)($this->dc()));
+
+        self::assertSame([['addError', 'Zu dieser Bestellnummer gibt es in diesem Shop keine Bestellung, die Sie bearbeiten dürfen.']], $this->messages);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_withdrawal WHERE id = 1'));
+    }
+
+    /**
+     * Review WA, S2: „Ohne Bestellung abweisen" — mit Begründung, ohne Mail;
+     * danach zeigt die Seite die Entscheidung statt der Aktionen.
+     */
+    public function testOhneBestellungAbweisenUndDanachNurDieEntscheidung(): void
+    {
+        $this->unassignedWithdrawal('Quatsch');
+
+        self::assertStringContainsString('value="dismiss"', $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc()));
+
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'dismiss', 'reason' => '']))($this->dc()));
+        self::assertSame([['addError', 'Bitte geben Sie eine Begründung an — sie bleibt intern.']], $this->messages);
+
+        $this->messages = [];
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'dismiss', 'reason' => 'Test <b>Eintrag</b>']))($this->dc()));
+        self::assertSame([['addConfirmation', 'Widerruf W-00001 ohne Bestellung abgewiesen. Der Kunde wurde nicht benachrichtigt.']], $this->messages);
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
+        self::assertStringContainsString('Ohne Bestellung abgewiesen', $html);
+        self::assertStringContainsString('Test &lt;b&gt;Eintrag&lt;/b&gt;', $html);
+        self::assertStringNotContainsString('value="assign"', $html);
+        self::assertStringNotContainsString('value="dismiss"', $html);
+        self::assertStringNotContainsString('Ordnen Sie ihn der Bestellung zu', $html, 'Abnahme c5: kein Auftrag mehr, der nicht mehr geht');
+    }
+
+    /** A4: Wer die Widerrufe nicht öffnen darf, sieht auch keinen ohne Bestellung. */
+    public function testOhneModulrechtKeinZugangZumNichtZugeordneten(): void
+    {
+        $this->unassignedWithdrawal('X');
+
+        $this->expectException(AccessDeniedHttpException::class);
+
+        $this->controller(Request::create('/contao?key=processWithdrawal&id=1'), false)($this->dc());
+    }
+
+    /** WA, B3: der späte Eingang als Hinweis auf der Seite. */
+    public function testNachFensterendeEingegangenAlsHinweis(): void
+    {
+        self::assertStringNotContainsString('Nach dem Ende des Widerrufsfensters', $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc()));
+
+        $this->connection->update('tl_consho_withdrawal', ['afterWindow' => 1], ['id' => 1]);
+
+        self::assertStringContainsString('Nach dem Ende des Widerrufsfensters eingegangen.', $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc()));
+    }
+
     public function testAblehnenOhneBegruendungMeldetDenFehler(): void
     {
         $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'reject', 'reason' => '']))($this->dc()));
@@ -215,13 +311,25 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::fail('Es wurde nicht zurückgeleitet.');
     }
 
-    private function controller(Request $request, bool $granted = true): WithdrawalBackendController
+    /**
+     * Withdrawal 1 as the form stores it when nothing matched (WA, A1): no
+     * order, the shop it came in through, the number as typed.
+     */
+    private function unassignedWithdrawal(string $typed): void
+    {
+        $this->connection->delete('tl_consho_withdrawal_item', ['pid' => 1]);
+        $this->connection->update('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00001', 'source' => 'form', 'scope' => 'all', 'orderReference' => $typed, 'email' => 'fremd@example.net'], ['id' => 1]);
+    }
+
+    private function controller(Request $request, bool $granted = true, Security|null $security = null): WithdrawalBackendController
     {
         $requests = new RequestStack();
         $requests->push($request);
 
-        $security = $this->createMock(Security::class);
-        $security->method('isGranted')->willReturn($granted);
+        if (null === $security) {
+            $security = $this->createMock(Security::class);
+            $security->method('isGranted')->willReturn($granted);
+        }
 
         $messages = &$this->messages;
         $message = $this->createMock(Adapter::class);
@@ -286,6 +394,7 @@ final class WithdrawalBackendControllerTest extends TestCase
             new WithdrawalSignals($this->connection),
             $router,
             new ValueCompensation($this->connection),
+            new WithdrawalAssignment($this->connection, new WithdrawalWindowReader($this->connection, $balances)),
         );
     }
 

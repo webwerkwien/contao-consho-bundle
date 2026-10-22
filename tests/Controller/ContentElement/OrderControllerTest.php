@@ -702,22 +702,32 @@ class OrderControllerTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
     }
 
-    public function testNachDerFristEinSatzMitDerAdresseDesShops(): void
+    /**
+     * WA, B2 (Michael, 2026-10-22): Nach dem Fenster bleibt der Knopf, mit dem
+     * Hinweis „Nach unseren Daten ist die Frist abgelaufen. Der Widerruf wird
+     * entsprechend geprüft." — und die Erklärung wird gespeichert. Bis dahin
+     * stand dort nur ein Satz mit der Adresse des Shops.
+     */
+    public function testNachDemFensterDerKnopfMitHinweisUndDieErklaerungZaehlt(): void
     {
+        [$data] = $this->render();
+        self::assertFalse($data['withdrawal']['late'], 'im Fenster kein Hinweis');
+
         $shipped = time() - 40 * 86400;
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => self::ORDER, 'shippedAt' => $shipped, 'reportedAt' => $shipped]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => 1]);
 
         [$data] = $this->render('&consho_withdraw=1');
 
-        self::assertSame('expired', $data['withdrawal']['state']);
-        self::assertFalse($data['withdrawal']['form'], 'keine Erklärung nach Fristende');
-        self::assertSame('office@shop.example', $data['withdrawal']['contact']);
+        self::assertSame('open', $data['withdrawal']['state']);
+        self::assertTrue($data['withdrawal']['late']);
+        self::assertTrue($data['withdrawal']['form']);
 
         $redirect = $this->post(['consho_order_action' => 'withdraw', 'consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'all']);
 
         self::assertInstanceOf(RedirectResponseException::class, $redirect);
-        self::assertStringContainsString('consho_notice=withdrawClosed', (string) $redirect->getResponse()->headers->get('Location'));
+        self::assertStringContainsString('consho_notice=withdrawn', (string) $redirect->getResponse()->headers->get('Location'));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT afterWindow FROM tl_consho_withdrawal'));
     }
 
     /**
@@ -908,7 +918,6 @@ class OrderControllerTest extends TestCase
         $links->method('forMail')->willReturn(self::URL.'?consho_order=mail');
 
         return new OrderPageWithdrawal(
-            $this->connection,
             $windows,
             $repository,
             new WithdrawalRecorder($this->connection, $windows, $repository, $mail, $links),

@@ -33,6 +33,9 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentDelivery;
     writes: true,
     tables: ['tl_consho_document', 'tl_files'],
     trace: [],
+    // DocumentArchiver never overwrites an archived file, so the PDF rendered
+    // today stays what the archive holds as the original.
+    irreversible: 'With --retry: writes the failed invoice PDFs into the archive folder as the archived originals, which are never overwritten afterwards.',
     repeatable: true,
 )]
 final class DocumentVerifyCommand extends Command

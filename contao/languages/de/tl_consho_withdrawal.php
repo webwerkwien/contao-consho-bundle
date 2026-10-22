@@ -4,6 +4,8 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['number'] = ['Widerrufsnummer', 'Aus
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['receivedAt'] = ['Eingegangen am', 'Zeitpunkt des Eingangs nach der Uhr des Servers — so steht er in der Eingangsbestätigung.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['source'] = ['Weg', 'Über die Bestellseite (Link aus der Mail) oder über das Widerrufsformular.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['name'] = ['Name', 'Wie vom Kunden angegeben oder bestätigt.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['orderReference'] = ['Angegebene Bestellnummer', 'So, wie der Kunde sie im Widerrufsformular eingetippt hat — auch wenn sie zu keiner Bestellung passte.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'] = ['Nach Fensterende eingegangen', 'Eingegangen nach „letzter Versand + Frist + Puffer". Das Fenster rechnet ab Versand, die Frist ab Erhalt — ob der Widerruf rechtzeitig war, entscheiden Sie.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['email'] = ['E-Mail', 'Die Adresse für die Eingangsbestätigung.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scope'] = ['Umfang', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['part'] = ['Widerrufener Teil', 'In den Worten des Kunden.'];
@@ -12,7 +14,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['confirmationSentAt'] = ['Bestätigu
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['state'] = ['Stand', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['states'] = ['received' => 'eingegangen', 'accepted' => 'angenommen', 'rejected' => 'abgelehnt'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['decidedAt'] = ['Entschieden am', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['reason'] = ['Begründung der Ablehnung', 'Ging wörtlich an den Kunden.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['reason'] = ['Begründung der Ablehnung', 'Bei einer Ablehnung zur Bestellung ging sie wörtlich an den Kunden; beim Abweisen ohne Bestellung blieb sie intern.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['returnReceivedAt'] = ['Rücksendung erhalten am', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundShipping'] = ['Erstatteter Versandanteil', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['valueCompensation'] = ['Wertersatz', 'Für eine Dienstleistung einbehalten (§ 357a Abs. 2 BGB): vorgeschlagen bei der Annahme, festgelegt mit der Erstattung.'];
@@ -117,7 +119,30 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
     'voucherChangedByHand' => 'Bei widerrufenen Gutscheinen wurde der Saldo von Hand geändert: %s. Ob und wie viel zurückgeht, entscheiden Sie. Nichts wurde gebucht.',
     'numberRangeMissing' => 'Es fehlt der Nummernkreis „%s" in der Shop-Konfiguration. Nichts wurde gebucht.',
     'unknown' => 'Diesen Widerruf gibt es nicht (mehr).',
+    // WA, A4: „Bestellung zuordnen".
+    'assigned' => 'Widerruf %s ist der Bestellung %s zugeordnet und kann jetzt bearbeitet werden.',
+    'assignedLate' => 'Widerruf %s ist der Bestellung %s zugeordnet. Er ging nach dem Ende ihres Widerrufsfensters ein — ob er rechtzeitig war, entscheiden Sie.',
+    // Review WA, K4: eine Meldung für „gibt es nicht" und „dürfen Sie nicht".
+    'assignNotFound' => 'Zu dieser Bestellnummer gibt es in diesem Shop keine Bestellung, die Sie bearbeiten dürfen.',
+    'assignAlready' => 'Dieser Widerruf ist schon einer Bestellung zugeordnet.',
+    // Review WA, S2: „Ohne Bestellung abweisen".
+    'dismissed' => 'Widerruf %s ohne Bestellung abgewiesen. Der Kunde wurde nicht benachrichtigt.',
+    'dismissReasonMissing' => 'Bitte geben Sie eine Begründung an — sie bleibt intern.',
 ];
+
+// WA (2026-10-22): ein Widerruf ohne Bestellung und der späte Eingang.
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassigned'] = 'nicht zugeordnet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedTitle'] = 'Widerruf %s — keiner Bestellung zugeordnet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedHelp'] = 'Bestellnummer und E-Mail-Adresse aus dem Widerrufsformular passen zu keiner Bestellung dieses Shops — oder zu einer, die über das Formular nicht widerrufbar ist (etwa ohne Widerrufsrecht oder storniert ohne Versand). Der Widerruf ist trotzdem eingegangen und an die angegebene Adresse bestätigt. Ordnen Sie ihn der Bestellung zu, um die es geht — danach können Sie ihn annehmen oder mit Begründung ablehnen. Die Erklärung selbst ändert sich dabei nicht.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['assignLegend'] = 'Bestellung zuordnen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['assignOrderNumber'] = 'Bestellnummer';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['assignSubmit'] = 'Zuordnen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissLegend'] = 'Ohne Bestellung abweisen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissReason'] = 'Begründung (intern)';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissHelp'] = 'Für Erklärungen, die zu keiner Bestellung gehören — Unsinn, ein doppelter Eintrag. Der Widerruf gilt dann als abgelehnt und verschwindet aus den offenen Aufgaben; die Erklärung bleibt gespeichert. Der Kunde wird nicht benachrichtigt: Die Adresse ist nicht geprüft.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissSubmit'] = 'Abweisen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissedLegend'] = 'Ohne Bestellung abgewiesen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindowHint'] = 'Nach dem Ende des Widerrufsfensters eingegangen. Das Fenster rechnet ab Versand, die Frist ab Erhalt — ob der Widerruf rechtzeitig war, entscheiden Sie.';
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'] = ['orderPage' => 'Bestellseite', 'form' => 'Widerrufsformular'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scopes'] = ['all' => 'ganze Bestellung', 'items' => 'einzelne Positionen', 'part' => 'Teil (Freitext)'];

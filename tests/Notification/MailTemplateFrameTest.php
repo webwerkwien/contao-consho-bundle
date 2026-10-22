@@ -42,7 +42,8 @@ class MailTemplateFrameTest extends TestCase
             ++$customer;
         }
 
-        self::assertSame(22, $customer);
+        // 23 since WA (2026-10-22): the confirmation of an unassigned withdrawal.
+        self::assertSame(23, $customer);
         self::assertGreaterThan(0, $operator);
     }
 }

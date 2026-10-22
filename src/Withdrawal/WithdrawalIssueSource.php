@@ -28,7 +28,26 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
 
     public function issues(): array
     {
-        return [...$this->open(), ...$this->ranges()];
+        return [...$this->open(), ...$this->unassigned(), ...$this->ranges()];
+    }
+
+    /**
+     * WA (A5): declarations from the form that matched no order. Not in
+     * "Open withdrawals" — that one goes through the order, and these have
+     * none yet — but in a finding of their own, per shop they came in
+     * through, with the day the first refund would fall due.
+     *
+     * @return list<ConfigurationIssue>
+     */
+    private function unassigned(): array
+    {
+        return $this->grouped(ConfigurationFinding::WithdrawalsUnassigned, $this->connection->fetchAllAssociative(
+            "SELECT w.shop, s.id AS shopExists, s.title, w.number, w.receivedAt
+               FROM tl_consho_withdrawal w
+               LEFT JOIN tl_consho_shop s ON s.id = w.shop
+              WHERE w.pid = 0 AND w.state = 'received'
+              ORDER BY w.shop, w.receivedAt, w.id",
+        ));
     }
 
     /**
@@ -36,15 +55,29 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
      */
     private function open(): array
     {
-        $rows = $this->connection->fetchAllAssociative(
-            "SELECT o.shop, s.title, w.number, w.receivedAt
+        return $this->grouped(ConfigurationFinding::WithdrawalsOpen, $this->connection->fetchAllAssociative(
+            "SELECT o.shop, s.id AS shopExists, s.title, w.number, w.receivedAt
                FROM tl_consho_withdrawal w
                JOIN tl_consho_order o ON o.id = w.pid
-               JOIN tl_consho_shop s ON s.id = o.shop
+               LEFT JOIN tl_consho_shop s ON s.id = o.shop
               WHERE w.state = 'received' OR (w.state = 'accepted' AND w.refundedAt IS NULL)
               ORDER BY o.shop, w.receivedAt, w.id",
-        );
+        ));
+    }
 
+    /**
+     * One finding per shop, with the day the first refund falls due.
+     *
+     * A shop that was deleted keeps its withdrawals — the refund is still
+     * owed. A join on the shop dropped them silently (review WA, K5); they
+     * come as a general finding now, named by the shop's former id.
+     *
+     * @param list<array<string, mixed>> $rows ordered by shop, then receipt
+     *
+     * @return list<ConfigurationIssue>
+     */
+    private function grouped(ConfigurationFinding $finding, array $rows): array
+    {
         $byShop = [];
 
         foreach ($rows as $row) {
@@ -54,17 +87,17 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
         $issues = [];
 
         foreach ($byShop as $shopId => $entries) {
-            $due = WithdrawalSignals::refundDue((int) $entries[0]['receivedAt']);
+            $exists = null !== $entries[0]['shopExists'];
 
             $issues[] = new ConfigurationIssue(
-                ConfigurationFinding::WithdrawalsOpen,
+                $finding,
                 [
-                    'shop' => (string) $entries[0]['title'],
+                    'shop' => $exists ? (string) $entries[0]['title'] : '#'.$shopId,
                     'count' => (string) \count($entries),
                     'numbers' => implode(', ', array_map(static fn (array $e): string => (string) $e['number'], $entries)),
-                    'due' => BackendDate::format($due),
+                    'due' => BackendDate::format(WithdrawalSignals::refundDue((int) $entries[0]['receivedAt'])),
                 ],
-                $shopId,
+                $exists ? $shopId : 0,
             );
         }
 

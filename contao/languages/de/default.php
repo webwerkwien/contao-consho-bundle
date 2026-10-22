@@ -48,6 +48,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'withdrawalFunctionMissing' => 'Startpunkte ohne erreichbare Funktion „Vertrag widerrufen": %count% (%pages%). In Deutschland seit 19.06.2026 (§ 356a BGB), in Österreich ab 01.10.2026 (§ 13a FAGG) muss ein Shop die Widerrufsfunktion während der ganzen Widerrufsfrist leicht zugänglich anbieten — auch Käufern ohne die Bestellmail. Legen Sie eine Seite mit dem Inhaltselement „Vertrag widerrufen" an, veröffentlichen Sie sie und wählen Sie sie am Startpunkt unter „Seite „Vertrag widerrufen"". Verlinken Sie sie am besten von jeder Seite aus, etwa in der Fußzeile.',
     'withdrawalFunctionAdvised' => 'Startpunkte ohne Funktion „Vertrag widerrufen": %count% (%pages%). Der Shop hat eine Widerrufsfrist, sitzt aber außerhalb von EU und EWR; der Checkout bleibt offen. Wer an Verbraucher in der EU verkauft, kann ihnen die Funktion trotzdem schulden. Legen Sie dann eine Seite mit dem Element „Vertrag widerrufen" an und wählen Sie sie am Startpunkt.',
     'withdrawalsOpen' => 'Offene Widerrufe im Shop „%shop%": %count% (%numbers%). Die erste Erstattung ist spätestens am %due% fällig (14 Tage ab Eingang). Bearbeiten unter „Widerrufe".',
+    'withdrawalsUnassigned' => 'Widerrufe ohne Bestellung im Shop „%shop%": %count% (%numbers%). Bestellnummer und E-Mail-Adresse aus dem Widerrufsformular passten zu keiner Bestellung oder zu einer, die über das Formular nicht widerrufbar ist; eingegangen sind sie trotzdem. Unter „Widerrufe" einer Bestellung zuordnen oder ohne Bestellung abweisen — die erste Erstattung wäre spätestens am %due% fällig.',
     'retentionPeriodMissing' => 'Der Shop-Konfiguration „%shop%" fehlt die Aufbewahrungsfrist. Ohne sie wird nichts anonymisiert, und ein Löschantrag kann nur vermerkt werden. Tragen Sie die Frist im Abschnitt „Aufbewahrung und Datenschutz" ein.',
     'anonymizationDue' => 'Im Shop „%shop%" endet in den nächsten 30 Tagen die Aufbewahrungsfrist von %count% Bestellungen (%numbers%). Ihre Kundendaten werden danach automatisch anonymisiert; Nummern und Beträge bleiben.',
     'customerGroupMissing' => 'Der Shop-Konfiguration „%shop%" fehlt die Basisgruppe der Kunden, oder die gewählte Gruppe gibt es nicht mehr. Konten ohne Bestellung fehlen deshalb unter „Kunden". Wählen Sie die Gruppe im Abschnitt „Kundengruppen".',
@@ -619,6 +620,13 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['all'] = 'die ganze Bestellu
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['message'] = 'Ihre Nachricht';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['statement'] = 'Ihre Erklärung im Wortlaut:';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['message'] = 'Nachricht des Kunden';
+// WA (A3): a declaration that matched no order — no order data in the mail.
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['unassigned']['subject'] = 'Eingangsbestätigung: Widerruf %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['unassigned']['intro'] = 'wir bestätigen den Eingang Ihres Widerrufs. Wir ordnen ihn Ihrer Bestellung zu und melden uns, falls wir dazu noch etwas von Ihnen brauchen.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['unassigned']['orderReference'] = 'Angegebene Bestellnummer';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['subject'] = 'Widerruf eingegangen, nicht zugeordnet: %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['intro'] = 'Über das Widerrufsformular ist ein Widerruf eingegangen, dessen Bestellnummer und E-Mail-Adresse zu keiner Bestellung passen. Bitte unter „Widerrufe" einer Bestellung zuordnen.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['unconfirmed'] = 'Die Eingangsbestätigung an den Kunden ist nicht hinausgegangen — bitte von Hand bestätigen.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['subject'] = 'Ihr Widerruf %s zur Bestellung %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['intro'] = 'Ihren Widerruf %s zur Bestellung %s können wir nicht annehmen. Die Begründung:';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['subject'] = 'Ihr Widerruf %s zur Bestellung %s: Erstattung';
@@ -956,25 +964,27 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'whole' => '%s (Abo, %s — nur ganz)',
     'message' => 'Nachricht (optional)',
     'back' => 'Zurück zur Bestellung',
-    'expired' => 'Die Widerrufsfrist für diese Bestellung ist abgelaufen. Bei Fragen erreichen Sie uns unter %s.',
-    'expiredNoContact' => 'Die Widerrufsfrist für diese Bestellung ist abgelaufen.',
+    // WA, B2 (Michael, 2026-10-22): neutral between du and Sie.
+    'late' => 'Nach unseren Daten ist die Frist abgelaufen. Der Widerruf wird entsprechend geprüft.',
     'received' => 'Eingegangene Widerrufe',
     'receivedEntry' => '%s, eingegangen am %s',
     'confirmed' => 'Eingangsbestätigung per E-Mail versandt',
     'unconfirmed' => 'Eingangsbestätigung per E-Mail ausstehend',
 
     // Das Element für Käufer ohne die Bestellmail (W1, E6).
-    'formIntro' => 'Geben Sie Ihre Bestellnummer, die E-Mail-Adresse der Bestellung und Ihren Namen an. Sie erhalten sofort eine Eingangsbestätigung per E-Mail.',
+    // WA (2026-10-22): the address the confirmation goes to — the order's,
+    // where they match, else the one typed here.
+    'formIntro' => 'Geben Sie Ihre Bestellnummer, Ihre E-Mail-Adresse und Ihren Namen an. Sie erhalten sofort eine Eingangsbestätigung per E-Mail.',
     'orderNumber' => 'Bestellnummer',
-    'orderEmail' => 'E-Mail-Adresse der Bestellung',
+    'orderEmail' => 'E-Mail-Adresse (am besten die der Bestellung)',
     'partOptional' => 'Nur einen Teil der Bestellung? Dann nennen Sie ihn hier (optional)',
-    'notFound' => 'Zu dieser Bestellnummer und E-Mail-Adresse haben wir keine Bestellung gefunden. Bitte prüfen Sie Ihre Angaben.',
     'tooMany' => 'Zu viele Versuche. Bitte versuchen Sie es in einer Viertelstunde erneut.',
     'missing' => 'Bitte füllen Sie Bestellnummer, E-Mail-Adresse und Name aus.',
-    'done' => 'Ihr Widerruf %s ist eingegangen. Die Eingangsbestätigung haben wir an die E-Mail-Adresse der Bestellung geschickt.',
-    'doneUnconfirmed' => 'Ihr Widerruf %s ist eingegangen und gespeichert. Die Eingangsbestätigung per E-Mail konnte nicht versandt werden; wir holen das nach.',
-    'closed' => 'Für diese Bestellung ist kein Widerruf über dieses Formular mehr möglich.',
-    'closedContact' => 'Für diese Bestellung ist kein Widerruf über dieses Formular mehr möglich. Bei Fragen erreichen Sie uns unter %s.',
+    'emailInvalid' => 'Bitte geben Sie eine gültige E-Mail-Adresse an — an sie geht die Eingangsbestätigung.',
+    // Review WA, S1/B1: eine Antwort für alle Fälle — ohne Nummer (ihre Form
+    // verriet, ob die Bestellung gefunden wurde) und ohne „nicht versandt"
+    // (nur der Weg ohne Bestellung hat eine Mail-Grenze).
+    'done' => 'Ihr Widerruf ist eingegangen und gespeichert. Die Eingangsbestätigung mit der Nummer des Widerrufs geht an die angegebene E-Mail-Adresse.',
 
     // Im Befund „Widerrufsfrist unter 14 Tagen", wenn keine Lieferländer gewählt sind.
     'allCountries' => 'alle Länder',

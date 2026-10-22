@@ -79,7 +79,6 @@ final class NoticeParamIssueSource implements ConfigurationIssueSource
         // not open.
         OrderPageWithdrawal::FORM_PARAM,
         WithdrawalController::NOTICE_PARAM,
-        WithdrawalController::NUMBER_PARAM,
 
         // Abo-7: the confirmation page of "Verträge hier kündigen" and the
         // signed result page. Stripped, the button leads nowhere and the

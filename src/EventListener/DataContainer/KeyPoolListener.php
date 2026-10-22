@@ -5,6 +5,8 @@ namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 use Contao\CoreBundle\DataContainer\DataContainerOperation;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\DataContainer;
+use Contao\StringUtil;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Digital\KeyPool;
 use Webwerkwien\ContaoConshoBundle\Digital\KeyPoolHandler;
@@ -84,16 +86,45 @@ class KeyPoolListener
      * The pools of its variants too: they are deleted with a main product
      * (VariantDeleteListener, which runs after this and lets it still find
      * them).
+     *
+     * Into the article's undo entry, as VariantDeleteListener does (AiContract
+     * review, 2026-10-22): the codes were bought from a supplier, and until
+     * then deleting the article — in the mask or with consho:product:delete —
+     * lost them for good, while "Wiederherstellen" brought the article back
+     * with an empty pool.
      */
     #[AsCallback(table: 'tl_consho_product', target: 'config.ondelete')]
-    public function deletePool(DataContainer $dc): void
+    public function deletePool(DataContainer $dc, int|string $undoId): void
     {
         $id = (int) $dc->id;
-
-        $this->connection->executeStatement(
-            'DELETE FROM tl_consho_key WHERE entitlement = 0 AND (pid = ? OR pid IN (SELECT id FROM tl_consho_product WHERE pid = ?))',
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT * FROM tl_consho_key WHERE entitlement = 0 AND (pid = ? OR pid IN (SELECT id FROM tl_consho_product WHERE pid = ?)) ORDER BY id',
             [$id, $id],
         );
+
+        if ([] === $rows) {
+            return;
+        }
+
+        $this->connection->transactional(function () use ($rows, $undoId): void {
+            $undo = $this->connection->fetchAssociative('SELECT data, affectedRows FROM tl_undo WHERE id = ?', [(int) $undoId]);
+
+            if (false === $undo) {
+                throw new \RuntimeException(\sprintf('The undo entry %s is missing; the key pool was not deleted.', $undoId));
+            }
+
+            $data = StringUtil::deserialize($undo['data'], true);
+            $data['tl_consho_key'] = [...($data['tl_consho_key'] ?? []), ...$rows];
+
+            $this->connection->update('tl_undo', ['data' => serialize($data), 'affectedRows' => (int) $undo['affectedRows'] + \count($rows)], ['id' => (int) $undoId]);
+            // Exactly the rows in the undo entry; `entitlement = 0` again in
+            // case one was handed out in the meantime.
+            $this->connection->executeStatement(
+                'DELETE FROM tl_consho_key WHERE entitlement = 0 AND id IN (?)',
+                [array_map(static fn (array $row): int => (int) $row['id'], $rows)],
+                [ArrayParameterType::INTEGER],
+            );
+        });
     }
 
     #[AsCallback(table: 'tl_consho_key', target: 'config.ondelete')]

@@ -25,6 +25,7 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\ProcessingResult;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\ValueCompensation;
+use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalAssignment;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalProcessing;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
@@ -52,6 +53,7 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 final class WithdrawalBackendController
 {
     public const TEMPLATE = '@Contao/backend/consho_withdrawal_process.html.twig';
+    public const ASSIGN_TEMPLATE = '@Contao/backend/consho_withdrawal_assign.html.twig';
 
     public function __construct(
         private readonly Connection $connection,
@@ -65,6 +67,7 @@ final class WithdrawalBackendController
         private readonly WithdrawalSignals $signals,
         private readonly UrlGeneratorInterface $router,
         private readonly ValueCompensation $compensations,
+        private readonly WithdrawalAssignment $assignment,
     ) {
     }
 
@@ -72,6 +75,12 @@ final class WithdrawalBackendController
     {
         $id = (int) $dc->id;
         $withdrawal = $id > 0 ? $this->connection->fetchAssociative('SELECT * FROM tl_consho_withdrawal WHERE id = ?', [$id]) : false;
+
+        // WA, A4: no order yet — the declaration and "Bestellung zuordnen".
+        if (false !== $withdrawal && 0 === (int) $withdrawal['pid']) {
+            return $this->unassigned($withdrawal);
+        }
+
         $order = false === $withdrawal ? false : $this->connection->fetchAssociative('SELECT * FROM tl_consho_order WHERE id = ?', [(int) $withdrawal['pid']]);
 
         if (false === $withdrawal || false === $order) {
@@ -123,6 +132,80 @@ final class WithdrawalBackendController
             'back' => $this->framework->getAdapter(System::class)->getReferer(),
             'lang' => $lang,
             ...$this->view($withdrawal, $order),
+        ]);
+    }
+
+    /**
+     * A withdrawal from the form that matched no order (WA, A4). Whoever may
+     * open the list "Widerrufe" sees it — there is no order yet whose rights
+     * could decide; assigning it is an update of the order it goes to, the
+     * same check as every action on the page "Widerruf bearbeiten".
+     *
+     * @param array<string, mixed> $withdrawal
+     */
+    private function unassigned(array $withdrawal): string
+    {
+        if (!$this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, 'consho_withdrawal')) {
+            throw new AccessDeniedHttpException();
+        }
+
+        $request = $this->requests->getCurrentRequest();
+        $lang = $GLOBALS['TL_LANG']['tl_consho_withdrawal'] ?? [];
+        $id = (int) $withdrawal['id'];
+
+        if (null !== $request && $request->isMethod('POST')) {
+            $action = $request->request->getString('consho_action');
+            $order = 'assign' === $action ? $this->assignment->findOrder($id, $request->request->getString('orderNumber')) : null;
+
+            $result = match (true) {
+                // The same answer for "no such order" and "not yours to edit":
+                // a separate one told who may not edit it that the number
+                // exists in the shop (review WA, K4).
+                'assign' === $action && (null === $order || !$this->security->isGranted(ContaoCorePermissions::DC_PREFIX.'tl_consho_order', new UpdateAction('tl_consho_order', $order))) => ProcessingResult::refused('assignNotFound'),
+                'assign' === $action => $this->assignment->assign($id, (int) $order['id']),
+                // Review WA, S2. The module right is the gate, as for seeing
+                // it: there is no order whose rights could decide, and the
+                // table is notEditable, so an UpdateAction on it is always no.
+                'dismiss' === $action => $this->assignment->dismiss($id, $request->request->getString('reason'), time()),
+                default => ProcessingResult::refused('unknown'),
+            };
+
+            $text = \sprintf(
+                (string) ($lang['result'][$result->key] ?? $result->key),
+                ...array_map(static fn (string $p): string => StringUtil::specialchars($p), $result->params),
+            );
+
+            $message = $this->framework->getAdapter(Message::class);
+            $result->done ? $message->addConfirmation($text) : $message->addError($text);
+
+            throw new RedirectResponseException($request->getUri());
+        }
+
+        $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
+        $received = (int) $withdrawal['receivedAt'];
+
+        return $this->twig->render(self::ASSIGN_TEMPLATE, [
+            'messages' => (string) $this->framework->getAdapter(Message::class)->generate(),
+            'action' => null === $request ? '' : $request->getUri(),
+            'back' => $this->framework->getAdapter(System::class)->getReferer(),
+            'lang' => $lang,
+            'withdrawal' => [
+                'number' => (string) $withdrawal['number'],
+                'receivedAt' => $this->moment($received, $language),
+                'source' => (string) ($lang['sources'][$withdrawal['source']] ?? $withdrawal['source']),
+                'orderReference' => (string) $withdrawal['orderReference'],
+                'name' => (string) $withdrawal['name'],
+                'email' => (string) $withdrawal['email'],
+                'scope' => (string) $withdrawal['scope'],
+                'part' => (string) ($withdrawal['part'] ?? ''),
+                'message' => (string) ($withdrawal['message'] ?? ''),
+                // Review WA, S2: dismissed, it shows the decision instead of the actions.
+                'dismissed' => 'rejected' === $withdrawal['state'],
+                'decidedAt' => null === $withdrawal['decidedAt'] ? '' : $this->moment((int) $withdrawal['decidedAt'], $language),
+                'reason' => (string) ($withdrawal['reason'] ?? ''),
+            ],
+            // The refund falls due from receipt, assigned or not (§ 357 Abs. 1 BGB).
+            'refundDueAt' => $this->day(WithdrawalSignals::refundDue($received), $language),
         ]);
     }
 
@@ -239,6 +322,8 @@ final class WithdrawalBackendController
                 'number' => (string) $withdrawal['number'],
                 'orderNumber' => (string) $order['orderNumber'],
                 'receivedAt' => $this->moment($received, $language),
+                // WA, B3: received after the window's estimated end — a hint.
+                'afterWindow' => (bool) ($withdrawal['afterWindow'] ?? false),
                 'source' => (string) ($GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'][$withdrawal['source']] ?? $withdrawal['source']),
                 'name' => (string) $withdrawal['name'],
                 'email' => (string) $withdrawal['email'],

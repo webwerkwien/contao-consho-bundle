@@ -58,6 +58,50 @@ final class WithdrawalIssueSourceTest extends TestCase
         self::assertTrue($issues[0]->finding->isWarning());
     }
 
+    /**
+     * WA, A5: Widerrufe ohne Bestellung — ein eigener Befund je Shop, über
+     * den sie hereinkamen; im Befund „Offene Widerrufe" stehen sie nicht.
+     */
+    public function testNichtZugeordneteWiderrufeEinEigenerBefund(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00002', 'state' => 'received', 'receivedAt' => strtotime('2026-09-25 10:00')]);
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00001', 'state' => 'received', 'receivedAt' => strtotime('2026-09-21 10:00')]);
+
+        $issues = $this->issues();
+
+        self::assertCount(1, $issues);
+        self::assertSame(ConfigurationFinding::WithdrawalsUnassigned, $issues[0]->finding);
+        self::assertSame(['shop' => 'Testshop', 'count' => '2', 'numbers' => 'W-00001, W-00002', 'due' => '05.10.2026'], $issues[0]->context);
+        self::assertSame(1, $issues[0]->shopId);
+        self::assertTrue($issues[0]->finding->isWarning());
+
+        // Zugeordnet ist es ein gewöhnlicher offener Widerruf.
+        $this->connection->update('tl_consho_withdrawal', ['pid' => 7], ['number' => 'W-00001']);
+
+        self::assertSame([ConfigurationFinding::WithdrawalsOpen, ConfigurationFinding::WithdrawalsUnassigned], array_map(static fn (ConfigurationIssue $i): ConfigurationFinding => $i->finding, $this->issues()));
+
+        // Review WA, S2: ohne Bestellung abgewiesen ist erledigt.
+        $this->connection->update('tl_consho_withdrawal', ['state' => 'rejected'], ['number' => 'W-00002']);
+
+        self::assertSame([ConfigurationFinding::WithdrawalsOpen], array_map(static fn (ConfigurationIssue $i): ConfigurationFinding => $i->finding, $this->issues()));
+    }
+
+    /**
+     * Review WA, K5: Ein gelöschter Shop nimmt seine Widerrufe nicht mit — die
+     * Erstattung ist weiter geschuldet. Allgemeiner Befund, mit der alten ID.
+     */
+    public function testWiderrufeEinesGeloeschtenShops(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 9, 'number' => 'W-00003', 'state' => 'received', 'receivedAt' => strtotime('2026-09-21 10:00')]);
+        $this->connection->insert('tl_consho_order', ['id' => 8, 'shop' => 9]);
+        $this->withdrawal('WEB-8-W1', 'received', strtotime('2026-09-22 10:00'));
+        $this->connection->update('tl_consho_withdrawal', ['pid' => 8], ['number' => 'WEB-8-W1']);
+
+        $issues = $this->issues();
+
+        self::assertSame([[ConfigurationFinding::WithdrawalsOpen, '#9', 0], [ConfigurationFinding::WithdrawalsUnassigned, '#9', 0]], array_map(static fn (ConfigurationIssue $i): array => [$i->finding, $i->context['shop'], $i->shopId], $issues));
+    }
+
     public function testFehlenderKreisFuerDieRechnungskorrektur(): void
     {
         $this->connection->delete('tl_consho_number_range', ['type' => 'creditNote']);

@@ -67,4 +67,17 @@ final class WithdrawalWindow
     {
         return WindowState::Open === $this->state && (null === $this->closesAt || $now <= $this->closesAt);
     }
+
+    /**
+     * Closed by TIME alone (WA, B1): the window had a withdrawal function and
+     * its end has passed. That end is an estimate from the shipping date; a
+     * parcel that took longer than the grace can still be inside the period,
+     * so such a declaration is stored with a mark instead of refused. The
+     * other closed states — no function (Off), cancelled before shipping —
+     * are no estimate and stay refusals.
+     */
+    public function isLateAt(int $now): bool
+    {
+        return WindowState::Open === $this->state && null !== $this->closesAt && $now > $this->closesAt;
+    }
 }

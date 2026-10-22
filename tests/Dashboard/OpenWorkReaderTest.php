@@ -95,6 +95,22 @@ final class OpenWorkReaderTest extends TestCase
     }
 
     /**
+     * WA, A5: Ein Widerruf ohne Bestellung zählt bei dem Shop, über den er
+     * hereinkam, als zu entscheiden — in der Zahl und in der gefilterten Liste.
+     */
+    public function testNichtZugeordnetZaehltBeimShopDesFormulars(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 2, 'number' => 'W-00001', 'state' => 'received', 'receivedAt' => self::NOW - self::DAY]);
+
+        $work = $this->reader()->byShop(self::NOW);
+
+        self::assertSame(1, $work[2]->undecided);
+        self::assertSame(0, $work[1]->undecided);
+        self::assertCount(1, $this->reader()->ids(OpenWorkReader::UNDECIDED, self::NOW, 2));
+        self::assertSame([], $this->reader()->ids(OpenWorkReader::UNDECIDED, self::NOW, 1));
+    }
+
+    /**
      * Review M15, M18, M3: Reklamationen gehören ihrem Shop; von mehreren
      * Fristen zählt die früheste, auch wenn sie später eingetragen ist; fällig
      * genau jetzt ist noch nicht überfällig.

@@ -5,6 +5,49 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.9] – 2026-10-22
+
+### Geändert
+
+- **Das Widerrufsformular nimmt jede Erklärung an.** Passen Bestellnummer und E-Mail-Adresse zu keiner Bestellung,
+  wird der Widerruf trotzdem gespeichert, als „nicht zugeordnet" mit eigener Nummer (`W-00042`), und an die
+  eingegebene Adresse bestätigt — ohne Bestelldaten. Bisher hieß es „nicht gefunden", und nichts wurde gespeichert;
+  § 356a BGB und § 13a FAGG verlangen aber nur Name, Angaben zum Vertrag und die Adresse für die Bestätigung. Die
+  Seite antwortet in jedem Fall gleich: ohne Nummer (sie steht in der Mail), ohne „Bestätigung nicht versandt", und
+  auch eine Bestellung ohne Widerrufsrecht wird nicht mehr mit „nicht mehr möglich" beantwortet, sondern nicht
+  zugeordnet gespeichert. Gegen Mails an fremde Adressen: höchstens 3 je Adresse und 20 je Shop pro Stunde,
+  gespeichert wird immer; die Grenze steht als Warnung im Log. (Block D, W2 revidiert)
+- **Nach dem Ende des Widerrufsfensters bleibt der Widerruf möglich.** Das Fenster rechnet ab Versand, die Frist ab
+  Erhalt — eine Ablehnung konnte eine rechtzeitige Erklärung abweisen. Die Bestellseite behält die Schaltfläche und
+  sagt „Nach unseren Daten ist die Frist abgelaufen. Der Widerruf wird entsprechend geprüft."; der Widerruf wird
+  gespeichert, bestätigt und „nach Fensterende eingegangen" markiert. Abgelehnt wird weiter, was nicht an der Zeit
+  hängt: Frist 0, storniert ohne Versand, Abo-Folgebestellung, freigegebene digitale Inhalte. (Block D, 6.2)
+- `consho:document:verify` erklärt sich als unumkehrbar (`irreversible` im `#[AiContract]`): Mit `--retry` legt er
+  Rechnungen ins Archiv, und eine archivierte Datei wird nie überschrieben. Ab contao-ai backend v0.22.1 läuft er
+  deshalb nicht im Backend-Chat, sondern über `contao-ai-cli ext run`. (AiContract-Prüfung)
+
+### Hinzugefügt
+
+- **„Bestellung zuordnen"** für nicht zugeordnete Widerrufe im Backend: Bestellnummer, vorbelegt mit der
+  eingegebenen; nur im Shop des Widerrufs, nur einmal, nur mit dem Recht, die Bestellung zu bearbeiten. Daneben
+  **„Ohne Bestellung abweisen"** mit interner Begründung, ohne Mail — für Einträge, die zu keiner Bestellung gehören.
+  Die Liste zeigt „nicht zugeordnet" und „nach Fensterende", die Startseite einen eigenen Befund, das Dashboard
+  zählt sie bei „Zu entscheiden". (Block D, 6.1)
+- **Nicht zugeordnete Widerrufe werden nach drei Jahren anonymisiert** (ab Ende des Eingangsjahres, täglicher Cron,
+  in jedem Shop); die Auskunft findet sie über die E-Mail-Adresse. (Block D, 6.1)
+- **Insert-Tags `{{consho_withdrawal_link}}` und `{{consho_withdrawal_url}}`** — der Link zur Seite
+  „Widerrufsformular" des Startpunkts, etwa für den Footer; Text „Vertrag widerrufen" in der Sprache der Seite oder
+  ein eigener als Parameter. (Block D, 6.1)
+
+### Behoben
+
+- Offene Widerrufe eines **gelöschten Shops** verschwanden aus dem Befund auf der Startseite, obwohl die Erstattung
+  weiter geschuldet ist. Sie erscheinen jetzt als allgemeiner Befund mit der alten Shop-ID — in der Einrichtung
+  damit bei jedem Shop. (Block D, 6.1)
+- **Freie Schlüsselcodes gehen beim Löschen eines Artikels in den Papierkorb.** Bisher wurden sie endgültig
+  gelöscht — „Wiederherstellen" brachte den Artikel mit leerem Vorrat zurück, die gekauften Codes waren weg. Jetzt
+  stehen sie im selben Eintrag wie der Artikel und seine Varianten. (AiContract-Prüfung)
+
 ## [0.1.8] – 2026-10-22
 
 ### Behoben

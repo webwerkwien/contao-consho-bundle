@@ -20,7 +20,8 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherCode;
  * What is in it is what Consho keeps about the person — the lines of "Kunden"
  * (CustomerDirectory): orders with lines, payments, deliveries, withdrawals,
  * complaints, documents and entitlements (downloads, keys), the subscriptions
- * bought with them and their cancellations, and for a member the account's
+ * bought with them and their cancellations, withdrawals through the form that
+ * matched no order (by the address typed, WA), and for a member the account's
  * address fields.
  * Internal ids stay out; they mean nothing outside the shop. Passwords and
  * login data of the account are Contao's and never leave it.
@@ -107,7 +108,7 @@ class CustomerExport
                 'items' => $this->rows('SELECT productName, sku, lineType, quantity, unitPrice, taxRate, lineTotal FROM tl_consho_order_item WHERE pid = ? ORDER BY id', $id),
                 'payments' => $this->rows('SELECT receivedAt, amount, method, reference FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', $id),
                 'deliveries' => $this->rows('SELECT shippedAt, carrier, trackingNumber, reportedAt FROM tl_consho_delivery WHERE pid = ? ORDER BY id', $id),
-                'withdrawals' => $this->rows('SELECT number, receivedAt, source, name, email, scope, part, message, state, decidedAt, reason, returnReceivedAt, refundAmount, refundedAt FROM tl_consho_withdrawal WHERE pid = ? ORDER BY id', $id),
+                'withdrawals' => $this->rows('SELECT number, receivedAt, source, name, email, orderReference, scope, part, message, state, decidedAt, reason, returnReceivedAt, refundAmount, refundedAt FROM tl_consho_withdrawal WHERE pid = ? ORDER BY id', $id),
                 'complaints' => $this->rows('SELECT receivedAt, note, resolvedAt FROM tl_consho_complaint WHERE pid = ? ORDER BY id', $id),
                 'paymentAttempts' => $this->rows('SELECT methodType, state, amount, currency, providerReference, createdAt FROM tl_consho_payment_attempt WHERE pid = ? ORDER BY id', $id),
                 // Block H (H-5): the codes redeemed with the order, and whether a cancellation gave them back.
@@ -138,6 +139,15 @@ class CustomerExport
             'customer' => ['kind' => null === $customer->memberId ? 'guest' : 'member', 'name' => $customer->name, 'email' => $customer->email],
             'account' => $account,
             'orders' => $orders,
+            // WA, A6: declarations through the form that matched no order —
+            // they name the person by the address they typed, in this shop.
+            'unassignedWithdrawals' => '' === $email ? [] : array_map(
+                fn (array $row): array => $this->clean($row),
+                $this->connection->fetchAllAssociative(
+                    'SELECT number, receivedAt, source, name, email, orderReference, scope, part, message, state FROM tl_consho_withdrawal WHERE pid = 0 AND shop = ? AND LOWER(email) = ? ORDER BY id',
+                    [$shopId, $email],
+                ),
+            ),
             'subscriptions' => $this->subscriptions(array_column($this->directory->orders($shopId, $key), 'id')),
             // Fable review D-5: what else Consho keeps about the person.
             'baskets' => $this->baskets($customer->memberId, $email),

@@ -41,6 +41,8 @@ class OrderEventMail
     public const SHIPPED_TEMPLATE = '@Contao/mail/consho_order_shipped.html.twig';
     public const WITHDRAWAL_TEMPLATE = '@Contao/mail/consho_withdrawal_received.html.twig';
     public const WITHDRAWAL_OPERATOR_TEMPLATE = '@Contao/mail/consho_withdrawal_received_operator.html.twig';
+    public const WITHDRAWAL_UNASSIGNED_TEMPLATE = '@Contao/mail/consho_withdrawal_received_unassigned.html.twig';
+    public const WITHDRAWAL_UNASSIGNED_OPERATOR_TEMPLATE = '@Contao/mail/consho_withdrawal_received_unassigned_operator.html.twig';
     public const WITHDRAWAL_REJECTED_TEMPLATE = '@Contao/mail/consho_withdrawal_rejected.html.twig';
     public const REFUND_TEMPLATE = '@Contao/mail/consho_refund_booked.html.twig';
     public const DIGITAL_RELEASED_TEMPLATE = '@Contao/mail/consho_digital_released.html.twig';
@@ -611,6 +613,70 @@ class OrderEventMail
     }
 
     /**
+     * The confirmation of a declaration that matched no order (WA, A3), and
+     * the operator's copy.
+     *
+     * It goes to the address the consumer TYPED (§ 356a Abs. 2 Nr. 3 BGB) and
+     * therefore says nothing about any order: a fixed text, the declaration
+     * as it arrived, the number and the moment of receipt — what the law
+     * asks for, and nothing an address typed by a stranger should learn.
+     *
+     * @param array{number: string, receivedAt: int, name: string, orderReference: string, email: string, scope: string, part: string, message: string} $withdrawal
+     *
+     * @return bool whether the consumer's mail left
+     */
+    public function withdrawalReceivedUnassigned(int $shopId, string $email, string $language, array $withdrawal): bool
+    {
+        try {
+            $shop = $this->source->shop($shopId) ?? throw new \RuntimeException('the shop does not exist');
+            $transportRow = $shop['transport'] ?? throw new \RuntimeException('the shop has no mail configuration');
+            $transport = $this->transports->create($transportRow);
+            $from = SenderAddress::of($transportRow);
+        } catch (\Throwable $e) {
+            $this->fail('withdrawalUnassigned', '', $withdrawal['number'], $e);
+
+            return false;
+        }
+
+        $for = static fn (string $language): array => [...$withdrawal, 'receivedAt' => self::moment($withdrawal['receivedAt'], $language)];
+
+        try {
+            $recipient = $this->recipients->forCustomer(['email' => $email, 'firstname' => '', 'lastname' => $withdrawal['name'], 'language' => $language])[0]
+                ?? throw new \RuntimeException('no e-mail address');
+
+            $mail = $this->renderer->render(self::WITHDRAWAL_UNASSIGNED_TEMPLATE, [
+                'customer' => ['name' => $recipient->name, 'email' => $recipient->email],
+                'withdrawal' => $for($recipient->language),
+            ], $recipient->language, $frame = $this->frames?->of($shopId, $recipient->language));
+
+            $message = $this->email($from, $recipient, $mail, []);
+            $frame?->embedInto($message);
+            $transport->send($message);
+            $sent = true;
+        } catch (\Throwable $e) {
+            $this->fail('withdrawalUnassigned', 'customer', $withdrawal['number'], $e);
+            $sent = false;
+        }
+
+        try {
+            $operator = $this->recipients->forOperator($shop, $shop['fallbackLanguage'])[0] ?? null;
+
+            if (null !== $operator) {
+                $mail = $this->renderer->render(self::WITHDRAWAL_UNASSIGNED_OPERATOR_TEMPLATE, [
+                    'withdrawal' => $for($operator->language),
+                    'confirmed' => $sent,
+                ], $operator->language);
+
+                $transport->send($this->email($from, $operator, $mail, []));
+            }
+        } catch (\Throwable $e) {
+            $this->fail('withdrawalUnassigned', 'operator', $withdrawal['number'], $e);
+        }
+
+        return $sent;
+    }
+
+    /**
      * A rejected withdrawal (D-3, F6): the operator's reason, verbatim. No
      * copy — the operator wrote it.
      *
@@ -827,6 +893,8 @@ class OrderEventMail
             \sprintf('The %s mail of order %s%s could not be sent: %s', match ($kind) {
                 'payment' => '"payment received"',
                 'withdrawal' => '"withdrawal received"',
+                // The "order" is the withdrawal's own number here — it has none.
+                'withdrawalUnassigned' => '"withdrawal received, not assigned"',
                 'withdrawalRejected' => '"withdrawal rejected"',
                 'refund' => '"refund booked"',
                 'subscriptionInvoice' => '"subscription invoice"',

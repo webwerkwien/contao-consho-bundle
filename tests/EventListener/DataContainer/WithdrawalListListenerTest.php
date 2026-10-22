@@ -121,6 +121,33 @@ final class WithdrawalListListenerTest extends TestCase
         self::assertSame('<strong>15.01.2026</strong>', $cells[5]);
     }
 
+    /**
+     * WA: ohne Bestellung steht es in der Bestellspalte, wo man die Bestellung
+     * sucht; nach Fensterende eingegangen steht in beiden Ansichten dabei.
+     */
+    public function testNichtZugeordnetUndNachFensterende(): void
+    {
+        // Unter der Bestellung zuerst: flatInModule stellt global auf Spalten.
+        $line = $this->listener('consho_order')->label(['number' => 'W-00009', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'received', 'refundedAt' => null, 'afterWindow' => 1]);
+
+        self::assertIsString($line);
+        self::assertStringEndsWith(' — '.$GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'][0], $line);
+
+        $listener = $this->listener('consho_withdrawal');
+        $listener->flatInModule('tl_consho_withdrawal');
+
+        $cells = $listener->label(['id' => 9, 'number' => 'W-00009', 'pid' => 0, 'state' => 'received', 'receivedAt' => 1_790_000_000, 'refundedAt' => null, 'refundAmount' => null, 'name' => 'E', 'afterWindow' => 0]);
+
+        self::assertIsArray($cells);
+        self::assertSame('<em>nicht zugeordnet</em>', $cells[2]);
+
+        $late = $listener->label(['id' => 9, 'number' => 'W-00009', 'pid' => 7, 'state' => 'received', 'receivedAt' => 1_790_000_000, 'refundedAt' => null, 'refundAmount' => null, 'name' => 'E', 'afterWindow' => 1]);
+
+        self::assertIsArray($late);
+        self::assertStringStartsWith('WEB-00077 <span class="tl_gray"', $late[2]);
+        self::assertStringContainsString($GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'][0], $late[2]);
+    }
+
     public function testErstattetOderAbgelehntOhneFaelligkeit(): void
     {
         $listener = $this->listener('consho_withdrawal');
