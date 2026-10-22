@@ -18,7 +18,7 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['price_legend'] = 'Price and tax';
 
 $GLOBALS['TL_LANG']['tl_consho_order_item']['edit'] = ['Edit', 'Edit item ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['show'] = ['Details', 'Show details of item ID %s'];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['kind'] = ['Kind', 'Taken from the product type at the purchase: physical goods, digital or service.'];
+$GLOBALS['TL_LANG']['tl_consho_order_item']['kind'] = ['Kind', 'Taken from the product type at the purchase: goods, digital content, service or gift voucher.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionRule'] = ['Subscription rule', 'The subscription rule the line was bought in. Empty: one-time purchase.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionTerms'] = ['Subscription terms', 'As the customer read them at the purchase, frozen. A later change of the rule does not touch this order.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedAt'] = ['Service performed on', 'Set with "Service performed". If the customer agreed to the early start, this ends the right of withdrawal for this line.'];
@@ -32,5 +32,5 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['performedResult'] = [
     'alreadyPerformed' => 'The service has already been reported as performed.',
     'withdrawn' => 'The service has been withdrawn and revoked.',
 ];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['kinds'] = ['physical' => 'physical goods', 'digital' => 'digital', 'service' => 'service', 'voucher' => 'gift voucher'];
+$GLOBALS['TL_LANG']['tl_consho_order_item']['kinds'] = ['physical' => 'Goods', 'digital' => 'Digital content', 'service' => 'Service', 'voucher' => 'Gift voucher'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedOn'] = 'performed on %s';

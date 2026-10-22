@@ -18,7 +18,7 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['price_legend'] = 'Preis und Steuer'
 
 $GLOBALS['TL_LANG']['tl_consho_order_item']['edit'] = ['Bearbeiten', 'Position ID %s bearbeiten'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['show'] = ['Details', 'Details der Position ID %s anzeigen'];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['kind'] = ['Art', 'Beim Kauf aus dem Produkttyp übernommen: körperliche Ware, digital oder Dienstleistung.'];
+$GLOBALS['TL_LANG']['tl_consho_order_item']['kind'] = ['Art', 'Beim Kauf aus dem Produkttyp übernommen: Ware, Digitales, Dienstleistung oder Wertgutschein.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionRule'] = ['Aboregel', 'Die Aboregel, in der gekauft wurde. Leer: Einmalkauf.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionTerms'] = ['Abo-Bedingungen', 'Wie der Kunde sie beim Kauf gelesen hat, eingefroren. Eine spätere Änderung der Aboregel berührt diese Bestellung nicht.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedAt'] = ['Leistung erbracht am', 'Gesetzt mit „Leistung erbracht". Hat der Kunde dem vorzeitigen Beginn zugestimmt, erlischt damit das Widerrufsrecht für diese Position.'];
@@ -32,5 +32,5 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['performedResult'] = [
     'alreadyPerformed' => 'Die Leistung ist bereits als erbracht gemeldet.',
     'withdrawn' => 'Die Leistung ist widerrufen und gesperrt.',
 ];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['kinds'] = ['physical' => 'körperliche Ware', 'digital' => 'digital', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];
+$GLOBALS['TL_LANG']['tl_consho_order_item']['kinds'] = ['physical' => 'Ware', 'digital' => 'Digitales', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedOn'] = 'erbracht am %s';

@@ -12,7 +12,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'homeCountryMissing' => 'The shop configuration "%shop%" has no home country. Without one there is no gross price: the shop shows no prices in listings or on product pages. Enter it under "Countries" in the shop configuration.',
     'duplicateVatId' => 'Two shop configurations carry the same VAT ID %vatId%: %shops%. If this is one shop in several languages it belongs on ONE configuration — otherwise two separate invoice number sequences are running.',
     'mailTransportMissing' => 'The shop configuration "%shop%" has no mail configuration. No order confirmations can be sent.',
-    'productManufacturerMissing' => 'Physical products without a manufacturer: %count%. The EU product safety regulation requires the manufacturer details on every single offer.',
+    'productManufacturerMissing' => 'Goods without a manufacturer: %count%. The EU product safety regulation requires the manufacturer details on every single offer.',
     'manufacturerEmailMissing' => 'The manufacturer "%manufacturer%" has no e-mail address. A website is not enough — an address allowing direct communication is required.',
     'duplicateGtin' => 'The GTIN %gtin% is recorded on %count% products. A GTIN normally names exactly one article.',
     'manufacturerEuResponsibleMissing' => 'The manufacturer "%manufacturer%" is based outside the EU (%country%) and has no responsible person inside the Union. Without one, their products may not be offered here.',
@@ -56,7 +56,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'shippingCostsPageMissing' => 'Start points without a shipping costs page: %count% (%pages%). The element "Shipping costs" shows the shipping methods with prices from the data; which statements the shop owes about them is for you to judge.',
     'shippingCostsElementMissing' => 'Shipping costs pages without the element "Shipping costs": %count% (%pages%). The page is set at the start point but shows no shipping costs.',
     'deliveryCountryWithoutShipping' => 'The shop configuration "%shop%" lists %countries% as delivery countries, but none of its shipping methods delivers there. The checkout therefore does not offer them. Add the countries to a shipping method or remove them from the delivery countries.',
-    'productKindMismatch' => 'Product "%product%" is %kind% according to its product type, but has %fields%. It is not used and hidden in the mask; please remove it at the product or check the product type.',
+    'productKindMismatch' => 'Product "%product%" is of the kind %kind% according to its product type, but also has %fields%. It is not used and hidden in the mask; please remove it at the product or check the product type.',
     'durabilityLabelMissing' => 'Product "%product%" has a manufacturer\'s durability guarantee of %years% years, but no GARAN label. Without the label the shop does not show the guarantee; it has to be given before the purchase in the harmonised form (Art. 6(1)(la) Directive 2011/83/EU). Upload the completed label at the product.',
     'durabilityYearsMissing' => 'Product "%product%" has a GARAN label but no valid duration of the durability guarantee (more than two years). Without one the shop does not show the label. Enter the duration in years or remove the label.',
     'durabilityLabelNotPublic' => 'The GARAN label of product "%product%" is in a folder that is not public. The image would not show in the shop, so Consho does not show the guarantee there at all. Set the folder to "public" in the file manager.',
@@ -115,7 +115,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
 
 // The parts of the finding "product does not fit its kind" (DL5).
 $GLOBALS['TL_LANG']['CONSHO']['kindMismatch'] = [
-    'kinds' => ['physical' => 'physical goods', 'digital' => 'digital', 'service' => 'a service', 'voucher' => 'a gift voucher'],
+    'kinds' => ['physical' => '"Goods"', 'digital' => '"Digital content"', 'service' => '"Service"', 'voucher' => '"Gift voucher"'],
     'delivery' => 'a delivery type',
     'file' => 'a file',
     'keys' => 'keys in the pool',

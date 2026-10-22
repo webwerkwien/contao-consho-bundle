@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
 $GLOBALS['TL_LANG']['tl_consho_product_type']['title'] = ['Bezeichnung', 'Name des Produkttyps, z. B. „Farbe" oder „Gewebe".'];
-$GLOBALS['TL_LANG']['tl_consho_product_type']['kind'] = ['Art', 'Körperliche Ware wird versandt und fällt unter die EU-Produktsicherheitsverordnung. Digital: Datei, Schlüssel oder Zugang, versteuert im Land des Kunden. Dienstleistung: ohne Auslieferung, versteuert im Land des Shops; ob eine Leistung elektronisch erbracht ist (dann digital), entscheiden Sie. Die Art wird beim Kauf in die Bestellung übernommen.'];
-$GLOBALS['TL_LANG']['tl_consho_product_type']['kinds'] = ['physical' => 'körperliche Ware', 'digital' => 'digital', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];
+$GLOBALS['TL_LANG']['tl_consho_product_type']['kind'] = ['Art', 'Ware wird versandt und fällt unter die EU-Produktsicherheitsverordnung. Digitales: Datei, Schlüssel oder Zugang, versteuert im Land des Kunden. Dienstleistung: ohne Auslieferung, versteuert im Land des Shops; ob eine Leistung elektronisch erbracht ist (dann Digitales), entscheiden Sie. Die Art wird beim Kauf in die Bestellung übernommen.'];
+$GLOBALS['TL_LANG']['tl_consho_product_type']['kinds'] = ['physical' => 'Ware', 'digital' => 'Digitales', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];
 $GLOBALS['TL_LANG']['tl_consho_product_type']['propertyGroups'] = ['Eigenschaftsgruppen', 'Welche Eigenschaften Produkte dieses Typs haben können. Nach Eigenschaften kann gefiltert werden.'];
 $GLOBALS['TL_LANG']['tl_consho_product_type']['customFields'] = ['Zusatzfelder', 'Frei typisierte Felder für Angaben, nach denen NICHT gefiltert wird.'];
 

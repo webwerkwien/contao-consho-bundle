@@ -14,7 +14,7 @@ Der Kern ist frei (MIT) und betreibt einen vollständigen Shop:
 | **Katalog** | Produkte mit Varianten, Eigenschaften und Zusatzfeldern; Liste, Filter, Landingpages, Detailseite, Sitemap, JSON-LD; Grundpreis, Herstellerangaben, GARAN-Label |
 | **Warenkorb und Checkout** | Gastbestellung, Kundengruppen, Netto für Geschäftskunden, Reverse Charge mit VIES-Prüfung; Button-Lösung, AGB-Zustimmung, Widerrufsbelehrung |
 | **Versand und Zahlung** | Versandarten mit Gewichtsstaffel, Ländern und Sperrgut; Vorkasse, „Auf Rechnung", Nachnahme; Andockstellen für Zahlungsmodule und Paketdienste |
-| **Nach dem Kauf** | Rechnung als PDF und HTML (mit Giro-Code), E-Rechnung ZUGFeRD EN 16931 an Geschäftskunden; Mails; Bestellseite über Token; Widerrufsfunktion (§ 356a BGB, § 13a FAGG); Kundenkonto |
+| **Nach dem Kauf** | Rechnung als PDF und HTML (mit Giro-Code), Stornorechnung und Rechnungskorrektur, Lieferschein je Paket (mit eigenem Nummernkreis), E-Rechnung ZUGFeRD EN 16931 an Geschäftskunden; Mails; Bestellseite über Token; Widerrufsfunktion (§ 356a BGB, § 13a FAGG); Kundenkonto |
 | **Digitale Güter und Abos** | Dateien und Lizenzschlüssel, Laufzeiten, Abos mit Aboregeln, Folgebestellungen, Kündigungsschaltfläche, Pausen |
 | **Preise** | Aktionen mit Streichpreis nach § 9a PrAG / § 11 PAngV, Rabattregeln, Rabattcodes, Wertgutscheine |
 | **Lager** | Bestand, Verfügbarkeitsanzeige, Benachrichtigung bei Wiederverfügbarkeit, Einkaufslisten |

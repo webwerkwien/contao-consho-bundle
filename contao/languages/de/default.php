@@ -12,7 +12,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'homeCountryMissing' => 'Die Shop-Konfiguration „%shop%" hat kein Heimatland. Ohne Heimatland gibt es keinen Bruttopreis: Der Shop zeigt in Listen und auf Produktseiten keine Preise. In der Shop-Konfiguration unter „Länder" eintragen.',
     'duplicateVatId' => 'Zwei Shop-Konfigurationen führen dieselbe UID-Nummer %vatId%: %shops%. Falls das ein Shop in mehreren Sprachen ist, gehört er auf EINE Konfiguration — sonst laufen zwei getrennte Rechnungsnummernkreise.',
     'mailTransportMissing' => 'Die Shop-Konfiguration „%shop%" hat keine Mail-Konfiguration. Es können keine Bestellbestätigungen versendet werden.',
-    'productManufacturerMissing' => 'Körperliche Produkte ohne Hersteller: %count%. Die EU-Produktsicherheitsverordnung verlangt die Herstellerangabe bei jedem einzelnen Angebot.',
+    'productManufacturerMissing' => 'Waren ohne Hersteller: %count%. Die EU-Produktsicherheitsverordnung verlangt die Herstellerangabe bei jedem einzelnen Angebot.',
     'manufacturerEmailMissing' => 'Für den Hersteller „%manufacturer%" fehlt die E-Mail-Adresse. Eine Webseite genügt nicht — verlangt ist eine Adresse für direkte Kommunikation.',
     'duplicateGtin' => 'Die GTIN %gtin% ist an %count% Produkten hinterlegt. Eine GTIN bezeichnet normalerweise genau einen Artikel.',
     'manufacturerEuResponsibleMissing' => 'Der Hersteller „%manufacturer%" sitzt außerhalb der EU (%country%) und hat keine verantwortliche Person in der EU. Ohne sie dürfen seine Produkte hier nicht angeboten werden.',
@@ -56,7 +56,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'shippingCostsPageMissing' => 'Startpunkte ohne Versandkostenseite: %count% (%pages%). Das Element „Versandkosten" zeigt die Versandarten mit Preisen aus den Daten; welche Angaben der Shop dazu machen muss, beurteilen Sie.',
     'shippingCostsElementMissing' => 'Versandkostenseiten ohne Element „Versandkosten": %count% (%pages%). Die Seite ist am Startpunkt eingestellt, zeigt aber keine Versandkosten.',
     'deliveryCountryWithoutShipping' => 'Die Shop-Konfiguration „%shop%" liefert laut Lieferländern nach %countries%, aber keine ihrer Versandarten liefert dorthin. Der Checkout bietet diese Länder deshalb nicht an. Eine Versandart um die Länder ergänzen oder sie aus den Lieferländern nehmen.',
-    'productKindMismatch' => 'Produkt „%product%" ist laut Produkttyp %kind%, hat aber %fields%. Das wird nicht verwendet und ist in der Maske ausgeblendet; bitte am Produkt entfernen oder den Produkttyp prüfen.',
+    'productKindMismatch' => 'Produkt „%product%" hat laut Produkttyp die Art %kind%, aber auch %fields%. Das wird nicht verwendet und ist in der Maske ausgeblendet; bitte am Produkt entfernen oder den Produkttyp prüfen.',
     'durabilityLabelMissing' => 'Produkt „%product%" hat eine Haltbarkeitsgarantie des Herstellers über %years% Jahre, aber kein GARAN-Label. Ohne Label zeigt der Shop die Garantie nicht an; sie ist vor dem Kauf in der harmonisierten Form anzugeben (§ 4 Abs. 1 Z 12a FAGG). Das ausgefüllte Label am Produkt hochladen.',
     'durabilityYearsMissing' => 'Produkt „%product%" hat ein GARAN-Label, aber keine gültige Dauer der Haltbarkeitsgarantie (mehr als zwei Jahre). Ohne sie zeigt der Shop das Label nicht an. Die Dauer in Jahren eintragen oder das Label entfernen.',
     'durabilityLabelNotPublic' => 'Das GARAN-Label von Produkt „%product%" liegt in einem Ordner, der nicht öffentlich ist. Im Shop wäre das Bild nicht zu sehen; deshalb zeigt Consho die Garantie dort gar nicht an. In der Dateiverwaltung beim Ordner „Öffentlich" setzen.',
@@ -115,7 +115,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
 
 // Die Teile des Befunds „Produkt passt nicht zu seiner Art" (DL5).
 $GLOBALS['TL_LANG']['CONSHO']['kindMismatch'] = [
-    'kinds' => ['physical' => 'körperliche Ware', 'digital' => 'digital', 'service' => 'eine Dienstleistung', 'voucher' => 'ein Wertgutschein'],
+    'kinds' => ['physical' => '„Ware"', 'digital' => '„Digitales"', 'service' => '„Dienstleistung"', 'voucher' => '„Wertgutschein"'],
     'delivery' => 'eine Auslieferungsart',
     'file' => 'eine Datei',
     'keys' => 'Schlüssel im Vorrat',

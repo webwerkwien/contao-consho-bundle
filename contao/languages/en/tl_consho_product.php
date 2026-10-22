@@ -15,11 +15,11 @@ $GLOBALS['TL_LANG']['tl_consho_product']['minimumAges'] = [
     16 => 'from 16 years',
     18 => 'from 18 years',
 ];
-$GLOBALS['TL_LANG']['tl_consho_product']['productType'] = ['Product type', 'Determines the available properties and custom fields. The kind (physical, digital, service, gift voucher) always comes from the main product\'s type: a variant with a type of another kind stays what the main product is.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['productType'] = ['Product type', 'Determines the available properties and custom fields. The kind (goods, digital content, service, gift voucher) always comes from the main product\'s type: a variant with a type of another kind stays what the main product is.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['pid'] = ['Main product', 'Leave empty for a product in its own right. Pick one and this record becomes a variant of it — description, images and page then come from the main product.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['shops'] = ['Shops', 'Which shops this product is visible in. The catalogue is shared; visibility is set per shop here. On a variant, nothing ticked means "same as the main product". Ticking narrows — a variant can never reach further than its main product.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['taxClass'] = ['Tax class', 'The rate follows from class, delivery country and order date — it is not stored on the product.'];
-$GLOBALS['TL_LANG']['tl_consho_product']['manufacturer'] = ['Manufacturer', 'Mandatory for physical goods. Leaving it empty on a variant means: the same as the main product.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['manufacturer'] = ['Manufacturer', 'Mandatory for goods. Leaving it empty on a variant means: the same as the main product.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['safetyWarnings'] = ['Warnings', 'Hazards and warnings, e.g. "Contains alcohol" or "Not for children under 3". Shown with the goods themselves, not in a tab.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['safetyInformation'] = ['Safety information', 'Notes on safe use, storage and disposal.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['durabilityYears'] = ['Manufacturer\'s durability guarantee (years)', 'Only if the <strong>manufacturer</strong> gives a commercial durability guarantee at no extra cost for the whole product that runs <strong>longer than two years</strong>, and has told you so (Art. 6(1)(la) Directive 2011/83/EU). The GARAN label is then mandatory. Whole or half years (e.g. 2,5). Empty or 0: no such guarantee. Applies to all variants.'];
@@ -80,7 +80,7 @@ $GLOBALS['TL_LANG']['tl_consho_product']['variantOptions'] = ['Variant axes', 'W
 
 // F-4: digital delivery.
 $GLOBALS['TL_LANG']['tl_consho_product']['digital_legend'] = 'Delivery and validity';
-$GLOBALS['TL_LANG']['tl_consho_product']['digitalDelivery'] = ['Delivery', 'How the customer receives a digital good. Only for a product type of the kind "digital". Empty: the entitlement alone, without a file or key. A variant without its own setting takes the main product\'s.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['digitalDelivery'] = ['Delivery', 'How the customer receives a digital good. Only for a product type of the kind "Digital content". Empty: the entitlement alone, without a file or key. A variant without its own setting takes the main product\'s.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['voucherValue'] = ['Value', 'What a voucher of this article is worth. Usually its price; empty: what was paid for it.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['voucherValidMonths'] = ['Validity (months)', '0: unlimited. Limiting it towards consumers needs a reason that holds (Austrian Supreme Court, 7 Ob 22/12d).'];
 $GLOBALS['TL_LANG']['tl_consho_product']['entitlementMonths'] = ['Term (months)', 'How long the entitlement lasts from its release. 0: permanent. What stops at the end — updates only, or use — is the product\'s business, not Consho\'s.'];
@@ -94,14 +94,14 @@ $GLOBALS['TL_LANG']['tl_consho_product']['customFieldInherited'] = 'Left empty, 
 $GLOBALS['TL_LANG']['tl_consho_product']['customFieldInheritedNone'] = 'Left empty, the main product\'s value applies (empty there).';
 $GLOBALS['TL_LANG']['tl_consho_product']['customFieldBoolean'] = ['1' => 'Yes', '0' => 'No'];
 $GLOBALS['TL_LANG']['tl_consho_product']['variantDuplicate'] = 'The variant with ID %s already carries exactly these variant values. The customer cannot tell two equal variants of one main product apart — please choose other values.';
-$GLOBALS['TL_LANG']['tl_consho_product']['kindUnused'] = '⚠ Not used: according to its product type the product is %s. Empty the field and it disappears from the mask.';
-$GLOBALS['TL_LANG']['tl_consho_product']['kindUnusedKeys'] = '⚠ Not used: according to its product type the product is %s. Delete the keys in the pool under "Keys" in the article list and the field disappears.';
+$GLOBALS['TL_LANG']['tl_consho_product']['kindUnused'] = '⚠ Not used: according to its product type the product is of the kind %s. Empty the field and it disappears from the mask.';
+$GLOBALS['TL_LANG']['tl_consho_product']['kindUnusedKeys'] = '⚠ Not used: according to its product type the product is of the kind %s. Delete the keys in the pool under "Keys" in the article list and the field disappears.';
 $GLOBALS['TL_LANG']['tl_consho_product']['keysFree'] = '%d free';
 $GLOBALS['TL_LANG']['tl_consho_product']['digitalDeliveries']['key'] = 'Key from the pool';
 $GLOBALS['TL_LANG']['tl_consho_product']['keys'] = ['Keys', 'Key pool of article ID %s'];
 
 // Abo-1: sale modes.
-$GLOBALS['TL_LANG']['tl_consho_product']['saleOnce'] = ['One-time sale', 'Paid once — permanently or for the term below. Always on for physical goods, whatever it says here.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['saleOnce'] = ['One-time sale', 'Paid once — permanently or for the term below. Always on for goods, whatever it says here.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['saleSubscription'] = ['Subscription', 'By subscription, under one or more subscription rules. The amounts are in the prices, each price row with its rule.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['subscriptionRules'] = ['Subscription rules', 'The models appear on the product page in this order. Rules are created under "Subscription rules".'];
 

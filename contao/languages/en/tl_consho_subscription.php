@@ -70,4 +70,4 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseFrom'] = ['Paused from', '']
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseUntil'] = ['Paused until', ''];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['show'] = ['Details', 'Show the details of subscription ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['order'] = ['Purchase order', 'Open the order subscription ID %s was bought with'];
-$GLOBALS['TL_LANG']['tl_consho_subscription']['kinds'] = ['physical' => 'physical goods', 'digital' => 'digital', 'service' => 'service', 'voucher' => 'gift voucher'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['kinds'] = ['physical' => 'Goods', 'digital' => 'Digital content', 'service' => 'Service', 'voucher' => 'Gift voucher'];

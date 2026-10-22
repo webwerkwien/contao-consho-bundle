@@ -53,9 +53,9 @@ class ProductKindMismatchIssueSourceTest extends TestCase
 
         self::assertSame([ConfigurationFinding::ProductKindMismatch], array_values(array_unique(array_map(static fn ($i) => $i->finding, $issues), SORT_REGULAR)));
         self::assertSame([
-            ['product' => 'Beratungspaket', 'kind' => 'eine Dienstleistung', 'fields' => 'eine Auslieferungsart und eine Datei'],
-            ['product' => 'Wanderstock', 'kind' => 'körperliche Ware', 'fields' => 'den Verkauf im Abo'],
-            ['product' => 'Mitgliedschaft Gold', 'kind' => 'eine Dienstleistung', 'fields' => 'Schlüssel im Vorrat'],
+            ['product' => 'Beratungspaket', 'kind' => '„Dienstleistung"', 'fields' => 'eine Auslieferungsart und eine Datei'],
+            ['product' => 'Wanderstock', 'kind' => '„Ware"', 'fields' => 'den Verkauf im Abo'],
+            ['product' => 'Mitgliedschaft Gold', 'kind' => '„Dienstleistung"', 'fields' => 'Schlüssel im Vorrat'],
         ], array_map(static fn ($i) => $i->context, $issues));
         self::assertFalse(ConfigurationFinding::ProductKindMismatch->isWarning());
     }
@@ -71,8 +71,8 @@ class ProductKindMismatchIssueSourceTest extends TestCase
         $this->product(3, 'Wanderstock', 3, ['durabilityYears' => 5, 'durabilityLabel' => str_repeat('c', 16)]);
 
         self::assertSame([
-            ['product' => 'E-Book', 'kind' => 'digital', 'fields' => 'eine Haltbarkeitsgarantie (GARAN-Label)'],
-            ['product' => 'Beratung', 'kind' => 'eine Dienstleistung', 'fields' => 'eine Haltbarkeitsgarantie (GARAN-Label)'],
+            ['product' => 'E-Book', 'kind' => '„Digitales"', 'fields' => 'eine Haltbarkeitsgarantie (GARAN-Label)'],
+            ['product' => 'Beratung', 'kind' => '„Dienstleistung"', 'fields' => 'eine Haltbarkeitsgarantie (GARAN-Label)'],
         ], array_map(static fn ($i) => $i->context, (new ProductKindMismatchIssueSource($this->connection))->issues()));
     }
 

@@ -15,11 +15,11 @@ $GLOBALS['TL_LANG']['tl_consho_product']['minimumAges'] = [
     16 => 'ab 16 Jahren',
     18 => 'ab 18 Jahren',
 ];
-$GLOBALS['TL_LANG']['tl_consho_product']['productType'] = ['Produkttyp', 'Bestimmt die verfügbaren Eigenschaften und Zusatzfelder. Die Art (körperlich, digital, Dienstleistung, Wertgutschein) kommt immer vom Typ des Grundprodukts: Eine Variante mit eigenem Typ einer anderen Art bleibt, was das Grundprodukt ist.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['productType'] = ['Produkttyp', 'Bestimmt die verfügbaren Eigenschaften und Zusatzfelder. Die Art (Ware, Digitales, Dienstleistung, Wertgutschein) kommt immer vom Typ des Grundprodukts: Eine Variante mit eigenem Typ einer anderen Art bleibt, was das Grundprodukt ist.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['pid'] = ['Hauptprodukt', 'Leer lassen für ein eigenständiges Produkt. Ist hier eines gewählt, wird dieser Datensatz zu einer Variante davon — Beschreibung, Bilder und Seite kommen dann vom Hauptprodukt.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['shops'] = ['Shops', 'In welchen Shops dieses Produkt sichtbar ist. Der Katalog ist gemeinsam, die Sichtbarkeit wird hier je Shop gesetzt. Bei einer Variante bedeutet „nichts angehakt": wie das Hauptprodukt. Angehakt schränkt ein — mehr als das Hauptprodukt kann eine Variante nie erreichen.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['taxClass'] = ['Steuerklasse', 'Der Satz ergibt sich aus Klasse, Lieferland und Bestelldatum — er wird nicht am Produkt hinterlegt.'];
-$GLOBALS['TL_LANG']['tl_consho_product']['manufacturer'] = ['Hersteller', 'Pflichtangabe für körperliche Ware. Bei einer Variante leer lassen heißt: derselbe wie beim Hauptprodukt.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['manufacturer'] = ['Hersteller', 'Pflichtangabe für Ware. Bei einer Variante leer lassen heißt: derselbe wie beim Hauptprodukt.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['safetyWarnings'] = ['Warnhinweise', 'Gefahren und Warnungen, z. B. „Enthält Alkohol" oder „Nicht für Kinder unter 3 Jahren". Erscheinen direkt bei der Ware, nicht in einem Reiter.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['safetyInformation'] = ['Sicherheitsinformationen', 'Hinweise zur sicheren Verwendung, Lagerung und Entsorgung.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['durabilityYears'] = ['Haltbarkeitsgarantie des Herstellers (Jahre)', 'Nur wenn der <strong>Hersteller</strong> eine gewerbliche Haltbarkeitsgarantie ohne Aufpreis für die ganze Ware gibt, die <strong>länger als zwei Jahre</strong> läuft, und sie Ihnen mitgeteilt hat (§ 4 Abs. 1 Z 12a FAGG). Dann ist das GARAN-Label Pflicht. Ganze oder halbe Jahre (z. B. 2,5). Leer oder 0: keine solche Garantie. Gilt für alle Varianten.'];
@@ -80,7 +80,7 @@ $GLOBALS['TL_LANG']['tl_consho_product']['variantOptions'] = ['Variantenachsen',
 
 // F-4: digitale Auslieferung.
 $GLOBALS['TL_LANG']['tl_consho_product']['digital_legend'] = 'Auslieferung und Gültigkeit';
-$GLOBALS['TL_LANG']['tl_consho_product']['digitalDelivery'] = ['Auslieferung', 'Wie der Kunde ein digitales Gut erhält. Gilt nur bei einem Produkttyp der Art „digital". Leer: nur die Berechtigung, ohne Datei oder Schlüssel. Eine Variante ohne eigene Angabe übernimmt die des Grundprodukts.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['digitalDelivery'] = ['Auslieferung', 'Wie der Kunde ein digitales Gut erhält. Gilt nur bei einem Produkttyp der Art „Digitales". Leer: nur die Berechtigung, ohne Datei oder Schlüssel. Eine Variante ohne eigene Angabe übernimmt die des Grundprodukts.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['voucherValue'] = ['Wert', 'Wie viel ein Gutschein dieses Artikels wert ist. Meist gleich dem Preis; leer: so viel, wie bezahlt wurde.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['voucherValidMonths'] = ['Gültigkeit (Monate)', '0: unbefristet. Eine Befristung gegenüber Verbrauchern braucht einen sachlichen Grund (OGH 7 Ob 22/12d).'];
 $GLOBALS['TL_LANG']['tl_consho_product']['entitlementMonths'] = ['Laufzeit (Monate)', 'Wie lange die Berechtigung gilt, ab der Freigabe. 0: dauerhaft. Was nach dem Ende aufhört — nur Updates oder die Nutzung —, legt das Produkt fest, nicht Consho.'];
@@ -94,14 +94,14 @@ $GLOBALS['TL_LANG']['tl_consho_product']['customFieldInherited'] = 'Leer lassen 
 $GLOBALS['TL_LANG']['tl_consho_product']['customFieldInheritedNone'] = 'Leer lassen übernimmt den Wert des Hauptprodukts (dort leer).';
 $GLOBALS['TL_LANG']['tl_consho_product']['customFieldBoolean'] = ['1' => 'Ja', '0' => 'Nein'];
 $GLOBALS['TL_LANG']['tl_consho_product']['variantDuplicate'] = 'Die Variante mit der ID %s trägt schon genau diese Variantenwerte. Zwei gleiche Varianten unter einem Hauptprodukt kann der Kunde nicht unterscheiden — bitte andere Werte wählen.';
-$GLOBALS['TL_LANG']['tl_consho_product']['kindUnused'] = '⚠ Nicht verwendet: Das Produkt ist laut Produkttyp %s. Feld leeren, dann verschwindet es aus der Maske.';
-$GLOBALS['TL_LANG']['tl_consho_product']['kindUnusedKeys'] = '⚠ Nicht verwendet: Das Produkt ist laut Produkttyp %s. Die Schlüssel im Vorrat in der Artikelliste unter „Schlüssel" löschen, dann verschwindet das Feld.';
+$GLOBALS['TL_LANG']['tl_consho_product']['kindUnused'] = '⚠ Nicht verwendet: Das Produkt hat laut Produkttyp die Art %s. Feld leeren, dann verschwindet es aus der Maske.';
+$GLOBALS['TL_LANG']['tl_consho_product']['kindUnusedKeys'] = '⚠ Nicht verwendet: Das Produkt hat laut Produkttyp die Art %s. Die Schlüssel im Vorrat in der Artikelliste unter „Schlüssel" löschen, dann verschwindet das Feld.';
 $GLOBALS['TL_LANG']['tl_consho_product']['keysFree'] = '%d frei';
 $GLOBALS['TL_LANG']['tl_consho_product']['digitalDeliveries']['key'] = 'Schlüssel aus dem Vorrat';
 $GLOBALS['TL_LANG']['tl_consho_product']['keys'] = ['Schlüssel', 'Schlüsselvorrat von Artikel ID %s'];
 
 // Abo-1: Verkaufsart.
-$GLOBALS['TL_LANG']['tl_consho_product']['saleOnce'] = ['Einmalkauf', 'Einmal bezahlen — dauerhaft oder für die Laufzeit darunter. Bei körperlicher Ware immer an, gleich was hier steht.'];
+$GLOBALS['TL_LANG']['tl_consho_product']['saleOnce'] = ['Einmalkauf', 'Einmal bezahlen — dauerhaft oder für die Laufzeit darunter. Bei Ware immer an, gleich was hier steht.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['saleSubscription'] = ['Abo', 'Im Abo nach einer oder mehreren Aboregeln. Die Beträge stehen in den Preisen, je Preiszeile mit ihrer Aboregel.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['subscriptionRules'] = ['Aboregeln', 'In dieser Reihenfolge stehen die Modelle auf der Produktseite. Aboregeln legt man unter „Aboregeln" an.'];
 

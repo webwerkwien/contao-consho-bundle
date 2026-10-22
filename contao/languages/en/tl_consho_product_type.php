@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
 $GLOBALS['TL_LANG']['tl_consho_product_type']['title'] = ['Name', 'Name of the product type, e.g. "Paint" or "Fabric".'];
-$GLOBALS['TL_LANG']['tl_consho_product_type']['kind'] = ['Kind', 'Physical goods are shipped and fall under the EU product safety regulation. Digital: file, key or access, taxed in the customer\'s country. Service: nothing is delivered, taxed in the shop\'s country; whether a service is supplied electronically (then digital) is your decision. The kind is copied into the order at purchase.'];
-$GLOBALS['TL_LANG']['tl_consho_product_type']['kinds'] = ['physical' => 'physical goods', 'digital' => 'digital', 'service' => 'service', 'voucher' => 'gift voucher'];
+$GLOBALS['TL_LANG']['tl_consho_product_type']['kind'] = ['Kind', 'Goods are shipped and fall under the EU product safety regulation. Digital content: file, key or access, taxed in the customer\'s country. Service: nothing is delivered, taxed in the shop\'s country; whether a service is supplied electronically (then digital content) is your decision. The kind is copied into the order at purchase.'];
+$GLOBALS['TL_LANG']['tl_consho_product_type']['kinds'] = ['physical' => 'Goods', 'digital' => 'Digital content', 'service' => 'Service', 'voucher' => 'Gift voucher'];
 $GLOBALS['TL_LANG']['tl_consho_product_type']['propertyGroups'] = ['Property groups', 'Which properties products of this type may carry. Properties are filterable.'];
 $GLOBALS['TL_LANG']['tl_consho_product_type']['customFields'] = ['Custom fields', 'Freely typed fields for data that is NOT filtered on.'];
 

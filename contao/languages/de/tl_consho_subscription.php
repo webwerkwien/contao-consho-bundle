@@ -71,4 +71,4 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseFrom'] = ['Pause ab', ''];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseUntil'] = ['Pause bis', ''];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['show'] = ['Details', 'Details des Abos ID %s anzeigen'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['order'] = ['Kaufbestellung', 'Die Bestellung öffnen, mit der das Abo ID %s gekauft wurde'];
-$GLOBALS['TL_LANG']['tl_consho_subscription']['kinds'] = ['physical' => 'körperliche Ware', 'digital' => 'digital', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['kinds'] = ['physical' => 'Ware', 'digital' => 'Digitales', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];

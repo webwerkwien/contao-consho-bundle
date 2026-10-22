@@ -5,6 +5,16 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.6] – 2026-10-22
+
+### Geändert
+
+- **Die Arten am Produkttyp heißen jetzt Ware, Digitales, Dienstleistung und Wertgutschein** (vorher „körperliche
+  Ware" und „digital"), englisch Goods, Digital content, Service, Gift voucher — in Produkttyp, Bestellposition, Abo,
+  Hilfetexten und im Befund „Produkt passt nicht zu seiner Art", der jetzt „hat laut Produkttyp die Art …" sagt;
+  der Befund „Körperliche Produkte ohne Hersteller" heißt „Waren ohne Hersteller".
+  Gespeichert wird weiter `physical`/`digital`/`service`/`voucher`. (Michael, 2026-10-22)
+
 ## [0.1.5] – 2026-10-21
 
 ### Hinzugefügt
