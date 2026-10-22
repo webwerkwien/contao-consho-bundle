@@ -57,7 +57,7 @@
             </table>
             <table class="tl_show">
                 <tbody>
-                    <tr><td class="tl_label">{{ l.windowClosesAt|default('Widerrufsfunktion offen bis') }}</td><td>{{ dates.windowClosesAt ?: (l.windowOpen|default('offen, solange Ware aussteht')) }}</td></tr>
+                    <tr><td class="tl_label">{{ l.windowClosesAt|default('Fensterende') }}</td><td>{{ dates.windowClosesAt ?: (l.windowOpen|default('noch keines, solange Ware aussteht')) }}</td></tr>
                     {% if dates.refundDueAt %}<tr><td class="tl_label">{{ l.refundDueAt|default('Erstattung fällig bis') }}</td><td>{% if dates.overdue %}<strong class="consho-overdue">{{ dates.refundDueAt }}</strong>{% else %}{{ dates.refundDueAt }}{% endif %}</td></tr>{% endif %}
                     {% if withdrawal.returnReceivedAtText %}<tr><td class="tl_label">{{ l.returnReceivedAt.0|default('Rücksendung erhalten am') }}</td><td>{{ withdrawal.returnReceivedAtText }}</td></tr>{% endif %}
                     {% if withdrawal.refunded %}<tr><td class="tl_label">{{ l.refundAmount.0|default('Erstattet') }}</td><td>{{ withdrawal.refundAmount }} — {{ withdrawal.refundedAt }}</td></tr>{% endif %}

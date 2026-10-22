@@ -543,8 +543,9 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          *
          * The grace days cover the way from the last shipment to the
          * customer: the period runs from RECEIPT, and Consho only knows the
-         * shipping date. The function closes at the end of the day of last
-         * shipment + period + grace (WithdrawalWindow).
+         * shipping date. The window ends at the end of the day of last
+         * shipment + period + grace (WithdrawalWindow); since WA a later
+         * withdrawal is still taken and marked `afterWindow`.
          *
          * `mandatory` is off on purpose: 0 is a legitimate answer, and
          * Contao's mandatory check refuses "0" as empty.
