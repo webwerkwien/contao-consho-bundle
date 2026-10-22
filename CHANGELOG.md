@@ -5,6 +5,13 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.7] – 2026-10-22
+
+### Geändert
+
+- Das Feld für den Pfad einer Landingpage heißt „Alias" wie bei Produkt, Hersteller und Seite (vorher „Adresse").
+  (Michael, 2026-10-22)
+
 ## [0.1.6] – 2026-10-22
 
 ### Geändert
