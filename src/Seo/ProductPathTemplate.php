@@ -54,11 +54,16 @@ final class ProductPathTemplate
     public const KNOWN = [self::ALIAS, self::SKU, self::MANUFACTURER, self::TYPE];
 
     /**
-     * One of these must be present, or the template does not address a product.
+     * Must be present, or the template does not address a product.
      *
-     * @var list<string>
+     * Only the alias: it is unique in the mask. {sku} used to count as well,
+     * but the article number is neither unique nor mandatory (block B: "die SKU
+     * ist nicht eindeutig") — with a template of only {sku}, two main products
+     * sharing a number got one address and ProductAddressLookup found just one
+     * of them, and a product without a number had none at all. {sku} stays
+     * allowed next to {alias} (Michael, 2026-10-22: "Variante 1").
      */
-    private const IDENTIFYING = [self::ALIAS, self::SKU];
+    private const IDENTIFYING = self::ALIAS;
 
     /**
      * @param list<string> $placeholders in the order they appear
@@ -96,7 +101,7 @@ final class ProductPathTemplate
             }
         }
 
-        if ([] === array_intersect(self::IDENTIFYING, $found)) {
+        if (!\in_array(self::IDENTIFYING, $found, true)) {
             throw InvalidPathTemplate::cannotIdentifyAProduct();
         }
 
@@ -130,7 +135,7 @@ final class ProductPathTemplate
         /*
          * A product without a manufacturer still needs an address, so the
          * segment is dropped rather than filled with something else. It stays
-         * unique because alias or sku is always part of the pattern.
+         * unique because the alias is always part of the pattern.
          */
         $path = (string) preg_replace('#/+#', '/', $path);
 

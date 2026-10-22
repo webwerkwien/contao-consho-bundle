@@ -12,7 +12,24 @@ class ProductPathTemplateTest extends TestCase
     {
         self::assertSame('{alias}', ProductPathTemplate::fromString('{alias}')->toString());
         self::assertSame('{manufacturer}/{alias}', ProductPathTemplate::fromString('{manufacturer}/{alias}')->toString());
-        self::assertSame('{type}/{sku}', ProductPathTemplate::fromString('{type}/{sku}')->toString());
+        self::assertSame('{type}/{sku}/{alias}', ProductPathTemplate::fromString('{type}/{sku}/{alias}')->toString());
+    }
+
+    /**
+     * Die Artikelnummer ist weder eindeutig noch Pflicht: Zwei Hauptprodukte mit
+     * derselben Nummer bekämen eine Adresse, eines ohne Nummer keine (Michael,
+     * 2026-10-22: „Variante 1"). Neben {alias} bleibt {sku} erlaubt.
+     */
+    public function testDieArtikelnummerAlleinIdentifiziertKeinProdukt(): void
+    {
+        try {
+            ProductPathTemplate::fromString('{type}/{sku}');
+            self::fail('{type}/{sku} wurde angenommen');
+        } catch (InvalidPathTemplate $e) {
+            self::assertSame(InvalidPathTemplate::NO_IDENTIFIER, $e->key);
+        }
+
+        self::assertSame('{sku}/{alias}', ProductPathTemplate::fromString('{sku}/{alias}')->toString());
     }
 
     public function testIsRelativeToThePageAndSaysSoBySheddingSlashes(): void
@@ -79,7 +96,7 @@ class ProductPathTemplateTest extends TestCase
     {
         /*
          * A product without a manufacturer still needs an address. Dropping the
-         * segment keeps the product identifiable, because alias or sku is
+         * segment keeps the product identifiable, because the alias is
          * always part of the template — substituting something else would put
          * the same word in twice.
          */

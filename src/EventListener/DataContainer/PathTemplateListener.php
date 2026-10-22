@@ -72,7 +72,7 @@ class PathTemplateListener
 
     /**
      * The three refusals name three different mistakes. "Invalid value" would
-     * leave the operator to guess which one — and the {alias}/{sku} rule is the
+     * leave the operator to guess which one — and the {alias} rule is the
      * one that looks arbitrary until it is explained.
      */
     private function message(InvalidPathTemplate $e): string

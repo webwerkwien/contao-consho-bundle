@@ -46,7 +46,7 @@ final class InvalidPathTemplate extends \InvalidArgumentException
         return new self(
             self::NO_IDENTIFIER,
             '',
-            'A path template needs {alias} or {sku}; without one, every product would share the same address.',
+            'A path template needs {alias}; without it, products would share an address.',
         );
     }
 

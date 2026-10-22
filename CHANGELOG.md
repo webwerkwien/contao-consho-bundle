@@ -5,6 +5,16 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.8] – 2026-10-22
+
+### Behoben
+
+- **Die Adressvorlage der Produktseite verlangt jetzt `{alias}`.** Bisher genügte auch `{sku}` allein — die
+  Artikelnummer ist aber weder eindeutig noch Pflicht: Zwei Hauptprodukte mit derselben Nummer bekamen dieselbe
+  Adresse, und nur eines war darunter erreichbar; ein Produkt ohne Nummer hatte keine. `{sku}` bleibt neben
+  `{alias}` erlaubt, etwa `{sku}/{alias}`. Eine gespeicherte Vorlage ohne `{alias}` fällt auf die Vorgabe zurück
+  und erscheint als Befund. Hilfetexte nennen die Regel. (Block B, 4.2)
+
 ## [0.1.7] – 2026-10-22
 
 ### Geändert

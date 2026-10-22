@@ -16,7 +16,7 @@ class PathTemplateListenerTest extends TestCase
     {
         $GLOBALS['TL_LANG']['CONSHO']['errors'] = [
             'pathTemplateUnknownPlaceholder' => '„%s" ist kein bekannter Platzhalter.',
-            'pathTemplateNoIdentifier' => 'Die Adressvorlage braucht {alias} oder {sku}.',
+            'pathTemplateNoIdentifier' => 'Die Adressvorlage braucht {alias}.',
             'pathTemplateRepeated' => 'Der Platzhalter {%s} kommt mehrfach vor.',
             'pathTemplateEmpty' => 'Die Adressvorlage darf nicht leer sein.',
         ];
@@ -48,9 +48,9 @@ class PathTemplateListenerTest extends TestCase
     public function testRefusesATemplateThatIdentifiesNothing(): void
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('braucht {alias} oder {sku}');
+        $this->expectExceptionMessage('braucht {alias}');
 
-        $this->save('{manufacturer}');
+        $this->save('{manufacturer}/{sku}');
     }
 
     public function testRefusesAnEmptyTemplate(): void
@@ -69,7 +69,7 @@ class PathTemplateListenerTest extends TestCase
         unset($GLOBALS['TL_LANG']);
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('{alias} or {sku}');
+        $this->expectExceptionMessage('needs {alias};');
 
         $this->save('{manufacturer}');
     }

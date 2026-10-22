@@ -459,9 +459,11 @@ final class RedirectRecorder
     }
 
     /**
-     * Without an alias the product has no address; without what the pattern
-     * renders only the bare product page is left — a pattern of just {sku} and
-     * an empty sku. A redirect from there would catch the page itself.
+     * Without an alias the product has no address. The second check is a guard:
+     * it held a pattern of just {sku} with an empty sku, which rendered only the
+     * bare product page — a redirect from there would catch the page itself.
+     * Since {alias} is required (2026-10-22), a stored pattern without it falls
+     * back to the default, so the guard should never fire.
      *
      * @param array<string, string> $values
      */

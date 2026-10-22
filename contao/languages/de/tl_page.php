@@ -18,5 +18,5 @@ $GLOBALS['TL_LANG']['tl_page']['consho_legend'] = 'Consho';
 
 $GLOBALS['TL_LANG']['tl_page']['conshoPathTemplate'] = [
     'Adressvorlage',
-    'Was <strong>nach dieser Seite</strong> in der Adresse steht — der Seiten-Alias davor kommt aus dem Seitenbaum. Erlaubt sind {alias}, {sku}, {manufacturer} und {type}; jeder davon ist je Produkt eindeutig. <strong>Keine Kategorie</strong>, denn ein Produkt steht in mehreren und hätte dann mehrere Adressen. Das Feld „Routen-Pfad" darunter zeigt zur Kontrolle, was dabei herauskommt. ⚠️ Eine Änderung ändert die Adresse <em>jedes</em> Produkts.',
+    'Was <strong>nach dieser Seite</strong> in der Adresse steht — der Seiten-Alias davor kommt aus dem Seitenbaum. Erlaubt sind {alias}, {sku}, {manufacturer} und {type}; <strong>{alias} muss vorkommen</strong>, denn nur der Alias ist je Produkt eindeutig. <strong>Keine Kategorie</strong>, denn ein Produkt steht in mehreren und hätte dann mehrere Adressen. Das Feld „Routen-Pfad" darunter zeigt zur Kontrolle, was dabei herauskommt. ⚠️ Eine Änderung ändert die Adresse <em>jedes</em> Produkts.',
 ];

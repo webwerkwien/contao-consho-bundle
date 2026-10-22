@@ -32,7 +32,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
  * Aufbau:
  * - Shop 1 (Standardsprache de): Startpunkt 1 (de) und 2 (en), beide mit
  *   {manufacturer}/{alias}.
- * - Shop 2 (de): Startpunkt 3 mit {type}/{sku}.
+ * - Shop 2 (de): Startpunkt 3 mit {type}/{sku}/{alias} ({alias} ist Pflicht, seit 2026-10-22).
  * - Hersteller 7 „kraeuterhaus", 8 „bienenhof", 9 ohne Alias.
  *   Typ 3 „tinktur", 4 „salbe".
  * - Produkt 10 „schwedenbitter", SKU sb-100, Hersteller 7, Typ 3, englisch
@@ -80,7 +80,7 @@ class ProductAddressRedirectTest extends TestCase
 
         $this->insertShop(['id' => 2, 'fallbackLanguage' => 'de']);
         $this->page(3, type: 'root', language: 'de', shop: 2);
-        $this->page(125, pid: 3, alias: 'artikel', type: 'consho_product', template: '{type}/{sku}');
+        $this->page(125, pid: 3, alias: 'artikel', type: 'consho_product', template: '{type}/{sku}/{alias}');
 
         $this->insertManufacturer(['id' => 7, 'title' => 'Kräuterhaus', 'alias' => 'kraeuterhaus']);
         $this->insertManufacturer(['id' => 8, 'title' => 'Bienenhof', 'alias' => 'bienenhof']);
@@ -98,7 +98,7 @@ class ProductAddressRedirectTest extends TestCase
 
     public function testEinHerstellerwechselZeichnetDieAlteAdresseNurAufStartpunktenMitHerstellerAuf(): void
     {
-        // Startpunkt 3 hat {type}/{sku} — dort wandert nichts.
+        // Startpunkt 3 hat {type}/{sku}/{alias} — dort wandert nichts.
         $this->submit(10, ['manufacturer' => 8]);
 
         self::assertSame(
@@ -295,12 +295,12 @@ class ProductAddressRedirectTest extends TestCase
     {
         $this->submit(10, ['productType' => 4]);
 
-        self::assertSame([[3, '/artikel/tinktur/sb-100.html', 10]], $this->recorded());
+        self::assertSame([[3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10]], $this->recorded());
     }
 
     public function testEinProdukttypwechselOhneTypInDerVorlageZeichnetNichtsAuf(): void
     {
-        $this->connection->update('tl_page', ['conshoPathTemplate' => '{sku}'], ['id' => 125]);
+        $this->connection->update('tl_page', ['conshoPathTemplate' => '{sku}/{alias}'], ['id' => 125]);
 
         $this->submit(10, ['productType' => 4]);
 
@@ -313,7 +313,7 @@ class ProductAddressRedirectTest extends TestCase
     {
         $this->submit(10, ['sku' => 'sb-101']);
 
-        self::assertSame([[3, '/artikel/tinktur/sb-100.html', 10]], $this->recorded());
+        self::assertSame([[3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10]], $this->recorded());
     }
 
     public function testEineGeaenderteSkuOhneSkuInDerVorlageZeichnetNichtsAuf(): void
@@ -325,14 +325,19 @@ class ProductAddressRedirectTest extends TestCase
         self::assertSame([], $this->recorded());
     }
 
-    public function testEineGeleerteSkuBeiEinerVorlageNurAusSkuZeichnetNichtsAuf(): void
+    public function testEineGeleerteSkuLaesstDasSegmentWegUndLeitetDieAlteAdresseWeiter(): void
     {
-        // Ohne SKU bliebe nur die nackte Produktseite /artikel.html — keine Adresse eines Produkts.
-        $this->connection->update('tl_page', ['conshoPathTemplate' => '{sku}'], ['id' => 125]);
+        /*
+         * Bis 2026-10-22 ging auch eine Vorlage nur aus {sku}: Ohne Nummer blieb
+         * dann nur die nackte Produktseite, und es wurde nichts aufgezeichnet.
+         * Seit {alias} Pflicht ist, fällt das leere Segment weg — die Adresse
+         * wandert, wie bei einem Produkt ohne Hersteller.
+         */
+        $this->connection->update('tl_page', ['conshoPathTemplate' => '{sku}/{alias}'], ['id' => 125]);
 
         $this->submit(10, ['sku' => '']);
 
-        self::assertSame([], $this->recorded());
+        self::assertSame([[3, '/artikel/sb-100/schwedenbitter.html', 10]], $this->recorded());
     }
 
     // ── Varianten ───────────────────────────────────────────────────────
@@ -390,6 +395,8 @@ class ProductAddressRedirectTest extends TestCase
                 [1, '/produkt/kraeuterhaus/neu.html', 10],
                 [1, '/produkt/kraeuterhaus/schwedenbitter.html', 10],
                 [2, '/en/product/kraeuterhaus/herbal-bitters.html', 10],
+                // Shop 2 hat den Alias in der Vorlage (seit 2026-10-22 Pflicht).
+                [3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10],
             ],
             $this->recorded(),
         );
@@ -421,7 +428,7 @@ class ProductAddressRedirectTest extends TestCase
     {
         $this->submit(10, ['sku' => 'sb-101', 'productType' => 4]);
 
-        self::assertSame([[3, '/artikel/tinktur/sb-100.html', 10]], $this->recorded());
+        self::assertSame([[3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10]], $this->recorded());
     }
 
     // ── Wiederherstellen einer Version ──────────────────────────────────
@@ -456,7 +463,7 @@ class ProductAddressRedirectTest extends TestCase
             [
                 [1, '/produkt/kraeuterhaus/schwedenbitter.html', 10],
                 [2, '/en/product/kraeuterhaus/herbal-bitters.html', 10],
-                [3, '/artikel/tinktur/sb-100.html', 10],
+                [3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10],
             ],
             $this->recorded(),
         );

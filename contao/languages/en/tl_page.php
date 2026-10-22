@@ -18,5 +18,5 @@ $GLOBALS['TL_LANG']['tl_page']['consho_legend'] = 'Consho';
 
 $GLOBALS['TL_LANG']['tl_page']['conshoPathTemplate'] = [
     'Address pattern',
-    'What comes <strong>after this page</strong> in the address — the page alias in front of it comes from the page tree. Available are {alias}, {sku}, {manufacturer} and {type}, each of which is unique per product. <strong>No category</strong>: a product sits in several and would end up with several addresses. The "Route path" field below shows the result. ⚠️ Changing this changes <em>every</em> product address.',
+    'What comes <strong>after this page</strong> in the address — the page alias in front of it comes from the page tree. Available are {alias}, {sku}, {manufacturer} and {type}; <strong>{alias} must appear</strong>, as only the alias is unique per product. <strong>No category</strong>: a product sits in several and would end up with several addresses. The "Route path" field below shows the result. ⚠️ Changing this changes <em>every</em> product address.',
 ];
