@@ -148,8 +148,17 @@ abstract class CoupledPriceInputListener
      * the price's start, today at the earliest (decision 2026-09-15,
      * conversionTime()). So it shows the gross the front end shows while the
      * price is valid — also after a rate change.
+     *
+     * With the back end's decimal separator, like every other decimal of the
+     * mask (DecimalFieldListener): "10,4167" in German. rgxp `digit` turns
+     * the comma back into a dot before onBeforeSubmit() reads it.
      */
     public function loadAmount(mixed $value, DataContainer $dc): string
+    {
+        return str_replace('.', (string) ($GLOBALS['TL_LANG']['MSC']['decimalSeparator'] ?? '.'), $this->amountOf($dc));
+    }
+
+    private function amountOf(DataContainer $dc): string
     {
         $record = $dc->getCurrentRecord();
 

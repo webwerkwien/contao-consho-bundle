@@ -214,7 +214,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         // (decision F1): proposed at acceptance, set by the operator.
         'refundShipping' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'notnull' => false],
         ],
 
@@ -223,7 +223,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         // with the refund.
         'valueCompensation' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
 
@@ -231,7 +231,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         // document that go with it (decision F4).
         'refundAmount' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'notnull' => false],
         ],
         'refundedAt' => [

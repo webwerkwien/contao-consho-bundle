@@ -90,7 +90,10 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
         'amount' => [
             'inputType' => 'text',
             'exclude' => true,
-            'eval' => ['mandatory' => true, 'tl_class' => 'w50'],
+            // rgxp digit: a decimal comma becomes a dot (Widget::validator()),
+            // and the mask shows the amount with the back end's separator
+            // (DecimalFieldListener) — without it "25,00" would reach the column.
+            'eval' => ['conshoMoney' => true, 'mandatory' => true, 'rgxp' => 'digit', 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'method' => [

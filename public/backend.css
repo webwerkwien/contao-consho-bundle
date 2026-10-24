@@ -670,3 +670,68 @@ button.consho-dashboard__finding:focus-visible {
 .consho-dashboard__dialog > :last-child {
     margin-bottom: 0;
 }
+
+/*
+ * ── Brutto | Netto als Schalter ───────────────────────────────────────────
+ *
+ * Zwei Radio-Buttons, gezeichnet als ein Schalter mit zwei Hälften (Michael,
+ * 2026-10-24). Die Radios bleiben im Formular, nur unsichtbar: Tastatur,
+ * Screenreader und Speichern laufen wie zuvor. Gesetzt über die tl_class
+ * `consho-switch` (Preise, Versandpreise).
+ *
+ * Die Optionen stehen in je einem <span> (RadioButton::generate()); `flex`
+ * auf dem Span schluckt das Leerzeichen zwischen Radio und Label. `float`
+ * statt Flex auf dem Fieldset, weil die Legende in einem Flex-Fieldset kein
+ * Flex-Element ist und die Browser sie unterschiedlich setzen.
+ */
+.consho-switch .tl_radio_container > span {
+    position: relative;
+    display: flex;
+    float: left;
+}
+
+.consho-switch .tl_radio_container > span + span {
+    margin-left: -1px;
+}
+
+.consho-switch .tl_radio {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+}
+
+.consho-switch .tl_radio + label {
+    margin: 0;
+    padding: 5px 16px;
+    border: 1px solid var(--form-border, #bbbbbd);
+    background: var(--form-button, #f3f3f5);
+    color: var(--text, #222);
+    cursor: pointer;
+}
+
+.consho-switch .tl_radio_container > span:first-of-type .tl_radio + label {
+    border-radius: var(--border-radius, 0.375rem) 0 0 var(--border-radius, 0.375rem);
+}
+
+.consho-switch .tl_radio_container > span:last-of-type .tl_radio + label {
+    border-radius: 0 var(--border-radius, 0.375rem) var(--border-radius, 0.375rem) 0;
+}
+
+.consho-switch .tl_radio + label:hover {
+    background: var(--form-button-hover, #f6f6f8);
+}
+
+/* Orange mit weißer Schrift in beiden Schemata: --white ist im dunklen schwarz. */
+.consho-switch .tl_radio:checked + label {
+    position: relative;
+    border-color: var(--contao, #f47c00);
+    background: var(--contao, #f47c00);
+    color: #fff;
+}
+
+.consho-switch .tl_radio:focus-visible + label {
+    outline: 2px solid var(--contao, #f47c00);
+    outline-offset: 2px;
+}

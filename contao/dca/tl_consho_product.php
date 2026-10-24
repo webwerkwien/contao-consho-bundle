@@ -537,7 +537,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
         'voucherValue' => [
             'inputType' => 'text',
             'exclude' => true,
-            'eval' => ['rgxp' => 'digit', 'maxlength' => 12, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'rgxp' => 'digit', 'maxlength' => 12, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         // Months a voucher of this product stays valid; 0 = unlimited (WG10).

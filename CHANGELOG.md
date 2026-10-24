@@ -5,6 +5,23 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.11] – 2026-10-24
+
+### Geändert
+
+- **Dezimalzahlen in den Masken in der Schreibweise der Backend-Sprache.** Mengen, Maße, Gewichte und Steuersätze
+  erscheinen ohne die Nullen der Datenbankspalte und mit dem Dezimaltrennzeichen der Sprache: „1" statt „1.0000",
+  „2,5" statt „2.5000". Beträge zeigen mindestens zwei Stellen: „25,00". Der Betrag in Preis- und Versandpreismaske
+  behält seine Stellen und bekommt das Trennzeichen der Sprache. Eingeben lässt sich weiterhin mit Komma
+  oder Punkt. Speichern ohne Änderung legt keine neue Version an.
+- **Brutto oder Netto als Schalter.** In der Preismaske und bei den Versandpreisen stehen die beiden Optionen als ein
+  Schalter mit zwei Hälften statt als zwei Radio-Buttons.
+
+### Behoben
+
+- Der Betrag einer Zahlung nimmt ein Dezimalkomma an und wird als Zahl geprüft. Bisher wurde ein Komma dort nicht
+  in einen Punkt umgewandelt.
+
 ## [0.1.10] – 2026-10-22
 
 ### Geändert

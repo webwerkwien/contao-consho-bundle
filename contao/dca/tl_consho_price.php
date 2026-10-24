@@ -122,7 +122,8 @@ $GLOBALS['TL_DCA']['tl_consho_price'] = [
             // tstamp 0, and saved unchanged it would otherwise stay invisible to
             // every price reader (tstamp > 0, Task 2b).
             'default' => 'gross',
-            'eval' => ['mandatory' => true, 'alwaysSave' => true, 'tl_class' => 'w50 clr'],
+            // consho-switch: the two radios drawn as one switch (backend.css).
+            'eval' => ['mandatory' => true, 'alwaysSave' => true, 'tl_class' => 'w50 clr consho-switch'],
             'sql' => ['type' => 'string', 'length' => 5, 'default' => 'net'],
         ],
         /*

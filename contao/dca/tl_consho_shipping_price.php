@@ -91,7 +91,8 @@ $GLOBALS['TL_DCA']['tl_consho_shipping_price'] = [
             'options' => ['gross', 'net'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_shipping_price']['inputModes'],
             'default' => 'gross',
-            'eval' => ['mandatory' => true, 'alwaysSave' => true, 'tl_class' => 'w50 clr'],
+            // consho-switch: as in tl_consho_price.
+            'eval' => ['mandatory' => true, 'alwaysSave' => true, 'tl_class' => 'w50 clr consho-switch'],
             'sql' => ['type' => 'string', 'length' => 5, 'default' => 'net'],
         ],
         // 🔴 'sql' => null, not a missing key — see tl_consho_price.amount.

@@ -101,7 +101,7 @@ $GLOBALS['TL_DCA']['tl_consho_cart_rule'] = [
         'amount' => [
             'inputType' => 'text',
             'exclude' => true,
-            'eval' => ['mandatory' => true, 'rgxp' => 'digit', 'minval' => 0.01, 'maxlength' => 13, 'tl_class' => 'w50 clr'],
+            'eval' => ['conshoMoney' => true, 'mandatory' => true, 'rgxp' => 'digit', 'minval' => 0.01, 'maxlength' => 13, 'tl_class' => 'w50 clr'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'reduced' => [
@@ -129,7 +129,7 @@ $GLOBALS['TL_DCA']['tl_consho_cart_rule'] = [
         'minimumOrder' => [
             'inputType' => 'text',
             'exclude' => true,
-            'eval' => ['rgxp' => 'digit', 'maxlength' => 13, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'rgxp' => 'digit', 'maxlength' => 13, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'products' => [

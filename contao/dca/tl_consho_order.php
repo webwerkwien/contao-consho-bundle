@@ -254,18 +254,18 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
         ],
         'netTotal' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'taxTotal' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'grandTotal' => [
             'label' => &$GLOBALS['TL_LANG']['tl_consho_order']['grandTotal'],
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
 

@@ -42,12 +42,12 @@ $GLOBALS['TL_DCA']['tl_consho_voucher_booking'] = [
         ],
         'amount' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'balanceAfter' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['conshoMoney' => true, 'readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000'],
         ],
         'orderId' => [

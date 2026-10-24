@@ -512,6 +512,23 @@ class PriceInputListenerTest extends TestCase
         self::assertSame('19.99', $amount);
     }
 
+    /**
+     * Wie die übrigen Dezimalfelder der Maske (DecimalFieldListener): mit dem
+     * Trennzeichen der Backend-Sprache, gesehen auf c5 am 2026-10-24 — die
+     * Mindestmenge zeigte schon „1“, der Betrag daneben noch „10.4167“.
+     */
+    public function testDerBetragSprichtDieSpracheDesBackends(): void
+    {
+        $GLOBALS['TL_LANG']['MSC']['decimalSeparator'] = ',';
+
+        try {
+            self::assertSame('19,99', $this->listener()->loadAmount(null, $this->dc(['net' => '16.6583', 'inputMode' => 'gross', 'inputCountry' => 'AT'])));
+            self::assertSame('10,4167', $this->listener()->loadAmount(null, $this->dc(['net' => '10.4167'])));
+        } finally {
+            unset($GLOBALS['TL_LANG']['MSC']['decimalSeparator']);
+        }
+    }
+
     public function testEineAlteZeileZeigtIhrNetto(): void
     {
         // Vor C-1b gespeichert: inputMode hat den Standardwert net.
