@@ -560,13 +560,13 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
         'saleOnce' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['submitOnChange' => true, 'tl_class' => 'w50 clr'],
+            'eval' => ['submitOnChange' => true, 'tl_class' => 'w50 clr consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => true],
         ],
         'saleSubscription' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['submitOnChange' => true, 'tl_class' => 'w50'],
+            'eval' => ['submitOnChange' => true, 'tl_class' => 'w50 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*
@@ -625,13 +625,13 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
         'stockTracked' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['submitOnChange' => true, 'tl_class' => 'clr w50 m12'],
+            'eval' => ['submitOnChange' => true, 'tl_class' => 'clr w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         'stockBackorder' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         'stockWarning' => [
@@ -723,7 +723,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             'exclude' => true,
             'toggle' => true,
             'filter' => true,
-            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*

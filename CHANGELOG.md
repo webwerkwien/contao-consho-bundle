@@ -5,6 +5,43 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unreleased]
+
+## [0.1.12] – 2026-10-24
+
+### Geändert
+
+- **Einzelne Checkboxen als Schiebeschalter.** In allen Consho-Masken erscheint jede einzelne Checkbox als
+  Ein/Aus-Schalter, etwa „Veröffentlicht", „Steuer im Bestimmungsland" oder „Bestand führen". Es bleiben Checkboxen:
+  Speichern und Tastatur verhalten sich wie bisher. Ein schreibgeschütztes Feld, etwa in einer gesperrten Bestellung,
+  ist blass und lässt sich nicht anklicken. Gruppen von Checkboxen und Consho-Felder in Contaos eigenen Masken (Seite,
+  Modul) bleiben unverändert.
+- **Hilfetext der Nachnahmegebühr nennt die EU-Regel.** Für SEPA-Überweisung, SEPA-Lastschrift und Verbraucherkarten
+  darf in der EU kein Entgelt verlangt werden, für andere Zahlungsmittel höchstens die eigenen Kosten (Art. 62
+  Richtlinie (EU) 2015/2366, Art. 19 Richtlinie 2011/83/EU). § 270a BGB und § 56 Abs. 3 ZaDiG 2018 stehen als Beispiele
+  für die Umsetzung in Deutschland und Österreich darunter.
+
+### Neu
+
+- **Insert-Tags `{{consho_cancellation_link}}` und `{{consho_cancellation_url}}`** — der Link zur Seite „Verträge hier
+  kündigen" des Startpunkts, etwa für die Fußzeile; Text „Verträge hier kündigen" in der Sprache der Seite oder ein
+  eigener als Parameter. Leer außerhalb eines Shops, ohne die Seite oder wenn sie nicht erreichbar ist.
+- **Lieferadresse und UID-Nummer in „Persönliche Daten".** Die Felder der Lieferadresse und die UID-Nummer lassen sich
+  im Modul „Persönliche Daten" und in der Registrierung auswählen, wie Contaos eigene Adressfelder. Sie erscheinen unter
+  eigenen Überschriften („Lieferadresse", „Umsatzsteuer"), und ihre Bezeichnungen tragen den Zusatz „(Lieferadresse)",
+  damit sie in der Feldauswahl neben Contaos gleichnamigen Feldern unterscheidbar sind. Der Checkout füllt sie wie bisher vor und prüft die
+  UID-Nummer bei jedem Kauf. Damit Kunden sie pflegen können, die Felder im Modul auswählen.
+- **Keine Anrede mehr in der Lieferadresse des Mitglieds.** Der Checkout fragt sie nicht ab und keine Bestellung
+  übernimmt sie; das Feld ist aus der Mitgliedermaske verschwunden. Bereits erfasste Werte bleiben gespeichert und
+  erscheinen weiter in Auskunft und Löschung.
+
+### Behoben
+
+- **Gesperrte Auswahllisten und Checkboxen ließen sich umstellen.** In einer Kündigung konnten Quelle, Art, Status
+  (nach der Entscheidung) und „Frühester Termin angewandt" im Browser geändert werden; gespeichert wurde die Änderung
+  nicht, sie sah aber übernommen aus. Diese Felder sind jetzt ausgegraut und nicht bedienbar. Dasselbe gilt für den
+  UID-Prüfstatus im Mitglied.
+
 ## [0.1.11] – 2026-10-24
 
 ### Geändert

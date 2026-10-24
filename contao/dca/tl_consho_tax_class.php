@@ -71,7 +71,7 @@ $GLOBALS['TL_DCA']['tl_consho_tax_class'] = [
             'inputType' => 'checkbox',
             'exclude' => true,
             'filter' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
     ],

@@ -159,7 +159,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
         'giroCode' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'clr w50 m12'],
+            'eval' => ['tl_class' => 'clr w50 m12 consho-toggle'],
         ],
 
         /*
@@ -196,13 +196,13 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
         'sameCountry' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'clr w50 m12'],
+            'eval' => ['tl_class' => 'clr w50 m12 consho-toggle'],
         ],
         // Nachlese E5b: not offered for digital content or vouchers.
         'notHandedOutAtOnce' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
         ],
         // Nachlese E5a: days after the term until the digital goods of an
         // unpaid one-time purchase rest. No `default`, like dueDays: empty
@@ -283,7 +283,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
             'exclude' => true,
             'toggle' => true,
             'filter' => true,
-            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
     ],

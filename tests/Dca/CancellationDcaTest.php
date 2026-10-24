@@ -37,10 +37,14 @@ class CancellationDcaTest extends TestCase
     {
         $fields = $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields'];
 
-        // Read-only, never disabled: a disabled checkbox is saved as unticked.
-        foreach (['number', 'receivedAt', 'source', 'kind', 'reason', 'name', 'email', 'requestedAt', 'earliestApplied', 'confirmationSentAt', 'decidedAt'] as $field) {
+        foreach (['number', 'receivedAt', 'reason', 'name', 'email', 'requestedAt', 'confirmationSentAt', 'decidedAt'] as $field) {
             self::assertTrue($fields[$field]['eval']['readonly'] ?? false, $field);
-            self::assertArrayNotHasKey('disabled', $fields[$field]['eval'], $field);
+        }
+
+        // Disabled, not readonly: a browser ignores readonly on a select or checkbox.
+        foreach (['source', 'kind', 'earliestApplied'] as $field) {
+            self::assertTrue($fields[$field]['eval']['disabled'] ?? false, $field);
+            self::assertArrayNotHasKey('readonly', $fields[$field]['eval'], $field);
         }
     }
 

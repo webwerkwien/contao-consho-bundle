@@ -107,7 +107,7 @@ $GLOBALS['TL_DCA']['tl_consho_cart_rule'] = [
         'reduced' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         // Empty: every shop.
@@ -177,7 +177,7 @@ $GLOBALS['TL_DCA']['tl_consho_cart_rule'] = [
             'exclude' => true,
             'toggle' => true,
             'filter' => true,
-            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 clr'],
+            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 clr consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         'validFrom' => [

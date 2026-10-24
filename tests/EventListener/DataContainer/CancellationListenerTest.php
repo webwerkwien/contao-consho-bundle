@@ -74,9 +74,12 @@ final class CancellationListenerTest extends TestCase
 
         foreach ($GLOBALS['TL_DCA']['tl_consho_cancellation']['fields'] as $name => $field) {
             if (isset($field['inputType'])) {
-                self::assertTrue($field['eval']['readonly'] ?? false, $name);
+                self::assertTrue(($field['eval']['readonly'] ?? false) || ($field['eval']['disabled'] ?? false), $name);
             }
         }
+
+        // The decision is a select: disabled, so it cannot be changed in the browser either.
+        self::assertTrue($GLOBALS['TL_DCA']['tl_consho_cancellation']['fields']['state']['eval']['disabled'] ?? false);
 
         self::assertSame('datim', $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields']['effectiveAt']['eval']['rgxp'], 'entschieden: mit Uhrzeit');
 

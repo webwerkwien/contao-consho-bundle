@@ -79,7 +79,8 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
             'inputType' => 'select',
             'options' => ['form', 'account'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_cancellation']['sources'],
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            // disabled, not readonly: a browser ignores readonly on a select or checkbox (CancellationListener).
+            'eval' => ['disabled' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => ''],
         ],
 
@@ -88,7 +89,7 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
             'inputType' => 'select',
             'options' => ['ordinary', 'extraordinary'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_cancellation']['kinds'],
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => 'ordinary'],
         ],
 
@@ -140,7 +141,7 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
         // The requested date was earlier than possible; the confirmation says so (P54).
         'earliestApplied' => [
             'inputType' => 'checkbox',
-            'eval' => ['readonly' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
 

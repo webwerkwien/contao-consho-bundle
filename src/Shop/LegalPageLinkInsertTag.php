@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace Webwerkwien\ContaoConshoBundle\Withdrawal;
+namespace Webwerkwien\ContaoConshoBundle\Shop;
 
 use Contao\CoreBundle\DependencyInjection\Attribute\AsInsertTag;
 use Contao\CoreBundle\InsertTag\InsertTagResult;
@@ -11,26 +11,34 @@ use Contao\StringUtil;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Webwerkwien\ContaoConshoBundle\Cart\ShopPageUrls;
-use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 
 /**
- * The link to the withdrawal form of the site (WA, I1) — for the footer or
- * any text, so the function is reachable from every page.
+ * The links to the pages the law wants reachable from every page — for the
+ * footer or any text:
  *
- *   {{consho_withdrawal_link}}         <a href="…">Vertrag widerrufen</a>
- *   {{consho_withdrawal_link::<text>}} with a text of one's own
- *   {{consho_withdrawal_url}}          the address only
+ *   {{consho_withdrawal_link}}            <a href="…">Vertrag widerrufen</a> (WA, I1)
+ *   {{consho_cancellation_link}}          <a href="…">Verträge hier kündigen</a> (Abo-7)
+ *   {{consho_…_link::<text>}}             with a text of one's own
+ *   {{consho_withdrawal_url}}, {{consho_cancellation_url}}   the address only
  *
- * The page is the start point's "Widerrufsformular" (consho_withdrawalFormPage)
- * — the one the start page's finding checks, not a second setting. The
- * default text is the form's own label, „Vertrag widerrufen" (§ 356a BGB,
- * § 13a FAGG), in the page's language.
+ * The page is the start point's own setting — "Widerrufsformular"
+ * (consho_withdrawalFormPage) or "Seite ‚Verträge hier kündigen‘"
+ * (consho_cancellationPage) — the one the start page's findings check, not a
+ * second setting. The default text is the label the law sets (§ 356a BGB,
+ * § 13a FAGG; § 312k Abs. 2 BGB), from the same language key as the form's
+ * button, in the page's language.
  *
  * Empty outside a shop, without the page, or for a page that cannot be routed
  * (unpublished, deleted) — never a link that leads nowhere.
  */
-final class WithdrawalLinkInsertTag
+final class LegalPageLinkInsertTag
 {
+    /** Tag prefix => [start point field, language key of the default text]. */
+    private const PAGES = [
+        'consho_withdrawal' => ['consho_withdrawalFormPage', 'CONSHO.withdrawal.button'],
+        'consho_cancellation' => ['consho_cancellationPage', 'CONSHO.cancellation.button'],
+    ];
+
     public function __construct(
         private readonly ShopResolver $shops,
         private readonly ShopPageUrls $urls,
@@ -42,9 +50,13 @@ final class WithdrawalLinkInsertTag
 
     #[AsInsertTag('consho_withdrawal_link')]
     #[AsInsertTag('consho_withdrawal_url')]
+    #[AsInsertTag('consho_cancellation_link')]
+    #[AsInsertTag('consho_cancellation_url')]
     public function __invoke(ResolvedInsertTag $insertTag): InsertTagResult
     {
-        $url = 'consho_withdrawal_url' === $insertTag->getName();
+        $name = $insertTag->getName();
+        $url = str_ends_with($name, '_url');
+        [$field, $textKey] = self::PAGES[substr($name, 0, (int) strrpos($name, '_'))];
         $page = $this->pages->getCurrentPage();
         $root = null === $page ? null : $this->shops->rootOf($page);
 
@@ -52,7 +64,7 @@ final class WithdrawalLinkInsertTag
             return new InsertTagResult('', $url ? OutputType::url : OutputType::html);
         }
 
-        $targetId = (int) ($root->row()['consho_withdrawalFormPage'] ?? 0);
+        $targetId = (int) ($root->row()[$field] ?? 0);
 
         // The start point says which page, the page says its address:
         // changing either has to reach every page that shows the link.
@@ -76,7 +88,7 @@ final class WithdrawalLinkInsertTag
 
         if ('' === $text) {
             $language = (string) $page->language;
-            $text = $this->translator->trans('CONSHO.withdrawal.button', [], 'contao_default', '' !== $language ? $language : null);
+            $text = $this->translator->trans($textKey, [], 'contao_default', '' !== $language ? $language : null);
         }
 
         return new InsertTagResult(

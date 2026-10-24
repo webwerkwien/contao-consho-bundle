@@ -125,6 +125,42 @@ class PromotionEndToEndTest extends TestCase
         self::assertNull($this->connection->fetchOne('SELECT compareGross FROM tl_consho_product_list_price WHERE pid = 1'));
     }
 
+    /**
+     * Eine dauerhafte Senkung ab einem Datum: Die alte Zeile endet, die neue
+     * beginnt dort, ohne Ende. Es steht keine Zeile ohne Zeitraum daneben —
+     * ein neuer Preis, keine Aktion, kein Streichpreis.
+     */
+    public function testEineGeplanteSenkungMitEndeDerAltenZeileIstKeineAktion(): void
+    {
+        $this->connection->executeStatement('DELETE FROM tl_consho_price');
+        $this->price('10.0000', null, self::NOW);
+        $this->price('8.0000', self::NOW);
+
+        $this->projector()->refresh([1], self::NOW - 40 * 86400);
+        $this->projector()->refresh([1], self::NOW);
+
+        self::assertSame(9.6, (float) $this->connection->fetchOne('SELECT gross FROM tl_consho_product_list_price WHERE pid = 1'));
+        self::assertNull($this->connection->fetchOne('SELECT compareGross FROM tl_consho_product_list_price WHERE pid = 1'));
+        self::assertSame(PriceSource::List, $this->resolver()->forCartLine(1, 1, 'EUR', '1', self::NOW)?->source);
+    }
+
+    /**
+     * Die Falle daneben: Bleibt die alte Zeile ohne Zeitraum stehen, ist die
+     * billigere Zeile mit „Gültig ab" eine Aktion — mit Streichpreis.
+     */
+    public function testEineBilligereZeileNurMitBeginnNebenDemBasispreisIstEineAktion(): void
+    {
+        $this->connection->executeStatement('DELETE FROM tl_consho_price');
+        $this->price('10.0000');
+        $this->price('8.0000', self::NOW);
+
+        $this->projector()->refresh([1], self::NOW - 40 * 86400);
+        $this->projector()->refresh([1], self::NOW);
+
+        self::assertSame(12.0, (float) $this->connection->fetchOne('SELECT compareGross FROM tl_consho_product_list_price WHERE pid = 1'));
+        self::assertSame(PriceSource::Promotion, $this->resolver()->forCartLine(1, 1, 'EUR', '1', self::NOW)?->source);
+    }
+
     private function price(string $net, int|null $from = null, int|null $to = null): void
     {
         $this->connection->insert('tl_consho_price', ['pid' => 1, 'tstamp' => 1, 'currency' => 'EUR', 'net' => $net, 'validFrom' => $from, 'validTo' => $to]);

@@ -172,14 +172,14 @@ $GLOBALS['TL_DCA']['tl_consho_shipping_method'] = [
         'cashOnDelivery' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
         ],
         'published' => [
             'inputType' => 'checkbox',
             'exclude' => true,
             'toggle' => true,
             'filter' => true,
-            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
     ],

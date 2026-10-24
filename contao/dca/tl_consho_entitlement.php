@@ -74,7 +74,7 @@ $GLOBALS['TL_DCA']['tl_consho_entitlement'] = [
         ],
         'revoked' => [
             'inputType' => 'checkbox',
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*

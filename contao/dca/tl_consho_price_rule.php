@@ -79,7 +79,7 @@ $GLOBALS['TL_DCA']['tl_consho_price_rule'] = [
             'inputType' => 'checkbox',
             'exclude' => true,
             'filter' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         // Main products; a variant matches through its main product.
@@ -123,7 +123,7 @@ $GLOBALS['TL_DCA']['tl_consho_price_rule'] = [
             'exclude' => true,
             'toggle' => true,
             'filter' => true,
-            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 clr'],
+            'eval' => ['doNotCopy' => true, 'tl_class' => 'w50 m12 clr consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         // Date and time, from inclusive, to exclusive — as the price rows

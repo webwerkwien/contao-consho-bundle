@@ -23,7 +23,6 @@ PaletteManipulator::create()
     ->addField(
         [
             'consho_shippingCompany',
-            'consho_shippingSalutation',
             'consho_shippingFirstname',
             'consho_shippingLastname',
             'consho_shippingStreet',
@@ -46,8 +45,7 @@ PaletteManipulator::create()
 
 $conshoShippingFields = [
     'consho_shippingCompany' => ['maxlength' => 255, 'class' => 'w50'],
-    'consho_shippingSalutation' => ['maxlength' => 128, 'class' => 'w50'],
-    'consho_shippingFirstname' => ['maxlength' => 255, 'class' => 'w50'],
+    'consho_shippingFirstname' => ['maxlength' => 255, 'class' => 'w50 clr'],
     'consho_shippingLastname' => ['maxlength' => 255, 'class' => 'w50'],
     'consho_shippingStreet' => ['maxlength' => 255, 'class' => 'clr'],
     'consho_shippingPostal' => ['maxlength' => 32, 'class' => 'w50'],
@@ -55,35 +53,52 @@ $conshoShippingFields = [
     'consho_shippingState' => ['maxlength' => 64, 'class' => 'w50'],
 ];
 
+/*
+ * feEditable: the member keeps the delivery address and the VAT ID in Contao's
+ * "Persönliche Daten" (and on registration) like the billing address — the
+ * operator picks the fields in the module. The checkout prefills from here and
+ * checks the VAT ID with VIES on every purchase (CheckoutController), so a VAT
+ * ID changed by the member carries no stale result along.
+ */
 foreach ($conshoShippingFields as $name => $config) {
     $GLOBALS['TL_DCA']['tl_member']['fields'][$name] = [
         'inputType' => 'text',
         'exclude' => true,
-        'eval' => ['maxlength' => $config['maxlength'], 'tl_class' => $config['class']],
+        'eval' => ['maxlength' => $config['maxlength'], 'feEditable' => true, 'feViewable' => true, 'feGroup' => 'consho_shipping', 'tl_class' => $config['class']],
         'sql' => ['type' => 'string', 'length' => $config['maxlength'], 'default' => ''],
     ];
 }
 
 unset($conshoShippingFields);
 
+/*
+ * No salutation in the delivery address: the checkout stopped asking for it
+ * (C-10, 2026-09-25) and an order has no column for it. Stored only, in no
+ * palette, so what members entered before stays in access and erasure.
+ */
+$GLOBALS['TL_DCA']['tl_member']['fields']['consho_shippingSalutation'] = [
+    'sql' => ['type' => 'string', 'length' => 128, 'default' => ''],
+];
+
 // Options come from ShopCountryOptions, the same source the tax rates and the
 // shop whitelist use — one canonical list, ISO 3166-1 alpha-2 in upper case.
 $GLOBALS['TL_DCA']['tl_member']['fields']['consho_shippingCountry'] = [
     'inputType' => 'select',
     'exclude' => true,
-    'eval' => ['includeBlankOption' => true, 'chosen' => true, 'tl_class' => 'w50'],
+    'eval' => ['includeBlankOption' => true, 'chosen' => true, 'feEditable' => true, 'feViewable' => true, 'feGroup' => 'consho_shipping', 'tl_class' => 'w50'],
     'sql' => ['type' => 'string', 'length' => 2, 'default' => ''],
 ];
 
 $GLOBALS['TL_DCA']['tl_member']['fields']['consho_vatId'] = [
     'inputType' => 'text',
     'exclude' => true,
-    'eval' => ['maxlength' => 32, 'tl_class' => 'w50'],
+    'eval' => ['maxlength' => 32, 'feEditable' => true, 'feViewable' => true, 'feGroup' => 'consho_tax', 'tl_class' => 'w50'],
     'sql' => ['type' => 'string', 'length' => 32, 'default' => ''],
 ];
 
 /*
- * The next three are written by the check, never by hand — hence `readonly`.
+ * The next three are written by the check, never by hand — hence `readonly`,
+ * and `disabled` for the status: a browser ignores readonly on a select.
  *
  * `consho_vatIdRequestIdentifier` is not decoration: VIES issues it as the
  * evidence of the query. In a tax audit it is what shows the VAT ID really was
@@ -94,7 +109,7 @@ $GLOBALS['TL_DCA']['tl_member']['fields']['consho_vatIdStatus'] = [
     'exclude' => true,
     'options' => ['valid', 'invalid', 'unavailable'],
     'reference' => &$GLOBALS['TL_LANG']['tl_member']['consho_vatIdStatuses'],
-    'eval' => ['includeBlankOption' => true, 'readonly' => true, 'tl_class' => 'w50'],
+    'eval' => ['includeBlankOption' => true, 'disabled' => true, 'tl_class' => 'w50'],
     'sql' => ['type' => 'string', 'length' => 16, 'default' => ''],
 ];
 

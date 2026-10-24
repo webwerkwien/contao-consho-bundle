@@ -109,7 +109,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
          */
         'afterWindow' => [
             'inputType' => 'checkbox',
-            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
 
@@ -118,7 +118,8 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'inputType' => 'select',
             'options' => ['orderPage', 'form'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'],
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            // disabled, not readonly: a browser ignores readonly on a select or checkbox.
+            'eval' => ['disabled' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => ''],
         ],
 
@@ -151,7 +152,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'inputType' => 'select',
             'options' => ['all', 'items', 'part'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_withdrawal']['scopes'],
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 8, 'default' => 'all'],
         ],
 
@@ -182,7 +183,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'inputType' => 'select',
             'options' => ['received', 'accepted', 'rejected'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_withdrawal']['states'],
-            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => 'received'],
         ],
 

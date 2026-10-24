@@ -20,8 +20,9 @@ use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationDecision;
  *
  * onload: everything is read-only, except — while an extraordinary
  * cancellation waits — the decision: state, end of contract, reason for a
- * rejection. Read-only: such a widget is not submitted, so nothing in the
- * row changes (Widget; `disabled` would do the same). No version menu: restoring
+ * rejection. Read-only, or disabled for a select or checkbox
+ * (LockedRecordListener::lockKey()): such a widget is not submitted, so
+ * nothing in the row changes (Widget). No version menu: restoring
  * an old version would bring back an undecided row and a second decision
  * (see LockedRecordListener).
  *
@@ -68,7 +69,7 @@ class CancellationListener
 
         foreach ($GLOBALS['TL_DCA']['tl_consho_cancellation']['fields'] as $name => $field) {
             if (isset($field['inputType']) && (!$pending || !\in_array($name, self::DECISION, true))) {
-                $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields'][$name]['eval']['readonly'] = true;
+                $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields'][$name]['eval'][LockedRecordListener::lockKey($field)] = true;
             }
         }
 

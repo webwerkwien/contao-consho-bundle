@@ -78,7 +78,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal_item'] = [
          */
         'restock' => [
             'inputType' => 'checkbox',
-            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => true],
         ],
         'restockedQuantity' => [

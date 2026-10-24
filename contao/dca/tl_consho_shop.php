@@ -206,7 +206,8 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         'taxAtDestination' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            // consho-toggle: the checkbox drawn as a switch (backend.css).
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*
@@ -287,7 +288,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'inputType' => 'checkbox',
             'exclude' => true,
             'default' => true,
-            'eval' => ['tl_class' => 'w50 clr'],
+            'eval' => ['tl_class' => 'w50 clr consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => true],
         ],
         /*
@@ -303,7 +304,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         'termsRequired' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'w50'],
+            'eval' => ['tl_class' => 'w50 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*
@@ -586,7 +587,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'inputType' => 'checkbox',
             'exclude' => true,
             'default' => true,
-            'eval' => ['tl_class' => 'w50 m12'],
+            'eval' => ['tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => true],
         ],
         /*
@@ -624,7 +625,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         'eInvoice' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['tl_class' => 'clr'],
+            'eval' => ['tl_class' => 'clr consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*
@@ -636,7 +637,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         'invoiceArchive' => [
             'inputType' => 'checkbox',
             'exclude' => true,
-            'eval' => ['submitOnChange' => true, 'tl_class' => 'clr'],
+            'eval' => ['submitOnChange' => true, 'tl_class' => 'clr consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*

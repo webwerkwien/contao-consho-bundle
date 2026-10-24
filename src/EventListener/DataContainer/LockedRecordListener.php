@@ -33,6 +33,19 @@ class LockedRecordListener
     ) {
     }
 
+    /**
+     * `readonly` for text and textarea, `disabled` for everything else. Both
+     * keep the widget from being submitted (Widget), but a browser ignores
+     * readonly on a select or checkbox: it would still change, and the new
+     * choice would stand there as if saved.
+     *
+     * @param array<string, mixed> $field
+     */
+    public static function lockKey(array $field): string
+    {
+        return \in_array($field['inputType'] ?? '', ['text', 'textarea'], true) ? 'readonly' : 'disabled';
+    }
+
     #[AsCallback(table: 'tl_consho_payment', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_delivery', target: 'config.onload')]
     public function __invoke(DataContainer|null $dc = null): void
@@ -52,7 +65,7 @@ class LockedRecordListener
 
         foreach ($GLOBALS['TL_DCA'][$table]['fields'] as $name => $field) {
             if (isset($field['inputType'])) {
-                $GLOBALS['TL_DCA'][$table]['fields'][$name]['eval']['readonly'] = true;
+                $GLOBALS['TL_DCA'][$table]['fields'][$name]['eval'][self::lockKey($field)] = true;
             }
         }
 

@@ -196,12 +196,12 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
         ],
         'reverseCharge' => [
             'inputType' => 'checkbox',
-            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         'businessCustomer' => [
             'inputType' => 'checkbox',
-            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12'],
+            'eval' => ['disabled' => true, 'tl_class' => 'w50 m12 consho-toggle'],
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
         // The kind of the bought line (DL1): digital or service.
