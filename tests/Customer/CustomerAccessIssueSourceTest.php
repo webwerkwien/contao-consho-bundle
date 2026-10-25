@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Customer;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
+use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutReadiness;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding as F;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Customer\CustomerAccessIssueSource;
@@ -106,6 +107,54 @@ final class CustomerAccessIssueSourceTest extends TestCase
         $this->connection->update('tl_consho_product', ['saleSubscription' => 0], ['id' => 4]);
 
         self::assertSame([], $this->issues());
+    }
+
+    /**
+     * Ohne Gastbestellung braucht jeder Kauf ein Konto, auch
+     * ohne Abos im Shop.
+     */
+    public function testOhneGastbestellungUndOhneAbosMeldetFehlendenWeg(): void
+    {
+        $this->connection->delete('tl_module', ['id' => 40]);
+        $this->connection->update('tl_consho_product', ['saleSubscription' => 0], ['id' => 4]);
+        $this->connection->update('tl_consho_shop', ['guestCheckout' => 0], ['id' => 1]);
+
+        $issues = $this->issues();
+
+        self::assertCount(1, $issues);
+        self::assertSame(F::RegistrationPathMissingNoGuests, $issues[0]->finding);
+        self::assertSame(['shop' => 'Webshop'], $issues[0]->context);
+        self::assertSame(1, $issues[0]->shopId);
+    }
+
+    public function testOhneGastbestellungMitAbosNenntDenWeiterenGrund(): void
+    {
+        $this->connection->delete('tl_module', ['id' => 40]);
+        $this->connection->update('tl_consho_shop', ['guestCheckout' => 0], ['id' => 1]);
+
+        self::assertSame([F::RegistrationPathMissingNoGuests], $this->findings());
+    }
+
+    public function testOhneGastbestellungGiltDieselbeRegelFuerDenWeg(): void
+    {
+        $this->connection->update('tl_consho_product', ['saleSubscription' => 0], ['id' => 4]);
+        $this->connection->update('tl_consho_shop', ['guestCheckout' => 0], ['id' => 1]);
+
+        self::assertSame([], $this->issues());
+
+        $this->connection->update('tl_module', ['reg_activate' => 0], ['id' => 40]);
+
+        self::assertSame([F::RegistrationPathMissingNoGuests], $this->findings());
+    }
+
+    /**
+     * Warnung, keine Sperre: Ein Shop, dessen Konten
+     * der Betreiber selbst anlegt, braucht keine Registrierung.
+     */
+    public function testOhneGastbestellungWarntSperrtAberNicht(): void
+    {
+        self::assertTrue(F::RegistrationPathMissingNoGuests->isWarning());
+        self::assertNotContains(F::RegistrationPathMissingNoGuests, CheckoutReadiness::BLOCKING);
     }
 
     public function testGeerbterSchutzOhneNettogruppe(): void

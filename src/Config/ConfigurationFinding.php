@@ -27,6 +27,7 @@ enum ConfigurationFinding: string
     case ProductShopMissing = 'productShopMissing';
     case ProductPriceMissing = 'productPriceMissing';
     case PriceTie = 'priceTie';
+    case PriceCutAsPromotion = 'priceCutAsPromotion';
     case PathTemplateInvalid = 'pathTemplateInvalid';
     case ShippingPriceMissing = 'shippingPriceMissing';
     case MiniCartMissing = 'miniCartMissing';
@@ -221,6 +222,7 @@ enum ConfigurationFinding: string
     // page that locks them out, and no way back from a login (CustomerAccess-
     // IssueSource).
     case RegistrationPathMissing = 'registrationPathMissing';
+    case RegistrationPathMissingNoGuests = 'registrationPathMissingNoGuests';
     case CustomerPageLocksOut = 'customerPageLocksOut';
     case LoginPageMissing = 'loginPageMissing';
 
@@ -254,7 +256,7 @@ enum ConfigurationFinding: string
             self::PaymentMethodMissing, self::SubscriptionBillingMethodMissing => ['consho_shop', 'consho_payment'],
             self::PaymentFeeTaxMissing => ['consho_payment'],
             self::ProductManufacturerMissing, self::DuplicateGtin, self::TranslationMissing,
-            self::TranslationSafetyMissing, self::ProductShopMissing, self::ProductPriceMissing, self::PriceTie,
+            self::TranslationSafetyMissing, self::ProductShopMissing, self::ProductPriceMissing, self::PriceTie, self::PriceCutAsPromotion,
             self::GroupPriceAboveList, self::DigitalFileMissing, self::SaleModePriceMissing,
             self::ProductKindMismatch, self::VoucherTaxed, self::NotTaxableClassOnGoods,
             self::VoucherValueMissing, self::DurabilityLabelMissing, self::DurabilityYearsMissing,
@@ -281,7 +283,7 @@ enum ConfigurationFinding: string
             self::ShippingCostsPageMissing, self::StartPointWithoutDomain, self::StartPointForwardsToProductPage, self::CancellationPageMissing,
             self::CustomerPageLocksOut, self::LoginPageMissing => ['page'],
             // The registration is a front end module of a theme.
-            self::RegistrationPathMissing => ['themes'],
+            self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests => ['themes'],
             self::PinnedProductMissing, self::MiniCartMissing, self::CheckoutElementMissing, self::CartElementMissing,
             self::OrderElementMissing, self::ShippingCostsElementMissing => ['article'],
             self::LegalTextMissing, self::LegalTextUnreachable, self::LegalTextAdvised => ['page', 'article'],
@@ -382,6 +384,13 @@ enum ConfigurationFinding: string
              * deciding rule is block H's — a note.
              */
             self::PriceTie => false,
+
+            /*
+             * A cheaper row with a start and no end shows as a promotion with
+             * a struck price for good. Usually a lasting cut was meant, but a
+             * promotion "until further notice" can be too — a note.
+             */
+            self::PriceCutAsPromotion => false,
 
             /*
              * A stored path template the route cannot use (B, written past the
@@ -780,7 +789,10 @@ enum ConfigurationFinding: string
             // admits — without them the customer is turned away and nothing is
             // logged (acceptance Abo-8). Warnings, not blocking: a guest still
             // buys once, and whether the shop wants accounts is the operator's.
-            self::RegistrationPathMissing, self::CustomerPageLocksOut, self::LoginPageMissing => true,
+            // Without guest checkout no new customer buys at all — still a
+            // warning, since accounts created by hand need no registration.
+            self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests,
+            self::CustomerPageLocksOut, self::LoginPageMissing => true,
         };
     }
 }

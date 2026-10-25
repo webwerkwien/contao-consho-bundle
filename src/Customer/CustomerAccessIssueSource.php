@@ -23,6 +23,11 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  *   checked: modules sit in layouts, elements and insert tags, and a guess
  *   would warn falsely more often than it helped.
  *
+ *   The same for a shop with guest checkout switched off, where every purchase
+ *   needs an account. A warning there too, not a blocker: a shop whose
+ *   accounts the operator creates by hand (B2B) needs no registration at all,
+ *   and this check cannot tell that from a forgotten module.
+ *
  * - **A customer page that locks customers out** — a page with "Meine
  *   Bestellungen" or "Meine Abos" that is protected, its own or inherited from a
  *   parent, without admitting the shop's customer group and every net price
@@ -48,10 +53,11 @@ final class CustomerAccessIssueSource implements ConfigurationIssueSource
     {
         $shops = [];
 
-        foreach ($this->connection->fetchAllAssociative('SELECT id, title, customerGroup, netPriceGroups FROM tl_consho_shop ORDER BY id') as $shop) {
+        foreach ($this->connection->fetchAllAssociative('SELECT id, title, customerGroup, netPriceGroups, guestCheckout FROM tl_consho_shop ORDER BY id') as $shop) {
             $shops[(int) $shop['id']] = [
                 'title' => (string) $shop['title'],
                 'customerGroup' => (int) $shop['customerGroup'],
+                'guestCheckout' => (bool) $shop['guestCheckout'],
                 'admitted' => array_values(array_unique(array_filter(
                     [(int) $shop['customerGroup'], ...array_map('intval', StringUtil::deserialize($shop['netPriceGroups'] ?? null, true))],
                     static fn (int $group): bool => $group > 0,
@@ -67,7 +73,7 @@ final class CustomerAccessIssueSource implements ConfigurationIssueSource
     }
 
     /**
-     * @param array<int, array{title: string, customerGroup: int, admitted: list<int>}> $shops
+     * @param array<int, array{title: string, customerGroup: int, guestCheckout: bool, admitted: list<int>}> $shops
      *
      * @return list<ConfigurationIssue>
      */
@@ -81,9 +87,16 @@ final class CustomerAccessIssueSource implements ConfigurationIssueSource
         );
 
         $issues = [];
+        $subscriptions = $this->shopsSellingSubscriptions();
 
-        foreach ($this->shopsSellingSubscriptions() as $shopId) {
-            if (!isset($shops[$shopId])) {
+        foreach ($shops as $shopId => $shop) {
+            // Without guest checkout every purchase needs an account, not only
+            // a subscription — the wider reason, so it is the one reported.
+            if (!$shop['guestCheckout']) {
+                $finding = ConfigurationFinding::RegistrationPathMissingNoGuests;
+            } elseif (\in_array($shopId, $subscriptions, true)) {
+                $finding = ConfigurationFinding::RegistrationPathMissing;
+            } else {
                 continue;
             }
 
@@ -95,19 +108,19 @@ final class CustomerAccessIssueSource implements ConfigurationIssueSource
 
                 $groups = array_map('intval', StringUtil::deserialize($module['reg_groups'] ?? null, true));
 
-                if (!empty($module['reg_activate']) && \in_array($shops[$shopId]['customerGroup'], $groups, true)) {
+                if (!empty($module['reg_activate']) && \in_array($shop['customerGroup'], $groups, true)) {
                     continue 2;
                 }
             }
 
-            $issues[] = new ConfigurationIssue(ConfigurationFinding::RegistrationPathMissing, ['shop' => $shops[$shopId]['title']], $shopId);
+            $issues[] = new ConfigurationIssue($finding, ['shop' => $shop['title']], $shopId);
         }
 
         return $issues;
     }
 
     /**
-     * @param array<int, array{title: string, customerGroup: int, admitted: list<int>}> $shops
+     * @param array<int, array{title: string, customerGroup: int, guestCheckout: bool, admitted: list<int>}> $shops
      *
      * @return list<ConfigurationIssue>
      */

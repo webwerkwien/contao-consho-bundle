@@ -7,6 +7,19 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.1.13] – 2026-10-25
+
+### Neu
+
+- **Hinweis „Preissenkung als Aktion".** Hat ein Artikel neben dem Basispreis eine billigere Preiszeile mit „Gültig
+  ab", aber ohne „Gültig bis", zeigt der Shop sie dauerhaft als Aktion mit Streichpreis. Ist eine dauerhafte Senkung
+  gemeint, wird die alte Zeile mit „Gültig bis" beendet. Der neue Hinweis `priceCutAsPromotion` zählt solche Artikel,
+  auch wenn die billigere Zeile erst später beginnt.
+- **Warnung „kein Weg zum Kundenkonto" auch ohne Gastbestellung.** Ist „Bestellung ohne Konto" aus, braucht jeder Kauf
+  ein Kundenkonto. Fehlt ein Registrierungsmodul, das neue Konten freischaltet und die Anmeldung erlaubt, warnt
+  `registrationPathMissingNoGuests` — bisher prüfte Consho das nur für Shops mit Abos. Es bleibt eine Warnung und sperrt
+  den Checkout nicht: Wer die Kundenkonten selbst anlegt, braucht keine Registrierung.
+
 ## [0.1.12] – 2026-10-24
 
 ### Geändert
