@@ -85,7 +85,9 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'cancellationsWaiting' =>'Außerordentliche Kündigungen im Shop „%shop%" warten auf Ihre Entscheidung: %count% (%numbers%), die erste seit %since%. Sie wirken erst, wenn Sie sie annehmen; annehmen oder ablehnen unter „Abos" → Kündigungen.',
     'registrationPathMissing' => 'Shop „%shop%" verkauft Abos, und ein Abo braucht ein Kundenkonto — aber kein Registrierungsmodul gibt neuen Konten die Kundengruppe, schaltet sie frei und erlaubt die Anmeldung. Contao legt neue Mitglieder gesperrt und ohne Anmeldung an. Am Registrierungsmodul „Anmeldung erlauben" und „Konten sofort freischalten" setzen, oder „Kontoaktivierung" mit der Kundengruppe des Shops unter „Standardgruppen".',
     'registrationPathMissingNoGuests' => 'Im Shop „%shop%" ist „Bestellung ohne Konto" aus, also braucht jeder Kauf ein Kundenkonto — aber kein Registrierungsmodul gibt neuen Konten die Kundengruppe, schaltet sie frei und erlaubt die Anmeldung. Neue Kunden können dann nicht bestellen. Am Registrierungsmodul „Anmeldung erlauben" und „Konten sofort freischalten" setzen, oder „Kontoaktivierung" mit der Kundengruppe des Shops unter „Standardgruppen". Legen Sie die Kundenkonten selbst an, ist nichts zu tun.',
+    'subscriptionVatIdInvalid' => 'Abos im Shop „%shop%" wurden mit Reverse Charge gekauft, aber bei der letzten Abrechnung meldete VIES die UID als ungültig: %numbers%. Diese Folgebestellung wurde mit Umsatzsteuer berechnet. Bitte mit dem Kunden klären; die nächste Abrechnung prüft die UID erneut.',
     'customerPageLocksOut' => 'Die Seite „%page%" (Shop „%shop%") zeigt Kunden ihre Bestellungen oder Abos, ist aber geschützt, ohne diese Gruppen zuzulassen: %groups%. Deren Mitglieder bekommen „Zugriff verweigert", ohne Eintrag im Log. In der Seitenstruktur unter „Zugriffsschutz" die Gruppen ergänzen — auch auf der Elternseite, wenn der Schutz von dort kommt.',
+    'orderPageProtected' => 'Die Bestellseite „%page%" (Shop „%shop%") ist geschützt, der Shop erlaubt aber Bestellungen ohne Konto. Ein Gast öffnet sie über den Link in der Bestätigungsmail und bekommt „Zugriff verweigert" statt seiner Bestellung. In der Seitenstruktur den „Zugriffsschutz" der Seite entfernen — auch auf der Elternseite, wenn der Schutz von dort kommt.',
     'loginPageMissing' => 'Shop „%shop%": Startpunkte mit geschützten Kundenseiten, aber ohne veröffentlichte 401-Seite: %roots%. Wer abgemeldet eine solche Seite öffnet, sieht Contaos allgemeine Fehlerseite statt der Anmeldung. Direkt unter dem Startpunkt eine Seite vom Typ „401 Nicht authentifiziert" mit einem Login-Modul anlegen und dort „Zur zuletzt besuchten Seite" setzen — sonst landet der Kunde nach der Anmeldung auf der Weiterleitungsseite des Moduls statt auf seiner Kundenseite.',
     'accountPasswordPageMissing' => 'Shop „%shop%": Startpunkte ohne Seite „Passwort vergessen": %roots%. Gäste können deshalb auf der Bestellseite kein Kundenkonto aus ihrer Bestellung anlegen. Legen Sie unter dem Startpunkt eine veröffentlichte, nicht geschützte Seite mit Contaos Modul „Passwort vergessen" an und wählen Sie sie am Startpunkt unter „Seite „Passwort vergessen"". Eine Seite unter einem anderen Startpunkt zählt nicht: Das Konto käme sonst in die Kundengruppe des anderen Shops.',
     'cancellationPageMissing' =>'Shop „%shop%" verkauft Abos, aber diese Startpunkte haben keine erreichbare Seite mit „Verträge hier kündigen": %roots%. Am Startpunkt unter „Seite ‚Verträge hier kündigen‘" eine veröffentlichte Seite ohne Anmeldepflicht wählen, auf der das Element „Verträge hier kündigen" steht. Ob § 312k BGB für den Shop gilt, beurteilen Sie.',
@@ -175,6 +177,13 @@ $GLOBALS['TL_LANG']['CONSHO']['errors'] = [
  * translated tables — hence here and not five times in the table files.
  */
 $GLOBALS['TL_LANG']['CONSHO']['translationLegend'] = 'Übersetzung: %s';
+
+// A product's tax class changed: the price rows typed as gross keep their gross.
+$GLOBALS['TL_LANG']['CONSHO']['taxClassChange'] = [
+    'converted' => 'Neue Steuerklasse: Diese brutto eingegebenen Preise bleiben brutto gleich, ihr Nettobetrag wurde neu berechnet: %s.',
+    'unconverted' => 'Neue Steuerklasse: Diese brutto eingegebenen Preise ließen sich nicht umrechnen, weil ein Steuersatz oder das Heimatland fehlt, und behalten ihren Nettobetrag: %s. Bitte die Preiszeilen prüfen.',
+    'net' => '%s netto',
+];
 
 /*
  * Label of the button on a notice. Only notices carry it — warnings cannot
@@ -1124,6 +1133,8 @@ $GLOBALS['TL_LANG']['CONSHO']['shippingCosts'] = [
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['problem']['phoneMissing'] = 'Der Paketdienst dieser Versandart braucht eine Telefonnummer des Empfängers.';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhone'] = 'Telefon für den Paketdienst';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhoneHint'] = 'Der Paketdienst meldet sich damit vor der Zustellung.';
+$GLOBALS['TL_LANG']['CONSHO']['checkout']['dateOfBirth'] = 'Geburtsdatum';
+$GLOBALS['TL_LANG']['CONSHO']['checkout']['dateOfBirthHint'] = 'Für Artikel mit Altersgrenze verlangt diese Versandart Ihr Geburtsdatum.';
 
 // The shipping method for a cart with digital lines only (F-2, F14).
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['electronicDelivery'] = 'Elektronische Zustellung';

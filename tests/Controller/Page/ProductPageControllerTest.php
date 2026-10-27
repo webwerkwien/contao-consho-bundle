@@ -49,9 +49,7 @@ class ProductPageControllerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_manufacturer');
         DcaSchema::create($this->connection, 'tl_consho_product_type');
         DcaSchema::create($this->connection, 'tl_consho_translation');
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0)",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_shop');
 
         $this->connection->insert('tl_consho_shop', ['id' => self::SHOP, 'fallbackLanguage' => 'en']);

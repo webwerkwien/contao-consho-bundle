@@ -32,14 +32,7 @@ class FacetAliasListenerTest extends TestCase
 
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                title TEXT NOT NULL DEFAULT '',
-                alias VARCHAR(255) NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_facet_page');
 
         $this->page(self::PAGE, 'Kräuterbitter', 'kraeuter');

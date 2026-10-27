@@ -8,6 +8,7 @@ use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Checkout\DbalLegalTextSource;
 use Webwerkwien\ContaoConshoBundle\Checkout\LegalTextKind;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 class DbalLegalTextSourceTest extends TestCase
 {
@@ -17,9 +18,7 @@ class DbalLegalTextSourceTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            'CREATE TABLE tl_page (id INTEGER PRIMARY KEY, consho_termsElement INTEGER NOT NULL DEFAULT 0, consho_withdrawalElement INTEGER NOT NULL DEFAULT 0)',
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '')",
         );

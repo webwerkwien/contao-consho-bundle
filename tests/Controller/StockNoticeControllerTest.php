@@ -48,7 +48,7 @@ class StockNoticeControllerTest extends TestCase
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_stock_notice');
-        $this->insertShop(['id' => 1, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(7, 'de', 1);
 
         $this->connection->insert('tl_consho_product', ['id' => 1, 'title' => 'Wanderstock', 'stockTracked' => 1]);

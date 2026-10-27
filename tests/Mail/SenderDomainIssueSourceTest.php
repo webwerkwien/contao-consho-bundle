@@ -21,7 +21,7 @@ final class SenderDomainIssueSourceTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_mail_transport');
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT 'regular', dns TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, sorting INTEGER NOT NULL DEFAULT 0)");
+        DcaSchema::createCore($this->connection, 'tl_page');
 
         $this->connection->insert('tl_consho_mail_transport', ['id' => 1, 'senderAddress' => 'web@example.net']);
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop', 'mailTransport' => 1]);

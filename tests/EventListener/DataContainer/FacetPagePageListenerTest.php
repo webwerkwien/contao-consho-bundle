@@ -12,6 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ListingPageRepository;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\FacetPagePageListener;
 use Webwerkwien\ContaoConshoBundle\Model\ShopModel;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 class FacetPagePageListenerTest extends TestCase
 {
@@ -27,9 +28,7 @@ class FacetPagePageListenerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, title TEXT NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (
                 id INTEGER PRIMARY KEY,

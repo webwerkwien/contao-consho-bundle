@@ -191,15 +191,7 @@ class ProductRedirectListenerTest extends TestCase
         DcaSchema::create($connection, 'tl_consho_product');
         DcaSchema::create($connection, 'tl_consho_product_shop');
         DcaSchema::create($connection, 'tl_consho_translation');
-        $connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                type TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                consho_currency TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($connection, 'tl_page');
         DcaSchema::create($connection, 'tl_consho_shop');
 
         $connection->insert('tl_consho_shop', ['id' => 1, 'fallbackLanguage' => 'de']);

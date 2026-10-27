@@ -125,7 +125,7 @@ class WithdrawalProcessing
                 $left = BigDecimal::of($goods[$itemId]['quantity'])->minus($elsewhere[$itemId] ?? '0');
 
                 if ($amount->isGreaterThan($left)) {
-                    return ProcessingResult::refused('tooMuch', [$goods[$itemId]['productName'], (string) $left->strippedOfTrailingZeros()]);
+                    return ProcessingResult::refused('tooMuch', [$goods[$itemId]['productName'], (string) $left->strippedOfTrailingZeros()], [1 => ProcessingResult::QUANTITY]);
                 }
 
                 // A subscription line goes only whole (Abo-8, P77, A11).
@@ -332,21 +332,24 @@ class WithdrawalProcessing
                 return ProcessingResult::refused('alreadyRefunded');
             }
 
+            $orderId = (int) $order['id'];
+            $shippingLeft = $this->shippingLeft($orderId);
+            $currency = (string) ($order['currency'] ?? '');
+            $digits = '' !== $currency && Currencies::exists($currency) ? Currencies::getFractionDigits($currency) : 2;
+
+            // The message names the most in both cases: it has a placeholder,
+            // and sprintf() throws on a missing argument.
+            $shippingRefused = ProcessingResult::refused('invalidShipping', [(string) $shippingLeft->toScale($digits, RoundingMode::HalfUp)], [ProcessingResult::MONEY]);
+
             try {
                 $shippingAmount = BigDecimal::of('' !== trim($shipping) ? str_replace(',', '.', trim($shipping)) : '0');
             } catch (MathException) {
-                return ProcessingResult::refused('invalidShipping');
+                return $shippingRefused;
             }
-
-            $orderId = (int) $order['id'];
-            $shippingLeft = $this->shippingLeft($orderId);
 
             if ($shippingAmount->isNegative() || $shippingAmount->isGreaterThan($shippingLeft)) {
-                return ProcessingResult::refused('invalidShipping', [(string) $shippingLeft->toScale(2, RoundingMode::HalfUp)]);
+                return $shippingRefused;
             }
-
-            $currency = (string) ($order['currency'] ?? '');
-            $digits = '' !== $currency && Currencies::exists($currency) ? Currencies::getFractionDigits($currency) : 2;
 
             /*
              * The value compensation (Abo-8, P79): kept back from the credit
@@ -361,14 +364,14 @@ class WithdrawalProcessing
                     ? (string) ($withdrawal['valueCompensation'] ?? '0')
                     : ('' !== trim($compensation) ? str_replace(',', '.', trim($compensation)) : '0'));
             } catch (MathException) {
-                return ProcessingResult::refused('invalidCompensation', ['0']);
+                return ProcessingResult::refused('invalidCompensation', ['0'], [ProcessingResult::MONEY]);
             }
 
             $kept = $kept->toScale($digits, RoundingMode::HalfUp);
             $keepable = $this->serviceCredit($orderId, (int) $withdrawal['id']);
 
             if ($kept->isNegative() || $kept->isGreaterThan($keepable)) {
-                return ProcessingResult::refused('invalidCompensation', [(string) $keepable->toScale($digits, RoundingMode::HalfUp)]);
+                return ProcessingResult::refused('invalidCompensation', [(string) $keepable->toScale($digits, RoundingMode::HalfUp)], [ProcessingResult::MONEY]);
             }
 
             $lines = $this->lines($orderId, (int) $withdrawal['id'], $shippingAmount, $kept);
@@ -410,11 +413,11 @@ class WithdrawalProcessing
                     ? $voucherPaid
                     : BigDecimal::of('' !== trim($toVouchers) ? str_replace(',', '.', trim($toVouchers)) : '0')->toScale($digits, RoundingMode::HalfUp);
             } catch (MathException) {
-                return ProcessingResult::refused('invalidVoucherShare', [(string) $voucherPaid]);
+                return ProcessingResult::refused('invalidVoucherShare', [(string) $voucherPaid], [ProcessingResult::MONEY]);
             }
 
             if ($toVouchers->isNegative() || $toVouchers->isGreaterThan($voucherPaid)) {
-                return ProcessingResult::refused('invalidVoucherShare', [(string) $voucherPaid]);
+                return ProcessingResult::refused('invalidVoucherShare', [(string) $voucherPaid], [ProcessingResult::MONEY]);
             }
 
             // "At most": the field is filled before the delivery share is
@@ -432,22 +435,27 @@ class WithdrawalProcessing
 
             try {
                 /*
-                 * No invoice yet and not everything withdrawn (F3a): the invoice is issued NOW, then corrected. Left
+                 * No invoice yet (F3a): the invoice is issued NOW, then corrected. Left
                  * to the shipment ("Rechnung bei Versand"), it would state the
                  * whole order and never be corrected — this refund is booked
                  * already. The shipment finds it and issues no second one
-                 * (issueOnce). With everything withdrawn nothing ships, and
-                 * there is nothing to invoice.
+                 * (issueOnce).
+                 *
+                 * With everything withdrawn too, and cancelled at once: the
+                 * sale was made and its tax counted from the payment on
+                 * (OssLedger), and only a document takes it back — a
+                 * withdrawal without one left the sale standing in the OSS
+                 * report.
                  *
                  * Without the Giro-Code (F3b): its amount would be the whole
                  * order, not what is left to pay. The mail names that.
                  */
-                if (null === $invoiceId && !$everything) {
+                if (null === $invoiceId) {
                     $invoiceId = $issuedInvoice = $this->documents->issueOnce($orderId, (int) $order['shop'], DocumentType::Invoice, null, false);
                 }
 
                 // Nothing left to credit (all of it kept back): no correction.
-                if (null !== $invoiceId && ($everything || [] !== $lines)) {
+                if ($everything || [] !== $lines) {
                     $documentId = $everything
                         ? $this->documents->cancel($invoiceId)
                         : $this->documents->correct($invoiceId, $lines, (string) $withdrawal['number'], $toVouchers->isPositive() ? ($this->vouchers?->prepaidFor($orderId, (string) $toVouchers, (string) ($order['language'] ?? ''), $creditLines) ?? []) : []);

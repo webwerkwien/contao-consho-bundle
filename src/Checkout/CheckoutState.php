@@ -100,6 +100,12 @@ final class CheckoutState
          * matches the review page's (R).
          */
         public readonly bool $taxAtDestination = false,
+        /**
+         * The chosen shipping method checks the age against a date of birth
+         * (AgeGate::asksDateOfBirth()): the shipping block shows the field,
+         * and only then does the order keep the date.
+         */
+        public readonly bool $needsDateOfBirth = false,
     ) {
     }
 
@@ -204,6 +210,7 @@ final class CheckoutState
             // Block R: missing here, the click wrote the order without the
             // switch and the total check refused it (R-5).
             $this->taxAtDestination,
+            $this->needsDateOfBirth,
         );
     }
 }

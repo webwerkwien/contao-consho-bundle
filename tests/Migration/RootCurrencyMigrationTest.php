@@ -201,11 +201,11 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testNachDemEntfernenDerAltspalteLaeuftSieNichtMehr(): void
     {
-        // Task 10 drops tl_consho_shop.currency later on. From then on this
-        // migration has no source any more — it must stay silent, not
-        // fail.
+        // `contao:migrate --with-deletes` drops tl_consho_shop.currency, which
+        // the DCA no longer defines. From then on this migration has no
+        // source any more — it must stay silent, not fail.
         $this->connection->executeStatement('DROP TABLE tl_consho_shop');
-        $this->connection->executeStatement("CREATE TABLE tl_consho_shop (id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '', currencies BLOB)");
+        DcaSchema::create($this->connection, 'tl_consho_shop');
 
         self::assertFalse($this->migration()->shouldRun());
     }
@@ -215,8 +215,7 @@ class RootCurrencyMigrationTest extends TestCase
         // contao:migrate runs in two passes, with the schema update in
         // between. In the first one the column does not exist yet — without
         // this check the pass fails on an unknown column.
-        $this->connection->executeStatement('DROP TABLE tl_page');
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0)");
+        $this->connection->executeStatement('ALTER TABLE tl_page DROP COLUMN consho_currency');
 
         self::assertFalse($this->migration()->shouldRun());
     }
@@ -240,18 +239,13 @@ class RootCurrencyMigrationTest extends TestCase
 
     private function createTables(): void
     {
-        // From the DCA: it still carries the old `currency` beside `currencies`
-        // — the state this migration reads from.
+        // From the DCA, plus the old `currency` the DCA no longer defines but
+        // a database from before C-1c still has — the state this migration
+        // reads from. Typed as it was: varchar(3), default ''.
         DcaSchema::create($this->connection, 'tl_consho_shop');
+        $this->connection->executeStatement("ALTER TABLE tl_consho_shop ADD COLUMN currency VARCHAR(3) NOT NULL DEFAULT ''");
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                type TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                consho_currency TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
     }
 
     private function insertShop(int $id, string $title, string $currency): void

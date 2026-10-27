@@ -16,14 +16,7 @@ class DbalRedirectResolverTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            'CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                dns TEXT NOT NULL DEFAULT "",
-                language TEXT NOT NULL DEFAULT "",
-                consho_shop INTEGER NOT NULL DEFAULT 0
-            )',
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_url_redirect');
     }
 

@@ -52,7 +52,7 @@ enum SetupStep: string
                 F::OrderPageMissing, F::OrderElementMissing, F::ShippingCostsElementMissing,
                 F::WithdrawalFunctionMissing, F::CancellationPageMissing,
                 // Nachlese KA7: accounts — pages and a module, not the shop mask.
-                F::RegistrationPathMissing, F::CustomerPageLocksOut, F::LoginPageMissing,
+                F::RegistrationPathMissing, F::CustomerPageLocksOut, F::OrderPageProtected, F::LoginPageMissing,
             ],
             self::LegalTexts => [F::LegalTextMissing, F::LegalTextUnreachable, F::PrivacyPageMissing, F::WarrantyNoticeMissing, F::WarrantyNoticeFileMissing],
         };

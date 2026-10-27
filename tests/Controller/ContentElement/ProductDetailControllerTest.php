@@ -129,17 +129,10 @@ class ProductDetailControllerTest extends TestCase
         $this->createCatalogSchema($this->connection);
 
         // ShopLanguages reads the languages from the start points.
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                type TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => 1]);
 
-        $this->insertShop(['id' => 1, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
 
         $this->insertPropertyGroup(['id' => self::VOLUME, 'title' => 'Füllmenge', 'filterable' => 0]);
         $this->insertPropertyOption(['id' => self::ML_250, 'pid' => self::VOLUME, 'title' => '250 ml', 'sorting' => 64]);

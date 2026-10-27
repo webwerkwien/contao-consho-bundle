@@ -70,7 +70,39 @@ final class OrderMailPayload
                 'subscription' => \is_array($subscription) && isset($subscription['number'], $subscription['from'], $subscription['to'])
                     ? ['number' => (string) $subscription['number'], 'from' => (string) $subscription['from'], 'to' => (string) $subscription['to']]
                     : null,
+                // EZ-4: the tax single-purpose vouchers already carried, so
+                // that the page and the mails state the remaining tax as the
+                // invoice does — its snapshot when there is one, the
+                // payments before.
+                'prepaid' => null !== $invoice
+                    ? self::prepaidOf($invoice['payload']['prepaid'] ?? null)
+                    : $this->source->prepaid((int) $order['id']),
             ],
         );
+    }
+
+    /**
+     * @return list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>
+     */
+    private static function prepaidOf(mixed $entries): array
+    {
+        $prepaid = [];
+
+        foreach (\is_array($entries) ? $entries : [] as $entry) {
+            if (!\is_array($entry)) {
+                continue;
+            }
+
+            $prepaid[] = [
+                'label' => (string) ($entry['label'] ?? ''),
+                'country' => (string) ($entry['country'] ?? ''),
+                'rate' => (string) ($entry['rate'] ?? '0'),
+                'net' => (string) ($entry['net'] ?? '0'),
+                'tax' => (string) ($entry['tax'] ?? '0'),
+                'gross' => (string) ($entry['gross'] ?? '0'),
+            ];
+        }
+
+        return $prepaid;
     }
 }

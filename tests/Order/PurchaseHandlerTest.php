@@ -75,6 +75,22 @@ class PurchaseHandlerTest extends TestCase
     }
 
     /**
+     * The date of birth likewise: a member's account prefills it into every
+     * checkout, and the order keeps it only where the method asked for it.
+     */
+    public function testDasGeburtsdatumNurWoDieVersandartEsVerlangt(): void
+    {
+        $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(dateOfBirth: '1980-05-17', needsDateOfBirth: true), 1_757_000_000);
+        self::assertNotNull($this->draft);
+        self::assertSame('1980-05-17', $this->draft->dateOfBirth);
+
+        $this->draft = null;
+        $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(dateOfBirth: '1980-05-17'), 1_757_000_000);
+        self::assertNotNull($this->draft);
+        self::assertSame('', $this->draft->dateOfBirth, 'vorbelegt, aber nicht gefragt: nicht gespeichert');
+    }
+
+    /**
      * F-3: the consent only goes onto the order where it was asked for —
      * digital items and a consumer. A business customer is frozen as such.
      */
@@ -271,6 +287,8 @@ class PurchaseHandlerTest extends TestCase
         int $renews = 0,
         array $vouchers = [],
         bool $covered = false,
+        string $dateOfBirth = '',
+        bool $needsDateOfBirth = false,
     ): CheckoutState {
         $cart = new CartView(
             [new CartLine(1, 9, 9, '1.0000', '7.4167', '7.4167', '8.9000', 1, $subscriptionRule, $renews)],
@@ -287,6 +305,7 @@ class PurchaseHandlerTest extends TestCase
                 billing: new Address(street: 'Hauptstraße 5', postal: '1100', city: 'Wien', country: 'AT'),
                 shippingPhone: $phone,
                 digitalConsentAt: $digitalConsentAt,
+                dateOfBirth: $dateOfBirth,
             ),
             true,
             [],
@@ -307,6 +326,7 @@ class PurchaseHandlerTest extends TestCase
             $hasDigitalLines,
             vouchers: $vouchers,
             coveredByVouchers: $covered,
+            needsDateOfBirth: $needsDateOfBirth,
         );
     }
 

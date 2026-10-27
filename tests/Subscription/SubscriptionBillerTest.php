@@ -9,6 +9,9 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Webwerkwien\ContaoConshoBundle\Address\AddressNormalizer;
 use Webwerkwien\ContaoConshoBundle\Address\PhoneNormalizer;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdCheckResult;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdStatus;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdValidatorInterface;
 use Webwerkwien\ContaoConshoBundle\Checkout\MemberCheckoutDefaults;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryReport;
@@ -432,7 +435,57 @@ class SubscriptionBillerTest extends TestCase
         self::assertSame('2026-02-28 10:15', $this->local($this->connection->fetchOne('SELECT validUntil FROM tl_consho_entitlement WHERE id = 30')));
     }
 
-    private function biller(MemberCheckoutDefaults|null $members = null): SubscriptionBiller
+    /**
+     * VIES per period: valid keeps reverse charge and puts the evidence on
+     * the order; invalid taxes the order; unreachable keeps the purchase's
+     * decision, as the checkout does (C15). Each asks with the shop's own
+     * VAT ID as the requester.
+     *
+     * @return iterable<string, array{VatIdStatus, bool, int}>
+     */
+    public static function viesAntworten(): iterable
+    {
+        yield 'gültig' => [VatIdStatus::Valid, true, 0];
+        yield 'ungültig' => [VatIdStatus::Invalid, false, 1];
+        yield 'nicht erreichbar' => [VatIdStatus::Unavailable, true, 1];
+    }
+
+    /**
+     * @dataProvider viesAntworten
+     */
+    public function testDieUidWirdJePeriodeGeprueft(VatIdStatus $status, bool $reverseCharge, int $warnings): void
+    {
+        $asked = [];
+        $vatIds = $this->createMock(VatIdValidatorInterface::class);
+        $vatIds->method('check')->willReturnCallback(static function (string $vatId, string|null $requester) use (&$asked, $status): VatIdCheckResult {
+            $asked[] = [$vatId, $requester];
+
+            return new VatIdCheckResult($status, 1, null, 'WAPIAAAA');
+        });
+
+        $this->biller(vatIds: $vatIds)->billDue(1, $this->at('2026-02-28 11:00'));
+
+        [$draft] = $this->created[0];
+        self::assertSame([['DE123456789', 'ATU12345678']], $asked);
+        self::assertSame($reverseCharge, $draft->frozenReverseCharge);
+        self::assertSame($status, $draft->vatCheck?->status);
+        self::assertCount($warnings, $this->warnings);
+    }
+
+    public function testOhneReverseChargeFragtNiemandVies(): void
+    {
+        $this->connection->update('tl_consho_subscription', ['reverseCharge' => 0], ['id' => 1]);
+        $vatIds = $this->createMock(VatIdValidatorInterface::class);
+        $vatIds->expects(self::never())->method('check');
+
+        $this->biller(vatIds: $vatIds)->billDue(1, $this->at('2026-02-28 11:00'));
+
+        [$draft] = $this->created[0];
+        self::assertFalse($draft->frozenReverseCharge);
+        self::assertNull($draft->vatCheck);
+    }
+
+    private function biller(MemberCheckoutDefaults|null $members = null, VatIdValidatorInterface|null $vatIds = null): SubscriptionBiller
     {
         $orders = $this->createMock(OrderFactoryInterface::class);
         $orders->method('create')->willReturnCallback(function (OrderDraft $draft, array $lines, int $timestamp): int {
@@ -493,6 +546,7 @@ class SubscriptionBillerTest extends TestCase
                 }
             },
             $members,
+            $vatIds,
         );
     }
 

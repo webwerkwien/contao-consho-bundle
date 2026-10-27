@@ -39,9 +39,7 @@ class CatalogCoverageTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT 'regular', title TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', published INTEGER NOT NULL DEFAULT 0, consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', includeCache INTEGER NOT NULL DEFAULT 0, cache INTEGER NOT NULL DEFAULT 0)",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, sorting INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 0, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '')",
         );
@@ -56,7 +54,7 @@ class CatalogCoverageTest extends TestCase
         );
         DcaSchema::create($this->connection, 'tl_consho_facet_page');
 
-        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         // consho_currency on the start point, not on the shop: since C-1c the
         // visibility projector reads the currency from here. Without it every
         // product would be unpriced and the projection empty.

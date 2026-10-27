@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Controller\Page\ProductPageController;
 use Webwerkwien\ContaoConshoBundle\Seo\StartPointProductPageIssueSource;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
  * GARAN (`/shop2/` → 500): a start point whose first page —
@@ -21,14 +22,8 @@ class StartPointProductPageIssueSourceTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, sorting INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '', alias TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0,
-                published TEXT NOT NULL DEFAULT '1', start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT ''
-            )",
-        );
-        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'title' => 'Shop 2', 'consho_shop' => 2]);
+        DcaSchema::createCore($this->connection, 'tl_page');
+        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'title' => 'Shop 2', 'consho_shop' => 2, 'published' => 1]);
     }
 
     public function testDieErsteSeiteIstEineProduktseite(): void
@@ -67,7 +62,7 @@ class StartPointProductPageIssueSourceTest extends TestCase
     {
         $this->page(10, 128, ProductPageController::TYPE, 'Produkt');
         $this->page(11, 256, 'regular', 'Bereich');
-        $this->connection->insert('tl_page', ['id' => 12, 'pid' => 11, 'type' => 'regular', 'title' => 'Home', 'alias' => 'index']);
+        $this->connection->insert('tl_page', ['id' => 12, 'pid' => 11, 'type' => 'regular', 'title' => 'Home', 'alias' => 'index', 'published' => 1]);
 
         $withIndex = $this->source()->issues();
         $this->connection->update('tl_page', ['published' => ''], ['id' => 12]);
@@ -86,7 +81,7 @@ class StartPointProductPageIssueSourceTest extends TestCase
     public function testIndexSeiteOhneRouteVerhindertNichts(): void
     {
         $this->page(10, 128, ProductPageController::TYPE, 'Produkt');
-        $this->connection->insert('tl_page', ['id' => 12, 'pid' => 1, 'sorting' => 256, 'type' => 'regular', 'title' => 'Home', 'alias' => 'index', 'stop' => '100']);
+        $this->connection->insert('tl_page', ['id' => 12, 'pid' => 1, 'sorting' => 256, 'type' => 'regular', 'title' => 'Home', 'alias' => 'index', 'stop' => '100', 'published' => 1]);
         $expired = $this->source()->issues();
         $this->connection->update('tl_page', ['stop' => '', 'start' => (string) (time() + 3600)], ['id' => 12]);
         $notYet = $this->source()->issues();

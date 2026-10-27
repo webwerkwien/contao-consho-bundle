@@ -51,6 +51,34 @@ class CoverablePotsTest extends TestCase
         );
     }
 
+    /**
+     * The basket has the cart rule's shares only net; grossed here at the
+     * rate of what they reduce and negated, they take off the pot what the
+     * checkout takes off — not nothing, as the preview did before.
+     */
+    public function testDerWarenkorbZiehtDenRabattAbWieDieKasse(): void
+    {
+        $shares = $this->pots()->discountShares(
+            [
+                new ShippingShare(1, '10.0000', '0.0000', 'AT'),
+                // Without a country of its own: where the basket is priced.
+                new ShippingShare(2, '1.0000', '0.0000', ''),
+                // Without a rate the amount stays as it is, as in the checkout.
+                new ShippingShare(1, '5.0000', '0.0000', 'CH'),
+            ],
+            'AT',
+            1_800_000_000,
+        );
+
+        self::assertSame(
+            [[1, '-10.0000', '-12.0000', 'AT'], [2, '-1.0000', '-1.1000', ''], [1, '-5.0000', '-5.0000', 'CH']],
+            array_map(static fn (ShippingShare $share): array => [$share->taxClassId, $share->net, $share->gross, $share->taxCountry], $shares),
+        );
+
+        $pots = $this->pots()->of([$this->line(1, '60.0000', 1, 'AT')], $shares, 1_800_000_000, false, 'AT');
+        self::assertSame('48.0000', $pots[0]->amount);
+    }
+
     public function testUnterReverseChargeNichts(): void
     {
         self::assertSame([], $this->pots()->of([$this->line(1, '60.0000', 1, 'AT')], [], 1_800_000_000, true));

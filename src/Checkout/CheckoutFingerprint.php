@@ -149,7 +149,8 @@ class CheckoutFingerprint
         // The VAT id itself, not the check result: whether the number was
         // accepted shows in reverseCharge and in the totals above.
         $parts[] = $state->data->vatId;
-        $parts[] = $state->data->dateOfBirth;
+        // Like the phone: only where it is asked, and so kept.
+        $parts[] = $state->needsDateOfBirth ? $state->data->dateOfBirth : '';
         // Only where the carrier asks for it (E-6) — the same phone that goes
         // onto the order.
         $parts[] = $state->needsPhone ? $state->data->shippingPhone : '';

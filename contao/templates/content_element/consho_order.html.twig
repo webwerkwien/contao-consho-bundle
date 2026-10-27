@@ -298,6 +298,18 @@
             ? {taxTotal: 'CONSHO.invoice.notTaxable'|trans({}, 'contao_default'), grandTotal: order.grandTotal}
             : {netTotal: order.netTotal, taxTotal: order.taxTotal, grandTotal: order.grandTotal} %}
         {% for key, amount in totals %}
+            {#- EZ-4: before the total, the tax single-purpose vouchers
+                already carried and what remains — as the invoice states it. #}
+            {% if 'grandTotal' == key and not untaxed %}
+                {% for prepaid in order.prepaid|default([]) %}
+                    {% set label = 'CONSHO.invoice.prepaidTax'|trans([prepaid.label, prepaid.rate], 'contao_default') %}
+                    <tr class="consho-order__prepaid"><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ prepaid.tax }}</td></tr>
+                {% endfor %}
+                {% if order.taxDue|default('') %}
+                    {% set label = 'CONSHO.invoice.taxDue'|trans({}, 'contao_default') %}
+                    <tr class="consho-order__tax-due"><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ order.taxDue }}</td></tr>
+                {% endif %}
+            {% endif %}
             {% set label = ('CONSHO.invoice.' ~ key)|trans({}, 'contao_default') %}
             <tr{% if 'grandTotal' == key %} class="consho-order__grand"{% endif %}><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ amount }}</td></tr>
         {% endfor %}

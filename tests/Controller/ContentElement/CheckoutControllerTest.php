@@ -400,6 +400,22 @@ class CheckoutControllerTest extends TestCase
         self::assertSame(4, $this->repository->checkoutDataOf($this->cartId)->shippingMethod);
     }
 
+    /**
+     * The date field sends `YYYY-MM-DD`; a day the calendar does not have is
+     * kept as none, so the age check asks again instead of rolling it over.
+     */
+    public function testDasGeburtsdatumLandetImWarenkorb(): void
+    {
+        $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_method' => '4', 'consho_date_of_birth' => '1980-05-17']);
+        self::assertSame('1980-05-17', $this->repository->checkoutDataOf($this->cartId)->dateOfBirth);
+
+        $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_method' => '4', 'consho_date_of_birth' => '2008-02-30']);
+        self::assertSame('', $this->repository->checkoutDataOf($this->cartId)->dateOfBirth);
+
+        $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_method' => '4', 'consho_date_of_birth' => '17.05.1980']);
+        self::assertSame('', $this->repository->checkoutDataOf($this->cartId)->dateOfBirth);
+    }
+
     public function testEineGewaehlteZahlungsartLandetImWarenkorb(): void
     {
         $this->post(['consho_checkout_block' => 'payment', 'consho_payment_method' => '9']);

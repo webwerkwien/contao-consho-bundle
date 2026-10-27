@@ -10,6 +10,7 @@ use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Uid\Uuid;
 use Webwerkwien\ContaoConshoBundle\Notification\WarrantyNoticeFile;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 class WarrantyNoticeFileTest extends TestCase
 {
@@ -20,7 +21,7 @@ class WarrantyNoticeFileTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_warrantyNotice BLOB NULL)");
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'consho_warrantyNotice' => Uuid::fromString(self::UUID)->toBinary()]);
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root']);
         $this->connection->insert('tl_page', ['id' => 3, 'type' => 'regular', 'consho_warrantyNotice' => Uuid::fromString(self::UUID)->toBinary()]);

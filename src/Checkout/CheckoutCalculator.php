@@ -631,6 +631,7 @@ final class CheckoutCalculator
             (string) $payable->toScale($digits),
             $coveredByVouchers,
             $taxAtDestination,
+            $this->ages->asksDateOfBirth($minimumAge, $capabilities),
         );
     }
 

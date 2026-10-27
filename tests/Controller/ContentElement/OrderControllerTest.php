@@ -116,6 +116,9 @@ class OrderControllerTest extends TestCase
     /** @var array{number: string, from: string, to: string}|null Abo-4: the invoice snapshot's subscription */
     private array|null $invoiceSubscription = null;
 
+    /** @var (\Closure(FakeConfirmationSource): void)|null EZ-4: adjusts the source before the page reads it */
+    private \Closure|null $sourceSetup = null;
+
     /** @var list<string> hashes markUsed() was called with */
     private array $used = [];
 
@@ -223,6 +226,37 @@ class OrderControllerTest extends TestCase
         self::assertSame([false, true, true], array_column($data['payments'], 'refund'));
         // 13.90 − 10 + 2 + 1 = 6.90 open
         self::assertSame('6,90 €', str_replace("\u{a0}", ' ', $data['outstanding']));
+    }
+
+    /**
+     * EZ-4: the page states the tax single-purpose vouchers already carried
+     * and the remaining tax as the invoice does — without an invoice yet from
+     * the payments, with one from its snapshot. The order's tax is 2.32.
+     */
+    public function testDieSeiteZeigtDieVerbleibendeSteuerNachEinemEinzweckGutschein(): void
+    {
+        $this->connection->update('tl_consho_order', ['taxTotal' => '2.32'], ['id' => self::ORDER]);
+        $voucher = ['label' => 'Gutschein …ZZ3P', 'country' => 'AT', 'rate' => '20.0000', 'net' => '9.3800', 'tax' => '1.8700', 'gross' => '11.2500'];
+
+        $this->sourceSetup = static function (FakeConfirmationSource $source) use ($voucher): void {
+            $source->invoiceRow = null;
+            $source->prepaidRows = [$voucher];
+        };
+        [$data] = $this->render();
+
+        self::assertSame(['Gutschein …ZZ3P'], array_column($data['order']['prepaid'], 'label'));
+        self::assertSame('0,45 €', str_replace("\u{a0}", ' ', $data['order']['taxDue']));
+
+        // With an invoice its snapshot counts, not today's payments.
+        $this->sourceSetup = static function (FakeConfirmationSource $source) use ($voucher): void {
+            if (null !== $source->invoiceRow) {
+                $source->invoiceRow['payload']['prepaid'] = [['tax' => '1.0000'] + $voucher];
+            }
+            $source->prepaidRows = [$voucher];
+        };
+        [$data] = $this->render();
+
+        self::assertSame('1,32 €', str_replace("\u{a0}", ' ', $data['order']['taxDue']));
     }
 
     public function testEineVorhandeneReferrerAngabeWirdErsetztNichtVerdoppelt(): void
@@ -896,6 +930,10 @@ class OrderControllerTest extends TestCase
 
         if (null !== $this->invoiceSubscription && null !== $source->invoiceRow) {
             $source->invoiceRow['payload']['subscription'] = $this->invoiceSubscription;
+        }
+
+        if (null !== $this->sourceSetup) {
+            ($this->sourceSetup)($source);
         }
 
         $contexts = $this->createStub(ResponseContextAccessor::class);

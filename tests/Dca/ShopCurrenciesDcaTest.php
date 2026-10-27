@@ -31,18 +31,14 @@ class ShopCurrenciesDcaTest extends TestCase
     }
 
     /**
-     * C-1c step 4: out of the form, but not out of the table. The values are
-     * taken over in step 3; the column is only dropped once that has been
-     * verified on a real installation — like `gross` on tl_consho_price in C-1b.
+     * The old single currency is gone from the form and, since its values
+     * reached `currencies` and the start pages on real installations, from the
+     * DCA too: `contao:migrate --with-deletes` drops the column.
      */
-    public function testDieAlteEinzelwaehrungIstAusDerPaletteVerschwundenAberNichtAusDerTabelle(): void
+    public function testDieAlteEinzelwaehrungIstAusDerDcaVerschwunden(): void
     {
         self::assertNotContains('currency', $this->paletteFields());
-
-        $field = $GLOBALS['TL_DCA']['tl_consho_shop']['fields']['currency'];
-
-        self::assertSame('string', $field['sql']['type']);
-        self::assertSame(3, $field['sql']['length']);
+        self::assertArrayNotHasKey('currency', $GLOBALS['TL_DCA']['tl_consho_shop']['fields']);
     }
 
     /**
@@ -53,20 +49,6 @@ class ShopCurrenciesDcaTest extends TestCase
     public function testDieListeZeigtDieErlaubtenWaehrungen(): void
     {
         self::assertSame(['title', 'currencies'], $GLOBALS['TL_DCA']['tl_consho_shop']['list']['label']['fields']);
-    }
-
-    /**
-     * Loud rather than silent — which also suits an international product.
-     *
-     * A newly created shop no longer inherits EUR from the column default.
-     * `DbalMarketRepository` filters `WHERE currency <> ''` — without a chosen
-     * currency the shop visibly drops out of the markets instead of silently
-     * selling in euros. And a built-in EUR would be eurocentric in a product
-     * whose very purpose is multi-currency capability.
-     */
-    public function testDieAlteEinzelwaehrungHatKeinenEuroVorgabewertMehr(): void
-    {
-        self::assertSame('', $GLOBALS['TL_DCA']['tl_consho_shop']['fields']['currency']['sql']['default']);
     }
 
     /**

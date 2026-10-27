@@ -27,6 +27,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutReadiness;
 use Webwerkwien\ContaoConshoBundle\Cart\CartView;
 use Webwerkwien\ContaoConshoBundle\Cart\CodeEntry;
 use Webwerkwien\ContaoConshoBundle\Cart\DbalCartRepository;
+use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartDiscount;
 use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartDiscounts;
 use Webwerkwien\ContaoConshoBundle\Cart\Discount\CodeStatus;
 use Webwerkwien\ContaoConshoBundle\Cart\PurchaseCheck;
@@ -316,8 +317,8 @@ class CartController extends AbstractContentElementController
         $template->set('unpriced', $unpriced);
         $goods = $audience->showsNet ? $view->net : $view->gross;
         $template->set('total', $this->money->format($goods, $view->currency, $language));
-        $this->discountOf($template, $cart, $view, $shopId, $audience->groups, $audience->showsNet, $goods, $language, $now);
-        $this->vouchersOf($template, $cart, $view, $shopId, $language, $now);
+        $discount = $this->discountOf($template, $cart, $view, $shopId, $audience->groups, $audience->showsNet, $goods, $language, $now);
+        $this->vouchersOf($template, $cart, $view, $shopId, $language, $now, $discount, (string) $shop->country);
         $template->set('showsNet', $audience->showsNet);
         $template->set('shipped', $this->anyShipped(array_map(static fn ($item): int => $item->articleId, $items)));
         $template->set('untaxed', $this->notTaxable?->all(array_map(static fn ($item): int => $item->articleId, $items)) ?? false);
@@ -624,8 +625,13 @@ class CartController extends AbstractContentElementController
      * Offered only where something besides vouchers lies in the basket: a
      * voucher does not pay for vouchers (WG8).
      */
-    private function vouchersOf(FragmentTemplate $template, Cart|null $cart, CartView $view, int $shopId, string $language, int $now): void
+    private function vouchersOf(FragmentTemplate $template, Cart|null $cart, CartView $view, int $shopId, string $language, int $now, CartDiscount|null $discount, string $country): void
     {
+        // EZ-1, F2: what a single-purpose voucher may pay is after the cart
+        // rule's discount, as the checkout counts it. Free shipping takes
+        // nothing off the articles.
+        $shares = null === $discount || $discount->freeShipping || null === $this->pots ? [] : $this->pots->discountShares($discount->shares, $country, $now);
+
         $payable = [] !== array_filter($view->lines, static fn (CartLine $line): bool => !$line->kind->isVoucher());
         $codes = null === $cart || null === $this->vouchers ? [] : $this->repository->vouchersOf($cart->id);
 
@@ -636,7 +642,7 @@ class CartController extends AbstractContentElementController
             'value' => VoucherCode::format($voucher->code),
             'status' => $voucher->status->value,
             'balance' => $this->money->format($voucher->balance, $view->currency, $language),
-        ], null === $this->vouchers ? [] : $this->vouchers->apply($codes, $shopId, $view->currency, '0', 2, $now, $this->pots?->of($view->lines, [], $now, false) ?? [])));
+        ], null === $this->vouchers ? [] : $this->vouchers->apply($codes, $shopId, $view->currency, '0', 2, $now, $this->pots?->of($view->lines, $shares, $now, false, $country) ?? [])));
     }
 
     /**
@@ -649,7 +655,7 @@ class CartController extends AbstractContentElementController
      *
      * @param list<int> $groups
      */
-    private function discountOf(FragmentTemplate $template, Cart|null $cart, CartView $view, int $shopId, array $groups, bool $showsNet, string $goods, string $language, int $now): void
+    private function discountOf(FragmentTemplate $template, Cart|null $cart, CartView $view, int $shopId, array $groups, bool $showsNet, string $goods, string $language, int $now): CartDiscount|null
     {
         $code = null === $cart || null === $this->discounts ? '' : $this->repository->discountCodeOf($cart->id);
 
@@ -660,7 +666,7 @@ class CartController extends AbstractContentElementController
         $template->set('code_missing', '');
 
         if (null === $this->discounts || $view->isEmpty()) {
-            return;
+            return null;
         }
 
         $result = $this->discounts->evaluate($view, $shopId, $code, $groups, $showsNet, $this->carts->memberId(), '', $now);
@@ -668,7 +674,7 @@ class CartController extends AbstractContentElementController
         $template->set('code_missing', '' === $result->minimumOrder ? '' : $this->money->format($result->minimumOrder, $view->currency, $language));
 
         if (null === $result->discount) {
-            return;
+            return null;
         }
 
         $off = $result->discount->displayed();
@@ -680,6 +686,8 @@ class CartController extends AbstractContentElementController
         ]);
         $template->set('subtotal', $this->money->format($goods, $view->currency, $language));
         $template->set('total', $this->money->format((string) BigDecimal::of($goods)->minus($off), $view->currency, $language));
+
+        return $result->discount;
     }
 
 }

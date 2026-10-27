@@ -39,9 +39,9 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopCurrencies;
  * configuration", which switches the shop functions off (block A, section 7).
  * Written down so the silence stays a decision rather than an oversight.
  *
- * It also leaves `tl_consho_shop.currency` in place. The column drops once
- * the values are shown to have arrived, the same course `gross` took in C-1b: first show
- * that the values arrived, then remove where they came from.
+ * It leaves `tl_consho_shop.currency` in place; the DCA no longer defines
+ * it, so `contao:migrate --with-deletes` removes it after this migration has
+ * run. A database without the column skips the migration (shouldRun()).
  */
 final class RootCurrencyMigration extends AbstractMigration
 {

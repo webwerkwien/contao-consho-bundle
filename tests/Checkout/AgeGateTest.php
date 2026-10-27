@@ -198,6 +198,22 @@ class AgeGateTest extends TestCase
     }
 
     /**
+     * The checkout's field follows the same answer as the check: a method
+     * that asks, and a limit that is checked at all.
+     */
+    public function testDasFeldErscheintNurWoDieAbfrageEsBraucht(): void
+    {
+        $gate = new AgeGate();
+
+        self::assertTrue($gate->asksDateOfBirth(16, new ShippingCapabilities(18, true)));
+        self::assertTrue($gate->asksDateOfBirth(18, new ShippingCapabilities(0, true)));
+        // 14 is a notice: nothing to check it against.
+        self::assertFalse($gate->asksDateOfBirth(14, new ShippingCapabilities(18, true)));
+        self::assertFalse($gate->asksDateOfBirth(18, new ShippingCapabilities(18, false)));
+        self::assertFalse($gate->asksDateOfBirth(18, null));
+    }
+
+    /**
      * @param list<int> $groups
      * @param list<int> $verified
      */

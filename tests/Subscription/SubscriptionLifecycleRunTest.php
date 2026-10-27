@@ -167,7 +167,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
      */
     public function testDieErinnerungFindetMeineAbos(): void
     {
-        $this->connection->executeStatement('CREATE TABLE tl_page (id INTEGER PRIMARY KEY, consho_subscriptionsPage INTEGER NOT NULL DEFAULT 0)');
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_page', ['id' => 1, 'consho_subscriptionsPage' => 77]);
         $this->reminders[1] = new ReminderDue(1, 'WEB-00001-1', RenewalKind::Ends, self::NOW + 20 * self::DAY, self::NOW + 6 * self::DAY, false);
 

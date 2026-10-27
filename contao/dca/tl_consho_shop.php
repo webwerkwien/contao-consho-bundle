@@ -47,8 +47,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             // Names the record in the breadcrumb; see tl_consho_product.
             'defaultSearchField' => 'title',
         ],
-        // The currencies the shop accepts — not `currency`, the transitional
-        // column no mask or command sets since C-1c (a new shop showed none).
+        // The currencies the shop accepts.
         'label' => [
             'fields' => ['title', 'currencies'],
             'format' => '%s <span class="tl_gray">[%s]</span>',
@@ -108,38 +107,6 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'exclude' => true,
             'eval' => ['multiple' => true, 'chosen' => true, 'mandatory' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'blob', 'notnull' => false],
-        ],
-        /*
-         * ⚠️ Out of the palette since C-1c, still in the table on purpose.
-         *
-         * C-1c task 3 copies the value into `currencies` and into the start
-         * pages; the column is dropped only in a later release —
-         * same course as `gross` on tl_consho_price in C-1b. A migration that
-         * removes the source in the same release leaves nothing to fall back
-         * on if the copy turns out wrong on real data.
-         *
-         * Everything still reading it (DbalMarketRepository, VisibilityProjector,
-         * the cart and detail controllers) is rewritten in tasks 2 and 3, not
-         * here. It stays editable through neither mask in the meantime.
-         *
-         * ⚠️ The default is '' since C-1c, no longer 'EUR' :
-         * loud rather than silent, and more international.
-         * Both halves of that matter, and the second outlives this column:
-         *
-         * LOUD — a shop created before task 3 fills `currencies` now has no
-         * single currency, and '' says so. DbalMarketRepository filters
-         * `WHERE currency <> ''`, so such a shop drops out of the markets
-         * visibly instead of quietly selling in euro that nobody chose.
-         *
-         * INTERNATIONAL — a built-in 'EUR' is a eurocentric default in a
-         * product whose entire purpose is handling several currencies. That
-         * argument holds regardless of task 10 dropping the column.
-         */
-        'currency' => [
-            'inputType' => 'text',
-            'exclude' => true,
-            'eval' => ['mandatory' => true, 'maxlength' => 3, 'rgxp' => 'alpha', 'tl_class' => 'w50'],
-            'sql' => ['type' => 'string', 'length' => 3, 'default' => ''],
         ],
         /*
          * The language the texts sit in on the record itself. Does not follow

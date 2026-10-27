@@ -32,6 +32,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\ProductPageRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Seo\ProductUrlGenerator;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
@@ -74,17 +75,9 @@ class SitemapListenerTest extends TestCase
         $this->createCatalogSchema($this->connection);
 
         // ShopLanguages reads the languages from the root pages.
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                type TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                consho_currency TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => 1, 'consho_currency' => 'EUR']);
-        $this->insertShop(['id' => 1, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
 
         $this->product(1, 'schwedenbitter');
         $this->product(2, 'ohne-preis', priced: false);

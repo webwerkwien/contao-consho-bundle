@@ -778,8 +778,16 @@ final class FakeConfirmationSource implements OrderConfirmationSourceInterface
     /** @var list<array{quantity: string, name: string, service: bool}> */
     public array $entitlementRows = [];
 
+    /** @var list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}> */
+    public array $prepaidRows = [];
+
     public function entitlements(int $orderId, int $since = 0): array
     {
         return $this->entitlementRows;
+    }
+
+    public function prepaid(int $orderId): array
+    {
+        return $this->prepaidRows;
     }
 }

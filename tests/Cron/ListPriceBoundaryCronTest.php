@@ -567,7 +567,7 @@ class ListPriceBoundaryCronTest extends TestCase
      */
     private function startPoints(): void
     {
-        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 0]);
+        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 0, 'published' => 1]);
     }
 
     /**

@@ -105,10 +105,10 @@ class DbalOrderConfirmationSourceTest extends TestCase
     public function testDerStartpunktFolgtDerSpracheDerBestellung(): void
     {
         $this->createPageTable();
-        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de']);
-        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en']);
-        $this->connection->insert('tl_page', ['id' => 6, 'type' => 'regular', 'consho_shop' => 1, 'language' => 'en']);
-        $this->connection->insert('tl_page', ['id' => 8, 'type' => 'root', 'consho_shop' => 3, 'language' => 'en']);
+        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 6, 'type' => 'regular', 'consho_shop' => 1, 'language' => 'en', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 8, 'type' => 'root', 'consho_shop' => 3, 'language' => 'en', 'published' => 1]);
 
         self::assertSame(5, $this->source()->rootOf(1, 'en'));
         self::assertSame(2, $this->source()->rootOf(1, 'de'));
@@ -120,8 +120,8 @@ class DbalOrderConfirmationSourceTest extends TestCase
     public function testOhnePassendeSpracheGiltDerFallbackStartpunkt(): void
     {
         $this->createPageTable();
-        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de']);
-        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'fallback' => '1']);
+        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'fallback' => '1', 'published' => 1]);
 
         self::assertSame(5, $this->source()->rootOf(1, 'fr'));
         // The language still comes first.
@@ -132,7 +132,7 @@ class DbalOrderConfirmationSourceTest extends TestCase
     {
         $this->createPageTable();
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de', 'published' => '']);
-        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'fallback' => '1']);
+        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'fallback' => '1', 'published' => 1]);
         $this->connection->insert('tl_page', ['id' => 7, 'type' => 'root', 'consho_shop' => 2, 'language' => 'de', 'published' => '']);
 
         // The German root is offline: its links would lead nowhere.
@@ -143,7 +143,7 @@ class DbalOrderConfirmationSourceTest extends TestCase
 
     private function createPageTable(): void
     {
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT '', fallback TEXT NOT NULL DEFAULT '', published TEXT NOT NULL DEFAULT '1')");
+        DcaSchema::createCore($this->connection, 'tl_page');
     }
 
     private function source(): DbalOrderConfirmationSource

@@ -191,7 +191,7 @@ class CatalogBenchmarkTest extends TestCase
     {
         $this->createCatalogSchema($connection);
         $this->createRootPageTable($connection);
-        $this->insertShop(['id' => 1, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1);
         $this->insertRootPage(2, 'fr', 1);
 

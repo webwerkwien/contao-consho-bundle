@@ -85,7 +85,9 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'cancellationsWaiting' =>'Extraordinary cancellations in the shop "%shop%" are waiting for your decision: %count% (%numbers%), the first since %since%. They take effect only once you accept them; accept or reject them under "Subscriptions" → Cancellations.',
     'registrationPathMissing' => 'Shop "%shop%" sells subscriptions, and a subscription needs a customer account — but no registration module gives new accounts the customer group, opens them and allows the login. Contao creates new members disabled and without login. On the registration module set "Allow login" and "Activate accounts at once", or "Account activation" with the shop\'s customer group among the default groups.',
     'registrationPathMissingNoGuests' => 'In shop "%shop%" "Ordering without an account" is off, so every purchase needs a customer account — but no registration module gives new accounts the customer group, opens them and allows the login. New customers then cannot order. On the registration module set "Allow login" and "Activate accounts at once", or "Account activation" with the shop\'s customer group among the default groups. If you create the customer accounts yourself, there is nothing to do.',
+    'subscriptionVatIdInvalid' => 'Subscriptions in the shop "%shop%" were bought with reverse charge, but at the last billing VIES reported the VAT ID as invalid: %numbers%. That follow-up order was charged with VAT. Please clarify with the customer; the next billing checks the VAT ID again.',
     'customerPageLocksOut' => 'The page "%page%" (shop "%shop%") shows customers their orders or subscriptions, but it is protected without admitting these groups: %groups%. Their members get "access denied", with no entry in the log. Add the groups under "Protect page" in the site structure — on the parent page if the protection comes from there.',
+    'orderPageProtected' => 'The order page "%page%" (shop "%shop%") is protected, but the shop allows orders without an account. A guest opens it from the link in the confirmation mail and gets "access denied" instead of their order. Remove "Protect page" from the page in the site structure — on the parent page if the protection comes from there.',
     'loginPageMissing' => 'Shop "%shop%": start points with protected customer pages but no published 401 page: %roots%. A visitor who is logged out sees Contao\'s generic error page instead of the login. Create a page of type "401 Not authenticated" with a login module directly below the start point and set "Redirect to last page visited" there — otherwise the customer lands on the module\'s redirect page after the login instead of their customer page.',
     'accountPasswordPageMissing' => 'Shop "%shop%": start points without a "Lost password" page: %roots%. Guests therefore cannot create a customer account from their order on the order page. Create a published, unprotected page with Contao\'s "Lost password" module below the start point and select it on the start point under ""Lost password" page". A page below another start point does not count: the account would join the other shop\'s customer group.',
     'cancellationPageMissing' =>'Shop "%shop%" sells subscriptions, but these start points have no reachable page with "Cancel contracts here": %roots%. On the start point under "\'Cancel contracts here\' page" choose a published page without login that carries the element "Cancel contracts here". Whether § 312k BGB applies to the shop is for you to judge.',
@@ -175,6 +177,13 @@ $GLOBALS['TL_LANG']['CONSHO']['errors'] = [
  * translated tables, hence here rather than five times in the table files.
  */
 $GLOBALS['TL_LANG']['CONSHO']['translationLegend'] = 'Translation: %s';
+
+// A product's tax class changed: the price rows typed as gross keep their gross.
+$GLOBALS['TL_LANG']['CONSHO']['taxClassChange'] = [
+    'converted' => 'New tax class: these prices entered as gross keep their gross, their net amount was recalculated: %s.',
+    'unconverted' => 'New tax class: these prices entered as gross could not be converted because a tax rate or the home country is missing, and keep their net amount: %s. Please check the price rows.',
+    'net' => '%s net',
+];
 
 /*
  * Label of the button on a note. Only notes carry one — warnings cannot
@@ -1110,6 +1119,8 @@ $GLOBALS['TL_LANG']['CONSHO']['shippingCosts'] = [
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['problem']['phoneMissing'] = 'The carrier of this shipping method needs the recipient\'s phone number.';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhone'] = 'Phone for the carrier';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhoneHint'] = 'The carrier uses it to announce the delivery.';
+$GLOBALS['TL_LANG']['CONSHO']['checkout']['dateOfBirth'] = 'Date of birth';
+$GLOBALS['TL_LANG']['CONSHO']['checkout']['dateOfBirthHint'] = 'For age-restricted items this shipping method needs your date of birth.';
 
 // The delivery for a basket with digital lines only (F-2, F14).
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['electronicDelivery'] = 'Electronic delivery';

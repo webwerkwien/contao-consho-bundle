@@ -91,7 +91,9 @@ final class PurchaseHandler implements PurchaseHandlerInterface
             // to read it from — and today's method may say something else.
             paymentInstructions: (string) ($method->config['instructions'] ?? ''),
             minimumAge: $state->minimumAge,
-            dateOfBirth: $state->data->dateOfBirth,
+            // Only where it was asked: a prefilled date nobody was asked for
+            // is not the order's business.
+            dateOfBirth: $state->needsDateOfBirth ? $state->data->dateOfBirth : '',
 
             // 0 means "this shop does not ask", and the column is NULL-able so
             // that it does not read as 01.01.1970.

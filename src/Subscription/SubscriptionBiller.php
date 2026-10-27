@@ -7,6 +7,9 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Webwerkwien\ContaoConshoBundle\Address\Address;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdCheckResult;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdStatus;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdValidatorInterface;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Checkout\MemberCheckoutDefaults;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
@@ -63,6 +66,9 @@ class SubscriptionBiller
         // The account's billing address (Abo-Nachlese, P74). Optional for the
         // tests built by hand; the container wires it.
         private readonly MemberCheckoutDefaults|null $members = null,
+        // VIES per period for reverse charge (replacing P26's "no check").
+        // Optional like the above.
+        private readonly VatIdValidatorInterface|null $vatIds = null,
     ) {
     }
 
@@ -211,6 +217,8 @@ class SubscriptionBiller
                 email: (string) $last['email'],
             );
 
+        [$reverseCharge, $vatCheck] = $this->reverseCharge($subscription, $last, (string) $shop['vatId']);
+
         $orderId = $this->orders->create(
             new OrderDraft(
                 shopId: (int) $subscription['shop'],
@@ -229,6 +237,7 @@ class SubscriptionBiller
                 shopCountry: (string) $shop['country'],
                 memberId: (int) $subscription['member'],
                 customerVatId: (string) $last['vatId'],
+                vatCheck: $vatCheck,
                 language: $language,
                 fallbackLanguage: (string) $shop['fallbackLanguage'],
                 shippingMethod: (int) $last['shippingMethod'],
@@ -240,7 +249,7 @@ class SubscriptionBiller
                 shippingPhone: (string) $last['shippingPhone'],
                 businessCustomer: (bool) $subscription['businessCustomer'],
                 subscriptionId: $subscriptionId,
-                frozenReverseCharge: (bool) $subscription['reverseCharge'],
+                frozenReverseCharge: $reverseCharge,
                 servicePeriodFrom: $periodFrom,
                 servicePeriodUntil: $periodUntil,
                 // Block R (R3): as the shop says it today — over the
@@ -280,6 +289,52 @@ class SubscriptionBiller
         );
 
         return new BilledPeriod($subscriptionId, (string) $subscription['subscriptionNumber'], $orderId, $periodFrom, $periodUntil, null !== $charging);
+    }
+
+    /**
+     * Reverse charge for this period: the purchase's decision, checked again.
+     *
+     * A VAT ID valid at the purchase may be withdrawn since, and reverse charge
+     * on an invalid one is tax the shop owes. So every follow-up order asks
+     * VIES again, and the answer goes onto the order as the evidence the
+     * checkout's answer goes onto the first one:
+     *
+     *  - valid: reverse charge, as frozen;
+     *  - invalid: taxed — the safe direction (VatIdStatus) — and the finding
+     *    "UID ungültig" names the subscription, as the operator has to clarify
+     *    it with the customer; the next period asks again;
+     *  - not reachable: the frozen decision stands, as the checkout does not
+     *    block on it either (C15), and the log says the check is owed.
+     *
+     * Asked under the subscription's lock: VIES answers within its timeout,
+     * and a second run must not bill the same period meanwhile.
+     *
+     * @param array<string, mixed> $subscription
+     * @param array<string, mixed> $last
+     *
+     * @return array{bool, VatIdCheckResult|null}
+     */
+    private function reverseCharge(array $subscription, array $last, string $shopVatId): array
+    {
+        $vatId = trim((string) $last['vatId']);
+
+        if (!(bool) $subscription['reverseCharge'] || null === $this->vatIds || '' === $vatId) {
+            return [(bool) $subscription['reverseCharge'], null];
+        }
+
+        $check = $this->vatIds->check($vatId, '' === trim($shopVatId) ? null : $shopVatId);
+
+        if (VatIdStatus::Invalid === $check->status) {
+            $this->logger->warning(\sprintf('Subscription %s was billed with VAT: VIES reports the VAT ID %s as invalid.', $subscription['subscriptionNumber'], $vatId));
+
+            return [false, $check];
+        }
+
+        if (VatIdStatus::Unavailable === $check->status) {
+            $this->logger->warning(\sprintf('Subscription %s was billed with reverse charge from the purchase: VIES could not check the VAT ID %s.', $subscription['subscriptionNumber'], $vatId));
+        }
+
+        return [true, $check];
     }
 
     /**

@@ -117,7 +117,7 @@ class CartControllerTest extends TestCase
             DcaSchema::create($connection, $table);
         }
 
-        $this->insertShop(['id' => self::SHOP, 'currency' => 'EUR', 'country' => 'AT', 'fallbackLanguage' => 'de']);
+        $this->insertShop(['id' => self::SHOP, 'country' => 'AT', 'fallbackLanguage' => 'de']);
         $this->insertRootPage(self::ROOT_PAGE, 'de', self::SHOP);
 
         // Main product with two variants. The title is only on the main product,

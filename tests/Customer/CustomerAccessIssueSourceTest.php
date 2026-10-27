@@ -219,6 +219,78 @@ final class CustomerAccessIssueSourceTest extends TestCase
         self::assertSame([F::CustomerPageLocksOut], $this->findings());
     }
 
+    /**
+     * The order page opens by the link in the mail. With guest checkout no
+     * protection can be right — a guest has no login to get past it.
+     */
+    public function testGeschuetzteBestellseiteMitGastbestellung(): void
+    {
+        $this->connection->update('tl_consho_shop', ['guestCheckout' => 1], ['id' => 1]);
+        $this->page(13, 1, 'regular', 'Bestellung');
+        $this->connection->update('tl_page', ['consho_orderPage' => 13], ['id' => 1]);
+
+        self::assertSame([], $this->findings(), 'ungeschützt: nichts');
+
+        // Inherited from the account page, with every group admitted.
+        $this->connection->update('tl_page', ['pid' => 10], ['id' => 13]);
+
+        $issues = $this->issues();
+
+        self::assertCount(1, $issues);
+        self::assertSame(F::OrderPageProtected, $issues[0]->finding);
+        self::assertSame(['shop' => 'Webshop', 'page' => 'Bestellung'], $issues[0]->context);
+        self::assertTrue($issues[0]->finding->isWarning());
+    }
+
+    /**
+     * Without guest checkout every buyer is a member: the order page follows
+     * the rule of the customer pages, and counts towards the login page.
+     */
+    public function testGeschuetzteBestellseiteOhneGastbestellung(): void
+    {
+        $this->connection->update('tl_consho_shop', ['guestCheckout' => 0], ['id' => 1]);
+        // Accounts by hand: the registration finding stays out of the way.
+        $this->connection->update('tl_module', ['consho_activateAtOnce' => 1], ['id' => 40]);
+        $this->page(13, 10, 'regular', 'Bestellung');
+        $this->connection->update('tl_page', ['consho_orderPage' => 13], ['id' => 1]);
+
+        self::assertSame([], $this->findings(), 'beide Gruppen zugelassen');
+
+        $this->connection->update('tl_page', ['"groups"' => serialize(['7'])], ['id' => 10]);
+        $this->connection->delete('tl_content', ['id' => 30]);
+
+        $issues = $this->issues();
+
+        self::assertCount(1, $issues);
+        self::assertSame(F::CustomerPageLocksOut, $issues[0]->finding);
+        self::assertSame(['shop' => 'Webshop', 'page' => 'Bestellung', 'groups' => 'Händler'], $issues[0]->context);
+
+        $this->connection->update('tl_page', ['published' => 0], ['id' => 12]);
+        self::assertSame([F::CustomerPageLocksOut, F::LoginPageMissing], $this->findings());
+    }
+
+    /**
+     * The shop that names the order page decides, not the tree the page sits
+     * in: a guest shop linking to a protected page under a members-only shop
+     * locks its guests out all the same.
+     */
+    public function testBestellseiteUnterFremdemStartpunktZaehltFuerDenNennendenShop(): void
+    {
+        $this->connection->update('tl_consho_shop', ['guestCheckout' => 0], ['id' => 1]);
+        $this->connection->update('tl_module', ['consho_activateAtOnce' => 1], ['id' => 40]);
+        $this->connection->insert('tl_consho_shop', ['id' => 2, 'title' => 'Gastshop', 'customerGroup' => 7, 'guestCheckout' => 1]);
+        $this->page(2, 0, 'root', 'Gastshop DE', ['consho_shop' => 2]);
+        $this->page(13, 10, 'regular', 'Bestellung');
+        $this->connection->update('tl_page', ['consho_orderPage' => 13], ['id' => 2]);
+
+        $issues = $this->issues();
+
+        self::assertCount(1, $issues);
+        self::assertSame(F::OrderPageProtected, $issues[0]->finding);
+        self::assertSame(['shop' => 'Gastshop', 'page' => 'Bestellung'], $issues[0]->context);
+        self::assertSame(2, $issues[0]->shopId);
+    }
+
     public function testStartpunktOhneShopZaehltNicht(): void
     {
         $this->connection->update('tl_page', ['consho_shop' => 0], ['id' => 1]);

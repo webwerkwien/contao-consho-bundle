@@ -20,9 +20,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT 'regular', published INTEGER NOT NULL DEFAULT 1, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_checkoutPage INTEGER NULL, consho_cartPage INTEGER NOT NULL DEFAULT 0, consho_orderPage INTEGER NOT NULL DEFAULT 0, consho_shippingCostsPage INTEGER NOT NULL DEFAULT 0)",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             // published/start/stop as in Contao's DCA — published defaults to false there.
             "CREATE TABLE tl_article (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 0, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '')",
@@ -130,7 +128,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     {
         // A website without Consho has no checkout page and needs none.
         $this->vollstaendig();
-        $this->connection->insert('tl_page', ['id' => 99, 'title' => 'Andere Site', 'type' => 'root', 'consho_shop' => 0]);
+        $this->connection->insert('tl_page', ['id' => 99, 'title' => 'Andere Site', 'type' => 'root', 'consho_shop' => 0, 'published' => 1]);
 
         self::assertSame([], $this->issues());
     }
@@ -402,17 +400,18 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         $this->connection->insert('tl_page', [
             'id' => 1, 'title' => 'Shop DE', 'type' => 'root', 'consho_shop' => 1,
             'consho_checkoutPage' => 2, 'consho_cartPage' => 3, 'consho_orderPage' => 4, 'consho_shippingCostsPage' => 20,
+            'published' => 1,
         ]);
-        $this->connection->insert('tl_page', ['id' => 2, 'title' => 'Kasse', 'type' => 'regular']);
-        $this->connection->insert('tl_page', ['id' => 3, 'title' => 'Warenkorb', 'type' => 'regular']);
-        $this->connection->insert('tl_page', ['id' => 4, 'title' => 'Bestellung', 'type' => 'regular']);
+        $this->connection->insert('tl_page', ['id' => 2, 'title' => 'Kasse', 'type' => 'regular', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 3, 'title' => 'Warenkorb', 'type' => 'regular', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 4, 'title' => 'Bestellung', 'type' => 'regular', 'published' => 1]);
         $this->connection->insert('tl_article', ['id' => 5, 'pid' => 3, 'published' => 1]);
         $this->connection->insert('tl_content', ['id' => 6, 'pid' => 5, 'ptable' => 'tl_article', 'type' => 'consho_cart']);
         $this->connection->insert('tl_article', ['id' => 1, 'pid' => 2, 'published' => 1]);
         $this->connection->insert('tl_content', ['id' => 1, 'pid' => 1, 'ptable' => 'tl_article', 'type' => 'consho_checkout']);
         $this->connection->insert('tl_article', ['id' => 7, 'pid' => 4, 'published' => 1]);
         $this->connection->insert('tl_content', ['id' => 8, 'pid' => 7, 'ptable' => 'tl_article', 'type' => 'consho_order']);
-        $this->connection->insert('tl_page', ['id' => 20, 'title' => 'Versandkosten', 'type' => 'regular']);
+        $this->connection->insert('tl_page', ['id' => 20, 'title' => 'Versandkosten', 'type' => 'regular', 'published' => 1]);
         $this->connection->insert('tl_article', ['id' => 20, 'pid' => 20, 'published' => 1]);
         $this->connection->insert('tl_content', ['id' => 20, 'pid' => 20, 'ptable' => 'tl_article', 'type' => 'consho_shipping_costs']);
 

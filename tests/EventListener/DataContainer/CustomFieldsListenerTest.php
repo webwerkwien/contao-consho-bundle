@@ -40,7 +40,7 @@ class CustomFieldsListenerTest extends TestCase
 
         // Product 10 is in a shop with German and French: fr is its
         // translation language.
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', urlPrefix TEXT NOT NULL DEFAULT '', urlSuffix TEXT NOT NULL DEFAULT '')");
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_consho_shop', ['id' => 7, 'fallbackLanguage' => 'de']);
         $this->connection->insert('tl_page', ['type' => 'root', 'consho_shop' => 7, 'language' => 'de']);
         $this->connection->insert('tl_page', ['type' => 'root', 'consho_shop' => 7, 'language' => 'fr']);

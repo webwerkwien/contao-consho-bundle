@@ -50,21 +50,7 @@ class AliasRedirectTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                alias TEXT NOT NULL DEFAULT '',
-                type TEXT NOT NULL DEFAULT 'regular',
-                published INTEGER NOT NULL DEFAULT 0,
-                dns TEXT NOT NULL DEFAULT '',
-                urlPrefix TEXT NOT NULL DEFAULT '',
-                urlSuffix TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                conshoPathTemplate TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_url_redirect');
 
         $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de']);

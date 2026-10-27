@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Notification;
 
 use Doctrine\DBAL\Connection;
+use Webwerkwien\ContaoConshoBundle\Voucher\PrepaidTax;
 
 /**
  * Reads what the confirmation mails need from the frozen order (C-9).
@@ -23,6 +24,11 @@ final class DbalOrderConfirmationSource implements OrderConfirmationSourceInterf
         $row = $this->connection->fetchAssociative('SELECT * FROM tl_consho_order WHERE id = ?', [$orderId]);
 
         return false === $row ? null : $row;
+    }
+
+    public function prepaid(int $orderId): array
+    {
+        return (new PrepaidTax($this->connection))->of($orderId);
     }
 
     public function entitlements(int $orderId, int $since = 0): array

@@ -153,6 +153,30 @@ class MemberCheckoutDefaultsTest extends TestCase
         self::assertFalse($data->separateShipping);
     }
 
+    /**
+     * Contao keeps the date of birth as a timestamp of midnight; the
+     * checkout's field wants the day. Filled also where the address was
+     * already typed — the two are independent — and never over a typed date.
+     */
+    public function testDasGeburtsdatumKommtAusDemKonto(): void
+    {
+        $this->insertMember($this->connection, 7, ['lastname' => 'Example', 'dateOfBirth' => (string) mktime(0, 0, 0, 5, 17, 1960)]);
+
+        self::assertSame('1960-05-17', $this->defaults()->applyTo(new CheckoutData(), 7)->dateOfBirth);
+        self::assertSame('1960-05-17', $this->defaults()->applyTo(new CheckoutData(billing: new Address(lastname: 'Anders')), 7)->dateOfBirth);
+        self::assertSame('1980-01-02', $this->defaults()->applyTo(new CheckoutData(dateOfBirth: '1980-01-02'), 7)->dateOfBirth);
+        self::assertSame('', $this->defaults()->applyTo(new CheckoutData(), 0)->dateOfBirth);
+    }
+
+    public function testEinLeeresGeburtsdatumBleibtLeer(): void
+    {
+        $this->insertMember($this->connection, 7, ['lastname' => 'Example']);
+        $this->insertMember($this->connection, 8, ['lastname' => 'Example', 'dateOfBirth' => '0']);
+
+        self::assertSame('', $this->defaults()->applyTo(new CheckoutData(), 7)->dateOfBirth);
+        self::assertSame('', $this->defaults()->applyTo(new CheckoutData(), 8)->dateOfBirth);
+    }
+
     public function testEinGeloeschtesMitgliedAendertNichts(): void
     {
         self::assertTrue($this->defaults()->applyTo(new CheckoutData(), 99)->billing->isEmpty());

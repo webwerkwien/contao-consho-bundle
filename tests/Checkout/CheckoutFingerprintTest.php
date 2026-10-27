@@ -116,8 +116,7 @@ class CheckoutFingerprintTest extends TestCase
         yield 'Rechnungsadresse' => [self::build(billingCity: 'Graz')];
         yield 'Lieferadresse getrennt' => [self::build(separateShipping: true)];
         yield 'UID' => [self::build(vatId: 'ATU12345678')];
-        yield 'Geburtsdatum' => [self::build(dateOfBirth: '1990-01-01')];
-        // Abo-2: the same money, a different contract — monthly subscription instead of a one-off purchase.
+        yield 'Geburtsdatum' => [self::build(dateOfBirth: '1990-01-01', needsDateOfBirth: true)];        // Abo-2: the same money, a different contract — monthly subscription instead of a one-off purchase.
         yield 'Modell' => [self::build(subscriptionRule: 5)];
         // Abo-2: the customer read the sentence on digital content,
         // meanwhile the product is set to "service" — the order
@@ -239,6 +238,7 @@ class CheckoutFingerprintTest extends TestCase
         int $subscriptionRule = 0,
         array $withdrawalKinds = [],
         int $renews = 0,
+        bool $needsDateOfBirth = false,
     ): CheckoutState {
         $line = new CartLine(1, $articleId, $articleId, $quantity, '10.0000', '10.0000', $lineGross, $taxClassId, $subscriptionRule, $renews);
 
@@ -272,6 +272,7 @@ class CheckoutFingerprintTest extends TestCase
             $minimumAge,
             [],
             withdrawalKinds: $withdrawalKinds,
+            needsDateOfBirth: $needsDateOfBirth,
         );
     }
 }

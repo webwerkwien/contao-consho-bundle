@@ -11,6 +11,7 @@ use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Document\DbalDocumentSource;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Tests\Subscription\SubscriptionSchema;
@@ -30,9 +31,7 @@ class DbalDocumentSourceTest extends TestCase
         // see them reach the snapshot — a hand-written schema goes stale with
         // the next column.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_shop');
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT '', consho_currency TEXT NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_files (id INTEGER PRIMARY KEY, uuid BLOB NULL, type TEXT NOT NULL DEFAULT '', hash TEXT NOT NULL DEFAULT '')",
         );

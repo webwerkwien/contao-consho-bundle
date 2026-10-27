@@ -115,6 +115,17 @@ final class WithdrawalBackendController
                 $params = array_map(static fn (string $type): string => (string) ($GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'][$type] ?? $type), $params);
             }
 
+            // "11,25 €" in a German backend, not "11.25".
+            $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
+
+            foreach ($result->kinds as $position => $kind) {
+                if (isset($params[$position])) {
+                    $params[$position] = ProcessingResult::MONEY === $kind
+                        ? $this->money->format($params[$position], (string) $order['currency'], $language)
+                        : $this->money->quantity($params[$position], $language);
+                }
+            }
+
             $text = \sprintf(
                 (string) ($lang['result'][$result->key] ?? $result->key),
                 ...array_map(static fn (string $p): string => StringUtil::specialchars($p), $params),

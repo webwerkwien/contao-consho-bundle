@@ -106,6 +106,21 @@
         <th scope="row" style="padding: 4px 8px; text-align: right; font-weight: normal;">{{ 'CONSHO.invoice.taxTotal'|trans({}, 'contao_default') }}</th>
         <td width="110" style="padding: 4px 8px; {{ num }}">{{ untaxed ? 'CONSHO.invoice.notTaxable'|trans({}, 'contao_default') : order.taxTotal }}</td>
     </tr>
+    {#- EZ-4: the tax single-purpose vouchers already carried, and what remains. #}
+    {% if not untaxed %}
+    {% for prepaid in order.prepaid|default([]) %}
+    <tr>
+        <th scope="row" style="padding: 4px 8px; text-align: right; font-weight: normal;">{{ 'CONSHO.invoice.prepaidTax'|trans([prepaid.label, prepaid.rate], 'contao_default') }}</th>
+        <td width="110" style="padding: 4px 8px; {{ num }}">{{ prepaid.tax }}</td>
+    </tr>
+    {% endfor %}
+    {% if order.taxDue|default('') %}
+    <tr>
+        <th scope="row" style="padding: 4px 8px; text-align: right; font-weight: normal;">{{ 'CONSHO.invoice.taxDue'|trans({}, 'contao_default') }}</th>
+        <td width="110" style="padding: 4px 8px; {{ num }}">{{ order.taxDue }}</td>
+    </tr>
+    {% endif %}
+    {% endif %}
     <tr>
         <th scope="row" style="padding: 8px; text-align: right; border-top: 2px solid #222222;">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th>
         <td width="110" style="padding: 8px; border-top: 2px solid #222222; font-weight: bold; font-size: 16px; {{ num }}">{{ order.grandTotal }}</td>

@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Voucher;
 use Brick\Math\BigDecimal;
 use Webwerkwien\ContaoConshoBundle\Cart\CartLine;
 use Webwerkwien\ContaoConshoBundle\Checkout\ShippingShare;
+use Webwerkwien\ContaoConshoBundle\Pricing\GrossCalculator;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxRateNotFound;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
 
@@ -69,5 +70,37 @@ class CoverablePots
         }
 
         return $pots;
+    }
+
+    /**
+     * The cart rule's net shares as of() takes them: grossed at the rate of
+     * what they reduce, and negative — the same as the checkout makes them
+     * (CheckoutCalculator), so that the basket's preview of a single-purpose
+     * voucher does not promise more than the checkout then takes.
+     *
+     * @param list<ShippingShare> $netShares
+     * @param string              $country   where a share without a country of its own is taxed
+     *
+     * @return list<ShippingShare>
+     */
+    public function discountShares(array $netShares, string $country, int $now): array
+    {
+        $gross = new GrossCalculator($this->taxes);
+
+        return array_map(
+            static function (ShippingShare $share) use ($gross, $country, $now): ShippingShare {
+                $at = '' !== $share->taxCountry ? $share->taxCountry : $country;
+
+                try {
+                    $amount = '' === $at ? $share->net : $gross->gross($share->net, $share->taxClassId, $at, $now);
+                } catch (TaxRateNotFound) {
+                    // As the checkout: without a rate the amount stays as it is.
+                    $amount = $share->net;
+                }
+
+                return new ShippingShare($share->taxClassId, (string) BigDecimal::of($share->net)->negated(), (string) BigDecimal::of($amount)->negated(), $share->taxCountry);
+            },
+            $netShares,
+        );
     }
 }

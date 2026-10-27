@@ -131,7 +131,7 @@ final class SubscriptionPauseEndToEndTest extends TestCase
             DcaSchema::create($this->connection, $table);
         }
 
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT '', consho_currency TEXT NOT NULL DEFAULT '')");
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement("CREATE TABLE tl_files (id INTEGER PRIMARY KEY, uuid BLOB NULL, type TEXT NOT NULL DEFAULT '', hash TEXT NOT NULL DEFAULT '')");
 
         $this->seed();

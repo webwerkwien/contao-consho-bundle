@@ -39,7 +39,7 @@ class VisibilityProjectorTest extends TestCase
         $this->createRootPageTable($this->connection);
 
         // de is the default language, fr a translation language.
-        $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', self::SHOP);
         $this->insertRootPage(2, 'fr', self::SHOP);
 
@@ -391,7 +391,7 @@ class VisibilityProjectorTest extends TestCase
         // someone can name it. Whoever computes skips it — otherwise the
         // projection would hold rows with an empty language that no list ever
         // reads.
-        $this->connection->insert('tl_page', ['id' => 3, 'type' => 'root', 'title' => 'Ohne Sprache', 'language' => '', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR']);
+        $this->connection->insert('tl_page', ['id' => 3, 'type' => 'root', 'title' => 'Ohne Sprache', 'language' => '', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR', 'published' => 1]);
         $this->main(1);
         $this->listPrice(1, '12.0000');
 

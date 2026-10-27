@@ -129,6 +129,12 @@ trait CatalogSchema
      * own, not part of createCatalogSchema(): several tests create tl_page
      * themselves.
      *
+     * The whole tl_page, built by DcaSchema::createCore() from Contao's DCA
+     * plus contao/dca/tl_page.php — the same columns, types and defaults as
+     * the real table, so a new column needs no edit here. Two of those
+     * defaults matter to the tests: `published` is false and `type` is
+     * 'regular', as in Contao.
+     *
      * `consho_currency` after contao/dca/tl_page.php: string(3) NOT NULL
      * DEFAULT '' — so **empty** as the column default, not 'EUR'. A
      * start point written past the field must not silently become
@@ -136,22 +142,7 @@ trait CatalogSchema
      */
     protected function createRootPageTable(Connection $c): void
     {
-        $c->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                dns TEXT NOT NULL DEFAULT '',
-                useSSL TEXT NOT NULL DEFAULT '1',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                consho_currency TEXT NOT NULL DEFAULT '',
-                published TEXT NOT NULL DEFAULT '1',
-                start TEXT NOT NULL DEFAULT '',
-                stop TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($c, 'tl_page');
     }
 
     /**
@@ -159,10 +150,13 @@ trait CatalogSchema
      * the same split as for {@see insertPrice()}: in the test code, where it
      * is read, it hides nothing; in the table definition it would hide
      * the empty start point. Whoever needs the case passes ''.
+     *
+     * Published, set explicitly: the column default is unpublished, as in
+     * Contao.
      */
     protected function insertRootPage(int $id, string $language, int $shopId, string $currency = 'EUR'): void
     {
-        $this->catalogConnection->insert('tl_page', ['id' => $id, 'type' => 'root', 'title' => 'Start '.$language, 'language' => $language, 'consho_shop' => $shopId, 'consho_currency' => $currency]);
+        $this->catalogConnection->insert('tl_page', ['id' => $id, 'type' => 'root', 'title' => 'Start '.$language, 'language' => $language, 'consho_shop' => $shopId, 'consho_currency' => $currency, 'published' => 1]);
     }
 
     /**

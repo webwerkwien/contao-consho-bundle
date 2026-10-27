@@ -40,7 +40,7 @@ class PriceRebuildCommandTest extends TestCase
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($connection);
         $this->createRootPageTable($connection);
-        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1);
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1]);
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);

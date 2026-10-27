@@ -551,6 +551,13 @@ class CheckoutController extends AbstractContentElementController
     {
         $data = $data->withShippingMethod((int) $request->request->getString('consho_shipping_method'));
 
+        // Shown only where the method asks (AgeGate::asksDateOfBirth()). A
+        // date that is no calendar date is kept as none, and the age check
+        // then says so instead of reading it as some other day.
+        if ($request->request->has('consho_date_of_birth')) {
+            $data = $data->withDateOfBirth(self::dateOf($request->request->getString('consho_date_of_birth')));
+        }
+
         if (!$request->request->has('consho_shipping_phone')) {
             return $data;
         }
@@ -558,6 +565,21 @@ class CheckoutController extends AbstractContentElementController
         $phone = mb_substr(trim((string) preg_replace('/[\x00-\x1F\x7F]/u', '', $request->request->getString('consho_shipping_phone'))), 0, 64);
 
         return $data->withShippingPhone('' === $phone ? '' : $this->phones->normalize($phone, $data->deliveryCountry()));
+    }
+
+    /**
+     * `YYYY-MM-DD` as a date field sends it, and a real day of the calendar —
+     * "2008-02-30" is no birthday, though DateTimeImmutable would roll it over.
+     */
+    private static function dateOf(string $value): string
+    {
+        $value = trim($value);
+
+        if (1 !== preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $match) || !checkdate((int) $match[2], (int) $match[3], (int) $match[1])) {
+            return '';
+        }
+
+        return $value;
     }
 
     private function apply(Request $request, Cart $cart, string $shopVatId): void

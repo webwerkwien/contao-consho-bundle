@@ -147,13 +147,18 @@ final class DcaSchema
     /**
      * "int(10) unsigned NOT NULL auto_increment", "varchar(255) BINARY NOT
      * NULL default ''" — SQLite takes the type name and the constraints as
-     * they are once the MySQL-only words are gone.
+     * they are once the MySQL-only words are gone. "binary(16)"
+     * (tl_page.favicon, a UUID) becomes BLOB: Doctrine's SQLite schema
+     * manager knows no type "binary" and would fail on listTableColumns(),
+     * which the migrations call.
      */
     private static function stringColumn(string $sql): string
     {
         if (false !== stripos($sql, 'auto_increment')) {
             return 'INTEGER PRIMARY KEY AUTOINCREMENT';
         }
+
+        $sql = (string) preg_replace('/\b(?:var)?binary\s*\(\d+\)/i', 'BLOB', $sql);
 
         return trim((string) preg_replace(['/\bunsigned\b/i', '/\bBINARY\b(?!\s*\()/', '/\bCOLLATE\s+\S+/i'], '', $sql));
     }

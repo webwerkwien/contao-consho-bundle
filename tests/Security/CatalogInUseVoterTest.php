@@ -39,7 +39,7 @@ class CatalogInUseVoterTest extends TestCase
         }
 
         $this->connection->executeStatement('CREATE TABLE tl_content (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT \'\', conshoFilter BLOB NULL)');
-        $this->connection->executeStatement('CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, consho_shop INTEGER NOT NULL DEFAULT 0)');
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_consho_product', ['id' => 5, 'productType' => 2, 'manufacturer' => 3]);
         $this->connection->insert('tl_consho_property_option', ['id' => 11, 'pid' => 4]);
         $this->connection->insert('tl_consho_product_property', ['pid' => 5, 'optionId' => 11]);

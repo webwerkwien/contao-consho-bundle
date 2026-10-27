@@ -61,4 +61,12 @@ interface OrderConfirmationSourceInterface
      * @return list<array{quantity: string, name: string, service: bool}>
      */
     public function entitlements(int $orderId, int $since = 0): array;
+
+    /**
+     * The tax single-purpose vouchers already carried (EZ-4), for an order
+     * without an invoice yet — with one, the invoice's snapshot says it.
+     *
+     * @return list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>
+     */
+    public function prepaid(int $orderId): array;
 }

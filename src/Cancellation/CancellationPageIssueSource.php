@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
+use Webwerkwien\ContaoConshoBundle\Customer\PageTree;
 
 /**
  * A shop that sells subscriptions without a reachable "Verträge hier
@@ -20,7 +21,8 @@ use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
  * Source): the start point's `consho_cancellationPage` is published and in
  * its window, and carries the element — in an article or one level down in
  * a container element, each shown and in its window. Unlike the withdrawal,
- * a protected page fails whatever the shop's guest checkout: § 312k wants
+ * a protected page fails whatever the shop's guest checkout — protected on
+ * its own or from a parent page, as Contao inherits it (PageTree): § 312k wants
  * the button "unmittelbar und leicht zugänglich", and a subscription always
  * has an account, so a login is exactly what the law keeps out of the way.
  */
@@ -51,7 +53,21 @@ final class CancellationPageIssueSource implements SetupIssueSource
 
         $rows = $this->connection->fetchAllAssociative(
             \sprintf(
-                "SELECT root.title, s.id AS shop, s.title AS shopTitle
+                "SELECT root.title, s.id AS shop, s.title AS shopTitle, target.id AS target,
+                        CASE WHEN target.id IS NULL
+                            OR (
+                            NOT EXISTS (
+                                SELECT 1 FROM tl_content c
+                                JOIN tl_article a ON a.id = c.pid AND c.ptable = 'tl_article'
+                                WHERE a.pid = target.id AND %1\$s AND c.type = 'consho_cancellation' AND %2\$s
+                            )
+                            AND NOT EXISTS (
+                                SELECT 1 FROM tl_content nested
+                                JOIN tl_content outer_element ON outer_element.id = nested.pid AND nested.ptable = 'tl_content'
+                                JOIN tl_article a ON a.id = outer_element.pid AND outer_element.ptable = 'tl_article'
+                                WHERE a.pid = target.id AND %1\$s AND nested.type = 'consho_cancellation' AND %3\$s AND %4\$s
+                            )
+                        ) THEN 1 ELSE 0 END AS missing
                    FROM tl_page root
                    JOIN tl_consho_shop s ON s.id = root.consho_shop
               LEFT JOIN tl_page target
@@ -68,23 +84,6 @@ final class CancellationPageIssueSource implements SetupIssueSource
                              WHERE p.pid = 0 AND p.published = 1 AND p.saleSubscription = 1
                                AND EXISTS (SELECT 1 FROM tl_consho_product_shop ps WHERE ps.pid = p.id AND ps.shop = s.id))
                     )
-                    AND (
-                        target.id IS NULL
-                        OR target.protected = 1
-                        OR (
-                            NOT EXISTS (
-                                SELECT 1 FROM tl_content c
-                                JOIN tl_article a ON a.id = c.pid AND c.ptable = 'tl_article'
-                                WHERE a.pid = target.id AND %1\$s AND c.type = 'consho_cancellation' AND %2\$s
-                            )
-                            AND NOT EXISTS (
-                                SELECT 1 FROM tl_content nested
-                                JOIN tl_content outer_element ON outer_element.id = nested.pid AND nested.ptable = 'tl_content'
-                                JOIN tl_article a ON a.id = outer_element.pid AND outer_element.ptable = 'tl_article'
-                                WHERE a.pid = target.id AND %1\$s AND nested.type = 'consho_cancellation' AND %3\$s AND %4\$s
-                            )
-                        )
-                    )
                   ORDER BY s.id, root.id",
                 self::visible('a', 'published = 1'),
                 self::visible('c', 'invisible = 0'),
@@ -97,8 +96,15 @@ final class CancellationPageIssueSource implements SetupIssueSource
         );
 
         $byShop = [];
+        $tree = [] === $rows ? null : PageTree::load($this->connection);
 
         foreach ($rows as $row) {
+            // Carries the element, and nothing protects it — neither the page
+            // itself nor a parent, as Contao inherits it: reachable.
+            if (!$row['missing'] && null === $tree?->guardOf((int) $row['target'])) {
+                continue;
+            }
+
             $byShop[(int) $row['shop']]['title'] = (string) $row['shopTitle'];
             $byShop[(int) $row['shop']]['roots'][] = (string) $row['title'];
         }

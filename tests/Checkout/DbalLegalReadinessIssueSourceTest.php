@@ -31,13 +31,7 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT 'regular',
-             published INTEGER NOT NULL DEFAULT 1, protected INTEGER NOT NULL DEFAULT 0, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '',
-             consho_shop INTEGER NOT NULL DEFAULT 0, consho_privacyPage INTEGER NOT NULL DEFAULT 0, consho_warrantyPage INTEGER NOT NULL DEFAULT 0, consho_termsElement INTEGER NOT NULL DEFAULT 0, consho_withdrawalElement INTEGER NOT NULL DEFAULT 0,
-             consho_withdrawalFormPage INTEGER NOT NULL DEFAULT 0,
-             consho_warrantyNotice BLOB NULL)",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_files (id INTEGER PRIMARY KEY, uuid BLOB NULL, type TEXT NOT NULL DEFAULT 'file')",
         );
@@ -675,16 +669,17 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
             'consho_termsElement' => 10, 'consho_withdrawalElement' => 11,
             'consho_warrantyNotice' => self::NOTICE,
             'consho_withdrawalFormPage' => 12,
+            'published' => 1,
         ]);
 
         // D-2: the "Withdraw from contract" page with its element.
-        $this->connection->insert('tl_page', ['id' => 12, 'title' => 'Vertrag widerrufen']);
+        $this->connection->insert('tl_page', ['id' => 12, 'title' => 'Vertrag widerrufen', 'published' => 1]);
         $this->connection->insert('tl_article', ['id' => 13, 'pid' => 12]);
         $this->connection->insert('tl_content', ['id' => 14, 'pid' => 13, 'type' => 'consho_withdrawal']);
         $this->connection->insert('tl_files', ['id' => 20, 'uuid' => self::NOTICE, 'type' => 'file']);
-        $this->connection->insert('tl_page', ['id' => 3, 'title' => 'Rechtliches']);
-        $this->connection->insert('tl_page', ['id' => 4, 'title' => 'Datenschutz']);
-        $this->connection->insert('tl_page', ['id' => 8, 'title' => 'Gewährleistung']);
+        $this->connection->insert('tl_page', ['id' => 3, 'title' => 'Rechtliches', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 4, 'title' => 'Datenschutz', 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 8, 'title' => 'Gewährleistung', 'published' => 1]);
 
         $this->connection->insert('tl_article', ['id' => 7, 'pid' => 3]);
         $this->connection->insert('tl_content', ['id' => 10, 'pid' => 7, 'type' => 'text']);

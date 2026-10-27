@@ -20,14 +20,7 @@ class DbalProductPageRepositoryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            'CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL DEFAULT "regular",
-                published INTEGER NOT NULL DEFAULT 0
-            )',
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
 
         // From the DCA, as in ProductAddressLookupTest — the round-trip test in
         // this class needs both to agree on what a translation row looks like.

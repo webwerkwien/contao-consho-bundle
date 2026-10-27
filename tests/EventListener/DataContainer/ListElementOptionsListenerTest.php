@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\ListElementOptionsListener;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
  * The lists that a filter element can refer to explicitly (conshoListElement).
@@ -19,9 +20,7 @@ class ListElementOptionsListenerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
         // Types and defaults as in core-bundle 5.7 and Consho's tl_content DCA.
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, title VARCHAR(255) NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, title VARCHAR(255) NOT NULL DEFAULT '')",
         );

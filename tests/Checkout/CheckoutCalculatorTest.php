@@ -891,6 +891,48 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
+     * C19: the field for the date of birth shows where the chosen method
+     * checks the age against it, and only for a limit that is checked.
+     */
+    public function testDasGeburtsdatumNurWennDieVersandartEsPrueft(): void
+    {
+        $ausweis = new class implements ShippingMethodTypeInterface {
+            public static function getType(): string
+            {
+                return 'ausweis';
+            }
+
+            public function isAvailable(ShippingContext $context, array $config): bool
+            {
+                return true;
+            }
+
+            public function calculate(ShippingContext $context, array $config): ShippingQuote
+            {
+                return new ShippingQuote('5.0000');
+            }
+
+            public function capabilities(array $config): ShippingCapabilities
+            {
+                return new ShippingCapabilities(18, true);
+            }
+        };
+        $paket = [new ShippingMethod(1, 'ausweis', 'Paket mit Ausweis', ShippingTaxMode::Fixed, 1, [])];
+
+        $state = $this->calculate($this->vollstaendig(), minimumAge: 18, shipping: $paket, shippingTypes: [$ausweis]);
+        self::assertTrue($state->needsDateOfBirth);
+        self::assertTrue($state->has(CheckoutProblem::DateOfBirthMissing));
+
+        $state = $this->calculate($this->vollstaendig()->withDateOfBirth('1980-05-17'), minimumAge: 18, shipping: $paket, shippingTypes: [$ausweis]);
+        self::assertFalse($state->has(CheckoutProblem::DateOfBirthMissing));
+        self::assertTrue($state->isReady());
+
+        // Without a checked limit nothing asks.
+        self::assertFalse($this->calculate($this->vollstaendig(), minimumAge: 12, shipping: $paket, shippingTypes: [$ausweis])->needsDateOfBirth);
+        self::assertFalse($this->calculate($this->vollstaendig(), minimumAge: 18)->needsDateOfBirth);
+    }
+
+    /**
      * 🔴 Shipping AND discount together. An earlier version used the same
      * variable for both, and the payment stage overwrote the shipping shares —
      * the total then happened to be almost right.

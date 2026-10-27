@@ -5,6 +5,52 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.15] – 2026-10-27
+
+### Added
+
+- **Date of birth in the checkout.** Where the chosen shipping method checks the age against a date of birth and the
+  basket has an age limit of 16 or 18, the shipping step shows a date field. A logged-in member finds it filled from
+  the account. The order keeps the date only where it was asked for.
+- **Protected order page.** A new finding `orderPageProtected` warns when the order page of a shop with guest checkout
+  is protected, on its own or from a parent page: a guest opening it from the confirmation mail gets "access denied".
+  Without guest checkout the order page follows the rule of the customer pages (`customerPageLocksOut`,
+  `loginPageMissing`).
+
+### Removed
+
+- **`tl_consho_shop.currency`.** The single currency of the shop configuration, out of the form since the currency
+  moved to the start page, is no longer defined. `contao:migrate --with-deletes` drops the column; check with
+  `--dry-run` first. Updating from a version without the currency on the start page: run `contao:migrate` once
+  without `--with-deletes` first, so the currency is copied before the column goes.
+
+### Changed
+
+- **VAT ID checked per subscription period.** A subscription bought with reverse charge checks the customer's VAT ID
+  at VIES for every follow-up order and stores the result on the order. An invalid VAT ID bills that order with VAT
+  and raises the new finding `subscriptionVatIdInvalid`; when VIES cannot be reached, the reverse charge of the
+  purchase stays and the system log says so.
+- **Tax class change keeps gross prices.** When a product's tax class changes, its price rows entered as gross keep
+  their gross amount and get a new net amount at the new rate; rows entered as net keep their net amount. A message
+  names the converted prices, and the rows that could not be converted because a tax rate or the home country is
+  missing.
+- **"Cancel contracts here" protected from a parent page.** `cancellationPageMissing` also reports a cancellation page
+  that is not protected itself but sits below a protected page.
+
+### Fixed
+
+- **Amounts in the messages of "Process withdrawal".** A refused delivery share, value compensation or voucher share
+  names the most allowed as an amount in the backend's language ("17,80 €", not "17.80"), the quantity left as a
+  quantity. A delivery share that is not a number no longer fails with an error but names the most allowed.
+- **Remaining tax on the order page and in the order confirmation.** With a single-purpose voucher both state the tax
+  it already carried and the remaining tax, as the invoice does — from the invoice once there is one, before that from
+  the payments.
+- **Full withdrawal before the invoice.** When everything is withdrawn from an order that has no invoice yet, the
+  refund issues the invoice and cancels it at once; both go out with the refund mail. The OSS report takes the sale
+  back by the cancellation, where it used to keep counting it.
+- **Single-purpose vouchers in the basket.** The basket counts what such a voucher may pay after the cart rule's
+  discount, as the checkout does, and no longer shows it covering more than the checkout then takes.
+
 ## [0.1.14] – 2026-10-27
 
 ### Added

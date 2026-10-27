@@ -176,6 +176,10 @@ enum ConfigurationFinding: string
     // country in the account; follow-up invoices keep the previous address.
     case SubscriptionCountryChanged = 'subscriptionCountryChanged';
 
+    // A follow-up order found the VAT ID of a reverse-charge subscription
+    // invalid at VIES and was taxed (SubscriptionVatIdIssueSource).
+    case SubscriptionVatIdInvalid = 'subscriptionVatIdInvalid';
+
     // Abo-4b (P99): subscriptions whose mandate charges through a payment
     // method the shop no longer offers — they are billed "on account".
     case MandateMethodUnavailable = 'mandateMethodUnavailable';
@@ -226,6 +230,7 @@ enum ConfigurationFinding: string
     case RegistrationPathMissing = 'registrationPathMissing';
     case RegistrationPathMissingNoGuests = 'registrationPathMissingNoGuests';
     case CustomerPageLocksOut = 'customerPageLocksOut';
+    case OrderPageProtected = 'orderPageProtected';
     case LoginPageMissing = 'loginPageMissing';
 
     // K1: a shop with guest checkout whose start point names no "Lost
@@ -280,14 +285,14 @@ enum ConfigurationFinding: string
             // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
-            self::SubscriptionsSuspended, self::CancellationsWaiting, self::DecisionNotSent, self::SubscriptionCountryChanged => ['consho_subscription'],
+            self::SubscriptionsSuspended, self::CancellationsWaiting, self::DecisionNotSent, self::SubscriptionCountryChanged, self::SubscriptionVatIdInvalid => ['consho_subscription'],
             self::MandateMethodUnavailable => ['consho_subscription', 'consho_payment'],
             self::RootWithoutCurrency, self::RootCurrencyNotSold, self::CurrencyMissing => ['page', 'consho_shop'],
             self::PathTemplateInvalid, self::CatalogPageAlwaysCached, self::CheckoutPageMissing, self::CartPageMissing,
             self::OrderPageMissing, self::PrivacyPageMissing, self::WarrantyNoticeMissing,
             self::WarrantyNoticeFileMissing, self::WithdrawalFunctionMissing, self::WithdrawalFunctionAdvised,
             self::ShippingCostsPageMissing, self::StartPointWithoutDomain, self::StartPointForwardsToProductPage, self::CancellationPageMissing,
-            self::CustomerPageLocksOut, self::LoginPageMissing, self::AccountPasswordPageMissing => ['page'],
+            self::CustomerPageLocksOut, self::OrderPageProtected, self::LoginPageMissing, self::AccountPasswordPageMissing => ['page'],
             // The registration is a front end module of a theme.
             self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests => ['themes'],
             self::PinnedProductMissing, self::MiniCartMissing, self::CheckoutElementMissing, self::CartElementMissing,
@@ -751,6 +756,9 @@ enum ConfigurationFinding: string
             // a warning.
             self::SubscriptionCountryChanged => true,
 
+            // Taxed where the purchase was not — the customer has to hear it.
+            self::SubscriptionVatIdInvalid => true,
+
             // The customer chose to be charged and gets invoices (P99) — a
             // warning.
             self::MandateMethodUnavailable => true,
@@ -796,7 +804,7 @@ enum ConfigurationFinding: string
             // Without guest checkout no new customer buys at all — still a
             // warning, since accounts created by hand need no registration.
             self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests,
-            self::CustomerPageLocksOut, self::LoginPageMissing => true,
+            self::CustomerPageLocksOut, self::OrderPageProtected, self::LoginPageMissing => true,
 
             // K1: an offer the shop does not make — nothing fails, a guest
             // still buys and can register the usual way. A note.

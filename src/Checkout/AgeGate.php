@@ -32,10 +32,10 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingCapabilities;
  *
  * ── The date of birth ─────────────────────────────────────────────────────
  *
- * Asked for only when the shipping method says it needs one, and then checked
- * against the limit. In C nothing asks — the flat rate has no hand-over check.
- * The code is here because the rule belongs with the rest of the rule, not
- * because something uses it today.
+ * Asked for only when the shipping method says it needs one and the limit is
+ * one that is checked, and then checked against the limit. The checkout shows
+ * the field on exactly that condition (asksDateOfBirth()), so a form never
+ * asks for a date nothing reads.
  */
 final class AgeGate
 {
@@ -68,7 +68,7 @@ final class AgeGate
          * "you are old enough because you are in a group" would make the
          * question decorative.
          */
-        if (true === $shipping?->needsDateOfBirth) {
+        if ($this->asksDateOfBirth($minimumAge, $shipping)) {
             if ('' === $dateOfBirth) {
                 return CheckoutProblem::DateOfBirthMissing;
             }
@@ -94,6 +94,16 @@ final class AgeGate
         }
 
         return CheckoutProblem::AgeNotVerifiable;
+    }
+
+    /**
+     * Whether check() wants a date of birth: the shipping method asks for one
+     * and the basket's limit is checked at all. The checkout's field, the
+     * check and what the order keeps all follow this one answer.
+     */
+    public function asksDateOfBirth(int $minimumAge, ShippingCapabilities|null $shipping): bool
+    {
+        return $minimumAge >= self::CHECKED_FROM && true === $shipping?->needsDateOfBirth;
     }
 
     /**

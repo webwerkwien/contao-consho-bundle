@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Pricing\DbalCachedCatalogPageIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
  * "Always load from cache" on a page while the shop prices per
@@ -29,16 +30,7 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL DEFAULT '',
-                includeCache INTEGER NOT NULL DEFAULT 0,
-                alwaysLoadFromCache INTEGER NOT NULL DEFAULT 0
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
 
         $this->insertShop(['id' => 1, 'title' => 'Testshop']);
     }

@@ -52,6 +52,18 @@ final class WithdrawalBackendControllerTest extends TestCase
     /** @var list<array{string, string}> */
     private array $messages = [];
 
+    /**
+     * The messages as the redirect left them — read through a method, so
+     * that static analysis does not pin them to the value set before the
+     * request.
+     *
+     * @return list<array{string, string}>
+     */
+    private function messages(): array
+    {
+        return $this->messages;
+    }
+
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
@@ -150,7 +162,16 @@ final class WithdrawalBackendControllerTest extends TestCase
 
         $this->messages = [];
         $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'refund', 'shipping' => '0', 'compensation' => '18']))($this->dc()));
-        self::assertSame([['addError', 'Der Wertersatz muss zwischen 0 und 17.80 liegen.']], $this->messages);
+        // Formatted in the backend's language, not the plain decimal "17.80".
+        self::assertSame([['addError', "Der Wertersatz muss zwischen 0 und 17,80\u{a0}€ liegen."]], $this->messages);
+
+        // Not a number: the message still names the most, rather than
+        // sprintf() failing on its missing argument.
+        $this->messages = [];
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'refund', 'shipping' => 'abc']))($this->dc()));
+        $messages = $this->messages();
+        self::assertSame(['addError'], array_column($messages, 0));
+        self::assertMatchesRegularExpression('/^Der Versandanteil muss zwischen 0 und \d+,\d{2}\x{a0}€ liegen\.$/u', implode("\n", array_column($messages, 1)));
     }
 
     /**

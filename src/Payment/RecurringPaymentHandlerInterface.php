@@ -36,6 +36,11 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
  * A charge that throws counts as failed. Consent to charges without the
  * customer is the module's and the operator's matter, not the core's —
  * Consho sets no legal texts.
+ *
+ * The same holds for a SEPA direct debit's pre-notification: the core
+ * announces no debit, with its date and the mandate reference, before it
+ * calls charge(). A module that debits by SEPA sends it, or leaves it to its
+ * provider, in time before the debit.
  */
 interface RecurringPaymentHandlerInterface extends PaymentHandlerInterface
 {

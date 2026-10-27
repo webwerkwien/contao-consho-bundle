@@ -61,7 +61,7 @@ class CatalogReaderTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
-        $this->insertShop(['id' => 1, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT', 'deliveryCountries' => serialize(['AT', 'DE'])]);
+        $this->insertShop(['id' => 1, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT', 'deliveryCountries' => serialize(['AT', 'DE'])]);
         $this->insertRootPage(1, 'de', 1);
         $this->connection->update('tl_page', ['dns' => 'shop.example'], ['id' => 1]);
     }

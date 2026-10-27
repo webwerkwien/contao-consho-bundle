@@ -249,6 +249,19 @@
                         </p>
                     {% endif %}
 
+                    {#- C19: only when the chosen method checks the age against it — and only then is it kept. -#}
+                    {% if state.needsDateOfBirth %}
+                        {% set id = 'consho_date_of_birth_' ~ element_id %}
+                        <p>
+                            <label for="{{ id }}">
+                                {{- "CONSHO.checkout.dateOfBirth"|trans({}, "contao_default") -}}
+                                <span class="consho-checkout__required" aria-hidden="true">*</span>
+                            </label>
+                            <input type="date" id="{{ id }}" name="consho_date_of_birth" value="{{ checkout.dateOfBirth }}" autocomplete="bday" required aria-describedby="{{ id }}_hint">
+                            <span id="{{ id }}_hint">{{ "CONSHO.checkout.dateOfBirthHint"|trans({}, "contao_default") }}</span>
+                        </p>
+                    {% endif %}
+
                     <button type="submit">{{ "CONSHO.checkout.save"|trans({}, "contao_default") }}</button>
                 </form>
             {% endif %}

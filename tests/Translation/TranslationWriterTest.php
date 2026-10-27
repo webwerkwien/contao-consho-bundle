@@ -28,11 +28,9 @@ class TranslationWriterTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $this->connection->executeStatement(
-            // pid and published: a translated manufacturer alias reaches
-            // RedirectRecorder, which looks for the product pages.
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, pid INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', urlPrefix TEXT NOT NULL DEFAULT '', urlSuffix TEXT NOT NULL DEFAULT '')",
-        );
+        // A translated manufacturer alias reaches RedirectRecorder, which
+        // looks for the product pages.
+        DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_product');
         DcaSchema::create($this->connection, 'tl_consho_manufacturer');
         DcaSchema::create($this->connection, 'tl_consho_shop');

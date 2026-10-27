@@ -25,7 +25,7 @@ class CatalogReferencesTest extends TestCase
         }
 
         $this->connection->executeStatement('CREATE TABLE tl_content (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT \'\', conshoFilter BLOB NULL)');
-        $this->connection->executeStatement('CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, consho_shop INTEGER NOT NULL DEFAULT 0)');
+        DcaSchema::createCore($this->connection, 'tl_page');
     }
 
     protected function tearDown(): void

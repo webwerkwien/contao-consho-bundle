@@ -18,7 +18,8 @@ class ConfirmationBeforeMailMigrationTest extends TestCase
         // The order from its DCA (confirmationSentAt predates C-9); only
         // tl_page is historical — without the column C-9 adds.
         DcaSchema::create($this->connection, 'tl_consho_order');
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, consho_orderPage INTEGER NOT NULL DEFAULT 0)");
+        DcaSchema::createCore($this->connection, 'tl_page');
+        $this->connection->executeStatement('ALTER TABLE tl_page DROP COLUMN consho_warrantyNotice');
         // Numbered: orderNumber is unique in the DCA, as every real order has one.
         $this->connection->insert('tl_consho_order', ['id' => 1, 'orderNumber' => 'WEB-1']);
         $this->connection->insert('tl_consho_order', ['id' => 2, 'orderNumber' => 'WEB-2', 'confirmationSentAt' => 1_758_800_000]);

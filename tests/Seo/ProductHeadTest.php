@@ -300,15 +300,7 @@ class ProductHeadTest extends TestCase
 
         // The same schema as in ProductUrlGeneratorTest — ShopLanguages asks both.
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                type TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                consho_currency TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($connection, 'tl_page');
         DcaSchema::create($connection, 'tl_consho_shop');
 
         return new ProductUrlGenerator(

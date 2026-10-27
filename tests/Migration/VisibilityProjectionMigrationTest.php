@@ -11,6 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityProjector;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityRows;
 use Webwerkwien\ContaoConshoBundle\Migration\VisibilityProjectionMigration;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
@@ -48,8 +49,8 @@ class VisibilityProjectionMigrationTest extends TestCase
         // nothing to do.
         $this->createCatalogSchema($this->connection);
         $this->rootPageTableBeforeC1c();
-        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
-        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => 1]);
+        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => 1, 'published' => 1]);
         $this->pricedProduct(1);
 
         self::assertFalse($this->migration()->shouldRun());
@@ -104,7 +105,7 @@ class VisibilityProjectionMigrationTest extends TestCase
     {
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
-        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1);
     }
 
@@ -113,17 +114,8 @@ class VisibilityProjectionMigrationTest extends TestCase
      */
     private function rootPageTableBeforeC1c(): void
     {
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                published TEXT NOT NULL DEFAULT '1'
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
+        $this->connection->executeStatement('ALTER TABLE tl_page DROP COLUMN consho_currency');
     }
 
     private function pricedProduct(int $id): void

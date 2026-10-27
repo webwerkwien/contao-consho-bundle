@@ -35,9 +35,7 @@ class TranslationFieldsListenerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', urlPrefix TEXT NOT NULL DEFAULT '', urlSuffix TEXT NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         // A translated manufacturer alias reaches RedirectRecorder, which reads
         // the manufacturer's own alias and the startpoints.
         DcaSchema::create($this->connection, 'tl_consho_manufacturer');

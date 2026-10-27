@@ -58,7 +58,7 @@ class CartCurrencyTest extends TestCase
         $this->cartConnection = $this->connection;
         $this->createCartTables();
 
-        $this->insertShop(['id' => self::SHOP, 'currency' => 'EUR', 'country' => 'AT', 'fallbackLanguage' => 'de']);
+        $this->insertShop(['id' => self::SHOP, 'country' => 'AT', 'fallbackLanguage' => 'de']);
 
         // Two articles, one price each in every currency. The pound prices are
         // deliberately not converted euro prices — in the shop a currency is

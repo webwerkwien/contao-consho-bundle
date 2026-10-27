@@ -69,7 +69,42 @@ final class MemberCheckoutDefaults
      */
     public function applyTo(CheckoutData $data, int $memberId): CheckoutData
     {
-        if ($memberId < 1 || !$data->billing->isEmpty()) {
+        if ($memberId < 1) {
+            return $data;
+        }
+
+        return $this->withDateOfBirth($this->withAddress($data, $memberId), $memberId);
+    }
+
+    /**
+     * The account's date of birth, for a checkout that has none yet. Filled
+     * whether or not the shipping method asks: the field only shows, and the
+     * order only keeps it, where it does (CheckoutState::$needsDateOfBirth).
+     *
+     * Contao keeps it as a timestamp of midnight in the server's time zone
+     * (`rgxp => date`), so date() in that same zone gives the day back.
+     */
+    private function withDateOfBirth(CheckoutData $data, int $memberId): CheckoutData
+    {
+        if ('' !== $data->dateOfBirth) {
+            return $data;
+        }
+
+        $stamp = $this->connection->fetchOne('SELECT dateOfBirth FROM tl_member WHERE id = ?', [$memberId]);
+
+        $stamp = \is_scalar($stamp) ? trim((string) $stamp) : '';
+
+        // '0' is an emptied field, not somebody born on 1 January 1970.
+        if ('0' === $stamp || 1 !== preg_match('/^-?\d+$/', $stamp)) {
+            return $data;
+        }
+
+        return $data->withDateOfBirth(date('Y-m-d', (int) $stamp));
+    }
+
+    private function withAddress(CheckoutData $data, int $memberId): CheckoutData
+    {
+        if (!$data->billing->isEmpty()) {
             return $data;
         }
 

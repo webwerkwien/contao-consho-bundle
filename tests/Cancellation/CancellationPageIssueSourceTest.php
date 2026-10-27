@@ -21,11 +21,7 @@ final class CancellationPageIssueSourceTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT 'regular',
-             published INTEGER NOT NULL DEFAULT 1, protected INTEGER NOT NULL DEFAULT 0, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '',
-             consho_shop INTEGER NOT NULL DEFAULT 0, consho_cancellationPage INTEGER NOT NULL DEFAULT 0)",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1,
              start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '')",
@@ -43,8 +39,8 @@ final class CancellationPageIssueSourceTest extends TestCase
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Webshop']);
         $this->connection->insert('tl_consho_product', ['id' => 4, 'published' => 1, 'saleSubscription' => 1]);
         $this->connection->insert('tl_consho_product_shop', ['pid' => 4, 'shop' => 1]);
-        $this->connection->insert('tl_page', ['id' => 1, 'title' => 'Shop DE', 'type' => 'root', 'consho_shop' => 1, 'consho_cancellationPage' => 10]);
-        $this->connection->insert('tl_page', ['id' => 10, 'title' => 'Kündigen']);
+        $this->connection->insert('tl_page', ['id' => 1, 'title' => 'Shop DE', 'type' => 'root', 'consho_shop' => 1, 'consho_cancellationPage' => 10, 'published' => 1]);
+        $this->connection->insert('tl_page', ['id' => 10, 'title' => 'Kündigen', 'published' => 1]);
         $this->connection->insert('tl_article', ['id' => 20, 'pid' => 10]);
         $this->connection->insert('tl_content', ['id' => 30, 'pid' => 20, 'type' => 'consho_cancellation']);
     }
@@ -87,6 +83,34 @@ final class CancellationPageIssueSourceTest extends TestCase
     public function testNichtErreichbar(string $table, array $values, int $id): void
     {
         $this->connection->update($table, $values, ['id' => $id]);
+
+        self::assertCount(1, $this->issues());
+    }
+
+    /**
+     * Contao inherits the protection: the page itself unprotected, below a
+     * protected parent, asks for a login all the same.
+     */
+    public function testGeerbterSchutzMachtSieUnerreichbar(): void
+    {
+        $this->connection->insert('tl_page', ['id' => 5, 'pid' => 1, 'title' => 'Konto', 'published' => 1, 'protected' => 1]);
+        $this->connection->update('tl_page', ['pid' => 5], ['id' => 10]);
+
+        self::assertCount(1, $this->issues());
+    }
+
+    public function testEineUngeschuetzteElternseiteSperrtNichts(): void
+    {
+        $this->connection->insert('tl_page', ['id' => 5, 'pid' => 1, 'title' => 'Konto', 'published' => 1]);
+        $this->connection->update('tl_page', ['pid' => 5], ['id' => 10]);
+
+        self::assertSame([], $this->issues());
+    }
+
+    public function testDerStartpunktSchuetztAllesDarunter(): void
+    {
+        $this->connection->update('tl_page', ['pid' => 1], ['id' => 10]);
+        $this->connection->update('tl_page', ['protected' => 1], ['id' => 1]);
 
         self::assertCount(1, $this->issues());
     }

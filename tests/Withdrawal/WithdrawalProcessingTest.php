@@ -731,16 +731,20 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('70,00 €', str_replace("\u{a0}", ' ', (string) $this->mails[0][1][6]));
     }
 
-    /** Everything withdrawn, nothing is shipped: no invoice, no document. */
-    public function testOhneRechnungUndAllesWiderrufenKeinBeleg(): void
+    /**
+     * Everything withdrawn without an invoice: the invoice is issued and
+     * cancelled at once. The sale counted in the OSS report from the payment
+     * on; only the cancellation, as the refund document, takes it back.
+     */
+    public function testOhneRechnungUndAllesWiderrufenRechnungUndStorno(): void
     {
         $this->invoice = null;
         $this->processing()->accept(self::WITHDRAWAL, [1 => '2', 2 => '1'], self::NOW);
 
         self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '5', self::NOW)->done);
-        self::assertSame([], $this->documentCalls);
-        self::assertSame(0, (int) $this->withdrawalRow()['refundDocument']);
-        self::assertSame([], $this->mails[0][1][4]);
+        self::assertSame([['issueOnce', ['giroCode' => false]], ['cancel', 60]], $this->documentCalls);
+        self::assertSame(56, (int) $this->withdrawalRow()['refundDocument']);
+        self::assertSame([60, 56], $this->mails[0][1][4], 'Rechnung zuerst, dann das Storno');
     }
 
     /**

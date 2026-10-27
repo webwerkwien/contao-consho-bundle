@@ -21,20 +21,7 @@ class RedirectRecorderTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        $this->connection->executeStatement(
-            'CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                alias TEXT NOT NULL DEFAULT "",
-                type TEXT NOT NULL DEFAULT "regular",
-                published INTEGER NOT NULL DEFAULT 0,
-                urlPrefix TEXT NOT NULL DEFAULT "",
-                urlSuffix TEXT NOT NULL DEFAULT "",
-                language TEXT NOT NULL DEFAULT "",
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                consho_currency TEXT NOT NULL DEFAULT ""
-            )',
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         // From the DCA; the translation is needed so urlValuesForShop() can
         // join one onto a product.
         foreach (['tl_consho_product', 'tl_consho_product_shop', 'tl_consho_manufacturer', 'tl_consho_product_type', 'tl_consho_shop', 'tl_consho_translation', 'tl_consho_url_redirect'] as $table) {

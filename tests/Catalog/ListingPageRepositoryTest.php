@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\ListingPageRepository;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 class ListingPageRepositoryTest extends TestCase
 {
@@ -21,13 +22,7 @@ class ListingPageRepositoryTest extends TestCase
 
         // Types and defaults as in core-bundle 5.7 (tl_page, tl_article,
         // tl_content) and in Consho's tl_content DCA.
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                title TEXT NOT NULL DEFAULT ''
-            )",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (
                 id INTEGER PRIMARY KEY,

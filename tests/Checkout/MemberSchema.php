@@ -38,6 +38,7 @@ trait MemberSchema
                 gender TEXT NOT NULL DEFAULT "",
                 firstname TEXT NOT NULL DEFAULT "",
                 lastname TEXT NOT NULL DEFAULT "",
+                dateOfBirth TEXT NOT NULL DEFAULT "",
                 street TEXT NOT NULL DEFAULT "",
                 postal TEXT NOT NULL DEFAULT "",
                 city TEXT NOT NULL DEFAULT "",

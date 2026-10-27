@@ -19,6 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\DbalPriceRepository;
 use Webwerkwien\ContaoConshoBundle\Pricing\ListPriceProjector;
 use Webwerkwien\ContaoConshoBundle\Pricing\PriceCalculator;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Pricing\SqliteProjectionWriter;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
@@ -48,7 +49,7 @@ class ListPriceMarketMigrationTest extends TestCase
     public function testBeforeTheSchemaUpdateItDoesNotRun(): void
     {
         // First pass of contao:migrate: the column does not exist yet.
-        $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->connection->executeStatement('DROP TABLE tl_consho_product_list_price');
         $this->connection->executeStatement('CREATE TABLE tl_consho_product_list_price (id INTEGER PRIMARY KEY AUTOINCREMENT, tstamp INTEGER NOT NULL DEFAULT 0, pid INTEGER NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT \'\', net NUMERIC NOT NULL DEFAULT 0, gross NUMERIC NOT NULL DEFAULT 0)');
 
@@ -63,29 +64,20 @@ class ListPriceMarketMigrationTest extends TestCase
         // pass after upgrading finds rows with country '' without
         // consho_currency existing yet — and both rebuilds in run() query
         // that column.
-        $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => '', 'net' => '10.0000', 'gross' => '12.0000']);
 
         $this->connection->executeStatement('DROP TABLE tl_page');
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (
-                id INTEGER PRIMARY KEY,
-                pid INTEGER NOT NULL DEFAULT 0,
-                type TEXT NOT NULL DEFAULT '',
-                title TEXT NOT NULL DEFAULT '',
-                language TEXT NOT NULL DEFAULT '',
-                consho_shop INTEGER NOT NULL DEFAULT 0,
-                published TEXT NOT NULL DEFAULT '1'
-            )",
-        );
-        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => 1]);
+        DcaSchema::createCore($this->connection, 'tl_page');
+        $this->connection->executeStatement('ALTER TABLE tl_page DROP COLUMN consho_currency');
+        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => 1, 'published' => 1]);
 
         self::assertFalse($this->migration()->shouldRun());
     }
 
     public function testRowsFromBeforeTheHomeCountryAreRebuiltOnce(): void
     {
-        $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'gross' => '12.0000']);
 
         $migration = $this->migration();
@@ -109,7 +101,7 @@ class ListPriceMarketMigrationTest extends TestCase
     {
         // contao:migrate runs as long as a migration is due. Without a home country
         // there is no market — the old rows go, new ones are not created.
-        $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de']);
+        $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de']);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'gross' => '12.0000']);
 
         $migration = $this->migration();
@@ -126,7 +118,7 @@ class ListPriceMarketMigrationTest extends TestCase
         // If INSERT ... ON DUPLICATE KEY hit it instead of (pid, currency,
         // country), the projection would be silently emptied and the countries
         // mixed — that is why run() aborts loudly here instead of rebuilding.
-        $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de', 'country' => 'AT']);
 
         $this->connection->executeStatement('DROP TABLE tl_consho_product_list_price');
         $this->connection->executeStatement(
@@ -162,7 +154,7 @@ class ListPriceMarketMigrationTest extends TestCase
 
     public function testAProjectionWrittenWithCountriesIsLeftAlone(): void
     {
-        $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => 1, 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000']);
 
         self::assertFalse($this->migration()->shouldRun());

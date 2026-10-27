@@ -169,7 +169,7 @@ After deploying C-1a, **no shop shows prices until its home country is set** —
 
 4. **Field permissions of user groups:** explicitly allow `currencies` on the shop configuration and `consho_currency` on the start page.
 
-5. **`tl_consho_shop.currency` is only removed in a later step — and `--with-deletes` alone is not enough for that.** Contao builds the target schema from the DCA definitions; as long as the field is defined there with `sql`, the column is part of the target and **no dry run proposes anything.** The procedure is: first prove that the values have arrived (step 3), then remove the field from `contao/dca/tl_consho_shop.php`, then `contao:migrate --with-deletes` with a dry run. The same procedure as for `gross` in C-1b.
+5. **`tl_consho_shop.currency` is removed in a later release.** The DCA no longer defines the field since the release after 0.1.14. Once step 3 has shown the values arrived, `contao:migrate --dry-run --with-deletes` proposes dropping the column, and `contao:migrate --with-deletes` drops it. 🔴 **Coming straight from a version before C-1c, run `contao:migrate` first without `--with-deletes`:** the migration that copies the currency needs `consho_currency` on `tl_page`, which only the schema update creates — and with `--with-deletes` that same pass would drop the old column before the migration has read it. The same procedure as for `gross` in C-1b.
 
 ### Introducing another currency — in this order
 

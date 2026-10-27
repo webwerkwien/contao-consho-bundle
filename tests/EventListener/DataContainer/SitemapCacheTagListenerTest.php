@@ -10,6 +10,7 @@ use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SitemapCacheTagListener;
 use Webwerkwien\ContaoConshoBundle\Seo\SitemapCacheTags;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
  * Root pages: 1 with shop 1, 2 without a shop (a foreign website), 3 with
@@ -22,9 +23,7 @@ class SitemapCacheTagListenerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0)",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'consho_shop' => 1]);
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 0]);
         $this->connection->insert('tl_page', ['id' => 3, 'type' => 'root', 'consho_shop' => 2]);

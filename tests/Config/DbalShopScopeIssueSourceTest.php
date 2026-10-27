@@ -24,13 +24,11 @@ class DbalShopScopeIssueSourceTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Only the columns that matter here — the types as in the DB:
+        // Both from their DCA, so the types are as in the DB:
         // `currencies` is a blob, `consho_currency` a varchar(3) with an
         // empty default (contao/dca/tl_consho_shop.php, tl_page.php).
         DcaSchema::create($this->connection, 'tl_consho_shop');
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
 
         $this->shop(1, 'Kräuterhaus', ['EUR', 'CHF']);
     }

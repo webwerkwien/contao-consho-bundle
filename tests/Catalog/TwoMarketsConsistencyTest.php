@@ -57,8 +57,8 @@ class TwoMarketsConsistencyTest extends TestCase
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
 
-        $this->insertShop(['id' => self::SHOP_AT, 'title' => 'AT-Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
-        $this->insertShop(['id' => self::SHOP_DE, 'title' => 'DE-Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'DE']);
+        $this->insertShop(['id' => self::SHOP_AT, 'title' => 'AT-Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => self::SHOP_DE, 'title' => 'DE-Shop', 'fallbackLanguage' => 'de', 'country' => 'DE']);
         $this->insertRootPage(1, 'de', self::SHOP_AT);
         $this->insertRootPage(2, 'de', self::SHOP_DE);
     }

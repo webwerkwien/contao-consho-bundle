@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Seo\DbalPathTemplateIssueSource;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 class DbalPathTemplateIssueSourceTest extends TestCase
 {
@@ -16,9 +17,7 @@ class DbalPathTemplateIssueSourceTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type VARCHAR(64) NOT NULL DEFAULT '', title VARCHAR(255) NOT NULL DEFAULT '', conshoPathTemplate VARCHAR(255) NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
     }
 
     public function testValidAndEmptyTemplatesAreNoFinding(): void

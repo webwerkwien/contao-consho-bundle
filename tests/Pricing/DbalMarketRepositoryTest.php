@@ -92,7 +92,7 @@ class DbalMarketRepositoryTest extends TestCase
         // that was once a root page must not become a sales signal — the same
         // condition as in RootCurrencyMigration.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
-        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'regular', 'consho_shop' => 1, 'consho_currency' => 'EUR']);
+        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'regular', 'consho_shop' => 1, 'consho_currency' => 'EUR', 'published' => 1]);
 
         self::assertSame([], $this->markets());
     }
@@ -101,7 +101,7 @@ class DbalMarketRepositoryTest extends TestCase
     {
         // Another website in the same installation.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
-        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'consho_shop' => 0, 'consho_currency' => 'EUR']);
+        $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'consho_shop' => 0, 'consho_currency' => 'EUR', 'published' => 1]);
 
         self::assertSame([], $this->markets());
     }

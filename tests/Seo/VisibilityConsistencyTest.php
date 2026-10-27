@@ -29,6 +29,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\PriceCalculator;
 use Webwerkwien\ContaoConshoBundle\Seo\ProductAddressLookup;
 use Webwerkwien\ContaoConshoBundle\Seo\ProductJsonLd;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Pricing\SqliteProjectionWriter;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
@@ -68,15 +69,13 @@ class VisibilityConsistencyTest extends TestCase
         $this->createCatalogSchema($this->connection);
 
         // ShopLanguages reads the languages from the start points.
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         // Since C-1c the market (EUR, AT) hangs on these start points, no longer
         // on the shop's currency column.
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR']);
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'language' => 'fr', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR']);
-        $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
-        $this->insertShop(['id' => self::OTHER_SHOP, 'title' => 'Anderer Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => self::OTHER_SHOP, 'title' => 'Anderer Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
 
         $this->catalogue();
 

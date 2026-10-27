@@ -55,7 +55,7 @@ class ProductQueryTest extends TestCase
          */
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
-        $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
+        $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', self::SHOP);
         $this->insertRootPage(2, 'en', self::SHOP);
         $this->insertRootPage(3, 'fr', self::SHOP);

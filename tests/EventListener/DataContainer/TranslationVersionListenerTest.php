@@ -39,12 +39,9 @@ class TranslationVersionListenerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // published, urlPrefix, urlSuffix: the alias change in the first test
-        // runs through RedirectRecorder, which reads root pages and product
+        // The alias change in the first test runs through RedirectRecorder, which reads root pages and product
         // pages. There is no product page, so nothing is recorded.
-        $this->connection->executeStatement(
-            "CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', published INTEGER NOT NULL DEFAULT 0, urlPrefix TEXT NOT NULL DEFAULT '', urlSuffix TEXT NOT NULL DEFAULT '')",
-        );
+        DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_product_shop');
         DcaSchema::create($this->connection, 'tl_consho_translation');
