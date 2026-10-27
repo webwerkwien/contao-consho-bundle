@@ -70,19 +70,22 @@ class PaymentChangeMail
 
             $documents = [
                 'cancelledInvoice' => (string) ($cancellation['payload']['cancels']['number'] ?? ''),
-                'cancellation' => (string) ($cancellation['documentNumber'] ?? ''),
-                'invoice' => (string) ($invoice['documentNumber'] ?? ''),
+                'cancellation' => '',
+                'invoice' => '',
             ];
+            $reference = null === $invoice ? '' : OrderConfirmation::referenceOf($invoice, $order);
 
             // Cancellation first, then what replaces it — the order a reader
-            // makes sense of them in.
+            // makes sense of them in. The mail names a document as attached
+            // only where it is (R21).
             $attachments = [];
 
-            foreach ([$cancellation, $invoice] as $document) {
-                $pdf = null === $document ? null : $this->pdfs->pdf($document['id']);
+            foreach (['cancellation' => $cancellation, 'invoice' => $invoice] as $key => $document) {
+                $pdf = null === $document || $this->pdfs->sentElsewhere($document['id']) ? null : $this->pdfs->pdf($document['id']);
 
                 if (null !== $pdf) {
                     $attachments[] = $pdf;
+                    $documents[$key] = $document['documentNumber'];
                 }
             }
         } catch (\Throwable $e) {
@@ -91,7 +94,7 @@ class PaymentChangeMail
             return false;
         }
 
-        $sent = $this->toCustomer($order, $payload, $documents, $attachments, $viewUrl, $transport, $from);
+        $sent = $this->toCustomer($order, $payload, $documents, $reference, $attachments, $viewUrl, $transport, $from);
         $this->toOperator($order, $shop, $payload, $documents, $attachments, $transport, $from);
 
         return $sent;
@@ -103,7 +106,7 @@ class PaymentChangeMail
      * @param array{cancelledInvoice: string, cancellation: string, invoice: string} $documents
      * @param list<array{pdf: string, fileName: string}>              $attachments
      */
-    private function toCustomer(array $order, array $payload, array $documents, array $attachments, string $viewUrl, TransportInterface $transport, Address $from): bool
+    private function toCustomer(array $order, array $payload, array $documents, string $reference, array $attachments, string $viewUrl, TransportInterface $transport, Address $from): bool
     {
         try {
             $recipient = $this->recipients->forCustomer([
@@ -120,7 +123,7 @@ class PaymentChangeMail
                 'customer' => ['name' => $recipient->name, 'email' => $recipient->email],
                 // The new invoice number, as in the confirmation and the
                 // Giro-Code: the old one no longer stands.
-                'reference' => [] !== $view['bankDetails'] ? $documents['invoice'] : '',
+                'reference' => [] !== $view['bankDetails'] ? $reference : '',
                 'documents' => $documents,
                 'viewUrl' => $viewUrl,
             ], $recipient->language, $frame = $this->frames?->of((int) ($order['shop'] ?? 0), $recipient->language));

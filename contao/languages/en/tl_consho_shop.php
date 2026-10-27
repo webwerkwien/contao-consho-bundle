@@ -13,7 +13,9 @@ $GLOBALS['TL_LANG']['tl_consho_shop']['deliveryCountries'] = ['Delivery countrie
 $GLOBALS['TL_LANG']['tl_consho_shop']['mailTransport'] = ['Mail configuration', 'Mailbox and sender of this shop. Several shop configurations may share one.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['operatorName'] = ['Operator name', 'Recipient of the operator copies — not the sender.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['operatorAddress'] = ['Operator e-mail', 'Where operator copies go — an e-mail address, not a postal one. The address for the invoice is under "invoice sender". The sender of the mails lives in the mail configuration.'];
-$GLOBALS['TL_LANG']['tl_consho_shop']['invoiceCompany'] = ['Company name', 'Who issues the invoice, as registered.'];
+$GLOBALS['TL_LANG']['tl_consho_shop']['invoicing'] = ['Invoices issued by', 'Consho issues invoices, cancellations and corrections itself. An installed accounting module can take this over or pass Consho\'s documents on. With "Off", invoices are issued outside Consho. Consho keeps the invoice data in every case; order confirmation, delivery note and withdrawal receipt always come from Consho.'];
+$GLOBALS['TL_LANG']['tl_consho_shop']['invoicingOptions'] = ['consho' => 'Consho', 'off' => 'Off', 'missing' => '%s (not installed)'];
+$GLOBALS['TL_LANG']['tl_consho_shop']['invoiceCompany'] =['Company name', 'Who issues the invoice, as registered.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['invoiceLegalForm'] = ['Legal form', 'Only fill this in when it is not part of the company name already. Optional.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['invoiceStreet'] = ['Street and number', ''];
 $GLOBALS['TL_LANG']['tl_consho_shop']['invoicePostal'] = ['Postcode', ''];

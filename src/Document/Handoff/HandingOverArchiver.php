@@ -10,6 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Document\DbalDocumentStore;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 
 /**
  * Hands every issued document to the accounting modules (block R, R13).
@@ -31,6 +33,10 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
  *
  * Archived first, then handed over: a module that takes the PDF gets the
  * file the shop keeps.
+ *
+ * Only documents Consho issued (R21). A shop whose invoicing module passes
+ * Consho's invoices on (InvoiceProviderInterface::issuesItself() false) has
+ * that module receive them here as well, through handOver().
  */
 #[AsDecorator(DocumentArchiverInterface::class)]
 final class HandingOverArchiver implements DocumentArchiverInterface
@@ -46,6 +52,7 @@ final class HandingOverArchiver implements DocumentArchiverInterface
         private readonly DbalDocumentStore $store,
         private readonly DocumentPdfInterface $pdfs,
         private readonly LoggerInterface $logger,
+        private readonly InvoicingPolicy|null $policy = null,
     ) {
     }
 
@@ -59,14 +66,35 @@ final class HandingOverArchiver implements DocumentArchiverInterface
     {
         $handlers = [...$this->handlers];
 
-        if ([] === $handlers) {
+        if ([] === $handlers && null === $this->policy) {
             return;
         }
 
         $row = $this->store->find($documentId);
         $type = DocumentType::tryFrom((string) ($row['type'] ?? ''));
 
-        if (null === $row || null === $type || DocumentType::DeliveryNote === $type) {
+        // Consho's documents only (R21): one a module issued is the
+        // module's, and "off" has no document to book.
+        if (null === $row || null === $type || DocumentType::DeliveryNote === $type
+            || Invoicing::CONSHO !== (string) ($row['issuer'] ?? Invoicing::CONSHO)) {
+            return;
+        }
+
+        /*
+         * The shop's invoicing module where it passes Consho's invoices on
+         * (R19, R21) — once, also when the same module is registered as a
+         * handler too. Not a module that issues itself: after a switch to it,
+         * the cancellation of an older Consho invoice is still Consho's (R20),
+         * and handOver() is not that module's to receive.
+         */
+        $invoicing = $this->policy?->forShop((int) $row['shop']);
+        $forward = null !== $invoicing && $invoicing->conshoNumbers ? $invoicing->provider : null;
+
+        if (null !== $forward && !\in_array($forward, $handlers, true)) {
+            $handlers[] = $forward;
+        }
+
+        if ([] === $handlers) {
             return;
         }
 
@@ -85,7 +113,11 @@ final class HandingOverArchiver implements DocumentArchiverInterface
 
         foreach ($handlers as $handler) {
             try {
-                $handler->handle($document);
+                if ($handler === $forward) {
+                    $forward->handOver($document);
+                } elseif ($handler instanceof IssuedDocumentHandlerInterface) {
+                    $handler->handle($document);
+                }
             } catch (\Throwable $e) {
                 $this->logger->error(\sprintf('%s could not take document %s: %s', $handler::class, $document->number, $e->getMessage()), ['exception' => $e]);
             }

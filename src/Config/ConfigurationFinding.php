@@ -238,6 +238,12 @@ enum ConfigurationFinding: string
     // IssueSource).
     case AccountPasswordPageMissing = 'accountPasswordPageMissing';
 
+    // Block R (R15, R18): invoicing switched off, its module gone, documents
+    // that did not reach the module (InvoicingIssueSource).
+    case InvoicingOff = 'invoicingOff';
+    case InvoiceProviderMissing = 'invoiceProviderMissing';
+    case ExternalInvoiceFailed = 'externalInvoiceFailed';
+
     /**
      * The back end modules in which the finding is put right (H1): a user sees it if they may open ONE of them. An empty
      * list is for what no module repairs — a console command, an environment
@@ -260,7 +266,8 @@ enum ConfigurationFinding: string
             self::InvoiceSenderIncomplete, self::NumberRangeMissing, self::NumberPrefixShared, self::InvoiceArchiveFolderUnsafe,
             self::ReverseChargeNoteMissing, self::DeliveryTimeMissing, self::OperatorAddressIsSender,
             self::WithdrawalPeriodShort, self::RefundRangeMissing, self::CustomerGroupMissing,
-            self::RetentionPeriodMissing, self::AutomaticStatusCancels, self::EInvoiceIncomplete => ['consho_shop'],
+            self::RetentionPeriodMissing, self::AutomaticStatusCancels, self::EInvoiceIncomplete,
+            self::InvoicingOff, self::InvoiceProviderMissing => ['consho_shop'],
             self::MailTransportMissing, self::SenderDomainMismatch => ['consho_shop', 'consho_mail'],
             self::ShippingPriceMissing, self::ShippingMethodMissing, self::AgeGateMissing,
             self::DeliveryCountryWithoutShipping => ['consho_shop', 'consho_shipping'],
@@ -280,7 +287,7 @@ enum ConfigurationFinding: string
             self::ManufacturerEmailMissing, self::ManufacturerEuResponsibleMissing => ['consho_manufacturer'],
             self::StockLow => ['consho_stock'],
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
-            self::InvoiceArchiveFailed, self::ConfirmationNotSent, self::AnonymizationDue,
+            self::InvoiceArchiveFailed, self::ExternalInvoiceFailed, self::ConfirmationNotSent, self::AnonymizationDue,
             self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid => ['consho_order'],
             // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
@@ -561,6 +568,7 @@ enum ConfigurationFinding: string
              * be done, not a judgement to accept.
              */
             self::InvoiceArchiveFailed,
+            self::ExternalInvoiceFailed,
             self::InvoiceArchiveFolderUnsafe,
             self::ReverseChargeNoteMissing,
 
@@ -809,6 +817,12 @@ enum ConfigurationFinding: string
             // K1: an offer the shop does not make — nothing fails, a guest
             // still buys and can register the usual way. A note.
             self::AccountPasswordPageMissing => false,
+
+            // Block R: "off" is the operator's choice, said so the invoices
+            // are not forgotten — a note. A module that is gone leaves every
+            // invoice waiting — a warning.
+            self::InvoicingOff => false,
+            self::InvoiceProviderMissing => true,
         };
     }
 }

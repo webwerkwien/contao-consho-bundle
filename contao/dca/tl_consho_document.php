@@ -87,9 +87,34 @@ $GLOBALS['TL_DCA']['tl_consho_document'] = [
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_document']['types'],
             'sql' => ['type' => 'string', 'length' => 32, 'default' => 'invoice'],
         ],
+        /*
+         * NULL where Consho drew no number (block R, R16): a shop whose
+         * invoices are issued elsewhere still keeps the invoice data, and an
+         * issuing module's number arrives after the commit. NULL rather than
+         * '', because the unique key shop,type,documentNumber admits any
+         * number of NULLs but only one ''.
+         */
         'documentNumber' => [
             'search' => true,
-            'sql' => ['type' => 'string', 'length' => 64, 'default' => ''],
+            'sql' => ['type' => 'string', 'length' => 64, 'notnull' => false, 'default' => null],
+        ],
+        /*
+         * Who issued it (R15, R20): 'consho', 'off' (the data only, issued
+         * outside Consho) or the name of the invoicing module. A cancellation
+         * or credit note follows its invoice, whatever the shop says today.
+         */
+        'issuer' => [
+            'filter' => true,
+            'sql' => ['type' => 'string', 'length' => 64, 'default' => 'consho'],
+        ],
+        // The module's id for the document, and where the handover stands:
+        // '' (nothing to hand over), pending, submitting, issued or failed
+        // (R18, ExternalInvoicing).
+        'externalId' => [
+            'sql' => ['type' => 'string', 'length' => 128, 'default' => ''],
+        ],
+        'externalState' => [
+            'sql' => ['type' => 'string', 'length' => 16, 'default' => ''],
         ],
 
         /*

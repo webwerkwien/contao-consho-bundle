@@ -5,6 +5,8 @@ namespace Webwerkwien\ContaoConshoBundle\Document;
 use Contao\CoreBundle\Filesystem\VirtualFilesystemException;
 use Contao\CoreBundle\Filesystem\VirtualFilesystemInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 
 /**
  * Hands out an invoice (8.3): the archived file where there is one and it is
@@ -17,6 +19,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *
  * A shop that never archived gets the regenerated PDF unmarked — that is the
  * normal way (C8), not a fallback.
+ *
+ * By issuer (block R, R16, R18): a document an invoicing module issued is the
+ * module's PDF, once the module has issued it; a row written while invoicing
+ * was off holds the invoice data but is no invoice, and has no PDF at all.
  */
 final class DocumentDelivery implements DocumentDeliveryInterface
 {
@@ -25,6 +31,7 @@ final class DocumentDelivery implements DocumentDeliveryInterface
         private readonly InvoiceRenderer $renderer,
         #[Autowire(service: 'contao.filesystem.virtual.files')]
         private readonly VirtualFilesystemInterface $files,
+        private readonly InvoicingPolicy|null $policy = null,
     ) {
     }
 
@@ -37,6 +44,12 @@ final class DocumentDelivery implements DocumentDeliveryInterface
 
         if (null === $document) {
             return null;
+        }
+
+        $issuer = self::issuerOf($document);
+
+        if (Invoicing::CONSHO !== $issuer) {
+            return $this->modulePdf($document, $issuer);
         }
 
         $fileName = DocumentArchiver::fileNameOf((string) $document['documentNumber']);
@@ -68,7 +81,34 @@ final class DocumentDelivery implements DocumentDeliveryInterface
     {
         $document = $this->store->find($documentId);
 
-        return null === $document ? null : $this->renderer->html($document);
+        // Consho's layout of a module's document would be a second original that differs.
+        return null === $document || Invoicing::CONSHO !== self::issuerOf($document) ? null : $this->renderer->html($document);
+    }
+
+    /**
+     * Consho's documents go out with its mails unless a module that passes
+     * them on sends them itself; a module's documents unless it sends them
+     * itself; "off" sends nothing (R21). Asked of the shop's setting today —
+     * the mail goes out today.
+     */
+    public function sentElsewhere(int $documentId): bool
+    {
+        $document = $this->store->find($documentId);
+
+        if (null === $document || null === $this->policy) {
+            return false;
+        }
+
+        $issuer = self::issuerOf($document);
+        $shopId = (int) ($document['shop'] ?? 0);
+
+        if (Invoicing::CONSHO === $issuer) {
+            $invoicing = $this->policy->forShop($shopId);
+
+            return $invoicing->conshoNumbers && !$invoicing->conshoSends;
+        }
+
+        return !$this->policy->forName($issuer, $shopId)->conshoSends;
     }
 
     /**
@@ -92,6 +132,42 @@ final class DocumentDelivery implements DocumentDeliveryInterface
         }
 
         return hash_equals((string) $document['archivedHash'], hash('sha256', $contents)) ? 'ok' : 'changed';
+    }
+
+    /**
+     * The module's PDF of a document it has issued; null before that, for
+     * "off", and where the module is gone or has none.
+     *
+     * @param array<string, mixed> $document
+     *
+     * @return array{pdf: string, fileName: string, fromArchive: bool, archiveProblem: bool, logoMissing: bool}|null
+     */
+    private function modulePdf(array $document, string $issuer): array|null
+    {
+        $externalId = (string) ($document['externalId'] ?? '');
+
+        if (Invoicing::OFF === $issuer || null === $this->policy || 'issued' !== (string) ($document['externalState'] ?? '') || '' === $externalId) {
+            return null;
+        }
+
+        $shopId = (int) ($document['shop'] ?? 0);
+        $pdf = $this->policy->forName($issuer, $shopId)->provider?->pdf($shopId, $externalId);
+
+        if (null === $pdf || '' === $pdf) {
+            return null;
+        }
+
+        return ['pdf' => $pdf, 'fileName' => DocumentArchiver::fileNameOf((string) $document['documentNumber']), 'fromArchive' => false, 'archiveProblem' => false, 'logoMissing' => false];
+    }
+
+    /**
+     * @param array<string, mixed> $document
+     */
+    private static function issuerOf(array $document): string
+    {
+        $issuer = (string) ($document['issuer'] ?? '');
+
+        return '' === $issuer ? Invoicing::CONSHO : $issuer;
     }
 
     /**

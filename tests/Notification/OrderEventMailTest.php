@@ -9,6 +9,7 @@ use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceView;
 use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Notification\MailFrame;
@@ -33,6 +34,9 @@ final class OrderEventMailTest extends TestCase
     private SpyTransport $transport;
 
     private ErrorSpyLogger $logger;
+
+    /** @var list<int> the documents the shop's invoicing module sends (block R) */
+    private array $elsewhere = [];
 
     protected function setUp(): void
     {
@@ -84,6 +88,41 @@ final class OrderEventMailTest extends TestCase
 
         self::assertCount(2, $this->transport->sent, 'mit Kopie an den Betreiber');
         self::assertStringNotContainsString('Musterstraße', (string) $this->transport->sent[1]->getHtmlBody());
+    }
+
+    public function testEineRechnungDieAnderswoHerkommtHaengtNichtAnUndWirdNichtGenannt(): void
+    {
+        // Block R (R21).
+        $this->elsewhere = [16];
+
+        self::assertTrue($this->mail()->paymentReceived(7, 16, 'https://shop.test/x', false));
+
+        $mail = $this->transport->sent[0];
+        self::assertSame([], $mail->getAttachments());
+        self::assertStringNotContainsString('im Anhang', (string) $mail->getHtmlBody());
+    }
+
+    public function testEinSpaeterAusgestellterBelegGehtMitAnhangNach(): void
+    {
+        // Block R (R18): issued by the module only on --retry.
+        self::assertTrue($this->mail()->documentIssued(7, 16, DocumentType::Cancellation, 'https://shop.test/x'));
+
+        $mail = $this->transport->sent[0];
+        $html = (string) $mail->getHtmlBody();
+
+        self::assertSame('Stornorechnung RE-00016 zu Ihrer Bestellung WEB-00054', $mail->getSubject());
+        self::assertStringContainsString('anbei erhalten Sie die Stornorechnung RE-00016 zu Ihrer Bestellung WEB-00054.', $html);
+        self::assertStringContainsString('https://shop.test/x', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+        self::assertSame(['RE-00016.pdf'], array_map(static fn ($p): string => (string) $p->getFilename(), $mail->getAttachments()));
+    }
+
+    public function testEinBelegDenDasModulSelbstSchicktGehtNichtNach(): void
+    {
+        $this->elsewhere = [16];
+
+        self::assertFalse($this->mail()->documentIssued(7, 16, DocumentType::Invoice, 'https://shop.test/x'));
+        self::assertSame([], $this->transport->sent);
     }
 
     public function testZahlungErhaltenNenntDieBestellung(): void
@@ -394,6 +433,19 @@ final class OrderEventMailTest extends TestCase
         self::assertStringContainsString('Die Belege finden Sie im Anhang: RE-00016.', $html);
         self::assertCount(1, $mail->getAttachments());
         self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
+    public function testErstattungOhneDenBelegDenDasModulSchickt(): void
+    {
+        // Block R (R21): the refund mail goes; the document is the module's to send.
+        $this->elsewhere = [16];
+
+        self::assertTrue($this->mail()->refundBooked(7, 'WEB-00054-W1', '30,00 €', '30,00 €', [16], 'https://shop.test/x'));
+
+        $mail = $this->transport->sent[0];
+        self::assertSame([], $mail->getAttachments());
+        self::assertStringNotContainsString('Die Belege finden Sie im Anhang', (string) $mail->getHtmlBody());
+        self::assertSame([], $this->logger->errors);
     }
 
     /**
@@ -890,6 +942,9 @@ final class OrderEventMailTest extends TestCase
         self::assertFalse($this->mail()->cancellationReceived(7, $this->cancellation(), 'https://shop.test/x'));
         self::assertFalse($this->mail()->cancellationDecided(7, 'WEB-00084-1-K1', 'WEB-00084-1', false, null, 'Nein.', 'https://shop.test/x'));
         self::assertNotEmpty($this->logger->errors);
+
+        self::assertFalse($this->mail()->documentIssued(7, 16, DocumentType::Invoice, 'https://shop.test/x'));
+        self::assertStringContainsString('The "document issued" mail of order', (string) end($this->logger->errors));
     }
 
     /**
@@ -972,10 +1027,22 @@ final class OrderEventMailTest extends TestCase
             }
         };
 
-        $pdfs = new class implements DocumentPdfInterface {
+        $pdfs = new class($this->elsewhere) implements DocumentPdfInterface {
+            /**
+             * @param list<int> $elsewhere
+             */
+            public function __construct(private readonly array $elsewhere)
+            {
+            }
+
             public function pdf(int $documentId): array
             {
                 return ['pdf' => '%PDF-'.$documentId, 'fileName' => 'RE-00016.pdf', 'fromArchive' => false, 'archiveProblem' => false, 'logoMissing' => false];
+            }
+
+            public function sentElsewhere(int $documentId): bool
+            {
+                return \in_array($documentId, $this->elsewhere, true);
             }
         };
 

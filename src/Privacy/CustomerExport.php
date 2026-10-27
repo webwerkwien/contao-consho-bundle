@@ -6,6 +6,7 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Customer\CustomerDirectory;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherCode;
 
 /**
@@ -92,7 +93,7 @@ class CustomerExport
             $order = $this->connection->fetchAssociative('SELECT * FROM tl_consho_order WHERE id = ?', [$id]) ?: [];
             $documents = [];
 
-            foreach ($this->connection->fetchAllAssociative('SELECT id, type, documentNumber, issuedAt FROM tl_consho_document WHERE pid = ? ORDER BY issuedAt, id', [$id]) as $document) {
+            foreach ($this->connection->fetchAllAssociative('SELECT id, type, documentNumber, issuedAt, issuer FROM tl_consho_document WHERE pid = ? ORDER BY issuedAt, id', [$id]) as $document) {
                 $pdf = $this->pdfs->pdf((int) $document['id']);
                 $file = null;
 
@@ -101,7 +102,11 @@ class CustomerExport
                     $files[$file] = $pdf['pdf'];
                 }
 
-                $documents[] = $this->clean(['type' => $document['type'], 'documentNumber' => $document['documentNumber'], 'issuedAt' => $document['issuedAt'], 'file' => $file]);
+                // Block R: who issued it where Consho did not — "off" marks
+                // the invoice data of an invoice made elsewhere.
+                $issuer = (string) ($document['issuer'] ?? '');
+                $documents[] = $this->clean(['type' => $document['type'], 'documentNumber' => $document['documentNumber'], 'issuedAt' => $document['issuedAt'], 'file' => $file]
+                    + ('' === $issuer || Invoicing::CONSHO === $issuer ? [] : ['issuer' => $issuer]));
             }
 
             $orders[] = $this->pick($order, self::ORDER_FIELDS) + [

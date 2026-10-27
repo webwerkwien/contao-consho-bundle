@@ -7,6 +7,7 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\SetupIssueSource;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 
 /**
@@ -55,6 +56,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
     public function __construct(
         private readonly Connection $connection,
         private readonly PaymentHandlers $handlers,
+        private readonly InvoicingPolicy|null $policy = null,
     ) {
     }
 
@@ -365,6 +367,9 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
      * saying which part sends the operator through six fields comparing them
      * against nothing.
      *
+     * Not where Consho numbers no invoice of the shop (R19): the sender is
+     * printed on Consho's invoice.
+     *
      * @return list<ConfigurationIssue>
      */
     private function senderIssues(): array
@@ -381,7 +386,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                 }
             }
 
-            if ([] === $empty) {
+            if ([] === $empty || !$this->conshoNumbers((int) $row['id'])) {
                 continue;
             }
 
@@ -459,7 +464,8 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
              * table twice to tell them the same thing.
              */
             $need = array_values(array_diff(
-                $this->issuesInvoices(MethodSettings::selectedIds($shop['paymentMethods']), $methods)
+                // The document ranges only where Consho numbers the invoices (R19).
+                $this->conshoNumbers($shopId) && $this->issuesInvoices(MethodSettings::selectedIds($shop['paymentMethods']), $methods)
                     ? ['order', 'invoice', 'cancellation']
                     : ['order'],
                 $have,
@@ -635,5 +641,15 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
     private function minute(): string
     {
         return (string) (int) (floor(time() / 60) * 60);
+    }
+
+    /**
+     * Whether Consho numbers this shop's invoices — itself or for a module
+     * that passes them on (block R, R19). Only then does it need the invoice
+     * ranges, the sender and what else goes on Consho's invoice.
+     */
+    private function conshoNumbers(int $shopId): bool
+    {
+        return null === $this->policy || $this->policy->forShop($shopId)->conshoNumbers;
     }
 }

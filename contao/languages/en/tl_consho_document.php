@@ -2,7 +2,11 @@
 
 $GLOBALS['TL_LANG']['tl_consho_document']['documentNumber'] = ['Document number', 'Unbroken per shop and document type.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['type'] = ['Document type', ''];
+$GLOBALS['TL_LANG']['tl_consho_document']['issuer'] = ['Issued by', 'Consho, an accounting module or nobody ("Off": the invoice data only, the invoice is issued elsewhere).'];
 $GLOBALS['TL_LANG']['tl_consho_document']['issuedAt'] = ['Issued at', ''];
+$GLOBALS['TL_LANG']['tl_consho_document']['notIssued'] = 'Invoice data (not issued)';
+$GLOBALS['TL_LANG']['tl_consho_document']['waitingFor'] = 'waiting for %s';
+$GLOBALS['TL_LANG']['tl_consho_document']['handOverFailed'] = 'handover to %s failed';
 $GLOBALS['TL_LANG']['tl_consho_document']['relatedDocument'] = ['Refers to', 'For invoice corrections and cancellations, the document being corrected.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['payload'] = ['Content', 'Snapshot taken when the document was issued. Deliberately immutable.'];
 

@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Document;
 
 use Doctrine\DBAL\Connection;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
 
 final class DbalDocumentRepository implements DocumentRepositoryInterface
 {
@@ -14,10 +15,12 @@ final class DbalDocumentRepository implements DocumentRepositoryInterface
         int $orderId,
         int $shopId,
         DocumentType $type,
-        string $documentNumber,
+        string|null $documentNumber,
         int $issuedAt,
         int $relatedDocumentId,
         array $payload,
+        string $issuer = Invoicing::CONSHO,
+        string $externalState = '',
     ): int {
         $this->connection->insert('tl_consho_document', [
             'pid' => $orderId,
@@ -26,6 +29,8 @@ final class DbalDocumentRepository implements DocumentRepositoryInterface
             'documentNumber' => $documentNumber,
             'issuedAt' => $issuedAt,
             'relatedDocument' => $relatedDocumentId,
+            'issuer' => $issuer,
+            'externalState' => $externalState,
 
             /*
              * JSON_UNESCAPED_UNICODE so an address keeps its umlauts as

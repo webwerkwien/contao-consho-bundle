@@ -87,6 +87,19 @@ final class CancellationInvoiceTest extends TestCase
         self::assertSame(CancellationInvoiceRefusal::NumberRangeMissing, $this->invoice($issuer)->refusal(7));
     }
 
+    public function testEineRechnungDieConshoNichtNummerierteBrauchtKeinenStornokreis(): void
+    {
+        // Block R (R20): its cancellation follows the invoice and gets no number of Consho's.
+        $this->connection->executeStatement('DELETE FROM tl_consho_number_range');
+        $this->document(30, 'invoice');
+
+        foreach (['off', 'fake_books'] as $issuer) {
+            $this->connection->update('tl_consho_document', ['issuer' => $issuer], ['id' => 30]);
+
+            self::assertNull($this->invoice($this->createMock(DocumentIssuerInterface::class))->refusal(7), $issuer);
+        }
+    }
+
     public function testDerStornoBelegWirdNachDemCommitAbgelegt(): void
     {
         $this->document(30, 'invoice');

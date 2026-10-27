@@ -9,6 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\OnOrderInvoicing;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 
 /**
@@ -34,6 +35,7 @@ final class DbalInvoiceIssueSource implements ConfigurationIssueSource
         private readonly Connection $connection,
         private readonly ArchiveFolderProtector $protector,
         private readonly PaymentHandlers $handlers,
+        private readonly InvoicingPolicy|null $policy = null,
     ) {
     }
 
@@ -76,6 +78,12 @@ final class DbalInvoiceIssueSource implements ConfigurationIssueSource
                 if (null !== $problem) {
                     $issues[] = new ConfigurationIssue(ConfigurationFinding::InvoiceArchiveFolderUnsafe, ['shop' => $title, 'problem' => $problem], (int) $shop['id']);
                 }
+            }
+
+            // What follows goes on Consho's invoice — not asked where a
+            // module issues its own or invoicing is off (R19).
+            if (!$this->conshoNumbers((int) $shop['id'])) {
+                continue;
             }
 
             if ($this->canReverseCharge($shop) && '' === trim((string) ($shop['invoiceReverseChargeNote'] ?? ''))) {
@@ -135,5 +143,15 @@ final class DbalInvoiceIssueSource implements ConfigurationIssueSource
         }
 
         return false;
+    }
+
+    /**
+     * Whether Consho numbers this shop's invoices — itself or for a module
+     * that passes them on (block R, R19). Only then does it need the invoice
+     * ranges, the sender and what else goes on Consho's invoice.
+     */
+    private function conshoNumbers(int $shopId): bool
+    {
+        return null === $this->policy || $this->policy->forShop($shopId)->conshoNumbers;
     }
 }

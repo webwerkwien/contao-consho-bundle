@@ -13,7 +13,9 @@ $GLOBALS['TL_LANG']['tl_consho_shop']['deliveryCountries'] = ['Lieferländer', '
 $GLOBALS['TL_LANG']['tl_consho_shop']['mailTransport'] = ['Mail-Konfiguration', 'Postfach und Absender dieses Shops. Mehrere Shop-Konfigurationen dürfen dieselbe verwenden.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['operatorName'] = ['Betreibername', 'Empfänger der Betreiberkopien — nicht der Absender.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['operatorAddress'] = ['Betreiber-E-Mail', 'Hierhin gehen die Kopien für den Betreiber — eine E-Mail-Adresse, keine Anschrift. Die Anschrift für die Rechnung steht unter „Rechnungsabsender". Der Absender der Mails steht in der Mail-Konfiguration.'];
-$GLOBALS['TL_LANG']['tl_consho_shop']['invoiceCompany'] = ['Firmenname', 'Wer die Rechnung ausstellt, im Wortlaut des Firmenbuchs oder Handelsregisters.'];
+$GLOBALS['TL_LANG']['tl_consho_shop']['invoicing'] = ['Rechnungen stellt aus', 'Consho stellt Rechnung, Storno und Korrektur selbst aus. Ein installiertes Buchhaltungsmodul kann das übernehmen oder die Belege von Consho weiterreichen. Bei „Aus“ entstehen die Rechnungen außerhalb von Consho. Die Rechnungsdaten speichert Consho in jedem Fall; Bestellbestätigung, Lieferschein und Widerrufsbeleg kommen immer von Consho.'];
+$GLOBALS['TL_LANG']['tl_consho_shop']['invoicingOptions'] = ['consho' => 'Consho', 'off' => 'Aus', 'missing' => '%s (nicht installiert)'];
+$GLOBALS['TL_LANG']['tl_consho_shop']['invoiceCompany'] =['Firmenname', 'Wer die Rechnung ausstellt, im Wortlaut des Firmenbuchs oder Handelsregisters.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['invoiceLegalForm'] = ['Rechtsform', 'Nur ausfüllen, wenn sie nicht schon im Firmennamen steckt. Freiwillig.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['invoiceStreet'] = ['Straße und Hausnummer', ''];
 $GLOBALS['TL_LANG']['tl_consho_shop']['invoicePostal'] = ['PLZ', ''];

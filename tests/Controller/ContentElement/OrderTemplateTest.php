@@ -61,6 +61,24 @@ class OrderTemplateTest extends TestCase
     }
 
     /**
+     * Block R: `invoices_by_mail` is false where the invoice comes from
+     * elsewhere. `|default(true)` would turn that false into true — Twig's
+     * default() replaces every empty value, false included — and the page
+     * would promise documents by e-mail again.
+     */
+    public function testOhneRechnungsversandKommtDieAndereErklaerung(): void
+    {
+        $expression = "(invoices_by_mail ?? true) ? 'explanation' : 'explanationElsewhere'";
+
+        self::assertStringContainsString("~ (".$expression.'))|trans',(string) file_get_contents(self::TEMPLATE));
+
+        $twig = new \Twig\Environment(new \Twig\Loader\ArrayLoader(['t' => '{{ '.$expression.' }}']));
+        self::assertSame('explanationElsewhere', $twig->render('t', ['invoices_by_mail' => false]));
+        self::assertSame('explanation', $twig->render('t', ['invoices_by_mail' => true]));
+        self::assertSame('explanation', $twig->render('t', []));
+    }
+
+    /**
      * @return iterable<string, array{string}>
      */
     public static function tabellen(): iterable
@@ -129,7 +147,10 @@ class OrderTemplateTest extends TestCase
             $keys[] = 'CONSHO.orderPage.deliveryStates.'.$state->value;
         }
 
-        foreach (['changed', 'notOpen', 'statusLocks', 'alreadyChanged', 'methodUnavailable', 'confirmMissing', 'paymentFailed', 'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing', 'afterWithdrawal'] as $notice) {
+        // Block R: the explanation and notice where Consho mails no invoice.
+        $keys[] = 'CONSHO.orderPage.change.explanationElsewhere';
+
+        foreach (['changed', 'changedElsewhere', 'notOpen', 'statusLocks', 'alreadyChanged', 'methodUnavailable', 'confirmMissing', 'paymentFailed', 'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing', 'afterWithdrawal'] as $notice) {
             $keys[] = 'CONSHO.orderPage.notice.'.$notice;
         }
 

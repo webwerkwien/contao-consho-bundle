@@ -11,6 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Document\ArchiveFolderProtector;
 use Webwerkwien\ContaoConshoBundle\Document\DbalInvoiceIssueSource;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlerInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
@@ -108,6 +109,15 @@ class DbalInvoiceIssueSourceTest extends TestCase
         self::assertEquals([new ConfigurationIssue(ConfigurationFinding::ReverseChargeNoteMissing, ['shop' => 'Wien'], 3)], $this->issues());
     }
 
+    public function testOhneConshoRechnungenFragtNiemandNachDemInhaltDerRechnung(): void
+    {
+        // Block R (R19): reverse charge note and delivery period go on Consho's invoice.
+        $this->shop(['vatId' => 'ATU1', 'country' => 'AT', 'deliveryCountries' => serialize(['AT', 'DE']), 'paymentMethods' => serialize(['1']), 'invoicing' => 'off']);
+
+        self::assertCount(2, $this->issues());
+        self::assertSame([], $this->issues(new \Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy($this->connection, new \Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders(new \Symfony\Component\DependencyInjection\ServiceLocator([])))));
+    }
+
     /**
      * C-8, delivery date: a shop that issues the invoice at purchase (prepayment)
      * must be able to state a delivery period — without a delivery time on the
@@ -139,7 +149,7 @@ class DbalInvoiceIssueSourceTest extends TestCase
     /**
      * @return list<ConfigurationIssue>
      */
-    private function issues(): array
+    private function issues(InvoicingPolicy|null $policy = null): array
     {
         // prepayment issues on order, card on payment — the handler says so,
         // as in production (OnOrderInvoicing asks documentTrigger()).
@@ -152,6 +162,6 @@ class DbalInvoiceIssueSourceTest extends TestCase
             return $handler;
         });
 
-        return (new DbalInvoiceIssueSource($this->connection, new ArchiveFolderProtector($this->root), new PaymentHandlers($locator)))->issues();
+        return (new DbalInvoiceIssueSource($this->connection, new ArchiveFolderProtector($this->root), new PaymentHandlers($locator), $policy))->issues();
     }
 }

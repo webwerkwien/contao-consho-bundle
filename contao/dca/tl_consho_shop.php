@@ -71,7 +71,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
 
     'palettes' => [
         '__selector__' => ['invoiceArchive'],
-        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
+        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
     ],
 
     'subpalettes' => [
@@ -383,6 +383,20 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * DbalLegalReadinessIssueSource (11.3), where the operator can see all of
          * it at once.
          */
+        /*
+         * Who issues the shop's invoices, cancellations and credit notes
+         * (block R, R15): Consho, an installed invoicing module, or nobody
+         * ("off"). The invoice data is kept in every mode; the options come
+         * from InvoicingOptionsListener, drawn as one switch like
+         * "Brutto | Netto".
+         */
+        'invoicing' => [
+            'inputType' => 'radio',
+            'exclude' => true,
+            'default' => 'consho',
+            'eval' => ['mandatory' => true, 'tl_class' => 'clr consho-switch'],
+            'sql' => ['type' => 'string', 'length' => 64, 'default' => 'consho'],
+        ],
         'invoiceCompany' => [
             'inputType' => 'text',
             'exclude' => true,

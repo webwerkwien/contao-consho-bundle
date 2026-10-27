@@ -3,6 +3,8 @@
 namespace Webwerkwien\ContaoConshoBundle\Document;
 
 use Brick\Math\BigDecimal;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 use Webwerkwien\ContaoConshoBundle\Order\NumberAllocatorInterface;
 
 /**
@@ -11,6 +13,21 @@ use Webwerkwien\ContaoConshoBundle\Order\NumberAllocatorInterface;
  * Every type draws from its own number range, and the number is allocated only
  * after every check has passed — a refused document must never leave a hole in
  * a sequence that has to be unbroken.
+ *
+ * ── Where Consho does not issue the invoice (block R, R15–R21) ────────────
+ *
+ * A shop may have its invoices issued by a module or outside Consho ("off").
+ * The document row is written all the same, with its full snapshot: the
+ * payment term, the OSS return, withdrawals and the address lock read it, and
+ * the operator asked for the invoice data to be kept in every mode (R16).
+ * Only what needs Consho's number is left out — the number itself and the
+ * Giro-Code, which carries it as its reference. A module numbers its
+ * documents after the commit (ExternalInvoicing).
+ *
+ * A cancellation or credit note follows the issuer of its invoice, not the
+ * shop's setting today (R20): an invoice Consho numbered is reversed by a
+ * document Consho numbers, or its range would carry an invoice nothing ever
+ * reversed.
  */
 final class DocumentIssuer implements DocumentIssuerInterface
 {
@@ -19,6 +36,7 @@ final class DocumentIssuer implements DocumentIssuerInterface
         private readonly NumberAllocatorInterface $allocator,
         private readonly DocumentPayloadBuilder $payloadBuilder,
         private readonly DocumentSourceInterface $source,
+        private readonly InvoicingPolicy|null $policy = null,
     ) {
     }
 
@@ -79,7 +97,12 @@ final class DocumentIssuer implements DocumentIssuerInterface
             $context,
         );
 
-        $number = $this->allocator->next($shopId, $type->numberRange());
+        // The delivery note is always Consho's; only the invoice asks the shop.
+        $invoicing = DocumentType::Invoice === $type && null !== $this->policy
+            ? $this->policy->forShop($shopId)
+            : null;
+        $numbered = null === $invoicing || $invoicing->conshoNumbers;
+        $number = $numbered ? $this->allocator->next($shopId, $type->numberRange()) : null;
 
         /*
          * What is still to pay (WG12, formatVersion 9). An invoice asked for
@@ -117,8 +140,11 @@ final class DocumentIssuer implements DocumentIssuerInterface
          * whole order and is corrected at once, so its total is not what the
          * customer has to pay — a code with that amount would ask for too
          * much. The refund mail names the remaining amount instead.
+         *
+         * Nor without Consho's number (R16): the code's reference would be
+         * empty, and a module prints its own.
          */
-        if ($asksMoney && ($context['payment']['giroCode'] ?? false)) {
+        if (null !== $number && $asksMoney && ($context['payment']['giroCode'] ?? false)) {
             $code = GiroCode::payload(
                 $payload['payment']['details'],
                 $owed,
@@ -136,6 +162,9 @@ final class DocumentIssuer implements DocumentIssuerInterface
          * the delivery period — the snapshot keeps the answer, not the rule.
          * Same condition as the Giro-Code: only an invoice that asks for
          * payment names a term, not the one issued with a refund.
+         *
+         * In every mode (R17): without it an invoice issued elsewhere would
+         * never be overdue and a subscription never rest for it.
          */
         $dueAt = 0;
 
@@ -153,6 +182,8 @@ final class DocumentIssuer implements DocumentIssuerInterface
             $issuedAt,
             $relatedDocumentId ?? 0,
             $payload,
+            null === $invoicing ? Invoicing::CONSHO : $invoicing->issuer,
+            null !== $invoicing && $invoicing->moduleIssues() ? 'pending' : '',
         );
 
         // Every invoice that asks for payment writes it, a term-less one 0:
@@ -203,7 +234,8 @@ final class DocumentIssuer implements DocumentIssuerInterface
         );
 
         $shopId = (int) $invoice['shop'];
-        $number = $this->allocator->next($shopId, DocumentType::Cancellation->numberRange());
+        [$issuer, $externalState] = self::followerOf($invoice);
+        $number = Invoicing::CONSHO === $issuer ? $this->allocator->next($shopId, DocumentType::Cancellation->numberRange()) : null;
 
         return $this->repository->insert(
             (int) $invoice['pid'],
@@ -213,6 +245,8 @@ final class DocumentIssuer implements DocumentIssuerInterface
             time(),
             $invoiceId,
             $payload,
+            $issuer,
+            $externalState,
         );
     }
 
@@ -259,7 +293,8 @@ final class DocumentIssuer implements DocumentIssuerInterface
         );
 
         $shopId = (int) $invoice['shop'];
-        $number = $this->allocator->next($shopId, DocumentType::CreditNote->numberRange());
+        [$issuer, $externalState] = self::followerOf($invoice);
+        $number = Invoicing::CONSHO === $issuer ? $this->allocator->next($shopId, DocumentType::CreditNote->numberRange()) : null;
 
         return $this->repository->insert(
             (int) $invoice['pid'],
@@ -269,7 +304,25 @@ final class DocumentIssuer implements DocumentIssuerInterface
             time(),
             $invoiceId,
             $payload,
+            $issuer,
+            $externalState,
         );
+    }
+
+    /**
+     * Issuer and handover state of a cancellation or credit note: those of
+     * its invoice (R20). A row without the column is Consho's — documents
+     * from before R-6.
+     *
+     * @param array<string, string> $invoice
+     *
+     * @return array{0: string, 1: string}
+     */
+    private static function followerOf(array $invoice): array
+    {
+        $issuer = '' === ($invoice['issuer'] ?? '') ? Invoicing::CONSHO : $invoice['issuer'];
+
+        return [$issuer, Invoicing::CONSHO === $issuer || Invoicing::OFF === $issuer ? '' : 'pending'];
     }
 
     /**

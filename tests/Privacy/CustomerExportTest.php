@@ -189,9 +189,29 @@ final class CustomerExportTest extends TestCase
         self::assertNull($this->export()->export(1, 'm:77', 1));
     }
 
+    public function testRechnungsdatenOhneConshoBelegNennenDenAussteller(): void
+    {
+        // Block R (R16): the row of an invoice made elsewhere has no number of Consho's.
+        $this->connection->update('tl_consho_document', ['documentNumber' => null, 'issuer' => 'off'], ['id' => 1]);
+
+        $export = $this->export()->export(1, 'm:5', strtotime('2026-09-28 12:00'));
+        self::assertIsArray($export);
+        $data = json_decode($this->unzip($export['zip'])['daten.json'], true);
+        self::assertIsArray($data);
+
+        $document = $data['orders'][1]['documents'][0];
+        self::assertSame('off', $document['issuer']);
+        self::assertArrayNotHasKey('documentNumber', $document);
+    }
+
     private function export(): CustomerExport
     {
         $pdfs = new class implements DocumentPdfInterface {
+            public function sentElsewhere(int $documentId): bool
+            {
+                return false;
+            }
+
             /**
              * @return array{pdf: string, fileName: string, fromArchive: bool, archiveProblem: bool, logoMissing: bool}
              */

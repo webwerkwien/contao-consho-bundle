@@ -2,10 +2,15 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Document;
 
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
+
 interface DocumentRepositoryInterface
 {
     /**
      * @param array<string, mixed> $payload
+     * @param string|null          $documentNumber null where Consho drew no number (R16)
+     * @param string               $issuer         'consho', 'off' or the invoicing module (R15)
+     * @param string               $externalState  '' or 'pending' for a module that issues it after the commit (R18)
      *
      * @return int the new document id
      */
@@ -13,10 +18,12 @@ interface DocumentRepositoryInterface
         int $orderId,
         int $shopId,
         DocumentType $type,
-        string $documentNumber,
+        string|null $documentNumber,
         int $issuedAt,
         int $relatedDocumentId,
         array $payload,
+        string $issuer = Invoicing::CONSHO,
+        string $externalState = '',
     ): int;
 
     /**

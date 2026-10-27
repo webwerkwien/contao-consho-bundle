@@ -13,6 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Document\DbalDocumentStore;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiver;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentDelivery;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\ExternalInvoicing;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\LateDocumentMail;
 
 /**
  * Checks every archived invoice against its hash (8.3) — the check the start
@@ -23,23 +25,31 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentDelivery;
  * its place would present a new document as the original, which is the one
  * thing the archive exists to rule out. Those are reported, and the operator
  * restores the file from a backup.
+ *
+ * `--retry` also offers the documents an issuing module has not issued yet
+ * (block R, R18) to the module again — those whose module was unreachable or
+ * not installed at the time. Each one issued now goes to the customer, where
+ * Consho sends the module's documents.
  */
 #[AsCommand(
     name: 'consho:document:verify',
-    description: 'Checks the archived invoice PDFs against their checksums; --retry archives the failed ones',
+    description: 'Checks the archived invoice PDFs against their checksums; --retry archives the failed ones, offers pending documents to the invoicing module again and mails the ones it issues',
 )]
 #[\Webwerkwien\ContaoAiCoreBundle\Attribute\AiContract(
-    // Only with --retry: the PDF into the archive folder and its row.
+    // Only with --retry: the PDF into the archive folder and its row; the
+    // invoicing module's number into the row.
     writes: true,
     tables: ['tl_consho_document', 'tl_files'],
     trace: [],
     // DocumentArchiver never overwrites an archived file, so the PDF rendered
     // today stays what the archive holds as the original.
-    irreversible: 'With --retry: writes the failed invoice PDFs into the archive folder as the archived originals, which are never overwritten afterwards.',
+    irreversible: 'With --retry: writes the failed invoice PDFs into the archive folder as the archived originals, which are never overwritten afterwards, and has the invoicing module issue the documents still pending there, mailing each one issued now to the customer where Consho sends them.',
     repeatable: true,
 )]
 final class DocumentVerifyCommand extends Command
 {
+    private const SETTLE_SECONDS = 300;
+
     public function __construct(
         private readonly DbalDocumentStore $store,
         private readonly DocumentDelivery $delivery,
@@ -47,13 +57,15 @@ final class DocumentVerifyCommand extends Command
         // to the accounting modules.
         #[Autowire(service: DocumentArchiver::class)]
         private readonly DocumentArchiverInterface $archiver,
+        private readonly ExternalInvoicing|null $external = null,
+        private readonly LateDocumentMail|null $lateMail = null,
     ) {
         parent::__construct();
     }
 
     protected function configure(): void
     {
-        $this->addOption('retry', null, InputOption::VALUE_NONE, 'Archive the documents whose archive failed');
+        $this->addOption('retry', null, InputOption::VALUE_NONE, 'Archive the documents whose archive failed, offer pending documents to the invoicing module again');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -63,6 +75,17 @@ final class DocumentVerifyCommand extends Command
         if ($input->getOption('retry')) {
             foreach ($this->store->idsWithArchive(true) as $id) {
                 $this->archiver->archive($id);
+            }
+
+            // Oldest first: an invoice before the cancellation that waits for it.
+            // Issued only now: the order's mail went out without it (R18).
+            // Not a document written in the last minutes: its purchase may
+            // still be submitting it and building the order's mail, which
+            // would then attach it a second time.
+            foreach ($this->external?->idsToSubmit(time() - self::SETTLE_SECONDS) ?? [] as $id) {
+                if ($this->external?->submit($id)) {
+                    $this->lateMail?->send($id);
+                }
             }
         }
 

@@ -9,6 +9,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
 
 /**
  * The cancellation invoice of a cancelling status (dev#1; spec A: `isCancelled`
@@ -105,11 +106,19 @@ class CancellationInvoice
             return CancellationInvoiceRefusal::Corrected;
         }
 
-        if (!$this->hasRange($orderId)) {
+        // Consho numbers the cancellation only of an invoice it numbered (R20).
+        if ($this->numberedByConsho($invoiceId) && !$this->hasRange($orderId)) {
             return CancellationInvoiceRefusal::NumberRangeMissing;
         }
 
         return null;
+    }
+
+    private function numberedByConsho(int $invoiceId): bool
+    {
+        $issuer = $this->connection->fetchOne('SELECT issuer FROM tl_consho_document WHERE id = ?', [$invoiceId]);
+
+        return \in_array($issuer, [false, null, '', Invoicing::CONSHO], true);
     }
 
     private function corrected(int $invoiceId): bool

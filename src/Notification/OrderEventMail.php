@@ -11,6 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 use Symfony\Component\Mime\Email;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceView;
 use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
@@ -61,6 +62,7 @@ class OrderEventMail
     public const CANCELLATION_TEMPLATE = '@Contao/mail/consho_cancellation_received.html.twig';
     public const CANCELLATION_OPERATOR_TEMPLATE = '@Contao/mail/consho_cancellation_received_operator.html.twig';
     public const CANCELLATION_DECIDED_TEMPLATE = '@Contao/mail/consho_cancellation_decided.html.twig';
+    public const DOCUMENT_ISSUED_TEMPLATE = '@Contao/mail/consho_document_issued.html.twig';
 
     public function __construct(
         private readonly OrderConfirmationSourceInterface $source,
@@ -354,6 +356,34 @@ class OrderEventMail
         return $this->toCustomer('purchaseResumed', $order, self::PURCHASE_RESUMED_TEMPLATE, $payload, [
             'viewUrl' => $viewUrl,
         ], [], $transport, $from);
+    }
+
+    /**
+     * A document an invoicing module issued late (block R, R18): its module
+     * failed or was missing when the order's mail went out, and
+     * `consho:document:verify --retry` had it issued afterwards. Sent only
+     * where Consho sends the module's documents — the attachment is the mail.
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function documentIssued(int $orderId, int $documentId, DocumentType $type, string $viewUrl): bool
+    {
+        try {
+            [$order, , $transport, $from, $payload, $document, $attachments] = $this->prepare($orderId, $documentId);
+        } catch (\Throwable $e) {
+            $this->fail('documentIssued', '', $orderId, $e);
+
+            return false;
+        }
+
+        if (null === $document || [] === $attachments) {
+            return false;
+        }
+
+        return $this->toCustomer('documentIssued', $order, self::DOCUMENT_ISSUED_TEMPLATE, $payload, [
+            'document' => ['type' => $type->value, 'number' => (string) $document['documentNumber']],
+            'viewUrl' => $viewUrl,
+        ], $attachments, $transport, $from);
     }
 
     /**
@@ -721,13 +751,15 @@ class OrderEventMail
             $attachments = [];
 
             foreach ($documentIds as $documentId) {
-                $document = $this->source->document($orderId, $documentId);
-                $pdf = null === $document ? null : $this->pdfs->pdf($document['id']);
+                $document = $this->source->document($orderId, $documentId) ?? throw new \RuntimeException(\sprintf('document %d does not exist', $documentId));
 
-                if (null === $document || null === $pdf) {
-                    throw new \RuntimeException(\sprintf('document %d cannot be attached', $documentId));
+                // A document the shop's invoicing module sends, or one written
+                // while invoicing was off, is neither attached nor named (R21).
+                if ($this->pdfs->sentElsewhere($document['id'])) {
+                    continue;
                 }
 
+                $pdf = $this->pdfs->pdf($document['id']) ?? throw new \RuntimeException(\sprintf('document %d cannot be attached', $documentId));
                 $numbers[] = $document['documentNumber'];
                 $attachments[] = $pdf;
             }
@@ -789,10 +821,14 @@ class OrderEventMail
         $payload = (new OrderMailPayload($this->source, $this->payloads))->of($order, $invoice ?? $this->source->invoice($orderId));
 
         $attachments = [];
-        $pdf = null === $invoice ? null : $this->pdfs->pdf($invoice['id']);
+        $pdf = null === $invoice || $this->pdfs->sentElsewhere($invoice['id']) ? null : $this->pdfs->pdf($invoice['id']);
 
         if (null !== $pdf) {
             $attachments[] = $pdf;
+        } elseif (null !== $invoice) {
+            // The mails name the invoice as attached (`invoice`): not one
+            // that is not (R21).
+            $invoice['documentNumber'] = '';
         }
 
         return [$order, $shop, $transport, $from, $payload, $invoice, $attachments];
@@ -906,6 +942,7 @@ class OrderEventMail
                 'cancellation' => '"cancellation received"',
                 'cancellationDecided' => '"cancellation decided"',
                 'digitalReleased' => '"digital content ready"',
+                'documentIssued' => '"document issued"',
                 default => '"shipped"',
             }, (string) $order, '' !== $who ? ' ('.$who.')' : '', $e->getMessage()),
             ['exception' => $e],

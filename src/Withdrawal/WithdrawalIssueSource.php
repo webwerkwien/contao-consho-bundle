@@ -7,6 +7,7 @@ use Webwerkwien\ContaoConshoBundle\Config\BackendDate;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 
 /**
  * Two findings about withdrawals for the back end start page (D-3). Neither
@@ -22,8 +23,10 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  */
 final class WithdrawalIssueSource implements ConfigurationIssueSource
 {
-    public function __construct(private readonly Connection $connection)
-    {
+    public function __construct(
+        private readonly Connection $connection,
+        private readonly InvoicingPolicy|null $policy = null,
+    ) {
     }
 
     public function issues(): array
@@ -120,8 +123,9 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
         foreach ($this->connection->fetchAllAssociative('SELECT id, title, withdrawalDays FROM tl_consho_shop ORDER BY id') as $shop) {
             $have = $ranges[(int) $shop['id']] ?? [];
 
-            // No invoices, nothing to correct; no withdrawal, nothing to refund.
-            if ((int) $shop['withdrawalDays'] < 1 || !\in_array('invoice', $have, true)) {
+            // No invoices, nothing to correct; no withdrawal, nothing to
+            // refund; no number of Consho's, nothing to number (R19).
+            if ((int) $shop['withdrawalDays'] < 1 || !\in_array('invoice', $have, true) || !$this->conshoNumbers((int) $shop['id'])) {
                 continue;
             }
 
@@ -148,5 +152,15 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
         }
 
         return $issues;
+    }
+
+    /**
+     * Whether Consho numbers this shop's invoices — itself or for a module
+     * that passes them on (block R, R19). Only then does it need the invoice
+     * ranges, the sender and what else goes on Consho's invoice.
+     */
+    private function conshoNumbers(int $shopId): bool
+    {
+        return null === $this->policy || $this->policy->forShop($shopId)->conshoNumbers;
     }
 }

@@ -24,8 +24,11 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherDocument;
 use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityLabelImages;
 use Webwerkwien\ContaoConshoBundle\Customer\AccountFromOrder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentDeliveryInterface;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceView;
+use Webwerkwien\ContaoConshoBundle\Notification\OrderConfirmation;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderConfirmationSourceInterface;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderMailPayload;
 use Webwerkwien\ContaoConshoBundle\Notification\PaymentChangeMail;
@@ -141,6 +144,9 @@ class OrderController extends AbstractContentElementController
         private readonly DurabilityLabelImages|null $durability = null,
         // K1: "Kundenkonto anlegen" on a guest order. Optional like the above.
         private readonly AccountFromOrder|null $account = null,
+        // Block R (R16, R17): whether Consho mails the shop's invoices, for
+        // what the page promises about them. Optional like the above.
+        private readonly InvoicingPolicy|null $policy = null,
     ) {
     }
 
@@ -214,7 +220,7 @@ class OrderController extends AbstractContentElementController
 
         $template->set('order', $orderView);
         $template->set('garan', $this->durability?->ofOrderItems($this->source->items($orderId)) ?? []);
-        $template->set('reference', null !== $invoice && [] !== $orderView['bankDetails'] ? $invoice['documentNumber'] : '');
+        $template->set('reference', null !== $invoice && [] !== $orderView['bankDetails'] ? OrderConfirmation::referenceOf($invoice, $order) : '');
         $paymentState = $balance->paymentState;
         $template->set('payment_state', $paymentState->value);
         $template->set('online', $this->onlineOf($orderId, $paymentState));
@@ -224,7 +230,13 @@ class OrderController extends AbstractContentElementController
         $template->set('vouchers', null === $this->vouchers ? [] : $this->vouchers->ofOrder($orderId, $language));
         $this->paymentsOf($template, $orderId, (string) ($order['currency'] ?? ''), $language, $balance->outstanding());
         $template->set('change', $this->changeOf($options, $order['currency'], $language));
-        $template->set('notice', self::noticeOf($request));
+
+        // Where the invoice comes from elsewhere (R16, R17), a change of
+        // payment method lists and mails no new documents here.
+        $invoicesByMail = null === $this->policy || $this->policy->forShop((int) $order['shop'])->conshoSends;
+        $notice = self::noticeOf($request);
+        $template->set('invoices_by_mail', $invoicesByMail);
+        $template->set('notice', 'changed' === $notice && !$invoicesByMail ? 'changedElsewhere' : $notice);
         $template->set('withdrawal', $this->withdrawal->view($orderId, $order, '1' === $request->query->getString(OrderPageWithdrawal::FORM_PARAM), $language, time()));
         // For the GET form of "Vertrag widerrufen" — the same token the page
         // was opened with, which the address already carries.
@@ -505,7 +517,11 @@ class OrderController extends AbstractContentElementController
     }
 
     /**
-     * @return list<array{id: int, type: string, number: string, date: string, cancelled: bool}>
+     * `formats`: PDF and the accessible HTML version for Consho's documents,
+     * the PDF alone for a module's (block R, R18) — Consho's layout of it
+     * would be a second original that differs.
+     *
+     * @return list<array{id: int, type: string, number: string, date: string, cancelled: bool, formats: list<string>}>
      */
     private function documentsOf(int $orderId, string $language): array
     {
@@ -518,6 +534,7 @@ class OrderController extends AbstractContentElementController
                 'number' => $document['number'],
                 'date' => $document['issuedAt'] > 0 ? (string) $formatter->format($document['issuedAt']) : '',
                 'cancelled' => $document['cancelled'],
+                'formats' => Invoicing::CONSHO === $document['issuer'] ? ['pdf', 'html'] : ['pdf'],
             ],
             $this->orders->documents($orderId),
         );

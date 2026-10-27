@@ -9,8 +9,9 @@ use Doctrine\DBAL\Connection;
  *
  * Kept apart from DocumentRepositoryInterface on purpose: that one is what
  * the issuer needs inside the purchase transaction, this is what happens
- * afterwards — and the three archive columns are the only thing ever written
- * to a document after it was inserted.
+ * afterwards — and the three archive columns are, with what an issuing module
+ * reports back (ExternalInvoicing, block R), the only thing ever written to a
+ * document after it was inserted.
  */
 class DbalDocumentStore
 {

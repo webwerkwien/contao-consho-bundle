@@ -7,14 +7,21 @@ use Contao\CoreBundle\Filesystem\VirtualFilesystemInterface;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Webwerkwien\ContaoConshoBundle\Command\DocumentVerifyCommand;
 use Webwerkwien\ContaoConshoBundle\Document\DbalDocumentStore;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentDelivery;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceRenderer;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\ExternalInvoicing;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\LateDocumentMail;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Document\Invoicing\FakeInvoiceProvider;
 
 class DocumentVerifyCommandTest extends TestCase
 {
@@ -72,7 +79,70 @@ class DocumentVerifyCommandTest extends TestCase
         $this->verify(true, $archiver);
     }
 
-    private function verify(bool $retry, DocumentArchiverInterface $archiver): CommandTester
+    public function testRetryBietetAusstehendeBelegeDemModulErneutAnRechnungZuerst(): void
+    {
+        // Block R (R18): the invoice before the cancellation that waits for it.
+        $this->connection->insert('tl_consho_document', ['id' => 4, 'pid' => 1, 'shop' => 1, 'type' => 'invoice', 'issuer' => 'fake_books', 'externalState' => 'failed', 'payload' => '{}']);
+        $this->connection->insert('tl_consho_document', ['id' => 5, 'pid' => 1, 'shop' => 1, 'type' => 'cancellation', 'relatedDocument' => 4, 'issuer' => 'fake_books', 'externalState' => 'pending', 'payload' => '{}']);
+        $provider = new FakeInvoiceProvider();
+
+        $this->verify(true, $this->createMock(DocumentArchiverInterface::class), new ExternalInvoicing(
+            $this->connection,
+            new InvoiceProviders(new ServiceLocator(['fake_books' => static fn () => $provider])),
+            new NullLogger(),
+        ));
+
+        self::assertSame([DocumentType::Invoice, DocumentType::Cancellation], array_map(static fn ($d) => $d->type, $provider->issued));
+    }
+
+    public function testNurEinJetztAusgestellterBelegGehtDemKundenNach(): void
+    {
+        // Block R (R18): the order's mail went out without it.
+        $this->connection->insert('tl_consho_document', ['id' => 4, 'pid' => 1, 'shop' => 1, 'type' => 'invoice', 'issuer' => 'fake_books', 'externalState' => 'failed', 'payload' => '{}']);
+        $this->connection->insert('tl_consho_document', ['id' => 6, 'pid' => 1, 'shop' => 1, 'type' => 'invoice', 'issuer' => 'removed_books', 'externalState' => 'pending', 'payload' => '{}']);
+        $provider = new FakeInvoiceProvider();
+
+        $late = $this->createMock(LateDocumentMail::class);
+        $late->expects(self::once())->method('send')->with(4)->willReturn(true);
+
+        $this->verify(true, $this->createMock(DocumentArchiverInterface::class), new ExternalInvoicing(
+            $this->connection,
+            new InvoiceProviders(new ServiceLocator(['fake_books' => static fn () => $provider])),
+            new NullLogger(),
+        ), $late);
+    }
+
+    public function testEinGeradeGeschriebenerBelegBleibtSeinemKaufUeberlassen(): void
+    {
+        // Its purchase may still be submitting it and mailing the order.
+        $this->connection->insert('tl_consho_document', ['id' => 4, 'pid' => 1, 'shop' => 1, 'type' => 'invoice', 'issuer' => 'fake_books', 'externalState' => 'failed', 'payload' => '{}', 'tstamp' => time() - 299]);
+        $this->connection->insert('tl_consho_document', ['id' => 5, 'pid' => 2, 'shop' => 1, 'type' => 'invoice', 'issuer' => 'fake_books', 'externalState' => 'pending', 'payload' => '{}', 'tstamp' => time() - 301]);
+        $provider = new FakeInvoiceProvider();
+
+        $this->verify(true, $this->createMock(DocumentArchiverInterface::class), new ExternalInvoicing(
+            $this->connection,
+            new InvoiceProviders(new ServiceLocator(['fake_books' => static fn () => $provider])),
+            new NullLogger(),
+        ));
+
+        self::assertSame([5], array_map(static fn ($d) => $d->id, $provider->issued));
+    }
+
+    public function testOhneRetryWirdNichtsEingereicht(): void
+    {
+        $this->connection->insert('tl_consho_document', ['id' => 4, 'pid' => 1, 'shop' => 1, 'type' => 'invoice', 'issuer' => 'fake_books', 'externalState' => 'pending', 'payload' => '{}']);
+        $provider = new FakeInvoiceProvider();
+
+        $this->verify(false, $this->createMock(DocumentArchiverInterface::class), new ExternalInvoicing(
+            $this->connection,
+            new InvoiceProviders(new ServiceLocator(['fake_books' => static fn () => $provider])),
+            new NullLogger(),
+        ));
+
+        self::assertSame([], $provider->issued);
+    }
+
+    private function verify(bool $retry, DocumentArchiverInterface $archiver, ExternalInvoicing|null $external = null, LateDocumentMail|null $late = null): CommandTester
     {
         $files = $this->createMock(VirtualFilesystemInterface::class);
         $files->method('read')->willReturnCallback(fn (string $path): string => $this->files[$path] ?? throw VirtualFilesystemException::unableToRead($path));
@@ -82,6 +152,8 @@ class DocumentVerifyCommandTest extends TestCase
             $store,
             new DocumentDelivery($store, $this->createMock(InvoiceRenderer::class), $files),
             $archiver,
+            $external,
+            $late,
         ));
         $tester->execute($retry ? ['--retry' => true] : []);
 

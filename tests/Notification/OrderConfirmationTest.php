@@ -42,6 +42,8 @@ class OrderConfirmationTest extends TestCase
 
     private array|null $pdf = ['pdf' => '%PDF-invoice', 'fileName' => 'RE-00014.pdf', 'fromArchive' => true, 'archiveProblem' => false, 'logoMissing' => false];
 
+    private bool $elsewhere = false;
+
     protected function setUp(): void
     {
         $this->source = new FakeConfirmationSource();
@@ -385,6 +387,31 @@ class OrderConfirmationTest extends TestCase
         self::assertSame(['gewaehrleistung-de.pdf'], array_map(static fn ($part): string => (string) $part->getFilename(), $mail->getAttachments()));
     }
 
+    public function testEineRechnungDieAnderswoHerkommtHaengtNichtAnUndWirdAngekuendigt(): void
+    {
+        // Block R (R21): the shop's invoicing module sends it, or the operator does.
+        $this->elsewhere = true;
+
+        $this->confirmation()->send(7, 1, 'https://shop.test/o', 1);
+
+        $customer = $this->transport->sent[0];
+        $html = (string) $customer->getHtmlBody();
+        self::assertSame(['gewaehrleistung-de.pdf'], array_map(static fn ($part): string => (string) $part->getFilename(), $customer->getAttachments()));
+        self::assertStringContainsString('Die Rechnung erhalten Sie gesondert.', $html);
+        self::assertStringNotContainsString('Die Rechnung finden Sie im Anhang.', $html);
+        self::assertSame([], $this->transport->sent[1]->getAttachments(), 'nor the operator copy');
+    }
+
+    public function testOhneRechnungsnummerIstDieBestellnummerDerVerwendungszweck(): void
+    {
+        // Block R (R16): the row holds the invoice data, the number is not Consho's.
+        $this->source->invoiceRow['documentNumber'] = '';
+
+        $this->confirmation()->send(7, 1, 'https://shop.test/o', 1);
+
+        self::assertMatchesRegularExpression('#Verwendungszweck</th><td[^>]*>WEB-00054</td>#', (string) $this->transport->sent[0]->getHtmlBody());
+    }
+
     /**
      * Without an invoice at purchase, the payment notice comes from the order
      * itself.
@@ -520,14 +547,19 @@ class OrderConfirmationTest extends TestCase
         };
 
         $pdf = $this->pdf;
-        $pdfs = new class($pdf) implements DocumentPdfInterface {
-            public function __construct(private readonly array|null $pdf)
+        $pdfs = new class($pdf, $this->elsewhere) implements DocumentPdfInterface {
+            public function __construct(private readonly array|null $pdf, private readonly bool $elsewhere)
             {
             }
 
             public function pdf(int $documentId): array|null
             {
                 return $this->pdf;
+            }
+
+            public function sentElsewhere(int $documentId): bool
+            {
+                return $this->elsewhere;
             }
         };
 

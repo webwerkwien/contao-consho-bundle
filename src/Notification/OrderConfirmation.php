@@ -216,7 +216,8 @@ final class OrderConfirmation implements OrderConfirmationInterface
             $from = SenderAddress::of($transportRow);
 
             $invoice = $this->source->invoice($orderId);
-            $pdf = null === $invoice ? null : $this->pdfs->pdf($invoice['id']);
+            // Not where the shop's invoicing module sends it, or nobody does (R21).
+            $pdf = null === $invoice || $this->pdfs->sentElsewhere($invoice['id']) ? null : $this->pdfs->pdf($invoice['id']);
             $payload = $this->payloadOf($order, $invoice);
         } catch (\Throwable $e) {
             $this->fail($order['orderNumber'] ?? $orderId, $e);
@@ -282,12 +283,18 @@ final class OrderConfirmation implements OrderConfirmationInterface
                 'order' => $view,
                 'customer' => ['name' => $recipient->name, 'email' => $recipient->email],
                 // The invoice number is the reference the Giro-Code uses as
-                // well (C-8): one way to name the payment, not two.
-                'reference' => null !== $invoice && [] !== $view['bankDetails'] ? $invoice['documentNumber'] : '',
+                // well (C-8): one way to name the payment, not two. Where
+                // Consho drew none (R16), the order number.
+                'reference' => null !== $invoice && [] !== $view['bankDetails'] ? self::referenceOf($invoice, $order) : '',
                 'legal' => $this->source->legalTexts($orderId),
                 'viewUrl' => $viewUrl,
                 'withdrawalUrl' => $withdrawalUrl,
-                'attachments' => ['invoice' => null !== $pdf, 'warranty' => null !== $notice],
+                'attachments' => [
+                    'invoice' => null !== $pdf,
+                    'warranty' => null !== $notice,
+                    // The invoice comes from the shop's invoicing module or the operator (R21).
+                    'invoiceSeparate' => null !== $invoice && null === $pdf && $this->pdfs->sentElsewhere($invoice['id']),
+                ],
                 // § 7 Abs. 3 FAGG, § 312f Abs. 3 BGB: the confirmation on a
                 // durable medium records the consent (F-3, F15).
                 'digitalConsent' => 0 < (int) ($order['digitalConsentAt'] ?? 0),
@@ -414,5 +421,18 @@ final class OrderConfirmation implements OrderConfirmationInterface
     private function fail(mixed $order, \Throwable $e): void
     {
         $this->logger->error(\sprintf('The order confirmation of order %s could not be sent: %s', (string) $order, $e->getMessage()), ['exception' => $e]);
+    }
+
+    /**
+     * The payment reference: the invoice number, or the order number where
+     * the invoice row has none (R16).
+     *
+     * @param array{id: int, documentNumber: string, payload: array<string, mixed>} $invoice
+     * @param array<string, mixed>                                                  $order
+     */
+    public static function referenceOf(array $invoice, array $order): string
+    {
+        // documentOf() already turns a NULL number into ''.
+        return '' !== $invoice['documentNumber'] ? $invoice['documentNumber'] : (string) ($order['orderNumber'] ?? '');
     }
 }

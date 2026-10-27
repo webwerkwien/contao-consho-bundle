@@ -102,6 +102,16 @@ final class WithdrawalIssueSourceTest extends TestCase
         self::assertSame([[ConfigurationFinding::WithdrawalsOpen, '#9', 0], [ConfigurationFinding::WithdrawalsUnassigned, '#9', 0]], array_map(static fn (ConfigurationIssue $i): array => [$i->finding, $i->context['shop'], $i->shopId], $issues));
     }
 
+    public function testOhneConshoRechnungenKeinKorrekturkreis(): void
+    {
+        // Block R (R19, R20): the correction follows the invoice and gets no number of Consho's.
+        $this->connection->delete('tl_consho_number_range', ['type' => 'creditNote']);
+        $this->connection->update('tl_consho_shop', ['invoicing' => 'off'], ['id' => 1]);
+
+        self::assertCount(1, $this->issues());
+        self::assertSame([], (new WithdrawalIssueSource($this->connection, new \Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy($this->connection, new \Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders(new \Symfony\Component\DependencyInjection\ServiceLocator([])))))->issues());
+    }
+
     public function testFehlenderKreisFuerDieRechnungskorrektur(): void
     {
         $this->connection->delete('tl_consho_number_range', ['type' => 'creditNote']);

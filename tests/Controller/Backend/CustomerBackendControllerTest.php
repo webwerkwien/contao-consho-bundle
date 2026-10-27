@@ -240,6 +240,11 @@ final class CustomerBackendControllerTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('isGranted')->willReturn($this->granted);
         $pdfs = new class implements DocumentPdfInterface {
+            public function sentElsewhere(int $documentId): bool
+            {
+                return false;
+            }
+
             /**
              * @return array{pdf: string, fileName: string, fromArchive: bool, archiveProblem: bool, logoMissing: bool}
              */

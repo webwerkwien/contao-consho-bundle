@@ -2,7 +2,11 @@
 
 $GLOBALS['TL_LANG']['tl_consho_document']['documentNumber'] = ['Belegnummer', 'Lückenlos je Shop und Belegart.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['type'] = ['Belegart', ''];
+$GLOBALS['TL_LANG']['tl_consho_document']['issuer'] = ['Ausgestellt von', 'Consho, ein Buchhaltungsmodul oder niemand („Aus“: nur die Rechnungsdaten, die Rechnung entsteht außerhalb).'];
 $GLOBALS['TL_LANG']['tl_consho_document']['issuedAt'] = ['Ausgestellt am', ''];
+$GLOBALS['TL_LANG']['tl_consho_document']['notIssued'] = 'Rechnungsdaten (nicht ausgestellt)';
+$GLOBALS['TL_LANG']['tl_consho_document']['waitingFor'] = 'wartet auf %s';
+$GLOBALS['TL_LANG']['tl_consho_document']['handOverFailed'] = 'Übergabe an %s gescheitert';
 $GLOBALS['TL_LANG']['tl_consho_document']['relatedDocument'] = ['Bezieht sich auf', 'Bei Rechnungskorrektur und Storno der Beleg, der korrigiert wird.'];
 $GLOBALS['TL_LANG']['tl_consho_document']['payload'] = ['Inhalt', 'Momentaufnahme zum Zeitpunkt der Ausstellung. Bewusst unveränderlich.'];
 

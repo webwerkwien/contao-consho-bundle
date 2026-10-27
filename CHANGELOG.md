@@ -5,6 +5,39 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.16] – 2026-10-27
+
+### Added
+
+- **Who issues the invoices.** A new setting in the shop configuration, "Invoices issued by", with three positions:
+  Consho (the default, as before), an invoicing module, or off. In every position Consho records the invoice data of
+  each order, with its payment term, so payment reminders, the OSS report, withdrawals and the address lock work the
+  same way. With "off" no invoice number is drawn and no invoice is attached; the invoices are made outside Consho.
+- **Extension point for invoicing modules** (`InvoiceProviderInterface`, tag `consho.invoice_provider`). A module says
+  per shop whether it issues the invoices itself (it receives each document after the purchase is committed and
+  reports its own number) or passes Consho's invoices on, and whether it sends them to the customer itself. A
+  cancellation or correction follows whoever issued its invoice. Documents that did not reach the module are offered
+  again by `consho:document:verify --retry`; where Consho sends the module's documents, each one issued on that retry
+  goes to the customer in a mail of its own, with the PDF attached. The retry leaves documents written in the last
+  five minutes to the purchase that is still handling them.
+- **Findings** `invoicingOff` (a note), `invoiceProviderMissing` and `externalInvoiceFailed` (warnings).
+
+### Changed
+
+- **`tl_consho_document.documentNumber` may be NULL.** A document Consho did not number has no number of its own;
+  modules that read the column should expect NULL rather than an empty string. New columns `issuer`, `externalId`
+  and `externalState`.
+- **Mails attach an invoice only where Consho sends it.** Where a module sends the invoice or invoicing is off, the
+  order confirmation says the invoice comes separately, and the other mails neither attach nor name it. Without an
+  invoice number the payment reference is the order number.
+- **Order page and document list.** The order page lists documents with a number only and offers a module's document
+  as PDF. The back end's document list marks invoice data that was not issued and documents waiting for the module.
+  Where Consho does not send the invoice, the payment change box and its notice say the invoice comes separately,
+  and the payment reference falls back to the order number.
+- **Readiness follows who numbers the invoices.** Invoice and cancellation number ranges, the invoice sender, the
+  e-invoice details, the reverse charge note, the delivery period and the refund ranges are required only where
+  Consho numbers the shop's invoices. The order number range stays required.
+
 ## [0.1.15] – 2026-10-27
 
 ### Added

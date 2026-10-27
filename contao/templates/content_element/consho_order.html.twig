@@ -7,13 +7,14 @@
     payment instructions and bank details, formatted), reference (the payment
     reference, '' without an invoice), payment_state and delivery_state
     (PaymentState / DeliveryState values), documents (list of {id, type,
-    number, date, cancelled}), change ({offered, block, options: list of {id,
+    number, date, cancelled, formats: the retrievable formats}), change ({offered, block, options: list of {id,
     title, available, current, amount}}), notice (a key of
     CONSHO.orderPage.notice or null), online ({state: a key of
     CONSHO.orderPage.online, retry: bool} or null — C-11), withdrawal (see
     OrderPageWithdrawal::view(), D-2), withdrawal_token (for the GET form of
     "Vertrag widerrufen"), order_url (the page without the declaration,
-    token included) and account (bool: the box "Kundenkonto anlegen", K1).
+    token included), account (bool: the box "Kundenkonto anlegen", K1) and
+    invoices_by_mail (bool: Consho mails the shop's invoices, block R).
 
     Every figure arrives formatted — the same view as the invoice and the mail,
     so the page cannot show an amount the documents do not.
@@ -365,7 +366,7 @@
                     {% set document_name = ('CONSHO.invoice.types.' ~ document.type)|trans({}, 'contao_default') ~ ' ' ~ document.number %}
                     <li class="consho-order__document{{ document.cancelled ? ' consho-order__document--cancelled' : '' }}">
                         <span>{{ document_name }}{% if document.date %}, {{ document.date }}{% endif %}{% if document.cancelled %} ({{ 'CONSHO.orderPage.cancelled'|trans({}, 'contao_default') }}){% endif %}</span>
-                        {% for format in ['pdf', 'html'] %}
+                        {% for format in document.formats|default(['pdf', 'html']) %}
                             <form method="post" class="consho-order__retrieve">
                                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                                 <input type="hidden" name="consho_order_action" value="{{ format }}">
@@ -486,7 +487,7 @@
     {% elseif change.offered %}
         <section class="consho-order__change">
             <h3>{{ 'CONSHO.orderPage.change.title'|trans({}, 'contao_default') }}</h3>
-            <p>{{ 'CONSHO.orderPage.change.explanation'|trans({}, 'contao_default') }}</p>
+            <p>{{ ('CONSHO.orderPage.change.' ~ ((invoices_by_mail ?? true) ? 'explanation' : 'explanationElsewhere'))|trans({}, 'contao_default') }}</p>
             <form method="post">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 <input type="hidden" name="consho_order_action" value="change">

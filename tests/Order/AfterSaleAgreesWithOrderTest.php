@@ -700,6 +700,11 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         // As DocumentDelivery does: the file name is the document number. Read,
         // not invented — a wrong document in the attachment would show this way.
         $pdfs = new class($this->connection) implements DocumentPdfInterface {
+            public function sentElsewhere(int $documentId): bool
+            {
+                return false;
+            }
+
             public function __construct(private readonly Connection $connection)
             {
             }

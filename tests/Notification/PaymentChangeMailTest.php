@@ -31,6 +31,8 @@ class PaymentChangeMailTest extends TestCase
 
     private ErrorSpyLogger $logger;
 
+    private bool $elsewhere = false;
+
     protected function setUp(): void
     {
         $this->source = new FakeConfirmationSource();
@@ -68,6 +70,21 @@ class PaymentChangeMailTest extends TestCase
         self::assertStringNotContainsString('CONSHO.', $html);
 
         self::assertSame(['ST-00002.pdf', 'RE-00016.pdf'], array_map(static fn ($p): string => (string) $p->getFilename(), $mail->getAttachments()));
+    }
+
+    public function testBelegeDieDasModulSchicktHaengenNichtAnUndWerdenNichtGenannt(): void
+    {
+        // Block R (R21); the payment reference stays the new invoice's number.
+        $this->elsewhere = true;
+
+        self::assertTrue($this->mail()->send(7, 15, 16, 'https://shop.test/x'));
+
+        $mail = $this->transport->sent[0];
+        $html = (string) $mail->getHtmlBody();
+        self::assertSame([], $mail->getAttachments());
+        self::assertStringNotContainsString('liegt bei', $html);
+        self::assertStringNotContainsString('im Anhang', $html);
+        self::assertMatchesRegularExpression('#Verwendungszweck</th><td[^>]*>RE-00016</td>#', $html);
     }
 
     public function testDerBetreiberBekommtEineKopieMitBeidenBelegen(): void
@@ -125,12 +142,21 @@ class PaymentChangeMailTest extends TestCase
             }
         };
 
-        $pdfs = new class implements DocumentPdfInterface {
+        $pdfs = new class($this->elsewhere) implements DocumentPdfInterface {
+            public function __construct(private readonly bool $elsewhere)
+            {
+            }
+
             public function pdf(int $documentId): array
             {
                 $name = 15 === $documentId ? 'ST-00002.pdf' : 'RE-00016.pdf';
 
                 return ['pdf' => '%PDF-'.$documentId, 'fileName' => $name, 'fromArchive' => false, 'archiveProblem' => false, 'logoMissing' => false];
+            }
+
+            public function sentElsewhere(int $documentId): bool
+            {
+                return $this->elsewhere;
             }
         };
 

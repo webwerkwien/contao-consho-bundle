@@ -28,6 +28,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityLabelImages;
 use Webwerkwien\ContaoConshoBundle\Customer\AccountFromOrder;
 use Webwerkwien\ContaoConshoBundle\Customer\AccountRequestOutcome;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentDeliveryInterface;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceView;
 use Webwerkwien\ContaoConshoBundle\Model\ShopModel;
@@ -107,6 +109,9 @@ class OrderControllerTest extends TestCase
 
     // K1: null — no account box, as before.
     private AccountFromOrder|null $account = null;
+
+    // Block R: null — Consho mails the invoices, as before.
+    private InvoicingPolicy|null $policy = null;
 
     private ResponseContext $context;
 
@@ -469,6 +474,18 @@ class OrderControllerTest extends TestCase
         self::assertSame('application/pdf', $answer->headers->get('Content-Type'));
         self::assertSame('no-referrer', $answer->headers->get('Referrer-Policy'));
         self::assertStringContainsString('no-store', (string) $answer->headers->get('Cache-Control'));
+    }
+
+    public function testBelegeOhneNummerFehlenUndDerBelegDesModulsHatNurDasPdf(): void
+    {
+        // Block R (R16, R18): invoice data without a document, and a module's document.
+        $this->connection->insert('tl_consho_document', ['id' => 16, 'pid' => self::ORDER, 'type' => 'invoice', 'documentNumber' => null, 'issuer' => 'off', 'issuedAt' => 1_758_900_000]);
+        $this->connection->insert('tl_consho_document', ['id' => 17, 'pid' => self::ORDER, 'type' => 'invoice', 'documentNumber' => 'FB-7', 'issuer' => 'fake_books', 'issuedAt' => 1_758_950_000]);
+
+        [$data] = $this->render();
+
+        self::assertSame(['RE-00014', 'RK-00001', 'FB-7'], array_column($data['documents'], 'number'));
+        self::assertSame([['pdf', 'html'], ['pdf', 'html'], ['pdf']], array_column($data['documents'], 'formats'));
     }
 
     public function testEinBelegEinerAnderenBestellungIstEin404(): void
@@ -849,6 +866,30 @@ class OrderControllerTest extends TestCase
         );
     }
 
+    public function testOhneRechnungVonConshoVersprichtDieSeiteKeineBelege(): void
+    {
+        // Block R (R16): the invoice row carries no number; the reference
+        // falls back to the order number, as in the confirmation mail.
+        $this->sourceSetup = static function (FakeConfirmationSource $source): void {
+            $source->invoiceRow['documentNumber'] = '';
+        };
+        $this->connection->update('tl_consho_shop', ['invoicing' => 'off'], ['id' => self::SHOP]);
+        $this->policy = new InvoicingPolicy($this->connection, new InvoiceProviders(new ServiceLocator([])));
+
+        [$data] = $this->render('&consho_notice=changed');
+
+        self::assertFalse($data['invoices_by_mail']);
+        self::assertSame('changedElsewhere', $data['notice']);
+        self::assertSame('WEB-00054', $data['reference']);
+
+        // Consho's invoices: the notice and the page as before.
+        $this->connection->update('tl_consho_shop', ['invoicing' => 'consho'], ['id' => self::SHOP]);
+        [$data] = $this->render('&consho_notice=changed');
+
+        self::assertTrue($data['invoices_by_mail']);
+        self::assertSame('changed', $data['notice']);
+    }
+
     /**
      * @return array{0: array<string, mixed>, 1: Response}
      */
@@ -914,6 +955,11 @@ class OrderControllerTest extends TestCase
         });
 
         $documents = new class implements DocumentDeliveryInterface {
+            public function sentElsewhere(int $documentId): bool
+            {
+                return false;
+            }
+
             public function pdf(int $documentId): array
             {
                 return ['pdf' => '%PDF-'.$documentId, 'fileName' => 'RE-00014.pdf', 'fromArchive' => false, 'archiveProblem' => false, 'logoMissing' => false];
@@ -968,6 +1014,7 @@ class OrderControllerTest extends TestCase
             null,
             $this->durability,
             $this->account,
+            $this->policy,
         ) extends OrderController implements TestableOrderElement {
             public function respond(FragmentTemplate $template, ContentModel $model, Request $request): Response
             {

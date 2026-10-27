@@ -66,6 +66,19 @@ class DocumentArchiveTest extends TestCase
         );
     }
 
+    public function testEinBelegDenNichtConshoAusstellteWirdNichtAbgelegt(): void
+    {
+        // Block R (R16): there is no Consho PDF that could be its original.
+        foreach (['off', 'fake_books'] as $issuer) {
+            $this->connection->update('tl_consho_document', ['issuer' => $issuer], ['id' => 1]);
+
+            $this->archiver()->archive(1);
+
+            self::assertSame([], $this->written, $issuer);
+            self::assertSame(['archiveState' => '', 'archivedPath' => '', 'archivedHash' => ''], $this->archiveColumns(), $issuer);
+        }
+    }
+
     /**
      * A shop without an archive: the document is NOT a failed archiving —
      * otherwise every invoice from before it was switched on would warn forever.

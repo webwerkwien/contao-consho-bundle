@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Document\Handoff;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Webwerkwien\ContaoConshoBundle\Document\DbalDocumentStore;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
@@ -12,8 +13,14 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Document\Handoff\HandingOverArchiver;
 use Webwerkwien\ContaoConshoBundle\Document\Handoff\IssuedDocument;
 use Webwerkwien\ContaoConshoBundle\Document\Handoff\IssuedDocumentHandlerInterface;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\ExternalDocument;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviderInterface;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\PendingDocument;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
+use Webwerkwien\ContaoConshoBundle\Tests\Document\Invoicing\FakeInvoiceProvider;
 
 /**
  * Block R (R13): every issued document goes to the accounting modules after
@@ -108,6 +115,120 @@ class HandingOverArchiverTest extends TestCase
         self::assertSame(['archive 3'], $this->calls);
     }
 
+    public function testEinWeiterreichendesModulDesShopsBekommtConshoBelege(): void
+    {
+        // Block R (R19, R21): the numbers stay Consho's, the module passes them on.
+        $provider = new FakeInvoiceProvider(issues: false);
+
+        $this->archiver([], policy: $this->policy('fake_books', $provider))->archive(3);
+
+        self::assertSame(['RE-00003'], array_map(static fn (IssuedDocument $d): string => $d->number, $provider->handedOver));
+    }
+
+    public function testEinSelbstAusstellendesModulBekommtConshosAltenBelegNicht(): void
+    {
+        // After the switch to the module, the cancellation of an older Consho invoice stays Consho's (R20).
+        $provider = new FakeInvoiceProvider(issues: true);
+
+        $this->archiver([], policy: $this->policy('fake_books', $provider))->archive(3);
+
+        self::assertSame([], $provider->handedOver);
+        self::assertSame(['archive 3'], $this->calls);
+    }
+
+    public function testEinWeiterreichendesModulBekommtDenLieferscheinNicht(): void
+    {
+        $this->connection->insert('tl_consho_document', ['id' => 4, 'pid' => 7, 'tstamp' => 1, 'shop' => 2, 'type' => 'deliveryNote', 'documentNumber' => 'LS-00001', 'payload' => '{}']);
+        $provider = new FakeInvoiceProvider(issues: false);
+
+        $this->archiver([], policy: $this->policy('fake_books', $provider))->archive(4);
+
+        self::assertSame([], $provider->handedOver);
+    }
+
+    public function testEinModulDesShopsDasAuchAlsUebergabeAngemeldetIstBekommtDenBelegEinmal(): void
+    {
+        $both = new class extends \stdClass implements IssuedDocumentHandlerInterface, InvoiceProviderInterface {
+            /** @var list<string> */
+            public array $calls = [];
+
+            public static function getName(): string
+            {
+                return 'fake_books';
+            }
+
+            public function label(): string
+            {
+                return 'Both';
+            }
+
+            public function issuesItself(int $shopId): bool
+            {
+                return false;
+            }
+
+            public function sendsItself(int $shopId): bool
+            {
+                return false;
+            }
+
+            public function issue(PendingDocument $document): ExternalDocument
+            {
+                throw new \LogicException('not called');
+            }
+
+            public function pdf(int $shopId, string $externalId): string|null
+            {
+                return null;
+            }
+
+            public function handOver(IssuedDocument $document): void
+            {
+                $this->calls[] = 'handOver';
+            }
+
+            public function handle(IssuedDocument $document): void
+            {
+                $this->calls[] = 'handle';
+            }
+        };
+
+        $this->archiver([$both], policy: $this->policy('fake_books', $both))->archive(3);
+        self::assertSame(['handOver'], $both->calls);
+
+        // Another shop: the module is a plain handler there.
+        $both->calls = [];
+        $this->archiver([$both], policy: $this->policy('consho', $both))->archive(3);
+        self::assertSame(['handle'], $both->calls);
+    }
+
+    public function testEinBelegDenNichtConshoAusstellteWirdNichtUebergeben(): void
+    {
+        $handler = $this->handler('buchhaltung', static function (): void {
+        });
+
+        foreach (['off', 'fake_books'] as $issuer) {
+            $this->connection->update('tl_consho_document', ['issuer' => $issuer], ['id' => 3]);
+            $this->calls = [];
+
+            $this->archiver([$handler], policy: $this->policy('fake_books', new FakeInvoiceProvider(issues: false)))->archive(3);
+
+            self::assertSame(['archive 3'], $this->calls, $issuer);
+        }
+    }
+
+    private function policy(string $invoicing, InvoiceProviderInterface $provider): InvoicingPolicy
+    {
+        if (!$this->connection->createSchemaManager()->tablesExist(['tl_consho_shop'])) {
+            DcaSchema::create($this->connection, 'tl_consho_shop');
+            $this->connection->insert('tl_consho_shop', ['id' => 2, 'title' => 'Shop']);
+        }
+
+        $this->connection->update('tl_consho_shop', ['invoicing' => $invoicing], ['id' => 2]);
+
+        return new InvoicingPolicy($this->connection, new InvoiceProviders(new ServiceLocator(['fake_books' => static fn () => $provider])));
+    }
+
     /**
      * @param \Closure(IssuedDocument): void $body
      */
@@ -133,7 +254,7 @@ class HandingOverArchiverTest extends TestCase
     /**
      * @param list<IssuedDocumentHandlerInterface> $handlers
      */
-    private function archiver(array $handlers, LoggerInterface|null $logger = null): HandingOverArchiver
+    private function archiver(array $handlers, LoggerInterface|null $logger = null, InvoicingPolicy|null $policy = null): HandingOverArchiver
     {
         $calls = &$this->calls;
         $inner = $this->createMock(DocumentArchiverInterface::class);
@@ -148,6 +269,6 @@ class HandingOverArchiverTest extends TestCase
             return ['pdf' => '%PDF-'.$id, 'fileName' => 're.pdf', 'fromArchive' => false, 'archiveProblem' => false, 'logoMissing' => false];
         });
 
-        return new HandingOverArchiver($inner, $handlers, new DbalDocumentStore($this->connection), $pdfs, $logger ?? $this->createMock(LoggerInterface::class));
+        return new HandingOverArchiver($inner, $handlers, new DbalDocumentStore($this->connection), $pdfs, $logger ?? $this->createMock(LoggerInterface::class), $policy);
     }
 }

@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Order;
 
 use Doctrine\DBAL\Connection;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
 
 /**
  * What the order page (7.7, C-10) reads — and the one thing it writes.
@@ -33,15 +34,21 @@ class DbalOrderPageRepository
      * less than the mailbox. `cancelled` marks an invoice a cancellation
      * refers to.
      *
-     * @return list<array{id: int, type: string, number: string, issuedAt: int, cancelled: bool}>
+     * Only documents with a number (block R, R16): a row written while
+     * invoicing was off, or one the shop's module has not issued yet, holds
+     * the invoice data but is no document the customer could retrieve.
+     * `issuer` says whose it is — a module's has no HTML version here.
+     *
+     * @return list<array{id: int, type: string, number: string, issuedAt: int, cancelled: bool, issuer: string}>
      */
     public function documents(int $orderId): array
     {
         $rows = $this->connection->fetchAllAssociative(
-            "SELECT d.id, d.type, d.documentNumber, d.issuedAt,
+            "SELECT d.id, d.type, d.documentNumber, d.issuedAt, d.issuer,
                     EXISTS (SELECT 1 FROM tl_consho_document c WHERE c.type = 'cancellation' AND c.relatedDocument = d.id) AS cancelled
                FROM tl_consho_document d
               WHERE d.pid = ? AND d.type IN ('invoice', 'cancellation', 'creditNote')
+                AND d.documentNumber IS NOT NULL AND d.documentNumber <> ''
               ORDER BY d.issuedAt, d.id",
             [$orderId],
         );
@@ -53,6 +60,7 @@ class DbalOrderPageRepository
                 'number' => (string) $row['documentNumber'],
                 'issuedAt' => (int) $row['issuedAt'],
                 'cancelled' => (bool) $row['cancelled'],
+                'issuer' => '' !== (string) $row['issuer'] ? (string) $row['issuer'] : Invoicing::CONSHO,
             ],
             $rows,
         );

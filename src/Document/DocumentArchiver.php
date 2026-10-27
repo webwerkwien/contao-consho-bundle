@@ -6,6 +6,7 @@ use Contao\CoreBundle\Filesystem\VirtualFilesystemInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Path;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
 
 /**
  * Keeps a copy of every invoice PDF in the shop's archive folder (C8, 8.3) —
@@ -53,7 +54,9 @@ final class DocumentArchiver implements DocumentArchiverInterface
     {
         $document = $this->store->find($documentId);
 
-        if (null === $document) {
+        // Consho's own documents only (R16): one issued elsewhere has no
+        // Consho PDF that could be its original.
+        if (null === $document || Invoicing::CONSHO !== (string) ($document['issuer'] ?? Invoicing::CONSHO)) {
             return;
         }
 

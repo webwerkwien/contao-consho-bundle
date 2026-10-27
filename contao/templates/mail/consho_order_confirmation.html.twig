@@ -34,11 +34,13 @@
     order        the order in InvoiceView's shape (lines, taxes, totals,
                  payment instructions, bank details), in the order's language
     customer     {name, email} of the buyer
-    reference    the payment reference — the invoice number, '' without one
+    reference    the payment reference — the invoice number, the order number
+                 where the invoice has none, '' without bank transfer
     legal        list of {headline, text}: terms and withdrawal, frozen HTML
     viewUrl      the order page, with a token
     withdrawalUrl  the order page on the declaration (D-2), null without a withdrawal function
-    attachments  {invoice: bool, warranty: bool}
+    attachments  {invoice: bool, invoiceSeparate: bool, warranty: bool} —
+                 invoiceSeparate: the invoice reaches the buyer another way
     digitalConsent  the consumer consented to the early start of digital
                  content (F-3) — recorded here as § 7 Abs. 3 FAGG and
                  § 312f Abs. 3 BGB require
@@ -220,9 +222,10 @@
 <p style="margin: 12px 0 0 0;">{{ ('CONSHO.mail.confirmation.' ~ digital.what|default('digital') ~ '.' ~ digital.kind)|trans([digital.date], 'contao_default') }}</p>
 {% endif %}
 
-{% if attachments.invoice or attachments.warranty %}
+{% if attachments.invoice or attachments.invoiceSeparate|default(false) or attachments.warranty %}
 <p style="margin: 24px 0 0 0; color: #555555;">
     {% if attachments.invoice %}{{ 'CONSHO.mail.confirmation.invoiceAttached'|trans({}, 'contao_default') }}{% endif %}
+    {% if attachments.invoiceSeparate|default(false) %}{{ 'CONSHO.mail.confirmation.invoiceSeparate'|trans({}, 'contao_default') }}{% endif %}
     {% if attachments.warranty %}{{ 'CONSHO.mail.confirmation.warrantyAttached'|trans({}, 'contao_default') }}{% endif %}
 </p>
 {% endif %}

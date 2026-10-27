@@ -99,6 +99,18 @@ class EInvoiceSettingsTest extends TestCase
         self::assertTrue($issues[0]->finding->isWarning());
     }
 
+    public function testOhneConshoRechnungenKeinBefundZurERechnung(): void
+    {
+        // Block R (R19): the XML travels in Consho's invoice.
+        $this->connection->update('tl_consho_shop', ['eInvoice' => 1], ['id' => 1]);
+        $source = new EInvoiceIssueSource($this->connection, new \Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy($this->connection, new \Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders(new \Symfony\Component\DependencyInjection\ServiceLocator([]))));
+
+        self::assertCount(1, $source->issues());
+
+        $this->connection->update('tl_consho_shop', ['invoicing' => 'off'], ['id' => 1]);
+        self::assertSame([], $source->issues());
+    }
+
     /**
      * Only to business customers — net group or verified VAT ID, frozen at
      * purchase.

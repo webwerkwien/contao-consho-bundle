@@ -43,8 +43,8 @@ class MailTemplateFrameTest extends TestCase
         }
 
         // 23 since WA: the confirmation of an unassigned withdrawal; 25 since
-        // K1: the two account mails.
-        self::assertSame(25, $customer);
+        // K1: the two account mails; 26 since R18: a document issued late.
+        self::assertSame(26, $customer);
         self::assertGreaterThan(0, $operator);
     }
 }

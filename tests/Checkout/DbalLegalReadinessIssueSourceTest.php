@@ -10,7 +10,11 @@ use Symfony\Contracts\Service\ServiceProviderInterface;
 use Webwerkwien\ContaoConshoBundle\Checkout\DbalLegalReadinessIssueSource;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoiceProviders;
+use Webwerkwien\ContaoConshoBundle\Document\Invoicing\InvoicingPolicy;
+use Webwerkwien\ContaoConshoBundle\Tests\Document\Invoicing\FakeInvoiceProvider;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlerInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
@@ -21,6 +25,8 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     private const NOTICE = "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10";
 
     private Connection $connection;
+
+    private FakeInvoiceProvider|null $provider = null;
 
     protected function setUp(): void
     {
@@ -499,6 +505,35 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         self::assertSame('invoiceCity', $this->only(ConfigurationFinding::InvoiceSenderIncomplete)->context['fields']);
     }
 
+    // ── Wer die Rechnung ausstellt (Block R, R19) ───────────────────────────
+
+    /**
+     * @return iterable<string, array{string, bool}>
+     */
+    public static function invoicing(): iterable
+    {
+        yield 'off' => ['off', true];
+        yield 'a module that issues itself' => ['fake_books', true];
+        yield 'a module that is not installed' => ['removed_books', true];
+        yield 'a module that passes Consho\'s invoices on' => ['fake_books', false];
+        yield 'Consho' => ['consho', false];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invoicing')]
+    public function testBelegkreiseUndAbsenderNurWoConshoNummeriert(string $invoicing, bool $exempt): void
+    {
+        $this->provider = new FakeInvoiceProvider(issues: 'fake_books' === $invoicing && $exempt);
+        $this->connection->update('tl_consho_shop', ['invoicing' => $invoicing, 'invoiceStreet' => ''], ['id' => 1]);
+        $this->connection->delete('tl_consho_number_range', ['type' => 'invoice']);
+        $this->connection->delete('tl_consho_number_range', ['type' => 'order']);
+
+        $findings = array_map(static fn (ConfigurationIssue $i): ConfigurationFinding => $i->finding, $this->issues());
+
+        // The order number stays Consho's whoever issues the invoice.
+        self::assertSame($exempt ? 'order' : 'order, invoice', $this->only(ConfigurationFinding::NumberRangeMissing)->context['types']);
+        self::assertSame(!$exempt, \in_array(ConfigurationFinding::InvoiceSenderIncomplete, $findings, true));
+    }
+
     // ── Nummernkreise ───────────────────────────────────────────────────────
 
     /**
@@ -609,7 +644,10 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
      */
     private function issues(): array
     {
-        return (new DbalLegalReadinessIssueSource($this->connection, $this->handlers()))->issues();
+        $provider = $this->provider ?? new FakeInvoiceProvider();
+        $policy = new InvoicingPolicy($this->connection, new InvoiceProviders(new ServiceLocator(['fake_books' => static fn () => $provider])));
+
+        return (new DbalLegalReadinessIssueSource($this->connection, $this->handlers(), $policy))->issues();
     }
 
     /**
