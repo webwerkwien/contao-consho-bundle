@@ -11,10 +11,10 @@ use Webwerkwien\ContaoConshoBundle\Seo\FilterStateCodec;
 use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
 
 /**
- * Die Tabelle aus Entscheidung 9 des B-4-Plans ist der Vertrag.
+ * The table of outcomes from B-4 is the contract.
  *
- * Gruppen stehen für das Ergebnis von FilterResolver::narrow(): null heißt, die
- * Wahl des Besuchers schneidet die Vorgabe der Kategorie leer.
+ * Groups stand for the result of FilterResolver::narrow(): null means the
+ * visitor's choice cuts the category's default down to nothing.
  */
 class ListingVerdictTest extends TestCase
 {
@@ -46,19 +46,19 @@ class ListingVerdictTest extends TestCase
 
         yield 'ungültige Adresse' => [ListingAddress::invalid(), [], 5, 1, 1, 0, true];
 
-        // Ein Shop, der gerade befüllt wird: Hinweis statt Fehlerseite.
+        // A shop that is just being filled: a notice instead of an error page.
         yield 'Kategorie ohne Filter, null Treffer' => [ListingAddress::category(new FilterState()), [], 0, 1, 1, 0, false];
 
-        // Sortieren erzeugt keine Menge. Ohne Treffer bleibt es die leere
-        // Kategorie — nicht eine Kombination, die nichts enthält.
+        // Sorting creates no set. Without hits it stays the empty
+        // category — not a combination that contains nothing.
         yield 'Kategorie, nur Sortierung, null Treffer' => [ListingAddress::category(new FilterState([], 'price_asc')), [], 0, 1, 1, 0, false];
 
         yield 'Filter schneidet die Vorgabe leer' => [$filter, null, 0, 1, 1, 1, true];
         yield 'Filter ohne Treffer' => [$filter, self::GROUPS, 0, 1, 1, 1, true];
         yield 'Filter mit Treffern' => [$filter, self::GROUPS, 5, 1, 1, 1, false];
 
-        // Spezifikation 10: ein unbekannter Alias in cq wird still verworfen,
-        // die Liste ist dann eine Option breiter als verlangt.
+        // Specification 10: an unknown alias in cq is silently discarded,
+        // the list is then one option wider than requested.
         yield 'Kategorie, ein Alias unbekannt' => [
             ListingAddress::category(new FilterState(['colour' => ['gibtsnicht', 'red']])),
             self::GROUPS, 5, 1, 1, 1, false,
@@ -67,8 +67,8 @@ class ListingVerdictTest extends TestCase
         yield 'Landingpage ohne Treffer' => [$landing, self::GROUPS, 0, 1, 1, 1, true];
         yield 'Landingpage mit Treffern' => [$landing, self::GROUPS, 5, 1, 1, 1, false];
 
-        // Eine Option der gespeicherten Kombination ist gelöscht. Unter dem
-        // Titel der Landingpage stünde sonst die breitere Menge.
+        // An option of the stored combination has been deleted. Otherwise the
+        // wider set would appear under the title of the landing page.
         yield 'Landingpage, Option inzwischen gelöscht' => [
             self::landing(['colour' => ['red'], 'volume' => ['250ml']]),
             self::GROUPS, 5, 1, 1, 1, true,
@@ -79,18 +79,18 @@ class ListingVerdictTest extends TestCase
             self::GROUPS, 5, 1, 1, 1, false,
         ];
 
-        // Ändert B-3, das auf die letzte Seite zurückfiel. Der Kern macht es
-        // genauso (ContentGallery, ImagesController).
+        // Changes B-3, which fell back to the last page. The core does the
+        // same (ContentGallery, ImagesController).
         yield 'Seite hinter der letzten' => [$filter, self::GROUPS, 30, 4, 3, 1, true];
         yield 'letzte Seite' => [$filter, self::GROUPS, 30, 3, 3, 1, false];
         yield 'Seite hinter der letzten, ohne Filter' => [ListingAddress::category(new FilterState()), [], 30, 4, 3, 0, true];
         yield 'Seite 2 einer leeren Kategorie' => [ListingAddress::category(new FilterState()), [], 0, 2, 0, 0, true];
 
-        // Wie der Kern: page_c7=0 und page_c7=abc sind keine Seite.
+        // Like the core: page_c7=0 and page_c7=abc are not a page.
         yield 'Seite 0' => [$filter, self::GROUPS, 30, 0, 3, 1, true];
 
-        // Übergabe aus Task 4: ?cq=Foo dekodiert zu nichts und ist die
-        // Kategorie ohne Filter — 200, auch ohne Treffer.
+        // ?cq=Foo decodes to nothing and is the
+        // category without a filter — 200, even without hits.
         yield 'cq, das zu nichts dekodiert' => [
             ListingAddress::category((new FilterStateCodec())->decode('Foo')),
             [], 0, 1, 1, 0, false,

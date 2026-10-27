@@ -18,7 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
  * refresh(), rebuildShop() and rebuild() differ in how much they cover, not in
  * what they write: all three put the same INSERT … SELECT behind a DELETE of
  * the same scope. A projection that only ever writes keeps a product in the
- * listing that is gone. See docs/block-b-katalog-frontend.md, section 5.7.
+ * listing that is gone. See Block B, section 5.7.
  *
  * refresh() does not trust the product table alone to name the main products.
  * It adds the ones found in the STORED rows: a variant hung onto another main

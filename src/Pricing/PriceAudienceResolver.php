@@ -118,7 +118,7 @@ final class PriceAudienceResolver
              * The shop rule of A, 3.7, in both halves: a variant INHERITS the
              * shops of its main product, and where it has a selection of its
              * own that selection is INTERSECTED with the product's. The second
-             * half was missing until the second C-4 review round — a variant
+             * half was missing until late in C-4 — a variant
              * narrowed to shop 2 made the hint speak in shop 1, where the
              * variant does not appear at all, which is the very thing this
              * condition exists to prevent.

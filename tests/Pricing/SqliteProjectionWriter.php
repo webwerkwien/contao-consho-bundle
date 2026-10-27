@@ -7,8 +7,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProjectionState;
 use Webwerkwien\ContaoConshoBundle\Pricing\ProjectionWriterInterface;
 
 /**
- * DbalProjectionWriter spricht MySQL (ON DUPLICATE KEY). Derselbe Vertrag in
- * SQLite-Form, für Tests, die den echten Projektor gegen SQLite rechnen lassen.
+ * DbalProjectionWriter speaks MySQL (ON DUPLICATE KEY). The same contract in
+ * SQLite form, for tests that let the real projector calculate against SQLite.
  */
 final class SqliteProjectionWriter implements ProjectionWriterInterface
 {

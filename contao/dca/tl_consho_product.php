@@ -2,7 +2,7 @@
 
 /*
  * Products and variants share this table. A variant is a row whose `pid`
- * points at its main product — see docs/block-a-fundament.md, section 3.1.
+ * points at its main product — see Block A, section 3.1.
  * Variants are never nested; VariantResolver enforces that.
  *
  * Weights and dimensions use decimal(10,4) in kilogrammes and centimetres.
@@ -27,8 +27,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
         //
         // The three join tables (shops, properties, variant options): so that
         // deleting a product takes them into tl_undo too, and undo brings them
-        // back — before, they stayed behind as orphans (CW-3 acceptance,
-        // 2026-10-11). Each declares doNotCopyRecords: ProductCopyListener
+        // back — before, they stayed behind as orphans (CW-3). Each declares doNotCopyRecords: ProductCopyListener
         // copies them, and must keep deciding that a copied variant leaves its
         // options behind.
         //
@@ -134,7 +133,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
          * of the product type (SaleModeListener, DL5).
          */
         '__selector__' => ['saleOnce', 'saleSubscription'],
-        'default' => '{product_legend},title,alias,productType,pid,properties,variantOptions;{identification_legend},sku,gtin,mpn,manufacturer;{sales_legend},shops,taxClass,voucherValue,voucherValidMonths,unit,purchaseUnit,referenceUnit,minPurchase,purchaseSteps,stockTracked,stockBackorder,stockWarning,stockTarget,packUnit,supplier,stockQuantity,stockOpened,stockAvailableFrom,supplierSku;{description_legend},teaser,metaDescription,description,images;{safety_legend},minimumAge,safetyWarnings,safetyInformation,durabilityYears,durabilityLabel,durabilityNested;{shipping_legend},weight,shippingWeight,length,width,height;{digital_legend:hide},digitalDelivery,digitalFile,keyImport,saleOnce,saleSubscription;{publish_legend},published,start,stop',
+        'default' => '{product_legend},title,alias,productType,pid,properties,variantOptions;{identification_legend},sku,gtin,mpn,manufacturer;{sales_legend},shops,taxClass,voucherValue,voucherValidMonths,voucherSinglePurpose,unit,purchaseUnit,referenceUnit,minPurchase,purchaseSteps,stockTracked,stockBackorder,stockWarning,stockTarget,packUnit,supplier,stockQuantity,stockOpened,stockAvailableFrom,supplierSku;{description_legend},teaser,metaDescription,description,images;{safety_legend},minimumAge,safetyWarnings,safetyInformation,durabilityYears,durabilityLabel,durabilityNested;{shipping_legend},weight,shippingWeight,length,width,height;{digital_legend:hide},digitalDelivery,digitalFile,keyImport,saleOnce,saleSubscription;{publish_legend},published,start,stop',
     ],
 
     // Abo-1 (A4): the one-time sale shows its term, the subscription its rules.
@@ -296,7 +295,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             'sql' => ['type' => 'text', 'notnull' => false],
         ],
         /*
-         * The description search engines show (Michael, 2026-09-14). Empty
+         * The description search engines show. Empty
          * means the teaser, shortened by ProductHead; both empty leave the
          * page's own. Translatable, and it falls back like the teaser.
          *
@@ -393,7 +392,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             'exclude' => true,
             // Whole or half years (GA9): checked by DurabilityGuaranteeListener.
             // No `filter`: DC_Table's filter menu skips the load callback and
-            // showed MySQL's "5.0" (review GARAN part 2, 2) — and the findings
+            // showed MySQL's "5.0" (GARAN part 2) — and the findings
             // already list every product with a guarantee that needs care.
             'eval' => ['maxlength' => 4, 'tl_class' => 'w50 clr'],
             'sql' => ['type' => 'decimal', 'precision' => 3, 'scale' => 1, 'default' => '0.0'],
@@ -405,8 +404,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             'sql' => ['type' => 'binary', 'length' => 16, 'notnull' => false],
         ],
         /*
-         * The nested label (Commission guidelines, April 2026, 3.3.1; GA8,
-         * Michael, 2026-10-10: "GA8a"): the compact element with only "XX"
+         * The nested label (Commission guidelines, April 2026, 3.3.1; GA8): the compact element with only "XX"
          * filled in, for space-limited places — the tiles of a listing. It
          * links to the full label, which must appear "on the first mouse
          * click, mouse roll-over or tactile screen expansion". Digital only,
@@ -549,6 +547,19 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'default' => 0],
         ],
         /*
+         * Spec Wertgutscheine, EZ-1: sold as a single-purpose voucher — taxed
+         * at its sale with the class of the article, in the shop's country,
+         * and spent only on articles of that class taxed there. Off: a
+         * multi-purpose voucher (WG2). At the main product only; a change
+         * counts for vouchers sold from then on (EZ-5).
+         */
+        'voucherSinglePurpose' => [
+            'inputType' => 'checkbox',
+            'exclude' => true,
+            'eval' => ['tl_class' => 'clr w50 m12 consho-toggle'],
+            'sql' => ['type' => 'boolean', 'default' => false],
+        ],
+        /*
          * What the article is sold as (Abo-1, A4). Two ticks, not a list:
          * both at once is the ordinary case of a theme bought for good or
          * rented by the year. saleOnce defaults to ON, so contao:migrate turns
@@ -574,7 +585,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
          * checkboxWizard, like the shop's methods (C2): it stores the ticked
          * ids in the order dragged. A chosen select stored them in the order
          * of its options — alphabetical —, whatever order they were picked in
-         * (seen on c5 in the Abo-1 acceptance).
+         * (Abo-1).
          */
         'subscriptionRules' => [
             'inputType' => 'checkboxWizard',
@@ -642,14 +653,14 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
         ],
         /*
          * Purchasing (G-7), at the main product like the settings above —
-         * only in the back end, the customer sees none of it (L2: "Zielbestand
-         * geht den Kunden nichts an"):
+         * only in the back end, the customer sees none of it (L2: the target
+         * stock is none of the customer's business):
          *  - stockTarget: the Sollbestand a purchase fills up to;
          *  - packUnit: pieces per pack the supplier sells (VPE, E2); 1 = single
          *    pieces. Not the customer's purchase unit or steps above;
          *  - supplier: free text with the names already in use as suggestions,
-         *    matched on save (E5 a — Michael: "ich will aber vermeiden, dass
-         *    ein und der selbe Lieferant mehrere Schreibweisen bekommt").
+         *    matched on save (E5 a: one supplier must not end up with
+         *    several spellings).
          * supplierSku at each ARTICLE: the supplier's number for exactly it, so
          * a process outside Consho can order without guessing (L4).
          */
@@ -694,7 +705,7 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             'exclude' => true,
         ],
         /*
-         * ⚠️ doNotSaveEmpty on both column-less fields (review G, B1): their
+         * ⚠️ doNotSaveEmpty on both column-less fields (G): their
          * save_callback returns null, and without the flag DC_Table writes
          * the empty value into tl_consho_product — a column that does not
          * exist, and every save of the mask failed.

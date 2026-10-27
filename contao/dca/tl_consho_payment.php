@@ -19,8 +19,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
 
         /*
          * A copied payment is money nobody received — and a copy of a locked
-         * one was born locked and could not even be deleted (Fable review of
-         * D-1, S1). Money is recorded, not duplicated.
+         * one was born locked and could not even be deleted (D-1). Money is recorded, not duplicated.
          */
         'notCopyable' => true,
 
@@ -71,7 +70,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],
@@ -81,8 +80,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
             'exclude' => true,
 
             // Now, as the core does for tl_member.dateAdded. Without it
-            // a new payment offered 01.01.1970 01:00 — seen at the
-            // acceptance of D-1.
+            // a new payment offered 01.01.1970 01:00 (D-1).
             'default' => time(),
             'eval' => ['mandatory' => true, 'rgxp' => 'datim', 'datepicker' => true, 'tl_class' => 'w50 wizard'],
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
@@ -126,5 +124,16 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
          * negative amount. Written by PaymentRecorded, never typed.
          */
         'lockedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false]],
+
+        /*
+         * EZ-4 (F1): a payment by single-purpose voucher — the tax its amount
+         * already carried when the voucher was sold, at that rate and country.
+         * The invoice states it as "bereits versteuert" instead of charging it
+         * again; a refund to the voucher carries its part negative. Rate 0:
+         * any other payment. Written by Consho, never typed.
+         */
+        'prepaidTaxRate' => ['sql' => ['type' => 'decimal', 'precision' => 6, 'scale' => 4, 'default' => '0.0000']],
+        'prepaidTaxCountry' => ['sql' => ['type' => 'string', 'length' => 2, 'default' => '']],
+        'prepaidTax' => ['sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000']],
     ],
 ];

@@ -12,7 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Notification\MailFrameIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * GARAN Teil 2 (L4, L5): Mail-Fußzeile leer, Logo zu schwer für Mails.
+ * GARAN part 2 (L4, L5): mail footer empty, logo too heavy for mails.
  */
 class MailFrameIssueSourceTest extends TestCase
 {

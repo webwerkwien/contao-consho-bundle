@@ -14,8 +14,8 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 /**
  * `<meta name="generator" content="Consho">` on shop pages (D-6, G1).
  *
- * A hint against fake shops (Michael, 2026-09-26: "der Generator-Hinweis und
- * bewusst kein Massenklon-Werkzeug"): whoever investigates a shop can see
+ * A hint against fake shops — with the generator hint, and
+ * deliberately no tool for cloning shops en masse: whoever investigates a shop can see
  * what built it. Without a version — that would help an attacker pick an
  * exploit more than it helps a researcher.
  *

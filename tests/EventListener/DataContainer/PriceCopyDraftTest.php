@@ -19,24 +19,24 @@ use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Was beim Kopieren aus Entwürfen und Duplikaten wird — gegen eine echte
- * SQLite-Datenbank.
+ * What becomes of drafts and duplicates when copying — against a real
+ * SQLite database.
  *
- * Aus vendor/contao/core-bundle/contao/drivers/DC_Table.php gelesen:
- * copyChildren() stempelt jede kopierte Kindzeile mit time(), auch einen nie
- * gespeicherten Entwurf (tstamp 0), und ruft danach den oncopy_callback der
- * Kindtabelle mit (neue id, $dc mit id = Quellzeile). copyAll ruft copy(true)
- * und stempelt ebenso; ein einzelnes act=copy lässt tstamp 0.
+ * Read from vendor/contao/core-bundle/contao/drivers/DC_Table.php:
+ * copyChildren() stamps every copied child row with time(), even a draft
+ * that was never saved (tstamp 0), and then calls the oncopy_callback of the
+ * child table with (new id, $dc with id = source row). copyAll calls
+ * copy(true) and stamps likewise; a single act=copy leaves tstamp 0.
  *
- * Warum die gestempelte Kopie eines Entwurfs zurückgesetzt und nicht gelöscht
- * wird: copyAll() reiht die nächste kopierte Zeile mit pid=<id dieser Kopie>
- * & mode=1 an diese Kopie an; DC_Table::getNewPosition() sucht dafür (ohne
- * eigene Sortierspalte) per `SELECT pid … WHERE id=<diese Kopie>` deren pid.
- * Fehlt die Zeile, bleibt $this->set['pid'] unverändert — die nächste Kopie
- * behält die pid, mit der sie entstanden ist, nämlich die der Quellzeile, und
- * landet zurück im Quellprodukt bzw. in der Quell-Versandart, jede weitere
- * Kopie in Kette. Ein Zurücksetzen auf tstamp 0 lässt die id als Anker
- * bestehen und hält die Zeile trotzdem unsichtbar (tstamp > 0-Regel).
+ * Why the stamped copy of a draft is reset rather than deleted: copyAll()
+ * queues the next copied row with pid=<id of this copy> & mode=1 after this
+ * copy; DC_Table::getNewPosition() looks up its pid for that (without a
+ * sorting column of its own) via `SELECT pid … WHERE id=<this copy>`. If the
+ * row is missing, $this->set['pid'] stays unchanged — the next copy keeps
+ * the pid it was created with, namely that of the source row, and lands
+ * back in the source product or source shipping method, every further copy
+ * in a chain. Resetting to tstamp 0 keeps the id as an anchor and still
+ * keeps the row invisible (tstamp > 0 rule).
  */
 class PriceCopyDraftTest extends TestCase
 {
@@ -50,7 +50,7 @@ class PriceCopyDraftTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Nur die Spalten, die die Listener lesen oder schreiben — Typen wie im DCA.
+        // Only the columns the listeners read or write — types as in the DCA.
         foreach (['tl_consho_price', 'tl_consho_shipping_price'] as $table) {
             $this->connection->executeStatement(
                 'CREATE TABLE '.$table.' (
@@ -67,10 +67,10 @@ class PriceCopyDraftTest extends TestCase
 
     public function testProduktpreisGestempelteKopieEinesEntwurfsWirdWiederEntwurf(): void
     {
-        // Ein mit „Neu" geöffneter und verlassener Preis, danach das Produkt kopiert:
-        // Die Kopie wäre sonst ein gültiger Preis von 0. Nicht gelöscht, sondern auf
-        // tstamp 0 zurückgesetzt — copyAll hängt die nächste Kopie an diese id an
-        // (siehe Klassen-Docblock).
+        // A price opened with "New" and left, then the product copied: the copy
+        // would otherwise be a valid price of 0. Not deleted but reset to
+        // tstamp 0 — copyAll appends the next copy to this id (see the class
+        // docblock).
         $this->connection->insert('tl_consho_price', ['id' => 1, 'pid' => 1, 'tstamp' => 0]);
         $this->connection->insert('tl_consho_price', ['id' => 2, 'pid' => 20, 'tstamp' => self::NOW]);
 
@@ -93,8 +93,8 @@ class PriceCopyDraftTest extends TestCase
 
     public function testEinzelkopieEinesEntwurfsBleibt(): void
     {
-        // act=copy: Die Kopie hat tstamp 0 und öffnet sich zum Bearbeiten —
-        // „Zurück" räumt sie selbst ab. Der Kern reicht die id hier als String.
+        // act=copy: the copy has tstamp 0 and opens for editing — "Back" cleans
+        // it up itself. The core passes the id as a string here.
         $this->connection->insert('tl_consho_price', ['id' => 1, 'pid' => 1, 'tstamp' => 0]);
         $this->connection->insert('tl_consho_price', ['id' => 2, 'pid' => 1, 'tstamp' => 0]);
 
@@ -105,7 +105,7 @@ class PriceCopyDraftTest extends TestCase
 
     public function testVersandbetragGestempelteKopieEinesEntwurfsWirdWiederEntwurf(): void
     {
-        // Wie beim Produktpreis: zurückgesetzt, nicht gelöscht (Klassen-Docblock).
+        // As with the product price: reset, not deleted (class docblock).
         $this->connection->insert('tl_consho_shipping_price', ['id' => 1, 'pid' => 3, 'tstamp' => 0]);
         $this->connection->insert('tl_consho_shipping_price', ['id' => 2, 'pid' => 30, 'tstamp' => self::NOW]);
 
@@ -117,10 +117,10 @@ class PriceCopyDraftTest extends TestCase
 
     public function testVersandbetragEinzelkopieEinerGespeichertenZeileBleibtUnveraendertTrotzBelegterWaehrung(): void
     {
-        // act=copy: DC_Table::copy() lässt eine einzelne Kopie mit tstamp 0 —
-        // sie ist schon ein Entwurf. afterCopy()s eigene tstamp<1-Prüfung greift
-        // zuerst und lässt die Zeile unangetastet, auch wenn die Währung in der
-        // Zielversandart schon belegt ist (pins the `< 1` early return).
+        // act=copy: DC_Table::copy() leaves a single copy with tstamp 0 — it is
+        // already a draft. afterCopy()'s own tstamp<1 check takes effect first
+        // and leaves the row untouched, even if the currency is already taken in
+        // the target shipping method (pins the `< 1` early return).
         $this->connection->insert('tl_consho_shipping_price', ['id' => 1, 'pid' => 3, 'tstamp' => 5, 'net' => '4.0000']);
         $this->connection->insert('tl_consho_shipping_price', ['id' => 2, 'pid' => 3, 'tstamp' => 0, 'net' => '4.0000']);
 
@@ -133,9 +133,9 @@ class PriceCopyDraftTest extends TestCase
 
     public function testVersandbetragQuellzeileExistiertNichtMehrLaesstDieGestempelteKopieUnangetastet(): void
     {
-        // Quellzeile wurde inzwischen gelöscht (z. B. gleichzeitig bearbeitet).
-        // onCopy() darf die Kopie dann nicht zurücksetzen — afterCopy() läuft
-        // wie gewohnt und lässt sie bei freier Währung gespeichert.
+        // The source row has been deleted in the meantime (e.g. edited at the same
+        // time). onCopy() must then not reset the copy — afterCopy() runs as usual
+        // and leaves it saved if the currency is free.
         $this->connection->insert('tl_consho_shipping_price', ['id' => 1, 'pid' => 4, 'tstamp' => self::NOW, 'net' => '4.0000']);
 
         $this->shippingListener()->onCopy(1, $this->dc(999));
@@ -146,8 +146,8 @@ class PriceCopyDraftTest extends TestCase
 
     public function testVersandbetragGestempelteKopieMitBereitsBelegterWaehrungWirdEntwurf(): void
     {
-        // „Mehrere kopieren" in dieselbe Versandart: zwei gespeicherte Beträge in EUR
-        // wären ein zufälliger Versandpreis. Die Kopie gilt erst nach dem Speichern.
+        // "Copy multiple" into the same shipping method: two saved amounts in EUR
+        // would be a random shipping price. The copy only counts once saved.
         $this->connection->insert('tl_consho_shipping_price', ['id' => 1, 'pid' => 3, 'tstamp' => 5, 'net' => '4.0000']);
         $this->connection->insert('tl_consho_shipping_price', ['id' => 2, 'pid' => 3, 'tstamp' => self::NOW, 'net' => '4.0000']);
 
@@ -160,7 +160,7 @@ class PriceCopyDraftTest extends TestCase
 
     public function testVersandbetragGestempelteKopieInEinerFreienWaehrungBleibtGespeichert(): void
     {
-        // Die Zielversandart hat nur einen Betrag in CHF — EUR ist dort frei.
+        // The target shipping method has only an amount in CHF — EUR is free there.
         $this->connection->insert('tl_consho_shipping_price', ['id' => 1, 'pid' => 3, 'tstamp' => 5, 'net' => '4.0000']);
         $this->connection->insert('tl_consho_shipping_price', ['id' => 2, 'pid' => 4, 'tstamp' => 5, 'currency' => 'CHF', 'net' => '5.0000']);
         $this->connection->insert('tl_consho_shipping_price', ['id' => 3, 'pid' => 4, 'tstamp' => self::NOW, 'net' => '4.0000']);
@@ -205,7 +205,7 @@ class PriceCopyDraftTest extends TestCase
     }
 
     /**
-     * Wie der Kern ihn übergibt: id ist die Quellzeile.
+     * As the core passes it: id is the source row.
      */
     private function dc(int $sourceId): DataContainer
     {

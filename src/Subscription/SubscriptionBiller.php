@@ -68,7 +68,7 @@ class SubscriptionBiller
 
     public function billDue(int $subscriptionId, int $now): BilledPeriod|null
     {
-        // Back to exactly the level we found (DigitalRelease, review B1): in
+        // Back to exactly the level we found (DigitalRelease): in
         // DBAL 4 a single rollBack() at level 2 only releases a savepoint.
         $level = $this->connection->getTransactionNestingLevel();
         $this->connection->beginTransaction();
@@ -90,7 +90,7 @@ class SubscriptionBiller
         $pending = $this->toArchive;
         $this->toArchive = null;
 
-        // The invoice's PDF after this commit, not inside it (review S2) —
+        // The invoice's PDF after this commit, not inside it —
         // the cron calls outside any transaction, so this is the real one.
         // archive() never throws; a failure is recorded on the document.
         if (null !== $pending) {
@@ -159,7 +159,7 @@ class SubscriptionBiller
 
         if (null === $method) {
             // P24: the finding says it on the start page; the log says it
-            // where someone looks for a missing order (review L4).
+            // where someone looks for a missing order.
             $this->logger->warning(\sprintf('Subscription %s was not billed: the shop has no payment method "on account".', $subscription['subscriptionNumber']));
 
             return null;
@@ -183,8 +183,7 @@ class SubscriptionBiller
         $account = $this->members?->billingOf((int) $subscription['member'], (string) $last['email']);
 
         /*
-         * Another country in the account (review Abo-Nachlese, S1; Michael:
-         * „wie empfohlen"): for digital goods the billing country is the tax
+         * Another country in the account (Abo-Nachlese): for digital goods the billing country is the tax
          * country, and the checkout that once checked it — served, a rate,
          * reverse charge — does not run here. The last order's address stays;
          * the finding "Land gewechselt" leaves the move to the operator.

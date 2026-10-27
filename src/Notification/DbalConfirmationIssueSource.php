@@ -20,7 +20,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * ── The operator writing to themselves ──────────────────────────────────
  *
  * Microsoft 365 files a mail from an address to the same address under
- * "Sent" only (seen in the Shopware maintenance of 2026-09-17): the operator
+ * "Sent" only: the operator
  * copy seems never to arrive, and nothing fails that would say why. A hint,
  * not a warning — on other hosts it works, and the shop sells either way.
  *

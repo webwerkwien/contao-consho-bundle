@@ -18,8 +18,8 @@ use Webwerkwien\ContaoConshoBundle\Setup\SetupGuide;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block I (I6): für Deploy-Skripte und Überwachung — der Exit-Code ist die
- * Antwort, die Zeilen sind die Begründung.
+ * Block I (I6): for deploy scripts and monitoring — the exit code is the
+ * answer, the lines are the reasoning.
  */
 class CheckCommandTest extends TestCase
 {
@@ -78,7 +78,7 @@ class CheckCommandTest extends TestCase
 
     public function testOhneStartpunktVerkauftDerShopNicht(): void
     {
-        // I7, wie auf der Einrichtungsseite.
+        // I7, as on the setup page.
         $this->connection->update('tl_page', ['published' => 0], ['id' => 5]);
         $tester = $this->tester([]);
 
@@ -96,7 +96,7 @@ class CheckCommandTest extends TestCase
 
     public function testDieQuellenLesenInDerGewaehltenSprache(): void
     {
-        // Ländernamen kommen aus TL_LANGUAGE, das auf der Konsole niemand setzt.
+        // Country names come from TL_LANGUAGE, which nobody sets on the console.
         /** @var \ArrayObject<int, string> $seen */
         $seen = new \ArrayObject();
         $source = new class($seen) implements ConfigurationIssueSource {
@@ -139,7 +139,7 @@ class CheckCommandTest extends TestCase
         self::assertSame(['en'], $this->loaded);
 
         self::assertSame(1, $tester->execute(['--shop' => '9']));
-        // Mit den Shops, die es gibt — statt IDs durchprobieren zu lassen.
+        // With the shops that exist — instead of making the caller try out IDs.
         self::assertStringContainsString('There is no shop configuration 9. Shop configurations: 1 (Shop (DE)), 2 (Shop 2).', preg_replace('/\s+/', ' ', $tester->getDisplay()) ?? '');
     }
 

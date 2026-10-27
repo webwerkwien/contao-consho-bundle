@@ -50,16 +50,15 @@ class DbalNetPriceGroupIssueSourceTest extends TestCase
     }
 
     /**
-     * ⚠️ Im Abschlussreview C-4 gefunden, in zwei Runden vollständig:
-     * FrontendUser::setUserFromDb() schneidet die Gruppen des Mitglieds mit
-     * MemberGroupModel::findAllActive(). Deaktiviert, noch nicht begonnen und
-     * abgelaufen erreichen den Resolver gleichermaßen nie — die Auswahl nennt
-     * sie weiter, die Anzeige fällt auf brutto zurück, und über die Ursache
-     * stand nirgends etwas.
+     * ⚠️ FrontendUser::setUserFromDb() intersects the member's groups with
+     * MemberGroupModel::findAllActive(). Disabled, not yet started and
+     * expired groups alike never reach the resolver — the selection still names
+     * them, the display falls back to gross, and nothing anywhere
+     * said anything about the cause.
      *
-     * Die erste Korrektur kannte nur `disable`. Die Zeitgrenzen fielen durch
-     * dieselbe Lücke, und ein Test hätte es auch nicht bemerkt: Die Spalten
-     * fehlten im Testschema.
+     * The first fix only knew `disable`. The time limits slipped through
+     * the same gap, and a test would not have noticed either: the columns
+     * were missing from the test schema.
      *
      * @dataProvider unerreichbareGruppen
      *
@@ -88,9 +87,8 @@ class DbalNetPriceGroupIssueSourceTest extends TestCase
 
     public function testEineZeitlichGueltigeGruppeIstInOrdnung(): void
     {
-        // Die Gegenprobe: Gesetzte Zeitgrenzen sind kein Befund, solange sie
-        // jetzt greifen. Ohne sie wäre der Test oben auch mit „meldet immer"
-        // grün.
+        // The counter-check: set time limits are not a finding as long as they
+        // apply now. Without it the test above would be green even with "always reports".
         $this->connection->update(
             'tl_member_group',
             ['start' => (string) (time() - 3_600), 'stop' => (string) (time() + 3_600)],
@@ -103,9 +101,9 @@ class DbalNetPriceGroupIssueSourceTest extends TestCase
 
     public function testJederShopBekommtSeinenEigenenBefund(): void
     {
-        // Ein Satz, der drei Shops nennt, muss dreimal gelesen werden, um zu
-        // klären, welcher gemeint ist — und repariert wird in der Maske eines
-        // einzelnen.
+        // A sentence naming three shops has to be read three times to
+        // work out which one is meant — and the repair happens in the form of a
+        // single one.
         $this->shop([99], 'Testshop');
         $this->shop([98], 'Testshop 2');
 
@@ -118,9 +116,9 @@ class DbalNetPriceGroupIssueSourceTest extends TestCase
 
     public function testMehrereFehlendeGruppenStehenSortiertInEinemBefund(): void
     {
-        // Sortiert, damit der Fingerabdruck nicht an der Reihenfolge hängt, in
-        // der der Betreiber angehakt hat: eine Quittierung, die beim nächsten
-        // Speichern zerfällt, ist keine.
+        // Sorted, so that the fingerprint does not depend on the order in
+        // which the operator ticked: an acknowledgement that falls apart at the next
+        // save is none.
         $this->shop([99, 3, 98]);
 
         $issues = $this->issues();
@@ -131,9 +129,9 @@ class DbalNetPriceGroupIssueSourceTest extends TestCase
 
     public function testDerBefundIstEinHinweisUndSperrtNichts(): void
     {
-        // Die Preise stimmen, der Shop verkauft weiter — nur eine Anzeige ist
-        // falsch. Eine Warnung sperrte den Checkout eines Shops, an dem
-        // rechnerisch nichts fehlt.
+        // The prices are right, the shop keeps selling — only a display is
+        // wrong. A warning would block the checkout of a shop in which
+        // nothing is missing arithmetically.
         self::assertFalse(ConfigurationFinding::NetPriceGroupMissing->isWarning());
     }
 
@@ -144,7 +142,7 @@ class DbalNetPriceGroupIssueSourceTest extends TestCase
     {
         $this->insertShop([
             'title' => $title,
-            // Wie Contao es schreibt: serialize(), nicht JSON.
+            // As Contao writes it: serialize(), not JSON.
             'netPriceGroups' => [] === $groups ? null : serialize(array_map('strval', $groups)),
         ]);
     }

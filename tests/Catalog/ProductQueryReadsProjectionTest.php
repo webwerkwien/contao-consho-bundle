@@ -7,13 +7,13 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductQuery;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityCriteria;
 
 /**
- * ProductQuery liest die Projektion der Sichtbarkeit, nicht die Regeln
- * (B-10, Spezifikation 5.7).
+ * ProductQuery reads the visibility projection, not the rules
+ * (B-10, specification 5.7).
  *
- * Die Regeln leben in VisibilityCriteria und VisibilityRows. Hängt ProductQuery
- * wieder an VisibilityCriteria, rechnet die Liste die Sichtbarkeit je Produkt
- * erneut selbst — der Scan aus B-9 wäre zurück, und keine Erwartung in
- * ProductQueryTest fiele dabei auf, weil beide Wege dieselben Produkte finden.
+ * The rules live in VisibilityCriteria and VisibilityRows. If ProductQuery
+ * depends on VisibilityCriteria again, the list recomputes visibility per
+ * product itself — the scan from B-9 would be back, and no expectation in
+ * ProductQueryTest would notice, because both paths find the same products.
  */
 class ProductQueryReadsProjectionTest extends TestCase
 {

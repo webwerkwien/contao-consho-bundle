@@ -20,10 +20,10 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Block H, H-1, Ende zu Ende: Die Aktion kommt durch die echte Preistabelle —
- * das Repository muss den Zeitraum mitliefern, sonst ist jede Zeile „stehend"
- * und der Gleichstand wieder zufällig. Und die Projektion (Filter, Sortierung,
- * Kachel) zeigt den Aktionspreis, solange er gilt.
+ * Block H, H-1, end to end: the promotion comes through the real price table —
+ * the repository must deliver the period along with it, otherwise every row is "standing"
+ * and the tie is random again. And the projection (filter, sorting,
+ * tile) shows the promotional price as long as it applies.
  */
 class PromotionEndToEndTest extends TestCase
 {
@@ -43,8 +43,8 @@ class PromotionEndToEndTest extends TestCase
 
         $this->connection->insert('tl_consho_product', ['id' => 1, 'pid' => 0, 'title' => 'Essig', 'taxClass' => 1]);
 
-        // Die Aktion zuerst angelegt — ohne Zeitraum im Repository gewänne sie
-        // als erste Zeile auch dann, wenn die Regel fehlte.
+        // The promotion created first — without the period in the repository it would win
+        // as the first row even if the rule were missing.
         $this->price('8.0000', self::NOW - 100, self::NOW + 100);
         $this->price('10.0000');
     }
@@ -77,8 +77,8 @@ class PromotionEndToEndTest extends TestCase
     }
 
     /**
-     * H-2: Der Projektor schreibt den Verlauf und legt den Bezugspreis an die
-     * Zeile — vor der Aktion stand 10 € (brutto 12 €).
+     * H-2: the projector writes the history and puts the reference price on the
+     * row — before the promotion it was €10 (gross €12).
      */
     public function testDieProjektionTraegtDenNiedrigstenPreisVorDerAktion(): void
     {
@@ -89,18 +89,18 @@ class PromotionEndToEndTest extends TestCase
 
         self::assertSame([9.6, 12.0, 10.0], array_map('floatval', array_values((array) $this->connection->fetchAssociative('SELECT gross, compareGross, compareNet FROM tl_consho_product_list_price WHERE pid = 1'))));
 
-        // Nach dem Ende: kein Streichpreis mehr.
+        // After the end: no strike-through price any more.
         $this->projector()->refresh([1], self::NOW + 100);
         self::assertNull($this->connection->fetchOne('SELECT compareGross FROM tl_consho_product_list_price WHERE pid = 1'));
     }
 
     /**
-     * Ein Streichpreis, der hinzukommt, ist eine Änderung der Kachel — auch
-     * wenn der Betrag gleich bleibt. Sonst würden die Listen nicht entwertet.
+     * A strike-through price that appears is a change of the tile — even
+     * if the amount stays the same. Otherwise the lists would not be invalidated.
      */
     public function testEinNeuerStreichpreisZaehltAlsAenderung(): void
     {
-        // Verlauf von früher, Projektion ohne Streichpreis (wie nach der Seed-Migration).
+        // History from before, projection without a strike-through price (as after the seed migration).
         (new PriceHistory($this->connection))->record(1, 'EUR', 'AT', new \Webwerkwien\ContaoConshoBundle\Pricing\ListPrice('10.0000', '12.0000'), self::NOW - 40 * 86400);
         $this->connection->insert('tl_consho_product_list_price', ['pid' => 1, 'currency' => 'EUR', 'country' => 'AT', 'net' => '8.0000', 'gross' => '9.6000']);
 
@@ -109,8 +109,8 @@ class PromotionEndToEndTest extends TestCase
     }
 
     /**
-     * B: Lag der Preis in den 30 Tagen davor schon unter der Aktion, wird
-     * nichts gestrichen — der Preis gilt trotzdem.
+     * B: if the price in the 30 days before was already below the promotion,
+     * nothing is struck through — the price applies nevertheless.
      */
     public function testEineAktionUeberDemBezugspreisStreichtNichts(): void
     {
@@ -126,9 +126,9 @@ class PromotionEndToEndTest extends TestCase
     }
 
     /**
-     * Eine dauerhafte Senkung ab einem Datum: Die alte Zeile endet, die neue
-     * beginnt dort, ohne Ende. Es steht keine Zeile ohne Zeitraum daneben —
-     * ein neuer Preis, keine Aktion, kein Streichpreis.
+     * A permanent price cut from a date on: the old row ends, the new one
+     * begins there, without an end. No row without a period stands next to it —
+     * a new price, no promotion, no strike-through price.
      */
     public function testEineGeplanteSenkungMitEndeDerAltenZeileIstKeineAktion(): void
     {
@@ -145,8 +145,8 @@ class PromotionEndToEndTest extends TestCase
     }
 
     /**
-     * Die Falle daneben: Bleibt die alte Zeile ohne Zeitraum stehen, ist die
-     * billigere Zeile mit „Gültig ab" eine Aktion — mit Streichpreis.
+     * The trap next to it: if the old row without a period stays, the
+     * cheaper row with "valid from" is a promotion — with a strike-through price.
      */
     public function testEineBilligereZeileNurMitBeginnNebenDemBasispreisIstEineAktion(): void
     {

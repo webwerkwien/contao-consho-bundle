@@ -8,15 +8,13 @@ use Webwerkwien\ContaoConshoBundle\Cart\CartItemRow;
 use Webwerkwien\ContaoConshoBundle\Cart\CartPricer;
 
 /**
- * "Lizenz verlängern" (Abo-7b; A11 as of 2026-10-01, P66–P70): a new
+ * "Lizenz verlängern" (Abo-7b; A11, P66–P70): a new
  * subscription at today's conditions that carries the old one's entitlement
  * and keys on — no new key to enter.
  *
- * Michael, 2026-10-01: „Link Lizenz verlängern -> es wird die bestehende
- * Lizenz verlängert (damit kein neuer Schlüssel eingegeben werden muss), aber
- * es ist dann ein neues Abo zu den aktuellen Konditionen." And: „die Prüfung
- * macht man am besten schon beim Link, nichts anbieten was es ohnehin nicht
- * gibt".
+ * The existing licence is extended, so no new key has to be entered, but
+ * as a new subscription at the current conditions. The check comes with the
+ * link already: nothing is offered that does not exist anyway.
  *
  * renewable() is the contract side (P66): only a subscription that ends, not
  * resting, nothing overdue, not renewed already. offer() is the shop side: the
@@ -152,7 +150,7 @@ class SubscriptionRenewal
         }
 
         // Its purchase cancelled — a rolled-back renewal, say: it never held
-        // a licence to carry on (acceptance Abo-7b, 2026-10-01: the button
+        // a licence to carry on (Abo-7b: the button
         // stood there beside the one of the subscription it had renewed).
         $cancelled = $this->connection->fetchOne('SELECT cancelledAt FROM tl_consho_order WHERE id = ?', [(int) $row['firstOrder']]);
 
@@ -188,7 +186,7 @@ class SubscriptionRenewal
         }
 
         // Offered to the customer as they are TODAY — their groups, the way
-        // the product page asks (review Abo-7b, S2: the frozen flag of the old
+        // the product page asks (Abo-7b: the frozen flag of the old
         // contract offered or hid it wrongly).
         if (!$this->offers->allows($articleId, $ruleId, $context->groups)) {
             return null;

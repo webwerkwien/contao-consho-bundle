@@ -16,9 +16,9 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Seit B-10 liest die Kachel den Ab-Preis aus der Projektion der Sichtbarkeit.
- * Die Fixtures schreiben den Katalog, repository() baut davor die Projektion
- * mit dem echten Projektor (Shop 1 in EUR, Startpunkte de, en, fr).
+ * Since B-10 the tile reads the from-price from the visibility projection.
+ * The fixtures write the catalogue; repository() builds the projection
+ * beforehand with the real projector (shop 1 in EUR, start points de, en, fr).
  */
 class DbalProductTileRepositoryTest extends TestCase
 {
@@ -56,8 +56,8 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * Block H (H-2): der Streichpreis der Zeile, die die Zahl liefert — brutto
-     * oder netto wie die Zahl selbst.
+     * Block H (H-2): the strike-through price of the row that supplies the
+     * number — gross or net like the number itself.
      */
     public function testDieKachelLiestDenStreichpreisIhrerZeile(): void
     {
@@ -74,9 +74,9 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * Abo-2b, P88/P89: die Kachel weiß, ob ihre Zahl ein Abo-Betrag ist —
-     * dann ohne Kaufknopf, denn der kauft einmalig — und ob es den
-     * Einmalkauf auch im Abo gibt.
+     * Abo-2b, P88/P89: the tile knows whether its number is a subscription
+     * amount — then without a buy button, because that one buys once — and
+     * whether the one-time purchase also exists as a subscription.
      */
     public function testAboBetragUndAuchImAbo(): void
     {
@@ -94,7 +94,7 @@ class DbalProductTileRepositoryTest extends TestCase
         self::assertSame([0, false, true], [$salt->subscriptionRule, $salt->alsoSubscription, $salt->isBuyable]);
     }
 
-    /** Abo-2b, L4b: bei Varianten zählt das Modell der Zeile mit dem Ab-Preis. */
+    /** Abo-2b, L4b: with variants the model of the row with the from-price counts. */
     public function testVariantenNurImAbo(): void
     {
         $this->product(1, 'Kurs');
@@ -109,9 +109,10 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * Fable-Review Abo-2b, K1: Variante A einmalig mit „auch im Abo", die
-     * billigere Variante B nur im Abo — die Zahl ist B's Abo-Betrag, und
-     * „auch im Abo" stünde unter einem Abo-Betrag falsch.
+     * Abo-2b: variant A one-time with "auch im Abo" (also as a subscription),
+     * the cheaper variant B only as a subscription — the number is B's
+     * subscription amount, and "auch im Abo" would be wrong under a
+     * subscription amount.
      */
     public function testAuchImAboNurUnterEinemEinmalkaufPreis(): void
     {
@@ -159,7 +160,7 @@ class DbalProductTileRepositoryTest extends TestCase
 
     public function testVariantsAtOnePriceNeedNoFrom(): void
     {
-        // Colours make no price difference — Michael, 2026-09-11. Writing
+        // Colours make no price difference. Writing
         // "ab 12,60 €" there would suggest a cheaper one exists.
         $this->product(1, 'Schwedenbitter');
         $this->variant(10, of: 1);
@@ -186,7 +187,7 @@ class DbalProductTileRepositoryTest extends TestCase
 
     public function testTheMainProductsOwnPriceDoesNotCountOnceItHasVariants(): void
     {
-        // Befund 6 aus A-4b: Die Detailseite fragt nur die Varianten — die Kachel jetzt auch.
+        // A-4b: the detail page only asks the variants — and now the tile does too.
         $this->product(1, 'Schwedenbitter');
         $this->price(1, '10.0000');
         $this->variant(10, of: 1);
@@ -203,10 +204,10 @@ class DbalProductTileRepositoryTest extends TestCase
     public function testThePriceIsTheOneTheListingSortedBy(): void
     {
         /*
-         * B-10: Die Kachel nimmt den Ab-Preis aus der Zeile der Projektion der
-         * Sichtbarkeit, nach der ProductQuery sortiert hat — nicht aus der
-         * Listenpreis-Projektion. Die Zeile weicht hier absichtlich ab und wird
-         * nicht neu gebaut.
+         * B-10: the tile takes the from-price from the row of the visibility
+         * projection that ProductQuery sorted by — not from the
+         * list price projection. The row deviates here on purpose and is
+         * not rebuilt.
          */
         $this->product(1, 'Schwedenbitter');
         $this->price(1, '12.6000');
@@ -235,8 +236,8 @@ class DbalProductTileRepositoryTest extends TestCase
 
     public function testAnUntranslatedTitleFallsBack(): void
     {
-        // Übersetzungszeile vorhanden, Titel darin leer — der Rückfall gilt je
-        // Feld, nicht je Zeile: der Teaser unten ist übersetzt, der Titel nicht.
+        // Translation row present, title empty in it — the fallback applies per
+        // field, not per row: the teaser below is translated, the title is not.
         $this->product(1, 'Kräuterbitter');
         $this->price(1, '12.6000');
         $this->translation(1, 'en', alias: 'herbal-bitters', title: '', teaser: 'Herbal notes');
@@ -259,8 +260,8 @@ class DbalProductTileRepositoryTest extends TestCase
 
     public function testWithoutALanguageNothingChanges(): void
     {
-        // Der Prüfstein: in der Standardsprache exakt das Ergebnis von vorher —
-        // auch wenn eine Übersetzung existiert, darf sie nicht greifen.
+        // The touchstone: in the default language exactly the previous result —
+        // even if a translation exists, it must not apply.
         $this->product(1, 'Kräuterbitter', teaser: 'Nach alter Rezeptur');
         $this->price(1, '12.6000');
         $this->translation(1, 'en', alias: 'herbal-bitters', title: 'Herbal Bitters', teaser: 'Old family recipe');
@@ -283,9 +284,9 @@ class DbalProductTileRepositoryTest extends TestCase
 
     public function testDieKachelLiestDieNettoSpalteWennDerBesucherNettoSieht(): void
     {
-        // C-4: Die Projektion führt beide Spalten (C-1a), und showsNet wählt
-        // eine aus. Ohne diesen Test bliebe „der Händler sieht netto" eine
-        // Behauptung über eine Spalte, die niemand je gelesen hat.
+        // C-4: the projection holds both columns (C-1a), and showsNet picks
+        // one. Without this test "the merchant sees net" would remain a
+        // claim about a column nobody has ever read.
         $this->product(1, 'Schwedenbitter');
         $this->price(1, '12.6000');
 
@@ -296,11 +297,11 @@ class DbalProductTileRepositoryTest extends TestCase
     public function testAbGiltFuerDenAngezeigtenBetragUndNichtImmerFuerDasBrutto(): void
     {
         /*
-         * ⚠️ Zwei Varianten, gleiches Brutto, verschiedenes Netto — der Fall
-         * entsteht, sobald sie in verschiedenen Steuerklassen sitzen. Brutto
-         * gäbe es nichts zu sagen, netto schon: „ab" hängt an dem Betrag, den
-         * der Besucher liest, sonst steht in der Liste ein Preis ohne „ab",
-         * über einer Produktseite mit zwei verschiedenen.
+         * ⚠️ Two variants, same gross, different net — the case
+         * arises as soon as they sit in different tax classes. Gross
+         * there would be nothing to say, net there is: "ab" depends on the amount
+         * the visitor reads, otherwise the list shows a price without "ab",
+         * above a product page with two different ones.
          */
         $this->product(1, 'Schwedenbitter');
         $this->price(1, '12.0000');
@@ -317,9 +318,9 @@ class DbalProductTileRepositoryTest extends TestCase
     public function testTheFromPriceIgnoresAVariantHiddenInThatLanguage(): void
     {
         /*
-         * B-8: Variante 2 trägt einen eigenen, nicht übersetzten Warnhinweis und
-         * ist auf fr unsichtbar (VisibilityCriteria, Regel 3). Die Kachel nannte
-         * trotzdem ihren Preis als „ab"-Preis — die Produktseite zeigt ihn nie.
+         * B-8: variant 2 carries its own untranslated warning and
+         * is invisible on fr (VisibilityCriteria, rule 3). The tile still
+         * named its price as the "ab" price — the product page never shows it.
          */
         $this->product(1, 'Schwedenbitter');
         $this->translation(1, 'fr', 'amer-suedois', 'Amer suédois');
@@ -342,11 +343,11 @@ class DbalProductTileRepositoryTest extends TestCase
     public function testDieKachelNimmtDieZeileIhrerWaehrung(): void
     {
         /*
-         * Zwei Startpunkte derselben Sprache in zwei Währungen (der DACH-Fall)
-         * haben seit C-1c Aufgabe 5b zwei Projektionszeilen je Produkt. Ohne
-         * die Währung im LEFT JOIN träfe die Kachel beide und nähme den Preis
-         * der Zeile, die die Datenbank zuerst liefert — eine der beiden
-         * Behauptungen unten wäre dann falsch, gleich welche.
+         * Two start points of the same language in two currencies (the DACH case)
+         * have two projection rows per product since C-1c, task 5b. Without
+         * the currency in the LEFT JOIN the tile would hit both and take the price
+         * of the row the database returns first — one of the two
+         * assertions below would then be wrong, no matter which.
          */
         $this->insertRootPage(4, 'de', self::SHOP, 'CHF');
         $this->product(1, 'Schwedenbitter');
@@ -374,11 +375,10 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * 🔴 Michaels Entscheidung vom 2026-09-22 im Wortlaut: bei einem Produkt
-     * mit Varianten **„kein Knopf, Kachel verlinkt"**. Es gibt dort keinen
-     * kaufbaren Artikel, solange niemand gewählt hat, und eine Ersatzregel
-     * („welche nehmen wir?") überraschte irgendwann jemanden mit der falschen
-     * Flasche.
+     * 🔴 For a product with variants: **no button, the tile links**. There is
+     * no buyable item there as long as nobody has chosen, and a substitute rule
+     * ("which one do we take?") would eventually surprise someone with the
+     * wrong bottle.
      */
     public function testEinProduktOhneVariantenIstAusDerListeKaufbar(): void
     {
@@ -389,9 +389,9 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * Block G (G7): Die Kachel sagt den Zustand, wo Bestand geführt wird —
-     * mit Varianten den besten der sichtbaren. Eine versteckte Variante auf
-     * Lager zählt nicht.
+     * Block G (G7): the tile states the stock state where stock is kept —
+     * with variants the best of the visible ones. A hidden variant in
+     * stock does not count.
      */
     public function testDieKachelSagtDenBestand(): void
     {
@@ -433,9 +433,9 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * ⚠️ NICHT dasselbe wie `isFrom`. Das sagt nur, ob die Varianten sich im
-     * PREIS unterscheiden — zwei gleich teure Varianten sind trotzdem zwei
-     * Varianten, und das Hauptprodukt bleibt unkaufbar.
+     * ⚠️ NOT the same as `isFrom`. That only says whether the variants differ
+     * in PRICE — two equally priced variants are still two
+     * variants, and the main product stays unbuyable.
      */
     public function testZweiGleichTeureVariantenMachenDasProduktTrotzdemUnkaufbar(): void
     {
@@ -452,9 +452,9 @@ class DbalProductTileRepositoryTest extends TestCase
     }
 
     /**
-     * Die Menge, die der Knopf in den Warenkorb legt. Gekürzt wird der WERT:
-     * `minPurchase` ist `decimal(10,4)`, und ein roh durchgereichtes „1,0000"
-     * stand am 2026-09-21 auf jeder Produktseite im Mengenfeld.
+     * The quantity the button puts into the cart. The VALUE is trimmed:
+     * `minPurchase` is `decimal(10,4)`, and a "1,0000" passed through raw
+     * would show up in the quantity field of every product page.
      */
     public function testDieKaufmengeIstDieMindestmengeOhneUeberfluessigeNullen(): void
     {

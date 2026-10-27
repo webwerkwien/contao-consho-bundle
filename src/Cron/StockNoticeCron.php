@@ -69,7 +69,7 @@ final class StockNoticeCron
     public function __invoke(): void
     {
         // Wishes of members who are gone or disabled go without a mail, and
-        // so do wishes for an article that no longer exists (review G, L4).
+        // so do wishes for an article that no longer exists (G).
         $this->connection->executeStatement(
             "DELETE FROM tl_consho_stock_notice
               WHERE NOT EXISTS (SELECT 1 FROM tl_member m WHERE m.id = tl_consho_stock_notice.member AND m.disable = 0 AND m.email <> '')
@@ -140,15 +140,15 @@ final class StockNoticeCron
         } catch (ProductPageMissing) {
             // The start point has no product page (any more): no mail can
             // ever lead anywhere. The wish goes, once, with a line in the log
-            // (review G, L4) — not an error every hour. Inside this try, so
+            // (G) — not an error every hour. Inside this try, so
             // any other trouble with the address is caught below and does not
-            // stop the cron for everybody (second review).
+            // stop the cron for everybody.
             $this->logger->error(\sprintf('A "back in stock" wish for article %d was dropped: its start point %d has no product page.', (int) $wish['article'], (int) $wish['root']));
             $this->connection->delete('tl_consho_stock_notice', ['id' => (int) $wish['id']]);
 
             return false;
         } catch (\Throwable $e) {
-            // The exception's class and our own words only (review G, L3): an
+            // The exception's class and our own words only (G): an
             // invalid address or a refusing mail server puts the address into
             // the message, and the log is Contao's — no erasure reaches it.
             $this->logger->error(\sprintf(

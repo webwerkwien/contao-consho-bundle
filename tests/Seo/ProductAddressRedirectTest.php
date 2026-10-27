@@ -25,22 +25,22 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Weiterleitungen, wenn ein Produkt selbst Hersteller, Produkttyp oder SKU
- * wechselt — und wenn ein Speichervorgang mehrere Teile der Adresse zugleich
- * ändert.
+ * Redirects when a product itself changes manufacturer, product type or SKU
+ * — and when one save changes several parts of the address at
+ * once.
  *
- * Aufbau:
- * - Shop 1 (Standardsprache de): Startpunkt 1 (de) und 2 (en), beide mit
+ * Setup:
+ * - Shop 1 (default language de): start point 1 (de) and 2 (en), both with
  *   {manufacturer}/{alias}.
- * - Shop 2 (de): Startpunkt 3 mit {type}/{sku}/{alias} ({alias} ist Pflicht, seit 2026-10-22).
- * - Hersteller 7 „kraeuterhaus", 8 „bienenhof", 9 ohne Alias.
- *   Typ 3 „tinktur", 4 „salbe".
- * - Produkt 10 „schwedenbitter", SKU sb-100, Hersteller 7, Typ 3, englisch
- *   „herbal-bitters". Variante 13 darunter, SKU sb-250.
+ * - Shop 2 (de): start point 3 with {type}/{sku}/{alias} ({alias} is required).
+ * - Manufacturer 7 "kraeuterhaus", 8 "bienenhof", 9 without an alias.
+ *   Type 3 "tinktur", 4 "salbe".
+ * - Product 10 "schwedenbitter", SKU sb-100, manufacturer 7, type 3, English
+ *   "herbal-bitters". Variant 13 below it, SKU sb-250.
  *
- * Die Maske wird so nachgestellt, wie DC_Table::submit() sie abarbeitet:
- * onbeforesubmit, der eine UPDATE, onsubmit mit Priorität 1, das Schreiben der
- * Übersetzungen (Priorität 0), onsubmit mit Priorität −1.
+ * The mask is replayed the way DC_Table::submit() processes it:
+ * onbeforesubmit, the one UPDATE, onsubmit with priority 1, writing the
+ * translations (priority 0), onsubmit with priority −1.
  */
 class ProductAddressRedirectTest extends TestCase
 {
@@ -94,11 +94,11 @@ class ProductAddressRedirectTest extends TestCase
         $this->insertTranslation(['pid' => 10, 'ptable' => 'tl_consho_product', 'language' => 'en', 'title' => 'Herbal Bitters', 'alias' => 'herbal-bitters']);
     }
 
-    // ── Hersteller ──────────────────────────────────────────────────────
+    // ── Manufacturer ────────────────────────────────────────────────────
 
     public function testEinHerstellerwechselZeichnetDieAlteAdresseNurAufStartpunktenMitHerstellerAuf(): void
     {
-        // Startpunkt 3 hat {type}/{sku}/{alias} — dort wandert nichts.
+        // Start point 3 has {type}/{sku}/{alias} — nothing moves there.
         $this->submit(10, ['manufacturer' => 8]);
 
         self::assertSame(
@@ -152,9 +152,9 @@ class ProductAddressRedirectTest extends TestCase
     public function testEinWechselAufEinenHerstellerOhneAliasIstEineWanderung(): void
     {
         /*
-         * Wie ein Hersteller ohne bisherigen Alias beim Recorder: Die Vorlage
-         * lässt das leere Segment weg, das Produkt hat danach die Adresse
-         * /produkt/schwedenbitter.html. Eine Zeile, die dort noch liegt, geht.
+         * Like a manufacturer without a previous alias in the recorder: the template
+         * leaves out the empty segment, and the product afterwards has the address
+         * /produkt/schwedenbitter.html. A row still lying there goes.
          */
         $this->redirect(1, '/produkt/schwedenbitter.html', 10);
 
@@ -197,14 +197,14 @@ class ProductAddressRedirectTest extends TestCase
         );
     }
 
-    // ── Übersetzungssprache ─────────────────────────────────────────────
+    // ── Translation language ────────────────────────────────────────────
 
     public function testDasNeueSegmentIstDerUebersetzteAliasDesNeuenHerstellers(): void
     {
         /*
-         * Die neue Adresse erkennt man daran, welche Zeile gelöscht wird: Eine
-         * Zeile auf der neuen Adresse geht, eine auf dem eigenen Alias des
-         * Herstellers — nicht die neue Adresse — bleibt.
+         * The new address can be recognised by which row is deleted: a
+         * row on the new address goes, one on the manufacturer's own alias
+         * — not the new address — stays.
          */
         $this->insertTranslation(['pid' => 8, 'ptable' => 'tl_consho_manufacturer', 'language' => 'en', 'title' => 'Bee Farm', 'alias' => 'bee-farm']);
         $this->redirect(2, '/en/product/bienenhof/herbal-bitters.html', 12);
@@ -247,14 +247,14 @@ class ProductAddressRedirectTest extends TestCase
         );
     }
 
-    // ── Übersetzter Alias ───────────────────────────────────────────────
+    // ── Translated alias ────────────────────────────────────────────────
 
     public function testEinErsterUebersetzterAliasZeichnetNichtsAuf(): void
     {
         /*
-         * Ohne übersetzten Alias war das Produkt in dieser Sprache unsichtbar
-         * (VisibilityCriteria::translated()). Die Adresse entsteht, sie wandert
-         * nicht — die Rückfalladresse mit dem leeren Alias gab es nie.
+         * Without a translated alias the product was invisible in this language
+         * (VisibilityCriteria::translated()). The address comes into being, it does
+         * not move — the fallback address with the empty alias never existed.
          */
         $this->connection->delete('tl_consho_translation', ['pid' => 10, 'ptable' => 'tl_consho_product']);
 
@@ -268,8 +268,8 @@ class ProductAddressRedirectTest extends TestCase
 
     public function testEinGeleerterUebersetzterAliasZeichnetNichtsAuf(): void
     {
-        // Ohne Alias verschwindet das Produkt aus der Sprache; eine Weiterleitung
-        // führte auf eine Adresse, die 404 antwortet.
+        // Without an alias the product disappears from the language; a redirect
+        // would lead to an address that answers 404.
         $this->storeAndRecord(10, function (): void {
             $this->connection->update('tl_consho_translation', ['alias' => ''], ['pid' => 10, 'ptable' => 'tl_consho_product', 'language' => 'en']);
         });
@@ -279,7 +279,7 @@ class ProductAddressRedirectTest extends TestCase
 
     public function testEinUebersetzterAliasInDerStandardspracheZeichnetNichtsAuf(): void
     {
-        // In der Standardsprache zeigt jeder Startpunkt den Alias des Datensatzes.
+        // In the default language every start point shows the record's alias.
         $this->insertTranslation(['pid' => 10, 'ptable' => 'tl_consho_product', 'language' => 'de', 'title' => 'Schwedenbitter', 'alias' => 'schwedenbitter-de']);
 
         $this->storeAndRecord(10, function (): void {
@@ -289,7 +289,7 @@ class ProductAddressRedirectTest extends TestCase
         self::assertSame([], $this->recorded());
     }
 
-    // ── Produkttyp ──────────────────────────────────────────────────────
+    // ── Product type ────────────────────────────────────────────────────
 
     public function testEinProdukttypwechselZeichnetNurAufStartpunktenMitTypAuf(): void
     {
@@ -328,10 +328,10 @@ class ProductAddressRedirectTest extends TestCase
     public function testEineGeleerteSkuLaesstDasSegmentWegUndLeitetDieAlteAdresseWeiter(): void
     {
         /*
-         * Bis 2026-10-22 ging auch eine Vorlage nur aus {sku}: Ohne Nummer blieb
-         * dann nur die nackte Produktseite, und es wurde nichts aufgezeichnet.
-         * Seit {alias} Pflicht ist, fällt das leere Segment weg — die Adresse
-         * wandert, wie bei einem Produkt ohne Hersteller.
+         * A template of {sku} alone used to be allowed: without a number only
+         * the bare product page remained, and nothing was recorded.
+         * Since {alias} is required, the empty segment drops out — the address
+         * moves, as with a product without a manufacturer.
          */
         $this->connection->update('tl_page', ['conshoPathTemplate' => '{sku}/{alias}'], ['id' => 125]);
 
@@ -340,11 +340,11 @@ class ProductAddressRedirectTest extends TestCase
         self::assertSame([[3, '/artikel/sb-100/schwedenbitter.html', 10]], $this->recorded());
     }
 
-    // ── Varianten ───────────────────────────────────────────────────────
+    // ── Variants ────────────────────────────────────────────────────────
 
     public function testEineGeaenderteSkuEinerVarianteZeichnetNichtsAuf(): void
     {
-        // {sku} ist die SKU des Hauptprodukts: Varianten haben keine Adresse.
+        // {sku} is the SKU of the main product: variants have no address.
         $this->submit(13, ['sku' => 'sb-500']);
 
         self::assertSame([], $this->recorded());
@@ -352,7 +352,7 @@ class ProductAddressRedirectTest extends TestCase
 
     public function testEineVarianteDieZumHauptproduktWirdHatteKeineAdresse(): void
     {
-        // Im selben Speichervorgang pid und SKU: Unter sb-250 gab es nie eine Adresse.
+        // pid and SKU in the same save: there never was an address under sb-250.
         $this->submit(13, ['pid' => 0, 'sku' => 'sb-500']);
 
         self::assertSame([], $this->recorded());
@@ -360,17 +360,17 @@ class ProductAddressRedirectTest extends TestCase
 
     public function testEinHauptproduktDasZurVarianteWirdZeichnetNichtsAuf(): void
     {
-        // Die Adresse verschwindet, sie wandert nicht — eine Weiterleitung führte auf eine Variante.
+        // The address disappears, it does not move — a redirect would lead to a variant.
         $this->submit(10, ['pid' => 13, 'sku' => 'sb-101']);
 
         self::assertSame([], $this->recorded());
     }
 
-    // ── Gleicher Wert ───────────────────────────────────────────────────
+    // ── Same value ──────────────────────────────────────────────────────
 
     public function testDieselbenWerteGespeichertZeichnenNichtsAuf(): void
     {
-        // „Mehrere bearbeiten → Überschreiben" schreibt jedes gewählte Feld, auch unverändert.
+        // "Mehrere bearbeiten → Überschreiben" (edit multiple → overwrite) writes every selected field, even unchanged.
         $this->submit(10, ['manufacturer' => 7, 'productType' => 3, 'sku' => 'sb-100', 'alias' => 'schwedenbitter']);
 
         self::assertSame([], $this->recorded());
@@ -381,9 +381,9 @@ class ProductAddressRedirectTest extends TestCase
     public function testAliasUndHerstellerInEinemSpeichervorgangErgebenDieVollstaendigAlteAdresse(): void
     {
         /*
-         * Die halb neue Adresse /produkt/kraeuterhaus/neu.html ist weder alt
-         * noch neu. Hier ist sie eine frühere Adresse des Produkts mit eigener
-         * Zeile — die muss bleiben. Die vollständig neue geht.
+         * The half-new address /produkt/kraeuterhaus/neu.html is neither old
+         * nor new. Here it is an earlier address of the product with its own
+         * row — that one must stay. The fully new one goes.
          */
         $this->redirect(1, '/produkt/kraeuterhaus/neu.html', 10);
         $this->redirect(1, '/produkt/bienenhof/neu.html', 10);
@@ -395,7 +395,7 @@ class ProductAddressRedirectTest extends TestCase
                 [1, '/produkt/kraeuterhaus/neu.html', 10],
                 [1, '/produkt/kraeuterhaus/schwedenbitter.html', 10],
                 [2, '/en/product/kraeuterhaus/herbal-bitters.html', 10],
-                // Shop 2 hat den Alias in der Vorlage (seit 2026-10-22 Pflicht).
+                // Shop 2 has the alias in the template (it is required).
                 [3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10],
             ],
             $this->recorded(),
@@ -405,9 +405,9 @@ class ProductAddressRedirectTest extends TestCase
     public function testUebersetzterAliasUndHerstellerInEinemSpeichervorgangErgebenDieVollstaendigAlteAdresse(): void
     {
         /*
-         * Die Übersetzung wird erst in onsubmit geschrieben, NACH dem UPDATE des
-         * Herstellers. Verglichen mit der Datenbank in diesem Moment entstünde
-         * /en/product/bienenhof/herbal-bitters.html — eine Adresse, die es nie gab.
+         * The translation is only written in onsubmit, AFTER the UPDATE of the
+         * manufacturer. Compared with the database at that moment, the result would be
+         * /en/product/bienenhof/herbal-bitters.html — an address that never existed.
          */
         $translations = $this->translationListener();
         $translations->save('swedish-bitters', $this->dc(10, 'alias__en'));
@@ -431,14 +431,14 @@ class ProductAddressRedirectTest extends TestCase
         self::assertSame([[3, '/artikel/tinktur/sb-100/schwedenbitter.html', 10]], $this->recorded());
     }
 
-    // ── Wiederherstellen einer Version ──────────────────────────────────
+    // ── Restoring a version ─────────────────────────────────────────────
 
     public function testEineWiederhergestellteVersionMitAnderemHerstellerZeichnetAuf(): void
     {
         $listener = $this->restoreListener();
         $listener->onLoad($this->dc(10));
 
-        // Versions::restore(): erst der UPDATE, dann onrestore_version_callback.
+        // Versions::restore(): first the UPDATE, then onrestore_version_callback.
         $this->connection->update('tl_consho_product', ['manufacturer' => 8], ['id' => 10]);
         $listener->onRestoreVersion('tl_consho_product', 10, 2, []);
 
@@ -469,26 +469,27 @@ class ProductAddressRedirectTest extends TestCase
         );
     }
 
-    // ── Die Verdrahtung ─────────────────────────────────────────────────
+    // ── The wiring ──────────────────────────────────────────────────────
 
     public function testDieCallbacksHaengenVorUndNachDemSchreibenDerUebersetzungen(): void
     {
         /*
-         * DC_Table::submit(): onbeforesubmit, UPDATE, onsubmit. Contao stellt
-         * Callbacks mit Priorität > 0 vor, ≤ 0 absteigend hinter die übrigen
-         * (DataContainerCallbackListener::addCallbacks()) — TranslationFieldsListener::store()
-         * hat 0 und liegt damit zwischen den beiden onsubmit-Callbacks.
+         * DC_Table::submit(): onbeforesubmit, UPDATE, onsubmit. Contao puts
+         * callbacks with priority > 0 in front, ≤ 0 in descending order behind the
+         * others (DataContainerCallbackListener::addCallbacks()) —
+         * TranslationFieldsListener::store() has 0 and so sits between the two
+         * onsubmit callbacks.
          */
         self::assertSame([['tl_consho_product', 'config.onbeforesubmit', 0]], $this->callbacksOf('rememberBeforeUpdate'));
         self::assertSame([['tl_consho_product', 'config.onsubmit', 1]], $this->callbacksOf('rememberBeforeTranslations'));
         self::assertSame([['tl_consho_product', 'config.onsubmit', -1]], $this->callbacksOf('recordMovedAddresses'));
     }
 
-    // ── Hilfen ──────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────
 
     /**
-     * Was DC_Table::submit() für einen Datensatz tut. Ohne geänderte Spalte
-     * gibt es keinen UPDATE und kein onbeforesubmit.
+     * What DC_Table::submit() does for a record. Without a changed column
+     * there is no UPDATE and no onbeforesubmit.
      *
      * @param array<string, int|string> $columns
      */
@@ -508,8 +509,8 @@ class ProductAddressRedirectTest extends TestCase
     }
 
     /**
-     * Ein Schreibweg ohne Maske, etwa das Zurückschreiben einer Übersetzung:
-     * Stand davor, $write, ein Vergleich danach.
+     * A write path without a mask, such as writing back a translation:
+     * state before, $write, a comparison afterwards.
      *
      * @param \Closure(): void $write
      */
@@ -580,7 +581,7 @@ class ProductAddressRedirectTest extends TestCase
     }
 
     /**
-     * Meldet, für welchen Shop und welche Sprache das eine Produkt abgefragt wird.
+     * Reports for which shop and which language the one product is queried.
      *
      * @param \Closure(int, string): void $onQuery
      */

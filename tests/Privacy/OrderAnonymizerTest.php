@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Privacy\OrderAnonymizer;
 
 /**
- * D-5, L4 — nach der Frist: was die Person nennt oder erreicht, geht;
- * Nummern, Beträge, Steuer, Positionen und Daten bleiben.
+ * D-5, L4 — after the period: what names or reaches the person goes;
+ * numbers, amounts, tax, items and dates stay.
  */
 final class OrderAnonymizerTest extends TestCase
 {
@@ -72,7 +72,7 @@ final class OrderAnonymizerTest extends TestCase
         }
 
         // Totals compared as numbers: decimal is NUMERIC in SQLite and comes
-        // back as 22.8, where MariaDB returns '22.8000' (Fall 30).
+        // back as 22.8, where MariaDB returns '22.8000'.
         self::assertSame(['WEB-7', 22.8, 3.8, 'AT', 'AT', 0, self::NOW, 1_600_000_000], [$order['orderNumber'], (float) $order['grandTotal'], (float) $order['taxTotal'], $order['billingCountry'], $order['shippingCountry'], (int) $order['member'], (int) $order['anonymizedAt'], (int) $order['createdAt']]);
         self::assertSame('Kräutersalz', $this->connection->fetchOne('SELECT productName FROM tl_consho_order_item WHERE pid = 7'));
 
@@ -93,14 +93,14 @@ final class OrderAnonymizerTest extends TestCase
         self::assertEqualsWithDelta(8.9, (float) $this->connection->fetchOne('SELECT refundAmount FROM tl_consho_withdrawal WHERE id = 3'), 0.0001, 'der Betrag bleibt');
         self::assertNull($this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE id = 4'));
         // The amount as a number: the DCA schema stores a decimal, SQLite
-        // returns it as one (Fall 30); the old hand-written table had TEXT.
+        // returns it as one; the old hand-written table had TEXT.
         $payment = $this->connection->fetchNumeric('SELECT reference, amount FROM tl_consho_payment WHERE id = 5') ?: [];
         self::assertSame('', $payment[0] ?? null);
         self::assertEqualsWithDelta(22.8, (float) ($payment[1] ?? 0), 0.0001, 'der Betrag bleibt');
         self::assertSame('', $this->connection->fetchOne('SELECT trackingNumber FROM tl_consho_delivery WHERE id = 6'));
         self::assertSame(['', ''], $this->connection->fetchFirstColumn('SELECT providerReference FROM tl_consho_payment_attempt WHERE pid = 7'));
         self::assertSame(['a1', 'a2'], $this->connection->fetchFirstColumn('SELECT tokenHash FROM tl_consho_payment_attempt WHERE pid = 7 ORDER BY id'), 'eindeutiger Hash ohne Personenbezug bleibt');
-        // H-5: die Einlösung bleibt gezählt, ohne zu sagen, von wem — die der anderen Bestellung unberührt.
+        // H-5: the redemption stays counted without saying by whom — that of the other order untouched.
         self::assertSame([['0', '', 'Herbst', '0'], ['5', 'erika@example.org', 'Herbst', '0']], array_map(static fn (array $r): array => array_map('strval', $r), $this->connection->fetchAllNumeric('SELECT member, email, code, cancelled FROM tl_consho_cart_rule_redemption ORDER BY id')));
 
         self::assertSame([['tl_consho_order', 8], ['tl_member', 7]], array_map(static fn (array $r): array => [$r['fromTable'], (int) $r['pid']], $this->connection->fetchAllAssociative('SELECT fromTable, pid FROM tl_version ORDER BY id')), 'die Versionen dieser Bestellung und ihrer Kinder sind weg — nicht die fremden');
@@ -108,14 +108,14 @@ final class OrderAnonymizerTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart'));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart_item'));
 
-        // Die andere Bestellung derselben Person bleibt unberührt.
+        // The other order of the same person stays untouched.
         self::assertSame('erika@example.org', $this->connection->fetchOne('SELECT email FROM tl_consho_order WHERE id = 8'));
         self::assertStringContainsString('erika@example.org', (string) $this->connection->fetchOne('SELECT payload FROM tl_consho_document WHERE id = 2'));
     }
 
     /**
-     * dev#2: Der Lieferschein trägt Name, Lieferadresse und Sendungsnummer —
-     * alle drei gehen mit, die Positionen bleiben.
+     * dev#2: The delivery note carries name, delivery address and tracking
+     * number — all three go, the items stay.
      */
     public function testDerLieferscheinVerliertAdresseUndSendungsnummer(): void
     {
@@ -147,8 +147,8 @@ final class OrderAnonymizerTest extends TestCase
     }
 
     /**
-     * Abo-DSGVO, P86 (K4 aus F): die Berechtigung nennt das Konto nicht mehr,
-     * das Download-Protokoll geht, der Schlüssel bleibt zugeordnet.
+     * Abo-DSGVO, P86 (K4 from F): the entitlement no longer names the account,
+     * the download log goes, the key stays assigned.
      */
     public function testBerechtigungUndDownloadsDerBestellung(): void
     {
@@ -168,8 +168,8 @@ final class OrderAnonymizerTest extends TestCase
     }
 
     /**
-     * Abo-DSGVO, P85: das Abo geht erst, wenn es beendet ist UND jede seiner
-     * Bestellungen anonymisiert ist — Kauf (7) und Folgebestellung (8).
+     * Abo-DSGVO, P85: the subscription only goes once it has ended AND each of
+     * its orders is anonymised — purchase (7) and follow-up order (8).
      */
     public function testAboErstNachSeinerLetztenBestellung(): void
     {
@@ -202,8 +202,8 @@ final class OrderAnonymizerTest extends TestCase
     }
 
     /**
-     * WA, A6: ohne Bestellung keine Frist der Bestellung — drei Jahre ab Ende
-     * des Eingangsjahres, dann bleibt nur, was niemanden nennt.
+     * WA, A6: without an order no order period — three years from the end of
+     * the year of receipt, then only what names nobody remains.
      */
     public function testNichtZugeordneterWiderrufNachDreiJahren(): void
     {
@@ -211,7 +211,7 @@ final class OrderAnonymizerTest extends TestCase
         $this->connection->insert('tl_consho_withdrawal', ['id' => 31, 'pid' => 0, 'shop' => 1, 'number' => 'W-00031', 'state' => 'received', 'receivedAt' => strtotime('2024-01-02 10:00'), 'name' => 'Max', 'email' => 'max@example.org', 'orderReference' => 'WEB-78']);
         $this->connection->insert('tl_version', ['fromTable' => 'tl_consho_withdrawal', 'pid' => 30, 'data' => 'a:0:{}']);
 
-        // 31.12.2026 23:59:59 ist das Ende für 2023 — eine Sekunde davor bleibt alles.
+        // 31.12.2026 23:59:59 is the end for 2023 — one second before, everything stays.
         self::assertSame(0, $this->anonymizer()->anonymizeUnassignedWithdrawals(strtotime('2026-12-31 23:59:59')));
         self::assertSame(1, $this->anonymizer()->anonymizeUnassignedWithdrawals(strtotime('2027-01-01 00:00:00')));
 

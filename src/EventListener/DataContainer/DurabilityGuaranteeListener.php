@@ -22,7 +22,7 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ArticleShippingDataInterface;
  * the main product's guarantee (GA2) — shown there, the fields would do
  * nothing. Filled ones stay visible wherever they are, so that a value set
  * before the type changed can still be emptied (the rule of
- * SaleModeListener, acceptance DL find 1).
+ * SaleModeListener, DL).
  *
  * ── Refused ──────────────────────────────────────────────────────────────
  *
@@ -30,17 +30,17 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ArticleShippingDataInterface;
  *   guarantee is no case of Z 12a, and a label for it would claim one.
  * - Anything but whole or half years (GA9, GuaranteeYears).
  * - Either field on anything but physical goods.
- * - Either field on a variant (review GARAN, 2): DurabilityGuarantees reads
+ * - Either field on a variant (GARAN): DurabilityGuarantees reads
  *   the main product only, so a value there would do nothing while looking
  *   as if it did — "Mehrere bearbeiten" shows the fields at variants too.
- * - A label in a folder the web cannot reach (acceptance on c5): the shop
+ * - A label in a folder the web cannot reach: the shop
  *   would print a broken image (PublicFiles).
  *
  * Emptying is always allowed, wherever a value stands.
  *
  * The kind comes from the STORED product type (ArticleShippingDataInterface).
  * Changing the type and these fields in one submit checks against the old
- * one — DC_Table writes the whole record at the end (review GARAN, 3).
+ * one — DC_Table writes the whole record at the end (GARAN).
  * ProductKindMismatchIssueSource names a guarantee left on a type changed
  * that way, and the next save refuses it.
  */
@@ -86,7 +86,7 @@ final class DurabilityGuaranteeListener
      * "5" and "2.5", not MySQL's "5.0" (GA9) — in exactly the form saveYears()
      * returns. DC_Table writes and versions a field whose saved value differs
      * strictly from the loaded one; "2,5" here would make every save of the
-     * product a change nobody made (review GARAN part 2, 1). The mask takes a
+     * product a change nobody made (GARAN part 2). The mask takes a
      * comma all the same.
      */
     #[AsCallback(table: 'tl_consho_product', target: 'fields.durabilityYears.load')]

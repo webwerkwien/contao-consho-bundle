@@ -34,7 +34,7 @@ final class DeliveryItemLockVoter extends AbstractDataContainerVoter
          * An update checks BOTH deliveries: the one the item is in and the
          * one it is moved to. DC_Table::cut() asks UpdateAction with the new
          * pid — checking only the current one let an item be moved INTO a
-         * reported parcel (Fable review of D-1, S3).
+         * reported parcel (D-1).
          */
         $deliveries = match (true) {
             $action instanceof CreateAction => [(int) $action->getNewPid()],

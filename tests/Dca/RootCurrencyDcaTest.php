@@ -5,25 +5,25 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Was an tl_page wirklich in der Palette steht — an der DCA-Datei gemessen,
- * nicht an einer Konstante im Listener-Test.
+ * What really is in the tl_page palette — measured against the DCA file,
+ * not against a constant in the listener test.
  *
- * ⚠️ Der Grund für diese Datei: Die Reihenfolge `consho_shop` vor
- * `consho_currency` ist funktional. `DC_Table::edit()` arbeitet die
- * Palettenfelder der Reihe nach ab und legt einen Wert erst **nach** der
- * Verarbeitung seines Feldes in `arrSubmit`; steht die Währung vorher, liest
- * ihr Callback den Shop vom letzten Speichern. Ein Test, der die Reihenfolge
- * aus einem selbst getippten Palettenstring liest, kann eine Umsortierung in
- * der DCA nicht bemerken — der String lügt dann einfach weiter.
+ * ⚠️ The reason for this file: the order `consho_shop` before
+ * `consho_currency` is functional. `DC_Table::edit()` processes the palette
+ * fields in order and puts a value into `arrSubmit` only **after** its field
+ * has been processed; if the currency comes first, its callback reads the
+ * shop from the last save. A test that reads the order from a palette string
+ * typed by itself cannot notice a reordering in the DCA — the string then
+ * simply keeps lying.
  */
 class RootCurrencyDcaTest extends TestCase
 {
     protected function setUp(): void
     {
         /*
-         * `PaletteManipulator::applyToPalette()` wirft, wenn die Palette nicht
-         * existiert — im Betrieb liefert sie der Contao-Kern. Ein
-         * Minimal-String reicht: Geprüft wird, was die DCA-Datei daran ändert.
+         * `PaletteManipulator::applyToPalette()` throws if the palette does not
+         * exist — in operation the Contao core provides it. A minimal string
+         * is enough: what is checked is what the DCA file changes about it.
          */
         $GLOBALS['TL_DCA']['tl_page']['palettes']['root'] = '{title_legend},title,alias,type;{publish_legend},published';
         $GLOBALS['TL_DCA']['tl_page']['palettes']['rootfallback'] = '{title_legend},title,alias,type;{publish_legend},published';
@@ -37,9 +37,9 @@ class RootCurrencyDcaTest extends TestCase
     }
 
     /**
-     * Beide Paletten, nicht nur „root": Contao nimmt „rootfallback" für den
-     * Startpunkt, der die Sprach-Rückfallebene trägt — das ist die
-     * Hauptsprache jeder Website.
+     * Both palettes, not just "root": Contao uses "rootfallback" for the root
+     * page that carries the language fallback — that is the main language of
+     * every website.
      *
      * @dataProvider rootPalettes
      */
@@ -65,10 +65,10 @@ class RootCurrencyDcaTest extends TestCase
     }
 
     /**
-     * Kein `submitOnChange` am Shop: Ein Auto-Submit setzte `tstamp = time()`
-     * und höbe damit den `tstamp = 0`-Zustand auf, an dem `reviseTable()`
-     * unvollständige Neuanlagen aufräumt. Aus genau diesem Grund hat die
-     * Preismaske es am 2026-09-15 verloren.
+     * No `submitOnChange` on the shop: an auto-submit would set
+     * `tstamp = time()` and thereby lift the `tstamp = 0` state by which
+     * `reviseTable()` cleans up incomplete new records. For exactly this reason
+     * the price form lost it.
      */
     public function testDerShopLoestKeinAutoSubmitAus(): void
     {
@@ -76,9 +76,9 @@ class RootCurrencyDcaTest extends TestCase
     }
 
     /**
-     * Kein `doNotCopy`, und das ist gewollt: `DC_Table::copy()` übernimmt jedes
-     * Feld ohne diese Marke, eine kopierte Startseite bringt ihre Währung also
-     * mit. So legt der Rollout-Ablauf die zweite Währungsseite an.
+     * No `doNotCopy`, and that is intended: `DC_Table::copy()` takes over every
+     * field without this marker, so a copied root page brings its currency
+     * along. That is how the rollout creates the second currency page.
      */
     public function testEineKopierteStartseiteBringtIhreWaehrungMit(): void
     {

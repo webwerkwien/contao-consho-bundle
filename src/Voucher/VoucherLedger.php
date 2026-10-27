@@ -19,7 +19,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
  *
  * ⚠️ The second buyer has to SEE the first one's booking after waiting for
  * the lock. OrderPlacer runs the purchase under READ COMMITTED for exactly
- * this (review H, P7; the last key of block G).
+ * this (H, P7; the last key of block G).
  */
 final class VoucherLedger
 {
@@ -52,12 +52,13 @@ final class VoucherLedger
         int $orderItem = 0,
         int $user = 0,
         string $note = '',
+        SinglePurpose|null $singlePurpose = null,
     ): int {
         if (!BigDecimal::of($value)->isPositive()) {
             throw new \InvalidArgumentException(\sprintf('A voucher needs a value above zero, %s given.', $value));
         }
 
-        return $this->connection->transactional(function () use ($shopId, $currency, $value, $paid, $validUntil, $source, $now, $orderId, $orderItem, $user, $note): int {
+        return $this->connection->transactional(function () use ($shopId, $currency, $value, $paid, $validUntil, $source, $now, $orderId, $orderItem, $user, $note, $singlePurpose): int {
             $id = $this->insertWithFreshCode([
                 'tstamp' => $now,
                 'createdAt' => $now,
@@ -71,6 +72,10 @@ final class VoucherLedger
                 'orderId' => $orderId,
                 'orderItem' => $orderItem,
                 'note' => $note,
+                // EZ-5: frozen here, never changed after.
+                'taxClass' => $singlePurpose->taxClass ?? 0,
+                'taxRate' => $singlePurpose->taxRate ?? '0.0000',
+                'taxCountry' => $singlePurpose->taxCountry ?? '',
             ]);
 
             $this->book($id, $value, VoucherBookingType::Issue, $now, $orderId, 0, $user, $note);

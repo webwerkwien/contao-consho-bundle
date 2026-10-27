@@ -30,9 +30,9 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenGenerator;
 require_once __DIR__.'/../Confirmation/EmailConfirmationTest.php';
 
 /**
- * D-4, K3 — was „Meine Bestellungen" mit einer Anfrage macht. Die Stelle,
- * an der Mitglied, Bestellnummer aus der Adresse und Token zusammenkommen
- * (Fable-Review D-4, B1).
+ * D-4, K3 — what "my orders" does with a request. The place where
+ * member, order number from the URL and token come together
+ * (D-4).
  */
 final class MyOrdersFlowTest extends TestCase
 {
@@ -68,7 +68,7 @@ final class MyOrdersFlowTest extends TestCase
         $this->limiter = new RateLimiterFactory(['id' => 'test', 'policy' => 'fixed_window', 'limit' => 3, 'interval' => '1 hour'], new InMemoryStorage());
     }
 
-    /** (a) Eine fremde Bestellung: kein Token, zurück mit „nicht gefunden". */
+    /** (a) Someone else's order: no token, back with "not found". */
     public function testEineFremdeBestellungWirdNichtGeoeffnet(): void
     {
         $result = $this->handle(Request::create(self::HERE.'?consho_open=3'), 5);
@@ -77,14 +77,14 @@ final class MyOrdersFlowTest extends TestCase
         self::assertSame(0, $this->tokenCount());
     }
 
-    /** Gastbestellung unter der eigenen Adresse — vor der Bestätigung ebenso. */
+    /** A guest order under one's own address — likewise before the confirmation. */
     public function testDieGastbestellungErstNachBestaetigung(): void
     {
         self::assertSame(['redirect' => self::HERE.'?consho_my_orders=notFound'], $this->handle(Request::create(self::HERE.'?consho_open=2'), 5));
         self::assertSame(0, $this->tokenCount());
     }
 
-    /** (b) Die eigene: Token für eine Stunde, bestätigt keine Adresse. */
+    /** (b) One's own: a token for one hour, confirms no address. */
     public function testDieEigeneBestellungOeffnetMitKurzemToken(): void
     {
         $result = $this->handle(Request::create(self::HERE.'?consho_open=1'), 5);
@@ -102,7 +102,7 @@ final class MyOrdersFlowTest extends TestCase
         self::assertSame(['redirect' => self::HERE.'?consho_my_orders=notFound'], $this->handle(Request::create(self::HERE.'?consho_open=1'), 0));
         self::assertSame(0, $this->tokenCount());
 
-        // (e) Abgemeldet ohne Link: nichts.
+        // (e) Logged out without a link: nothing.
         self::assertSame(['view' => null], $this->handle(Request::create(self::HERE), 0));
     }
 
@@ -112,7 +112,7 @@ final class MyOrdersFlowTest extends TestCase
         self::assertSame(0, $this->tokenCount());
     }
 
-    /** (c) + (d): Das Öffnen des Links bestätigt nichts, erst der POST. */
+    /** (c) + (d): Opening the link confirms nothing, only the POST does. */
     public function testDerLinkBestaetigtNichtErstDerKnopf(): void
     {
         $redirect = $this->handle(Request::create(self::HERE, 'POST', [MyOrdersFlow::ACTION => 'request']), 5);
@@ -139,7 +139,7 @@ final class MyOrdersFlowTest extends TestCase
         self::assertSame('confirmed', $view['notice']);
     }
 
-    /** Die Bestätigung aus einem fremden Konto geht zurück zum Link, der sagt warum. */
+    /** The confirmation from another account goes back to the link, which says why. */
     public function testDieBestaetigungAusEinemFremdenKontoGiltNicht(): void
     {
         $this->handle(Request::create(self::HERE, 'POST', [MyOrdersFlow::ACTION => 'request']), 5);
@@ -152,7 +152,7 @@ final class MyOrdersFlowTest extends TestCase
         self::assertSame('otherAccount', $this->handle(Request::create(self::HERE.'?consho_confirm='.$token), 6, 'andere@example.org')['view']['confirm'] ?? null);
     }
 
-    /** Review S1: ohne Namen, und begrenzt je Konto UND je Adresse. */
+    /** Without a name, and limited per account AND per address. */
     public function testDieMailOhneNamenUndBegrenztJeAdresse(): void
     {
         $this->handle(Request::create(self::HERE, 'POST', [MyOrdersFlow::ACTION => 'request']), 5);
@@ -163,12 +163,12 @@ final class MyOrdersFlowTest extends TestCase
         $this->handle(Request::create(self::HERE, 'POST', [MyOrdersFlow::ACTION => 'request']), 5);
         $this->handle(Request::create(self::HERE, 'POST', [MyOrdersFlow::ACTION => 'request']), 5);
 
-        // Ein neues Konto mit derselben Adresse hilft nicht weiter.
+        // A new account with the same address does not help.
         self::assertSame(['redirect' => self::HERE.'?consho_my_orders=tooMany'], $this->handle(Request::create(self::HERE, 'POST', [MyOrdersFlow::ACTION => 'request']), 6, 'Erika@example.org'));
         self::assertCount(3, $this->transport->sent);
     }
 
-    /** Review S3: nur bekannte Hinweise, kein Freitext aus der Adresse. */
+    /** Only known notices, no free text from the URL. */
     public function testNurBekannteHinweise(): void
     {
         self::assertSame('', $this->handle(Request::create(self::HERE.'?consho_my_orders=Rufen+Sie+0900+an'), 5)['view']['notice'] ?? null);

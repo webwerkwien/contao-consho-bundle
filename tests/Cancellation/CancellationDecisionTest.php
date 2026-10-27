@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-7, P57: Die Entscheidung über eine außerordentliche Kündigung wirkt
- * einmal und geht an den Kunden.
+ * Abo-7, P57: The decision on an extraordinary cancellation takes effect
+ * once and goes to the customer.
  */
 final class CancellationDecisionTest extends TestCase
 {
@@ -61,9 +61,9 @@ final class CancellationDecisionTest extends TestCase
         $this->decision()->apply(5, self::NOW);
 
         self::assertSame(self::NOW + 5 * self::DAY, (int) $this->subscription()['endsAt']);
-        // Review Abo-7, L3: die Mail nennt das Ende, das der Vertrag wirklich hat.
+        // Abo-7: the mail names the end the contract really has.
         self::assertSame(self::NOW + 5 * self::DAY, $this->mails[0]['effectiveAt']);
-        // Zweites Review, L-2: Ergebnisseite und Backend lesen dasselbe Ende.
+        // Result page and back end read the same end.
         self::assertSame(self::NOW + 5 * self::DAY, (int) $this->cancellation()['effectiveAt']);
     }
 
@@ -187,10 +187,10 @@ final class CancellationDecisionTest extends TestCase
 
     public function testErneutSendenOhneAnlass(): void
     {
-        // Nicht entschieden: nichts zu senden.
+        // Not decided: nothing to send.
         self::assertNull($this->decision()->resend(5, self::NOW));
 
-        // Schon gesendet, auch die 0 der Migration: keine zweite Mail.
+        // Already sent, including the migration's 0: no second mail.
         $this->decide(['state' => 'accepted', 'effectiveAt' => self::NOW + 10 * self::DAY, 'decidedAt' => self::NOW, 'decisionSentAt' => 0]);
 
         self::assertNull($this->decision()->resend(5, self::NOW));

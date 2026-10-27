@@ -23,8 +23,8 @@ use Webwerkwien\ContaoConshoBundle\Security\ShopInUseVoter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * CW-4b (H4): verwendete Stammdaten sind in der Maske nicht löschbar.
- * Typ 2, Hersteller 3, Eigenschaft 4 mit Wert 11 hängen an Produkt 5.
+ * CW-4b (H4): master data in use cannot be deleted in the edit mask.
+ * Type 2, manufacturer 3, property 4 with value 11 belong to product 5.
  */
 class CatalogInUseVoterTest extends TestCase
 {
@@ -44,7 +44,7 @@ class CatalogInUseVoterTest extends TestCase
         $this->connection->insert('tl_consho_property_option', ['id' => 11, 'pid' => 4]);
         $this->connection->insert('tl_consho_product_property', ['pid' => 5, 'optionId' => 11]);
 
-        // CW-5 (I6): Bestellung 30 in Shop 1 mit Status 12, Shop 1 versendet über 6.
+        // CW-5 (I6): order 30 in shop 1 with status 12, shop 1 ships via 6.
         $this->connection->insert('tl_consho_order', ['id' => 30, 'shop' => 1, 'orderStatus' => 12]);
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'mailTransport' => 6]);
     }

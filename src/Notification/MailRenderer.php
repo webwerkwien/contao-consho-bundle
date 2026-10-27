@@ -41,8 +41,7 @@ final class MailRenderer
                 //
                 // And decoded: the subject is a plain text header, but Twig
                 // escapes it like HTML — "Wanderstock & Hülle" arrived as
-                // "Wanderstock &amp; Hülle" (Block G, found by the test of
-                // the first subject carrying a product name).
+                // "Wanderstock &amp; Hülle" (Block G).
                 html_entity_decode(trim($rendered->renderBlock('subject', $context)), \ENT_QUOTES | \ENT_HTML5, 'UTF-8'),
                 $rendered->renderBlock('body', $context),
             );
@@ -68,10 +67,8 @@ final class MailRenderer
          * `TranslatorInterface&LocaleAwareInterface`.
          *
          * An intersection type cannot be autowired: Symfony drops the service
-         * definition and the class silently never gets built. That cost half a
-         * session on 2026-09-09 — the container still showed the tag while
-         * nothing ran. See the note on intersection types in
-         * "Bundle-Entwicklung – Fallstricke".
+         * definition and the class silently never gets built. The container
+         * still shows the tag while nothing runs.
          */
         if (!$this->translator instanceof LocaleAwareInterface) {
             return null;

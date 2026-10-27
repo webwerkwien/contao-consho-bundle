@@ -32,7 +32,7 @@ use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
  * 0, cancelled before shipping, a subscription's follow-up, released digital
  * content) or a tampered form.
  *
- * ── Accepted, then judged (WA, 2026-10-22) ────────────────────────────────
+ * ── Accepted, then judged (WA) ────────────────────────────────────────────
  *
  * The window ends at "last shipment + period + grace" — an estimate, since
  * the period runs from RECEIPT. A declaration after that end is stored and
@@ -202,7 +202,7 @@ final class WithdrawalRecorder
         $confirmed = false;
 
         // The address first: a flood on one address must not use up the
-        // shop's allowance as well (review WA, K2).
+        // shop's allowance as well (WA).
         $limited = !$this->allowed($this->perAddress, 'address-'.mb_strtolower(trim($email))) || !$this->allowed($this->perShop, 'shop-'.$shopId);
 
         if (!$limited) {
@@ -222,7 +222,7 @@ final class WithdrawalRecorder
             $this->connection->update('tl_consho_withdrawal', ['confirmationSentAt' => time()], ['id' => $id]);
         } elseif ($limited) {
             // Wanted, not a failure: in a wave of them twenty errors an hour
-            // would bury the real ones (review WA, K3).
+            // would bury the real ones (WA).
             $this->logger->warning(\sprintf('Withdrawal %s (not assigned to an order) was recorded; its confirmation of receipt was held back by the mail limit per shop or per address. Confirm it by hand if it is genuine.', $number));
         } else {
             $this->logger->error(\sprintf('Withdrawal %s (not assigned to an order) was recorded, but its confirmation of receipt did not go out. It has to be confirmed by hand.', $number));

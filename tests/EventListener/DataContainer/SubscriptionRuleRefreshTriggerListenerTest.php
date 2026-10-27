@@ -11,9 +11,9 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SubscriptionRuleR
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-2b: Die Kachel zeigt das erste Angebot für alle. Eine Aboregel oder
- * eine Produktart kann das ändern, ohne das Produkt anzufassen — gemeldet
- * werden die Produkte, gerechnet wird am Ende des Requests.
+ * Abo-2b: the tile shows the first offer for everyone. A subscription rule
+ * or a product type can change that without touching the product — the
+ * products are reported, the calculation happens at the end of the request.
  */
 class SubscriptionRuleRefreshTriggerListenerTest extends TestCase
 {
@@ -26,7 +26,7 @@ class SubscriptionRuleRefreshTriggerListenerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         DcaSchema::create($this->connection, 'tl_consho_product');
 
-        // 1 Abo-Produkt mit Variante 10, 2 nur Einmalkauf (Typ 4), 3 Abo-Produkt (Typ 4).
+        // 1 subscription product with variant 10, 2 one-off purchase only (type 4), 3 subscription product (type 4).
         $this->connection->insert('tl_consho_product', ['id' => 1, 'pid' => 0, 'saleSubscription' => 1, 'productType' => 3]);
         $this->connection->insert('tl_consho_product', ['id' => 10, 'pid' => 1, 'productType' => 0]);
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 0, 'saleSubscription' => 0, 'productType' => 4]);

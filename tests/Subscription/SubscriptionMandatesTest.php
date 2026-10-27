@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-4b, P93: Das Mandat kommt an die Abos der Bestellung — die sie angelegt
- * hat, und bei einer Folgebestellung an das, das sie abrechnet. Tabellen aus
- * den DCAs.
+ * Abo-4b, P93: the mandate goes to the subscriptions of the order — those it created,
+ * and for a follow-up order to the one it bills. Tables from
+ * the DCAs.
  */
 final class SubscriptionMandatesTest extends TestCase
 {
@@ -35,7 +35,7 @@ final class SubscriptionMandatesTest extends TestCase
 
         $c->insert('tl_consho_subscription', ['id' => 1, 'subscriptionNumber' => 'WEB-00090-1', 'firstOrder' => 90, 'orderItem' => 1, 'billingInterval' => 1, 'termLength' => 1, 'termUnit' => 'year', 'state' => 'active']);
         $c->insert('tl_consho_subscription', ['id' => 2, 'subscriptionNumber' => 'WEB-00090-2', 'firstOrder' => 90, 'orderItem' => 2, 'billingInterval' => 0, 'termLength' => 2, 'termUnit' => 'year', 'state' => 'active']);
-        // Ein Abo einer anderen Bestellung.
+        // A subscription of another order.
         $c->insert('tl_consho_subscription', ['id' => 3, 'subscriptionNumber' => 'WEB-00092-1', 'firstOrder' => 92, 'orderItem' => 0, 'state' => 'active']);
     }
 
@@ -78,7 +78,7 @@ final class SubscriptionMandatesTest extends TestCase
     }
 
     /**
-     * Abgeschnitten bucht ein Mandat nichts ab — also gar nicht, und gesagt.
+     * Truncated, a mandate charges nothing — so not at all, and said so.
      */
     public function testEinZuLangesMandatWirdVerweigertNichtGekuerzt(): void
     {

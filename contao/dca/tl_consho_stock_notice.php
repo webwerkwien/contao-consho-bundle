@@ -4,8 +4,7 @@
  * "Benachrichtigen, wenn wieder da" (Block G, G12, G15): a member's wish to
  * hear once when an article is available again.
  *
- * Only members — Michael, 2026-10-05: "die Funktion steht nur registrierten
- * Benutzern zur Verfügung". No address is stored: the mail goes to the
+ * Only members. No address is stored: the mail goes to the
  * account's address at the time it is sent. `root` and `language` are where
  * the wish was made, for the link and the language of the mail.
  *

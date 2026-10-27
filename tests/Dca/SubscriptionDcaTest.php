@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\RenewalKind;
 use Webwerkwien\ContaoConshoBundle\Tests\Subscription\SubscriptionSchema;
 
 /**
- * Abo-3, P20: Das Abo ist im Backend sichtbar, aber nicht bearbeitbar —
- * Bearbeiten wäre ein Weg an den eingefrorenen Werten vorbei (A9).
+ * Abo-3, P20: the subscription is visible in the backend but not editable —
+ * editing would be a way around the frozen values (A9).
  */
 class SubscriptionDcaTest extends TestCase
 {
@@ -87,8 +87,8 @@ class SubscriptionDcaTest extends TestCase
     }
 
     /**
-     * Abnahme 2026-09-29: Die Details zeigten „year", „indefinite", „content".
-     * Jeder Wert, der gespeichert werden kann, hat eine Beschriftung.
+     * The details showed "year", "indefinite", "content". Every value that can
+     * be saved has a label.
      */
     public function testJederGespeicherteWertHatEineBeschriftung(): void
     {
@@ -111,7 +111,7 @@ class SubscriptionDcaTest extends TestCase
             }
         }
 
-        // Die Felder zeigen auf genau diese Listen.
+        // The fields point to exactly these lists.
         $fields = $GLOBALS['TL_DCA']['tl_consho_subscription']['fields'];
         foreach (['termUnit' => 'termUnits', 'renewal' => 'renewals', 'kind' => 'kinds', 'phase' => 'phases', 'state' => 'states'] as $field => $key) {
             self::assertArrayHasKey('reference', $fields[$field], $field);

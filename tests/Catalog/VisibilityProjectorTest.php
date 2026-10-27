@@ -12,18 +12,18 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityRows;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Die Projektion der Sichtbarkeit schreiben und nachführen (B-10, 5.7) — gegen
- * eine echte Datenbank.
+ * Writing and updating the visibility projection (B-10, 5.7) — against
+ * a real database.
  *
- * Welche Zeilen hineingehören, prüft VisibilityRowsTest. Hier geht es darum,
- * dass refresh, rebuild und der Sprachabgleich genau diese Zeilen hinstellen —
- * und keine alten stehen lassen.
+ * VisibilityRowsTest checks which rows belong in it. This is about
+ * refresh, rebuild and the language sync putting exactly these rows there —
+ * and not leaving old ones behind.
  */
 class VisibilityProjectorTest extends TestCase
 {
     use CatalogSchema;
 
-    // Zehnstellig wie ein echter Zeitstempel — siehe VisibilityCriteriaTest.
+    // Ten digits like a real timestamp — see VisibilityCriteriaTest.
     private const NOW = 1_790_000_000;
     private const SHOP = 1;
 
@@ -38,7 +38,7 @@ class VisibilityProjectorTest extends TestCase
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
 
-        // de ist Standardsprache, fr Übersetzungssprache.
+        // de is the default language, fr a translation language.
         $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', self::SHOP);
         $this->insertRootPage(2, 'fr', self::SHOP);
@@ -60,7 +60,7 @@ class VisibilityProjectorTest extends TestCase
         $this->variant(2, 1);
         $this->listPrice(2, '12.0000');
 
-        // Zeile eines anderen Hauptprodukts: refresh([1]) darf sie nicht anfassen.
+        // Row of another main product: refresh([1]) must not touch it.
         $this->insertVisibility(['tstamp' => 1, 'pid' => 9, 'main' => 9, 'variant' => 0, 'shop' => self::SHOP, 'language' => 'de', 'net' => '1.0000', 'gross' => '1.2000']);
 
         self::assertTrue($this->projector->refresh([1], self::NOW));
@@ -90,17 +90,17 @@ class VisibilityProjectorTest extends TestCase
 
     public function testARehungVariantTakesTheLastVariantFromItsOldMainProduct(): void
     {
-        // Hauptprodukt 1 ist nur über Variante 3 sichtbar und bepreist. Wird 3
-        // umgehängt, steht 1 nur noch in den gespeicherten Zeilen von 3.
+        // Main product 1 is only visible and priced through variant 3. If 3 is
+        // moved elsewhere, 1 only remains in the stored rows of 3.
         $this->main(1);
         $this->main(2);
         $this->variant(3, 1);
         $this->listPrice(3, '12.0000');
         $this->projector->refresh([1, 2], self::NOW);
 
-        // Die fr-Variantenzeile ohne Hauptzeile ist gewollt: variants() prüft
-        // die Übersetzung des Hauptprodukts nicht, jeder Leser kommt über die
-        // Hauptzeile (siehe VisibilityRows::variants()).
+        // The fr variant row without a main row is intended: variants() does not
+        // check the main product's translation, every reader comes through the
+        // main row (see VisibilityRows::variants()).
         self::assertSame(['1:de/EUR H 1 (main 1) 12.0000', '1:de/EUR V 3 (main 1) -', '1:fr/EUR V 3 (main 1) -'], $this->stored());
 
         $this->connection->update('tl_consho_product', ['pid' => 2], ['id' => 3]);
@@ -111,8 +111,8 @@ class VisibilityProjectorTest extends TestCase
 
     public function testReportingOnlyTheNewMainProductOfARehungVariantAlsoClearsTheOldOne(): void
     {
-        // Ohne Rücksicht auf die gespeicherte Zeile von 3 stieße das Einfügen
-        // an den eindeutigen Schlüssel (pid, shop, language, currency).
+        // Without regard to the stored row of 3 the insert would hit
+        // the unique key (pid, shop, language, currency).
         $this->main(1);
         $this->main(2);
         $this->variant(3, 1);
@@ -127,7 +127,7 @@ class VisibilityProjectorTest extends TestCase
 
     public function testADeletedProductLosesItsRows(): void
     {
-        // Gelöscht steht es nur noch in den gespeicherten Zeilen.
+        // Once deleted, it only remains in the stored rows.
         $this->main(1);
         $this->variant(2, 1);
         $this->listPrice(2, '12.0000');
@@ -147,7 +147,7 @@ class VisibilityProjectorTest extends TestCase
         self::assertFalse($this->projector->refresh([], self::NOW));
         self::assertTrue($this->projector->refresh([1], self::NOW));
 
-        // Ein neuer Zeitstempel allein ist keine Änderung.
+        // A new timestamp alone is not a change.
         self::assertFalse($this->projector->refresh([1], self::NOW + 60));
 
         $this->connection->update('tl_consho_product_list_price', ['gross' => '14.0000', 'net' => '11.6667'], ['pid' => 1]);
@@ -172,7 +172,7 @@ class VisibilityProjectorTest extends TestCase
         $this->main(1);
         $this->listPrice(1, '12.0000');
 
-        // Shop 9 gibt es nicht mehr; it hat Shop 1 keine Root-Seite.
+        // Shop 9 no longer exists; for `it` shop 1 has no root page.
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'variant' => 0, 'shop' => 9, 'language' => 'de', 'net' => '1.0000', 'gross' => '1.2000']);
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'variant' => 0, 'shop' => self::SHOP, 'language' => 'it', 'net' => '1.0000', 'gross' => '1.2000']);
 
@@ -241,7 +241,7 @@ class VisibilityProjectorTest extends TestCase
         $this->listPrice(1, '12.0000');
         $this->projector->rebuild(self::NOW);
 
-        // Zeilen am Zustand vorbei — Seed, SQL, ein Stand vor den Fingerabdrücken.
+        // Rows past the state — seed, SQL, a state from before the fingerprints.
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'variant' => 0, 'shop' => 9, 'language' => 'de', 'net' => '1.0000', 'gross' => '1.2000']);
 
         self::assertTrue($this->projector->syncShops(self::NOW));
@@ -250,9 +250,9 @@ class VisibilityProjectorTest extends TestCase
 
     public function testALanguageWithoutAVisibleProductIsNotRebuiltOnEverySync(): void
     {
-        // fr hat eine Root-Seite, aber kein übersetztes Produkt — also keine
-        // einzige Zeile. Aus der Tabelle gelesen fehlte fr im Ist-Stand für
-        // immer, und jedes Speichern einer Seite baute den ganzen Shop neu.
+        // fr has a root page but no translated product — so not a
+        // single row. Read from the table, fr would be missing from the actual state
+        // forever, and every save of a page would rebuild the whole shop.
         $this->main(1);
         $this->listPrice(1, '12.0000');
 
@@ -265,10 +265,10 @@ class VisibilityProjectorTest extends TestCase
 
     public function testJederStartpunktBringtSeineEigeneWaehrungMit(): void
     {
-        // Spec 4.0: Die Währung hängt am Startpunkt, das Heimatland am Shop.
-        // Zwei Startpunkte desselben Shops in zwei Währungen sind damit zwei
-        // Ziele mit zwei Ab-Preisen — vorher bekamen beide dieselbe Währung
-        // aus tl_consho_shop angehängt.
+        // Spec 4.0: the currency hangs on the start point, the home country on the shop.
+        // Two start points of the same shop in two currencies are thus two
+        // targets with two from-prices — previously both got the same currency
+        // attached from tl_consho_shop.
         $this->insertRootPage(3, 'en', self::SHOP, 'GBP');
         $this->main(1);
         $this->translate(1, 'en');
@@ -285,10 +285,10 @@ class VisibilityProjectorTest extends TestCase
 
     public function testEineWaehrungDieNurEinenStartpunktBetrifftLaesstDenAnderenStehen(): void
     {
-        // Die Gegenprobe zum Test darüber: Ein Produkt, das es nur in Euro
-        // gibt, verschwindet aus der Pfund-Sprache und bleibt in der
-        // Euro-Sprache — mit der Shop-Währung als einziger Quelle wäre es
-        // entweder überall da oder nirgends.
+        // The counter-check to the test above: a product that only exists in
+        // euros disappears from the pound language and stays in the
+        // euro language — with the shop currency as the only source it would be
+        // either everywhere or nowhere.
         $this->insertRootPage(3, 'en', self::SHOP, 'GBP');
         $this->main(1);
         $this->translate(1, 'en');
@@ -301,12 +301,11 @@ class VisibilityProjectorTest extends TestCase
 
     public function testDieselbeSpracheInZweiWaehrungenErgibtZweiZiele(): void
     {
-        // Der DACH-Fall: example.de in Euro, example.ch in Franken, beide auf
-        // Deutsch. Bis Aufgabe 5b trug die Projektion (pid, shop, language)
-        // eindeutig und keine Währung — das zweite Ziel überschrieb das erste
-        // still, und welcher der beiden Startpunkte gewann, entschied die
-        // Sortierung. Mit der Währung im Schlüssel sind es wieder zwei Zeilen
-        // mit zwei Ab-Preisen.
+        // The DACH case: example.de in euros, example.ch in francs, both in
+        // German. Before task 5b the projection had (pid, shop, language) as
+        // unique and no currency — the second target silently overwrote the first,
+        // and the sort order decided which of the two start points won. With the
+        // currency in the key there are two rows with two from-prices again.
         $this->insertRootPage(3, 'de', self::SHOP, 'CHF');
         $this->main(1);
         $this->listPrice(1, '12.0000');
@@ -322,9 +321,9 @@ class VisibilityProjectorTest extends TestCase
 
     public function testRefreshLaesstDieZeileDerAnderenWaehrungStehen(): void
     {
-        // refresh() löscht je Ziel und schreibt es neu. Ohne die Währung in
-        // dieser Löschung räumte das Euro-Ziel auch die Franken-Zeilen weg und
-        // umgekehrt — am Ende stünde nur das zuletzt geschriebene Ziel da.
+        // refresh() deletes per target and writes it anew. Without the currency in
+        // this deletion the euro target would also clear away the franc rows and
+        // vice versa — in the end only the target written last would remain.
         $this->insertRootPage(3, 'de', self::SHOP, 'CHF');
         $this->main(1);
         $this->listPrice(1, '12.0000');
@@ -339,11 +338,11 @@ class VisibilityProjectorTest extends TestCase
 
     public function testRefreshMerktEinenTauschDerPreiseZwischenDenWaehrungen(): void
     {
-        // Der Fingerabdruck der gespeicherten Zeilen entscheidet, ob refresh()
-        // eine Änderung meldet — und damit, ob der Seiten-Cache geleert wird.
-        // Ohne die Währung darin sind „Euro 12, Franken 15" und „Euro 15,
-        // Franken 12" dieselbe sortierte Liste: die Liste zeigte auf beiden
-        // Seiten stundenlang die vertauschten Preise weiter.
+        // The fingerprint of the stored rows decides whether refresh()
+        // reports a change — and with it whether the page cache is cleared.
+        // Without the currency in it, "Euro 12, Franken 15" and "Euro 15,
+        // Franken 12" are the same sorted list: the list would keep showing the
+        // swapped prices on both pages for hours.
         $this->insertRootPage(3, 'de', self::SHOP, 'CHF');
         $this->main(1);
         $this->listPrice(1, '12.0000');
@@ -358,10 +357,10 @@ class VisibilityProjectorTest extends TestCase
 
     public function testRebuildRaeumtZeilenEinerWaehrungWegDieKeinStartpunktMehrFuehrt(): void
     {
-        // Ein Startpunkt, der von Franken auf Euro gestellt wurde, lässt seine
-        // Franken-Zeilen stehen. Für das Aufräumen zählt nicht das Paar aus
-        // Shop und Sprache — das gibt es weiterhin — sondern das Ziel samt
-        // Währung.
+        // A start point switched from francs to euros leaves its
+        // franc rows behind. For the cleanup it is not the pair of
+        // shop and language that counts — that still exists — but the target
+        // including its currency.
         $this->main(1);
         $this->listPrice(1, '12.0000');
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'variant' => 0, 'shop' => self::SHOP, 'language' => 'de', 'currency' => 'CHF', 'net' => '12.5000', 'gross' => '15.0000']);
@@ -373,10 +372,10 @@ class VisibilityProjectorTest extends TestCase
 
     public function testEinProduktNurInEinerWaehrungStehtNurUnterDieserZeile(): void
     {
-        // Die Gegenprobe: Zwei Startpunkte derselben Sprache, ein Produkt nur
-        // in Franken bepreist. Ohne Währung im Schlüssel wäre es entweder in
-        // beiden Zeilen zu sehen oder in keiner — je nachdem, welches Ziel
-        // zuletzt geschrieben hat.
+        // The counter-check: two start points of the same language, one product
+        // priced only in francs. Without the currency in the key it would be visible
+        // either in both rows or in none — depending on which target
+        // was written last.
         $this->insertRootPage(3, 'de', self::SHOP, 'CHF');
         $this->main(1);
         $this->listPrice(1, '15.0000', 'CHF');
@@ -388,10 +387,10 @@ class VisibilityProjectorTest extends TestCase
 
     public function testEinStartpunktOhneSpracheErgibtKeinZiel(): void
     {
-        // audiencesOf() meldet auch einen Startpunkt ohne Sprache, damit ihn
-        // jemand benennen kann. Wer rechnet, überspringt ihn — sonst stünden
-        // Zeilen mit leerer Sprache in der Projektion, die keine Liste je
-        // liest.
+        // audiencesOf() also reports a start point without a language, so that
+        // someone can name it. Whoever computes skips it — otherwise the
+        // projection would hold rows with an empty language that no list ever
+        // reads.
         $this->connection->insert('tl_page', ['id' => 3, 'type' => 'root', 'title' => 'Ohne Sprache', 'language' => '', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR']);
         $this->main(1);
         $this->listPrice(1, '12.0000');
@@ -410,21 +409,21 @@ class VisibilityProjectorTest extends TestCase
         $this->listPrice(2, '15.0000', 'CHF');
         $this->projector->rebuild(self::NOW);
 
-        // Seit C-1c am Startpunkt, nicht mehr am Shop. Beide Startpunkte,
-        // sonst wäre es ein Währungswechsel für de und keiner für fr.
+        // Since C-1c on the start point, no longer on the shop. Both start points,
+        // otherwise it would be a currency change for de and none for fr.
         $this->connection->update('tl_page', ['consho_currency' => 'CHF'], ['consho_shop' => self::SHOP]);
 
         self::assertTrue($this->projector->syncShops(self::NOW + 60));
-        // Produkt 1 hat keinen Preis in CHF — und damit keine Zeile mehr.
+        // Product 1 has no price in CHF — and therefore no row any more.
         self::assertSame(['1:de/CHF H 2 (main 2) 15.0000'], $this->stored());
     }
 
     public function testEinWaehrungswechselAnEinemVonZweiStartpunktenBautDenShopNeu(): void
     {
-        // Der Fingerabdruck trägt die Währung je Sprache, nicht eine je Shop:
-        // Bliebe er eine Shop-Angabe, überdeckte die unveränderte Währung des
-        // zweiten Startpunkts den Wechsel am ersten, und die Liste zeigte
-        // weiter Euro-Preise.
+        // The fingerprint carries the currency per language, not one per shop:
+        // if it stayed a shop value, the unchanged currency of the
+        // second start point would cover the change on the first, and the list
+        // would keep showing euro prices.
         $this->insertRootPage(3, 'en', self::SHOP, 'GBP');
         $this->main(1);
         $this->translate(1, 'en');
@@ -444,11 +443,11 @@ class VisibilityProjectorTest extends TestCase
 
     public function testEinWechselDesHeimatlandesBautDenShopNeu(): void
     {
-        // Das Heimatland bleibt am Shop (Spec 4.0) und entscheidet das Brutto
-        // jedes Ab-Preises — es gehört damit in den Fingerabdruck wie die
-        // Währung, nur je Shop statt je Sprache. Bisher hielt es dort allein
-        // die Formatzusage des Tests darüber fest; ein Wechsel selbst war
-        // nirgends geprüft.
+        // The home country stays on the shop (Spec 4.0) and decides the gross of
+        // every from-price — so it belongs in the fingerprint like the
+        // currency, only per shop instead of per language. Until now only the
+        // format assertion of the test above pinned it there; a change itself
+        // was checked nowhere.
         $this->main(1);
         $this->listPrice(1, '12.0000');
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => 'DE', 'net' => '10.0000', 'gross' => '11.9000']);
@@ -469,7 +468,7 @@ class VisibilityProjectorTest extends TestCase
         $this->connection->update('tl_consho_shop', ['fallbackLanguage' => 'fr'], ['id' => self::SHOP]);
 
         self::assertTrue($this->projector->syncShops(self::NOW + 60));
-        // Unübersetzt: jetzt in fr sichtbar, in de nicht mehr.
+        // Untranslated: now visible in fr, no longer in de.
         self::assertSame(['1:fr/EUR H 1 (main 1) 12.0000'], $this->stored());
     }
 
@@ -486,8 +485,8 @@ class VisibilityProjectorTest extends TestCase
 
     public function testRebuildShopUsesTheDefaultLanguageChangedInTheSameRequest(): void
     {
-        // Befund 3: ShopLanguages cacht je Request. Wer den Shop speichert und
-        // danach neu baut, darf nicht mit der alten Standardsprache rechnen.
+        // ShopLanguages caches per request. Whoever saves the shop and
+        // rebuilds afterwards must not compute with the old default language.
         $this->main(1);
         $this->listPrice(1, '12.0000');
         $this->projector->rebuild(self::NOW);
@@ -499,18 +498,18 @@ class VisibilityProjectorTest extends TestCase
 
         $this->projector->rebuildShop(self::SHOP, self::NOW);
 
-        // Unübersetzt: jetzt in fr sichtbar (Texte am Datensatz), in de nicht mehr.
+        // Untranslated: now visible in fr (texts on the record), no longer in de.
         self::assertSame(['1:fr/EUR H 1 (main 1) 12.0000'], $this->stored());
     }
 
     /**
-     * Die gespeicherten Zeilen, lesbar: Shop:Sprache/Währung,
-     * H(aupt)/V(ariante), pid, Hauptprodukt, Brutto-Ab-Preis.
+     * The stored rows, readable: shop:language/currency,
+     * H(aupt, main)/V(ariante, variant), pid, main product, gross from-price.
      *
-     * Die Währung steht seit C-1c Aufgabe 5b mit im Schlüssel und deshalb auch
-     * hier: Ohne sie zeigten zwei Zeilen derselben Sprache in zwei Währungen
-     * als ein Eintrag und der Preis entschiede allein, ob der Test rot wird —
-     * ein falsch geschriebener Währungsschlüssel bliebe unsichtbar.
+     * Since C-1c, task 5b, the currency is part of the key and therefore also
+     * here: without it two rows of the same language in two currencies would show
+     * as one entry, and the price alone would decide whether the test turns red —
+     * a misspelt currency key would stay invisible.
      *
      * @return list<string>
      */
@@ -550,7 +549,7 @@ class VisibilityProjectorTest extends TestCase
     }
 
     /**
-     * Der Fingerabdruck eines Shops, wie ihn der Auftrag festlegt.
+     * The fingerprint of a shop, in the format the projector writes it.
      */
     private function fingerprint(string $audiences, string $fallback, string $country = 'AT'): int
     {

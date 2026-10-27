@@ -12,8 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Controller\Page\ProductPageController;
  * Product pages whose stored path template is invalid.
  *
  * PathTemplateListener refuses such a template in the back end, but a write
- * past the DCA — CLI, SQL, an import — stores it anyway (measured on c5,
- * 2026-09-11). ProductPageController::configurePageRoute() then falls back to
+ * past the DCA — CLI, SQL, an import — stores it anyway. ProductPageController::configurePageRoute() then falls back to
  * the default template, so the site keeps routing; what nobody sees is that
  * every product of that page has quietly moved to a different address, and no
  * redirect was recorded for it.

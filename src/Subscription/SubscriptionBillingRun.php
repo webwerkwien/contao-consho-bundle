@@ -86,7 +86,7 @@ class SubscriptionBillingRun
 
     private function notify(BilledPeriod $period): void
     {
-        // The order stands whatever happens to its mail (review L6): a
+        // The order stands whatever happens to its mail: a
         // failing link must neither read as "not billed" nor stop the
         // subscription's further periods.
         try {

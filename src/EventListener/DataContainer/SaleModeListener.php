@@ -45,7 +45,7 @@ final class SaleModeListener
 
     // In the sales legend, not one of its own: the mask has no room for a
     // ninth tab (SaleModeDcaTest).
-    private const VOUCHER = ',voucherValue,voucherValidMonths';
+    private const VOUCHER = ',voucherValue,voucherValidMonths,voucherSinglePurpose';
 
     public function __construct(
         private readonly Connection $connection,
@@ -94,7 +94,7 @@ final class SaleModeListener
         if (!$kind->isVoucher()) {
             $palette = str_replace(self::VOUCHER, '', $palette);
         } elseif ($variant) {
-            $palette = str_replace(',voucherValidMonths', '', $palette);
+            $palette = str_replace([',voucherValidMonths', ',voucherSinglePurpose'], '', $palette);
         }
 
         $GLOBALS['TL_DCA']['tl_consho_product']['palettes']['default'] = $palette;
@@ -102,8 +102,7 @@ final class SaleModeListener
     }
 
     /**
-     * Fields the kind does not use but that hold a value (acceptance DL, find
-     * 1): they stay in the mask, or the finding "Produkt passt nicht zu seiner
+     * Fields the kind does not use but that hold a value (DL): they stay in the mask, or the finding "Produkt passt nicht zu seiner
      * Art" (ProductKindMismatchIssueSource) asks for something nobody can
      * reach. Emptied, they disappear with the next load. Keys are emptied in
      * the key list, so their field stays while any are in the pool.

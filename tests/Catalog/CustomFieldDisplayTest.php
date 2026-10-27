@@ -26,10 +26,10 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationWriter;
 
 /**
- * ZW-4 (Z1–Z3; Michael, 2026-10-14: „ja, alles wie empfohlen"): was die
- * Produktseite unter „Angaben" zeigt — nur befüllte Felder, in der Reihenfolge
- * des Typs, Titel und Text in der Sprache der Seite, Zahl und Datum nach
- * Sprache formatiert, die Variante mit ihrem Erbe.
+ * ZW-4 (Z1–Z3): what the
+ * product page shows under "Angaben" (details) — only filled fields, in the
+ * order of the type, title and text in the language of the page, number and
+ * date formatted by language, the variant with its inheritance.
  */
 class CustomFieldDisplayTest extends TestCase
 {
@@ -65,7 +65,7 @@ class CustomFieldDisplayTest extends TestCase
         $this->connection->insert('tl_consho_product', ['id' => 11, 'pid' => 10, 'productType' => 0, 'customFieldValues' => '{"lage":"Ried Achleiten"}']);
         $this->connection->insert('tl_consho_product_shop', ['pid' => 10, 'shop' => 7]);
 
-        // Französisch: der Feldtitel, und die Texte des Hauptprodukts.
+        // French: the field title, and the texts of the main product.
         $this->connection->insert('tl_consho_translation', ['ptable' => 'tl_consho_custom_field', 'pid' => 2, 'language' => 'fr', 'title' => 'Cépage']);
         $this->connection->insert('tl_consho_translation', ['ptable' => 'tl_consho_product', 'pid' => 10, 'language' => 'fr', 'customFieldValues' => '{"rebsorte":"Grüner Veltliner (fr)","lage":"Lieu-dit Klaus"}']);
 
@@ -87,8 +87,8 @@ class CustomFieldDisplayTest extends TestCase
     }
 
     /**
-     * Ein Jahrgang ist keine Tausenderzahl, und eine ganze Zahl bekommt keine
-     * Nachkommastellen dazu.
+     * A vintage is not a number with thousands separators, and a whole number
+     * gets no decimal places added.
      */
     public function testEinJahrgangBleibtEinJahrgang(): void
     {
@@ -96,15 +96,15 @@ class CustomFieldDisplayTest extends TestCase
 
         self::assertSame('2021', $this->display()->forArticle(10, 'de', 'de')[0]->formatted);
 
-        // Die angegebenen Nachkommastellen bleiben, auch eine Null am Ende.
+        // The given decimal places stay, a trailing zero too.
         $this->connection->update('tl_consho_product', ['customFieldValues' => '{"jahrgang":"0.250"}'], ['id' => 10]);
         self::assertSame('0,250', $this->display()->forArticle(10, 'de', 'de')[0]->formatted);
     }
 
     /**
-     * Codex-Review 2026-10-14: Über 15 Stellen rundet eine Gleitkommazahl. Die
-     * Ziffern bleiben, wie sie eingegeben wurden — nur das Komma ist das der
-     * Sprache.
+     * Beyond 15 digits a floating-point number rounds. The
+     * digits stay as they were entered — only the decimal separator is that of
+     * the language.
      */
     public function testEineLangeZahlVerliertKeineStelle(): void
     {
@@ -116,8 +116,8 @@ class CustomFieldDisplayTest extends TestCase
     }
 
     /**
-     * Codex-Review 2026-10-14: Ein unmögliches Datum — der Wert stammt aus der
-     * Zeit, als das Feld ein Textfeld war — wird nicht still zum 1. März.
+     * An impossible date — the value dates from the
+     * time when the field was a text field — does not silently become 1 March.
      */
     public function testEinUnmoeglichesDatumBleibtStehen(): void
     {
@@ -127,8 +127,8 @@ class CustomFieldDisplayTest extends TestCase
     }
 
     /**
-     * Review ZW-K, Fund 5: Das Feld war früher ein Textfeld. Der alte Wert
-     * steht da, wie er ist — nicht als „0".
+     * ZW-K: the field used to be a text field. The old value
+     * is shown as it is — not as "0".
      */
     public function testEinAlterTextUnterEinemZahlenfeld(): void
     {
@@ -138,9 +138,9 @@ class CustomFieldDisplayTest extends TestCase
     }
 
     /**
-     * Review ZW-C, S1: Das Katalog-JSON fragt je Artikel. Ein Typ ohne
-     * Zusatzfelder kostet zwei Abfragen (Typ, Felder des Typs) — die Werte
-     * werden gar nicht erst gelesen, auch wenn noch alte dastehen.
+     * ZW-C: the catalogue JSON asks per item. A type without
+     * custom fields costs two queries (type, fields of the type) — the values
+     * are not read at all, even if old ones are still there.
      */
     public function testEinTypOhneZusatzfelderKostetZweiAbfragen(): void
     {
@@ -162,8 +162,8 @@ class CustomFieldDisplayTest extends TestCase
     }
 
     /**
-     * Z1: Titel und Text übersetzt, sonst Rückfall auf die Standardsprache;
-     * Zahl und Datum nach der Sprache der Seite.
+     * Z1: title and text translated, otherwise fallback to the default language;
+     * number and date by the language of the page.
      */
     public function testInDerUebersetzung(): void
     {
@@ -175,8 +175,8 @@ class CustomFieldDisplayTest extends TestCase
     }
 
     /**
-     * Z2: Die Variante erbt; die französische Übersetzung des Hauptprodukts
-     * übersetzt dessen Text — nicht den, den die Variante überschreibt.
+     * Z2: the variant inherits; the French translation of the main product
+     * translates its text — not the one the variant overrides.
      */
     public function testDieVarianteUndIhreUebersetzung(): void
     {
@@ -187,15 +187,15 @@ class CustomFieldDisplayTest extends TestCase
         self::assertSame('Grüner Veltliner (fr)', $fr['rebsorte']->formatted, 'geerbt samt Übersetzung');
         self::assertSame('Ried Achleiten', $fr['lage']->formatted, 'nicht „Lieu-dit Klaus"');
 
-        // Die eigene Übersetzung der Variante zählt vor der des Hauptprodukts —
-        // auch für einen Text, den sie erbt.
+        // The variant's own translation counts before the main product's —
+        // also for a text it inherits.
         $this->connection->insert('tl_consho_translation', ['ptable' => 'tl_consho_product', 'pid' => 11, 'language' => 'fr', 'customFieldValues' => '{"lage":"Lieu-dit Achleiten","rebsorte":"Veltliner (variante)"}']);
         $fr = $this->byAlias($this->display()->forArticle(11, 'fr', 'de'));
         self::assertSame(['Lieu-dit Achleiten', 'Veltliner (variante)'], [$fr['lage']->formatted, $fr['rebsorte']->formatted]);
     }
 
     /**
-     * Die echte Liste aus der Vorlage, mit den echten deutschen Texten.
+     * The real list from the template, with the real German texts.
      */
     public function testDieVorlage(): void
     {

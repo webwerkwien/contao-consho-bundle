@@ -18,9 +18,8 @@ use Webwerkwien\ContaoConshoBundle\Address\AddressNormalizer;
  *
  * The seam has been there since A-5 and the form since C-5, and nobody
  * connected them: `checkoutDataOf()` reads what sits on the BASKET, and a
- * fresh basket carries empty JSON. Found while accepting C-7 on c5
- * (2026-09-23), when somebody bought while logged in for the first time — and
- * typed twelve fields, including the three that were in tl_member all along.
+ * fresh basket carries empty JSON. In C-7 somebody bought while logged in
+ * for the first time — and typed twelve fields, including the three that were in tl_member all along.
  *
  * ── Why filling in here and not when the basket is created ───────────────
  *
@@ -37,7 +36,7 @@ use Webwerkwien\ContaoConshoBundle\Address\AddressNormalizer;
  *
  * ── What is deliberately NOT taken over ──────────────────────────────────
  *
- * **`gender`** (Michael, 2026-09-23). Contao stores `male`/`female`; Consho's
+ * **`gender`**. Contao stores `male`/`female`; Consho's
  * `salutation` is free text that ends up on the invoice. Copied across, an
  * invoice would read "male". Translating it to "Herr"/"Frau" would be an
  * assumption about the form of address that the field does not carry —
@@ -57,7 +56,7 @@ final class MemberCheckoutDefaults
      * the ONE route to the invoice that skips it — "Eva@Example.ORG ", a
      * postal code with a space in it, an unformatted phone number — and
      * precisely for the customer who never touched the form, so nobody
-     * corrected it either. Found in the review of 2026-09-23.
+     * corrected it either.
      */
     public function __construct(
         private readonly Connection $connection,
@@ -130,8 +129,8 @@ final class MemberCheckoutDefaults
          * worse than none, because the parcel goes to the billing address
          * while the account says otherwise.
          */
-        // Erst prüfen, dann normalisieren: `normalize()` würde eine leere
-        // Adresse nicht füllen, aber die Reihenfolge sagt, worauf es ankommt.
+        // Check first, then normalise: `normalize()` would not fill an empty
+        // address, but the order says what matters.
         $ticked = !$shipping->isEmpty();
         $filled = $data->withBilling($billing)->withShipping($ticked ? $this->normalizer->normalize($shipping) : $shipping, $ticked);
 
@@ -143,13 +142,12 @@ final class MemberCheckoutDefaults
     /**
      * The member's billing address as the account says it today, normalised
      * like the checkout's — for a subscription's follow-up invoice (Abo-
-     * Nachlese, P74; Michael, 2026-10-01: „für jede neue Rechnung wird die
-     * aktuell eingetragene Rechnungsadresse genommen"). Null where the
+     * Nachlese, P74: every new invoice takes the
+     * billing address entered now). Null where the
      * account lacks what an invoice needs (name, street, postcode, town,
      * country, email): the caller keeps the address it had.
      *
-     * The email only where the member has confirmed it (review Abo-Nachlese,
-     * S2; Michael: „wie empfohlen") — Contao's "Persönliche Daten" changes it
+     * The email only where the member has confirmed it (Abo-Nachlese) — Contao's "Persönliche Daten" changes it
      * without any check, and the invoice goes there; MemberOrders trusts the
      * account's address on the same condition. Otherwise $fallbackEmail.
      */

@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\DecisionResendBut
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\PaymentDeferralButtonListener;
 
 /**
- * Review E8/E10 (S2): wann „Entscheidung erneut senden" und „Zahlungsziel
- * verschieben" erscheinen. Ausgeblendet heißt bei Contao: HTML ''.
+ * E8/E10: when "Send decision again" and "Postpone payment term" appear.
+ * Hidden means, in Contao: HTML ''.
  */
 final class ResendAndDeferButtonListenerTest extends TestCase
 {

@@ -94,11 +94,10 @@ final class CheckoutReadiness
     public const TAG = 'consho.checkout_readiness_source';
 
     /**
-     * ⚠️ Der Tag muss dastehen. `iterable` ist ein Builtin-Typ, und Autowiring
-     * kann daraus nichts ableiten — der Container baut dann GAR NICHT,
-     * `cache:clear` bricht ab, und die Seite läuft still mit dem alten Code
-     * weiter. Dieselbe Mechanik wie der Vorfall vom 2026-09-21, eine Variante
-     * tiefer; IterableArgumentsAreTaggedTest hält beide Fälle fest.
+     * ⚠️ The tag has to be there. `iterable` is a builtin type, and autowiring
+     * cannot derive anything from it — the container then does not build AT ALL,
+     * `cache:clear` aborts, and the site silently keeps running the old code.
+     * IterableArgumentsAreTaggedTest holds the cases.
      *
      * @param iterable<ConfigurationIssueSource> $sources
      */

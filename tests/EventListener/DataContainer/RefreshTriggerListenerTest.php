@@ -27,7 +27,7 @@ class RefreshTriggerListenerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        // Preiszeile 7 gehört zu Produkt 3.
+        // Price row 7 belongs to product 3.
         $this->insertPrice(['id' => 7, 'pid' => 3, 'net' => '10.0000']);
 
         $this->queue = new CatalogRefreshQueue();
@@ -42,7 +42,7 @@ class RefreshTriggerListenerTest extends TestCase
 
     public function testCopyingAPriceReportsTheProductOfTheNewRow(): void
     {
-        // Mit dem Produkt kopiert: die neue Zeile hängt an der Kopie, nicht am Original.
+        // Copied with the product: the new row hangs on the copy, not on the original.
         $this->insertPrice(['id' => 8, 'pid' => 20, 'net' => '10.0000']);
 
         $this->prices()->onCopy(8, $this->dc(7));
@@ -67,9 +67,10 @@ class RefreshTriggerListenerTest extends TestCase
     public function testRestoringAPriceVersionReportsItsProduct(): void
     {
         /*
-         * $data so, wie Versions::restore() es übergibt: OHNE id, pid, ptable und
-         * sorting — der Kern entfernt sie vor dem Callback. Der erste Test hier
-         * übergab pid mit und war grün, während auf c5 nichts neu gerechnet wurde.
+         * $data as Versions::restore() passes it: WITHOUT id, pid, ptable and
+         * sorting — the core removes them before the callback. The first test
+         * here passed pid along and was green, while on a real installation
+         * nothing was recalculated.
          */
         $this->prices()->onRestoreVersion('tl_consho_price', 7, 2, ['tstamp' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'gross' => '12.0000']);
 
@@ -91,19 +92,19 @@ class RefreshTriggerListenerTest extends TestCase
         $products->onCopy(2, $this->dc(1));
         $products->onDelete($this->dc(5), 1);
         $products->onUndo('tl_consho_product', ['id' => 6, 'pid' => 0], $this->dc(0));
-        // B-10: Eine zurückgeholte Version kann Veröffentlichung oder Zeitfenster
-        // ändern. $data wie vom Kern: ohne id und pid.
+        // B-10: a restored version can change publication or time window.
+        // $data as from the core: without id and pid.
         $products->onRestoreVersion('tl_consho_product', 8, 3, ['tstamp' => 1, 'published' => 1]);
 
         self::assertSame([1, 2, 5, 6, 8], $this->queue->take());
     }
 
     /**
-     * Abnahme 2026-10-14 auf c5: Hauptprodukt 27 gelöscht, die Zeile seiner
-     * Variante 28 blieb in tl_consho_product_list_price stehen. Gemeldet war nur
-     * die 27 — und am Ende des Requests, wenn der Projektor sie zu ihren
-     * Varianten erweitert, hat VariantDeleteListener die 28 schon gelöscht.
-     * Deshalb meldet das ondelete die Varianten selbst, solange es sie gibt.
+     * A main product was deleted, and the row of its variant stayed in
+     * tl_consho_product_list_price. Only the main product had been reported —
+     * and at the end of the request, when the projector expands it to its
+     * variants, VariantDeleteListener has already deleted the variant.
+     * Hence the ondelete reports the variants itself while they still exist.
      */
     public function testDeletingAMainProductReportsItsVariantsWhileTheyStillExist(): void
     {
@@ -118,8 +119,8 @@ class RefreshTriggerListenerTest extends TestCase
     }
 
     /**
-     * Die Varianten stehen nur vor VariantDeleteListener noch in der Tabelle:
-     * Contao ruft die höhere Priorität zuerst.
+     * The variants are only still in the table before VariantDeleteListener:
+     * Contao calls the higher priority first.
      */
     public function testTheProductDeleteReportRunsBeforeTheVariantsAreDeleted(): void
     {
@@ -150,7 +151,7 @@ class RefreshTriggerListenerTest extends TestCase
 
     public function testTheQueueHoldsEachProductOnceAndResetsEverything(): void
     {
-        // Ein Produkt mit zehn Preisen meldet sich beim Kopieren zehnmal.
+        // A product with ten prices reports itself ten times when copied.
         $this->queue->add(3);
         $this->queue->add(3);
         $this->queue->add(5);
@@ -183,7 +184,7 @@ class RefreshTriggerListenerTest extends TestCase
     }
 
     /**
-     * Wie copyChildren() ihn baut: ohne Konstruktor, nur die id gesetzt.
+     * As copyChildren() builds it: without a constructor, only the id set.
      */
     private static function dcWithId(int $id): DC_Table
     {

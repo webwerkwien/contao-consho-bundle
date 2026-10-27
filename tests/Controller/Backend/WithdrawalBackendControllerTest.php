@@ -40,8 +40,8 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Seite „Widerruf bearbeiten" (D-3) — mit der echten Vorlage
- * (strict_variables) und dem echten Dienst auf SQLite.
+ * The page "Widerruf bearbeiten" (edit withdrawal, D-3) — with the real
+ * template (strict_variables) and the real service on SQLite.
  */
 final class WithdrawalBackendControllerTest extends TestCase
 {
@@ -59,9 +59,9 @@ final class WithdrawalBackendControllerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy: a hand-written schema goes stale with the next column.
         DcaSchema::create($this->connection, 'tl_consho_payment');
-        // From its DCA (Fall 31): a hand-written copy did not know stockBooked (Block G).
+        // From its DCA, with the production column names: a hand-written copy did not know stockBooked (Block G).
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
         DcaSchema::create($this->connection, 'tl_consho_delivery_item');
@@ -90,7 +90,7 @@ final class WithdrawalBackendControllerTest extends TestCase
     {
         $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
 
-        // F12: Kopf mit den drei Symbolen und dem Link zur Bestellung.
+        // F12: header with the three symbols and the link to the order.
         self::assertStringContainsString('WEB-00077-W1', $html);
         self::assertStringContainsString('zur Bestellung <a href="/contao?do=consho_order&amp;act=edit&amp;id=7">WEB-00077</a>', $html);
         self::assertStringContainsString('consho-signal--undo', $html);
@@ -109,7 +109,7 @@ final class WithdrawalBackendControllerTest extends TestCase
     {
         $location = $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'accept', 'accepted' => [1 => '1']]))($this->dc()));
 
-        // Zurück auf dieselbe Seite (POST, Umleitung, GET).
+        // Back to the same page (POST, redirect, GET).
         self::assertSame('http://localhost/contao?id=1&key=processWithdrawal', $location);
         self::assertSame([['addConfirmation', 'Widerruf WEB-00077-W1 angenommen.']], $this->messages);
 
@@ -122,10 +122,10 @@ final class WithdrawalBackendControllerTest extends TestCase
     }
 
     /**
-     * Abo-8, P80: Die Maske nennt das Abo der Bestellung, zeigt die
-     * Vorschlagsrechnung des Wertersatzes und nimmt den Betrag mit der
-     * Erstattung entgegen. Das Salz ist hier ein Dienstleistungs-Abo,
-     * 17,80 € für 30 Tage, 7 begonnene Tage genutzt: 4,15 €.
+     * Abo-8, P80: the mask names the order's subscription, shows the suggested
+     * calculation of the compensation and takes the amount along with the
+     * refund. The salt here is a service subscription, € 17.80 for 30 days,
+     * 7 started days used: € 4.15.
      */
     public function testDieMaskeZeigtAboUndWertersatz(): void
     {
@@ -145,7 +145,7 @@ final class WithdrawalBackendControllerTest extends TestCase
 
         self::assertMatchesRegularExpression('#name="compensation"[^>]*value="4.15"#', $html);
         self::assertStringContainsString('Kräutersalz: 17,80 € × 7 / 30 Tage = 4,15 €', str_replace("\u{a0}", ' ', $html));
-        // DL4 (Abnahme Abo-8): eine Dienstleistung kommt nicht zurück.
+        // DL4 (Abo-8): a service does not come back.
         self::assertStringNotContainsString('noch nicht als zurückerhalten erfasst', $html);
 
         $this->messages = [];
@@ -154,9 +154,9 @@ final class WithdrawalBackendControllerTest extends TestCase
     }
 
     /**
-     * WA, A4: Ein Widerruf ohne Bestellung zeigt die Erklärung und nur eine
-     * Aktion — „Bestellung zuordnen", vorbelegt mit der eingetippten Nummer.
-     * Danach ist es der gewöhnliche Widerruf der Bestellung.
+     * WA, A4: a withdrawal without an order shows the explanation and only one
+     * action — "Bestellung zuordnen" (assign order), prefilled with the typed
+     * number. Afterwards it is the ordinary withdrawal of the order.
      */
     public function testNichtZugeordnetZuordnenUndDanachBearbeiten(): void
     {
@@ -169,7 +169,7 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertMatchesRegularExpression('#name="orderNumber"[^>]*value="WEB-0077"#', $html);
         self::assertStringNotContainsString('name="accepted[', $html, 'Annehmen erst nach dem Zuordnen');
 
-        // Vertippt — gibt es nicht.
+        // Mistyped — does not exist.
         $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'assign', 'orderNumber' => 'WEB-0077']))($this->dc()));
         self::assertSame([['addError', 'Zu dieser Bestellnummer gibt es in diesem Shop keine Bestellung, die Sie bearbeiten dürfen.']], $this->messages);
 
@@ -185,9 +185,9 @@ final class WithdrawalBackendControllerTest extends TestCase
     }
 
     /**
-     * A4: Zuordnen ist ein Ändern der Bestellung — ohne dieses Recht nicht.
-     * Review WA, K4: mit derselben Meldung wie „gibt es nicht", sonst erführe
-     * man, dass es die Nummer im Shop gibt.
+     * A4: assigning is a change to the order — not without that right.
+     * WA: with the same message as "does not exist", otherwise one would learn
+     * that the number exists in the shop.
      */
     public function testZuordnenNurMitDemRechtAnDerBestellung(): void
     {
@@ -203,8 +203,9 @@ final class WithdrawalBackendControllerTest extends TestCase
     }
 
     /**
-     * Review WA, S2: „Ohne Bestellung abweisen" — mit Begründung, ohne Mail;
-     * danach zeigt die Seite die Entscheidung statt der Aktionen.
+     * WA: "Ohne Bestellung abweisen" (dismiss without order) — with a reason,
+     * without a mail; afterwards the page shows the decision instead of the
+     * actions.
      */
     public function testOhneBestellungAbweisenUndDanachNurDieEntscheidung(): void
     {
@@ -224,10 +225,10 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertStringContainsString('Test &lt;b&gt;Eintrag&lt;/b&gt;', $html);
         self::assertStringNotContainsString('value="assign"', $html);
         self::assertStringNotContainsString('value="dismiss"', $html);
-        self::assertStringNotContainsString('Ordnen Sie ihn der Bestellung zu', $html, 'Abnahme c5: kein Auftrag mehr, der nicht mehr geht');
+        self::assertStringNotContainsString('Ordnen Sie ihn der Bestellung zu', $html, 'kein Auftrag mehr, der nicht mehr geht');
     }
 
-    /** A4: Wer die Widerrufe nicht öffnen darf, sieht auch keinen ohne Bestellung. */
+    /** A4: whoever may not open the withdrawals does not see one without an order either. */
     public function testOhneModulrechtKeinZugangZumNichtZugeordneten(): void
     {
         $this->unassignedWithdrawal('X');
@@ -237,7 +238,7 @@ final class WithdrawalBackendControllerTest extends TestCase
         $this->controller(Request::create('/contao?key=processWithdrawal&id=1'), false)($this->dc());
     }
 
-    /** WA, B3: der späte Eingang als Hinweis auf der Seite. */
+    /** WA, B3: the late receipt as a notice on the page. */
     public function testNachFensterendeEingegangenAlsHinweis(): void
     {
         self::assertStringNotContainsString('Nach dem Ende des Widerrufsfensters', $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc()));
@@ -255,8 +256,8 @@ final class WithdrawalBackendControllerTest extends TestCase
     }
 
     /**
-     * Abnahme D-3: Unentschieden sagt das Rücksendesymbol nicht „nicht
-     * erforderlich"; abgelehnt wird keine Erstattung mehr fällig.
+     * D-3: while undecided, the return symbol does not say "nicht erforderlich"
+     * (not required); once rejected, no refund falls due any more.
      */
     public function testAbgelehntOhneFaelligkeitUnentschiedenOhneNichtErforderlich(): void
     {
@@ -270,14 +271,14 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertStringContainsString('zu spät', $html);
         self::assertStringNotContainsString('Erstattung fällig bis', $html);
         // The due date, not the decision's stamp: the rejection is stamped
-        // with the server clock ("abgelehnt — 05.10.2026, 04:44"), and on
-        // 05.10.2026 a plain search for the date failed.
+        // with the server clock ("abgelehnt — 05.10.2026, 04:44"), and on a run
+        // on 05.10.2026 itself a plain search for the date fails.
         self::assertDoesNotMatchRegularExpression('#05\.10\.2026(?!, \d\d:\d\d)#', $html);
     }
 
     /**
-     * Block G (G9): Ein Häkchen ohne Haken wird nicht gesendet. Entschieden
-     * wird deshalb nur für die Zeilen, für die das Formular eines zeigte.
+     * Block G (G9): an unticked checkbox is not sent. A decision is therefore
+     * made only for the lines for which the form showed one.
      */
     public function testInsLagerNurFuerGezeigteZeilen(): void
     {

@@ -14,9 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 
 /**
- * GARAN Teil 2 (L1, L2, L4): Kopf und Fuß der Kundenmails aus den Feldern,
- * die die Rechnung schon hat — Logo, Firma, Rechtsform, Anschrift, Fußzeile
- * in der Sprache der Mail.
+ * GARAN part 2 (L1, L2, L4): header and footer of the customer mails from
+ * the fields the invoice already has — logo, company, legal form, address,
+ * footer in the language of the mail.
  */
 class MailFramesTest extends TestCase
 {
@@ -57,7 +57,7 @@ class MailFramesTest extends TestCase
     public function testDieFusszeileInDerSpracheDerMail(): void
     {
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'fallbackLanguage' => 'de', 'invoiceFooter' => 'Firmenbuch FN 1a']);
-        // Deutsch ist die Hauptsprache; übersetzt ist nur ins Englische.
+        // German is the main language; the only translation is into English.
         $this->connection->insert('tl_consho_translation', ['ptable' => 'tl_consho_shop', 'pid' => 1, 'language' => 'en', 'invoiceFooter' => 'Company register FN 1a']);
 
         self::assertSame('Company register FN 1a', $this->frames()->of(1, 'en')->footer);
@@ -67,7 +67,7 @@ class MailFramesTest extends TestCase
     public function testDasLogoEingebettetMitEigenerBreiteBisZweihundert(): void
     {
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'fallbackLanguage' => 'de', 'invoiceCompany' => 'Muster', 'invoiceLogo' => self::LOGO]);
-        // Ein echtes PNG von 1 × 1 Pixel.
+        // A real PNG of 1 × 1 pixel.
         $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', true);
         $images = $this->createMock(MailImageFile::class);
         $images->expects(self::once())->method('read')->with(self::LOGO)->willReturn(['name' => 'logo.png', 'contents' => $png, 'contentType' => 'image/png']);

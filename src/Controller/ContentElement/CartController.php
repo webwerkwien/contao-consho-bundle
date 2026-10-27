@@ -43,6 +43,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherCode;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
 use Webwerkwien\ContaoConshoBundle\Tax\NotTaxableArticles;
+use Webwerkwien\ContaoConshoBundle\Voucher\CoverablePots;
 
 /**
  * The basket page (4.2): lines, quantities, remove, on to the checkout.
@@ -103,7 +104,7 @@ class CartController extends AbstractContentElementController
         private readonly CartAgeLimit $ageLimits,
         private readonly ShopPageUrls $pages,
         // Block Wertgutscheine (WG5): required — a brake that can be missing
-        // is missing in silence (Prüfungsnotiz, Regel 25).
+        // is missing in silence.
         private readonly CodeEntry $codes,
         // Abo-2: the conditions on a subscription line. Optional for tests
         // built by hand; the container wires it.
@@ -111,7 +112,7 @@ class CartController extends AbstractContentElementController
         // Abo-7b: the numbers of renewed subscriptions. Optional likewise.
         private readonly SubscriptionRenewal|null $renewals = null,
         /*
-         * The kind of the article (DL1; acceptance DL, find 2): "zzgl.
+         * The kind of the article (DL1): "zzgl.
          * Versandkosten" only where something is shipped. Optional for the
          * tests built by hand — without it the sentence stays as it was.
          */
@@ -127,14 +128,16 @@ class CartController extends AbstractContentElementController
         // Block Wertgutscheine (WG-5, E3): what the typed vouchers hold.
         // Optional like the ones above; the click books under a lock regardless.
         private readonly VoucherWallet|null $vouchers = null,
-        // Acceptance WG-7: no "inkl. USt." over a basket of vouchers only.
+        // WG-7: no "inkl. USt." over a basket of vouchers only.
         private readonly NotTaxableArticles|null $notTaxable = null,
         /*
-         * E4 (Michael, 2026-10-08: "E-Punkte passen"): the basket asks the
+         * E4: the basket asks the
          * checkout's readiness too. Optional like the ones above — without
          * it the link stays, and the checkout refuses on its own.
          */
         private readonly CheckoutReadiness|null $readiness = null,
+        // EZ-1: whether a single-purpose voucher fits anything in the basket.
+        private readonly CoverablePots|null $pots = null,
     ) {
     }
 
@@ -333,16 +336,16 @@ class CartController extends AbstractContentElementController
         ));
 
         /*
-         * Der Weg zum Checkout (4.2). Leer, wenn am Startpunkt keine
-         * Checkout-Seite steht — dann sagt es der Befund CheckoutPageMissing
-         * im Backend, und die Warenkorbseite zeigt einfach keinen Knopf,
-         * statt auf eine Adresse zu zeigen, die es nicht gibt.
+         * The way to the checkout (4.2). Empty when the start point has no
+         * checkout page — then the finding CheckoutPageMissing says so in the
+         * back end, and the cart page simply shows no button instead of
+         * pointing at an address that does not exist.
          */
         $checkoutUrl = $view->isEmpty() ? null : $this->pages->checkoutOfPage($page);
 
         /*
-         * A blocked checkout is not linked (C-12, E4): the acceptance found
-         * the visitor on an empty page behind it. The same sentence as the
+         * A blocked checkout is not linked (C-12, E4): behind the link the
+         * visitor stood on an empty page. The same sentence as the
          * checkout instead, and as there the findings stay the operator's.
          * Asked only where there is a link to withhold.
          */
@@ -544,8 +547,8 @@ class CartController extends AbstractContentElementController
             return;
         }
 
-        // A renewal keeps the old subscription's quantity (Abo-7b; A11 as of
-        // 2026-10-01: no change of licences). The page shows no field for it;
+        // A renewal keeps the old subscription's quantity (Abo-7b; A11: no
+        // change of licences). The page shows no field for it;
         // a hand-made POST changes nothing either. Removing stays possible.
         if ($this->repository->renewsOf($cart->id, $action->itemId) > 0) {
             return;
@@ -592,7 +595,7 @@ class CartController extends AbstractContentElementController
     }
 
     /**
-     * Whether any of these articles is shipped (acceptance DL, find 2): the
+     * Whether any of these articles is shipped (DL): the
      * basket says "zzgl. Versandkosten" only then. Without the reader, or
      * with an empty basket, as it always did.
      *
@@ -633,7 +636,7 @@ class CartController extends AbstractContentElementController
             'value' => VoucherCode::format($voucher->code),
             'status' => $voucher->status->value,
             'balance' => $this->money->format($voucher->balance, $view->currency, $language),
-        ], null === $this->vouchers ? [] : $this->vouchers->apply($codes, $shopId, $view->currency, '0', 2, $now)));
+        ], null === $this->vouchers ? [] : $this->vouchers->apply($codes, $shopId, $view->currency, '0', 2, $now, $this->pots?->of($view->lines, [], $now, false) ?? [])));
     }
 
     /**

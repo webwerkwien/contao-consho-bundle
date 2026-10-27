@@ -23,18 +23,18 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Mit echtem ResponseContext, echter HtmlHeadBag und echtem ProductUrlGenerator.
+ * With a real ResponseContext, real HtmlHeadBag and real ProductUrlGenerator.
  *
- * Seite 123 „Produkt" unter Startpunkt 1, Produkt 1 „Schwedenbitter". Der Kopf
- * ist so vorbelegt, wie CoreResponseContextFactory ihn vor dem Element füllt:
- * Titel und Beschreibung der Seite, Robots `index,follow`.
+ * Page 123 "Produkt" under start point 1, product 1 "Schwedenbitter". The head
+ * is prefilled the way CoreResponseContextFactory fills it before the element:
+ * title and description of the page, robots `index,follow`.
  *
- * Contaos ContentUrlGenerator ist gedoppelt, verhält sich aber wie Symfonys
- * Generator: Werte, die die Route nicht kennt, hängt er als Query an. Käme
- * `variant` in den Canonical, stünde es also sichtbar in der Adresse.
+ * Contao's ContentUrlGenerator is doubled, but behaves like Symfony's
+ * generator: values the route does not know are appended as a query. If
+ * `variant` got into the canonical, it would thus be visible in the address.
  *
- * Jeder Aufruf prüft zusätzlich, dass Robots unverändert bleibt — nie
- * `noindex`, auch nicht auf einer Variantenadresse (Entscheidung 3, Block A 2).
+ * Every call additionally checks that robots stays unchanged — never
+ * `noindex`, not even on a variant address (Block A 2).
  */
 class ProductHeadTest extends TestCase
 {
@@ -55,24 +55,24 @@ class ProductHeadTest extends TestCase
 
     public function testAnInputEncodedTitleIsDecodedTheWayTheCoreDoes(): void
     {
-        // Wie CoreResponseContextFactory: HtmlDecoder::inputEncodedToPlainText().
-        // Das Template kodiert beim Ausgeben selbst — sonst stünde "&amp;amp;"
-        // im Titel. Der Teaser ist ein Textfeld ohne allowHtml, also ebenso.
+        // Like CoreResponseContextFactory: HtmlDecoder::inputEncodedToPlainText().
+        // The template encodes itself on output — otherwise "&amp;amp;" would be
+        // in the title. The teaser is a text field without allowHtml, so likewise.
         //
-        // Hält zugleich die Reihenfolge fest: erst kürzen, dann dekodieren.
-        // StringUtil::substr() entfernt Tags — dekodiert vorher, fiele „<süß>"
-        // als vermeintliches Tag weg.
+        // Also pins the order: shorten first, then decode.
+        // StringUtil::substr() removes tags — if decoded before, "<süß>" would
+        // drop out as a supposed tag.
         $head = $this->apply('Kr&#228;uter &amp; Bitter', 'Bitter &lt;süß&gt;');
 
         self::assertSame('Kräuter & Bitter', $head->getTitle());
         self::assertSame('Bitter <süß>', $head->getMetaDescription());
     }
 
-    // ── Beschreibung: eigene, sonst Kurztext gekürzt, sonst die der Seite ──
+    // ── Description: own, otherwise teaser shortened, otherwise the page's ──
 
     public function testTheProductsOwnMetaDescriptionComesBeforeTheTeaser(): void
     {
-        // Entscheidung Michael, 2026-09-14.
+        // The product's own meta description comes before the teaser.
         $head = $this->apply('Schwedenbitter', 'Nach alter Rezeptur', metaDescription: 'Schwedenbitter nach Originalrezept, 250 ml');
 
         self::assertSame('Schwedenbitter nach Originalrezept, 250 ml', $head->getMetaDescription());
@@ -80,8 +80,8 @@ class ProductHeadTest extends TestCase
 
     public function testTheOwnMetaDescriptionIsDecodedAndTrimmedButNeverShortened(): void
     {
-        // Wer sie selbst schreibt, bestimmt auch die Länge. Gekürzt wird nur der
-        // Kurztext, der nicht für die Suchergebnisse geschrieben wurde.
+        // Whoever writes it themselves also decides the length. Only the teaser
+        // is shortened, which was not written for the search results.
         $long = str_repeat('Kr&#228;uter &amp; Bitter nach alter Rezeptur. ', 8);
 
         $head = $this->apply('Schwedenbitter', 'Nach alter Rezeptur', metaDescription: "\n  ".$long."\n");
@@ -98,9 +98,9 @@ class ProductHeadTest extends TestCase
 
     public function testWithoutAMetaDescriptionALongTeaserIsShortenedAtAWordBoundary(): void
     {
-        // 350 Zeichen. Contao kürzt eine Meta-Beschreibung nicht selbst
-        // (HtmlHeadBag::setMetaDescription() übernimmt den Wert), also ProductHead
-        // — auf rund 160 Zeichen, wortgenau, mit Auslassungszeichen.
+        // 350 characters. Contao does not shorten a meta description itself
+        // (HtmlHeadBag::setMetaDescription() takes the value as is), so ProductHead
+        // does — to about 160 characters, at a word boundary, with an ellipsis.
         $teaser = str_repeat('Kräuterbitter nach alter Rezeptur. ', 10);
 
         $description = $this->apply('Schwedenbitter', $teaser)->getMetaDescription();
@@ -108,7 +108,7 @@ class ProductHeadTest extends TestCase
         self::assertStringEndsWith(' …', $description);
         self::assertLessThanOrEqual(162, mb_strlen($description));
         self::assertGreaterThan(140, mb_strlen($description));
-        // Ein Anfang des Kurztexts, der vor einem Leerzeichen endet — kein halbes Wort.
+        // A beginning of the teaser that ends before a space — no half word.
         self::assertStringStartsWith(mb_substr($description, 0, -2).' ', $teaser);
     }
 
@@ -121,7 +121,7 @@ class ProductHeadTest extends TestCase
 
     public function testWithoutMetaDescriptionAndTeaserThePagesDescriptionStays(): void
     {
-        // Kein Auszug aus der Beschreibung (Entscheidung 7, 2026-09-14 bestätigt).
+        // No excerpt from the description.
         $head = $this->apply('Schwedenbitter', '');
 
         self::assertSame('Schwedenbitter', $head->getTitle());
@@ -130,8 +130,8 @@ class ProductHeadTest extends TestCase
 
     public function testATeaserOfOnlyWhiteSpaceKeepsThePagesDescription(): void
     {
-        // Ein Textarea behält Zeilenumbrüche. Eine leere Meta-Beschreibung wäre
-        // schlechter als die der Seite.
+        // A textarea keeps line breaks. An empty meta description would be
+        // worse than the page's.
         $head = $this->apply('Schwedenbitter', "\n  ");
 
         self::assertSame(self::PAGE_DESCRIPTION, $head->getMetaDescription());
@@ -139,9 +139,9 @@ class ProductHeadTest extends TestCase
 
     public function testTheProductAddressOverridesACanonicalLinkMaintainedOnThePage(): void
     {
-        // Genau deshalb wird der Canonical gesetzt und nicht Contaos Standard
-        // überlassen: Den gepflegten canonicalLink der Produktseite hat die
-        // Factory schon eingetragen, er gälte sonst für jedes Produkt.
+        // This is exactly why the canonical is set and not left to Contao's
+        // default: the factory has already entered the product page's maintained
+        // canonicalLink; it would otherwise apply to every product.
         $head = $this->pageHead();
         $head->setCanonicalUri('https://example.org/gepflegt.html');
 
@@ -153,11 +153,11 @@ class ProductHeadTest extends TestCase
     public function testAVariantAddressIsCanonicalToItsProduct(): void
     {
         /*
-         * Aufruf /produkt/schwedenbitter.html?variant=6. Titel und Canonical
-         * gehören dem Hauptprodukt (Entscheidung 3 und 7, Googles Linie zu
-         * Produktvarianten). Selbst ein an der Seite gepflegtes
-         * canonicalKeepParams mit `variant` darf den Parameter nicht
-         * zurückholen — ein gesetzter Canonical geht in HtmlHeadBag vor.
+         * Request /produkt/schwedenbitter.html?variant=6. Title and canonical
+         * belong to the main product (Google's line on
+         * product variants). Even a canonicalKeepParams with `variant`
+         * maintained on the page must not bring the parameter
+         * back — a canonical that is set takes precedence in HtmlHeadBag.
          */
         $head = $this->pageHead();
         $head->setKeepParamsForCanonical(['variant', 'utm_*']);
@@ -174,9 +174,9 @@ class ProductHeadTest extends TestCase
 
     public function testWithoutAProductPageTheTitleIsSetButNoCanonical(): void
     {
-        // ProductUrlGenerator wirft ProductPageMissing. Auf der Produktseite
-        // selbst kaum denkbar — aber eine Ausnahme aus dem Kopf darf die Seite
-        // nicht mitreißen, und eine leere Adresse ist kein Canonical.
+        // ProductUrlGenerator throws ProductPageMissing. Hardly conceivable on the
+        // product page itself — but an exception from the head must not take the
+        // page down with it, and an empty address is not a canonical.
         $head = $this->apply('Schwedenbitter', 'Nach alter Rezeptur', productPageId: null);
 
         self::assertSame('Schwedenbitter', $head->getTitle());
@@ -186,8 +186,8 @@ class ProductHeadTest extends TestCase
 
     public function testWithoutAResponseContextNothingHappens(): void
     {
-        // Etwa beim Rendern außerhalb einer Seite. Die Datenbank wird dann gar
-        // nicht erst nach der Produktseite gefragt.
+        // For example when rendering outside a page. The database is then not
+        // even asked for the product page.
         $repository = $this->createMock(ProductPageRepositoryInterface::class);
         $repository->expects(self::never())->method('findForRootPage');
 
@@ -198,7 +198,7 @@ class ProductHeadTest extends TestCase
 
     public function testAResponseContextWithoutAHeadIsLeftAlone(): void
     {
-        // createResponseContext() ohne Webseite legt keine HtmlHeadBag an.
+        // createResponseContext() without a web page creates no HtmlHeadBag.
         $context = new ResponseContext();
 
         $this->productHead($this->accessor($context), $this->repository(123))
@@ -224,7 +224,7 @@ class ProductHeadTest extends TestCase
 
         $this->productHead($this->accessor($context, $uri), $this->repository($productPageId))->apply(1, 1, $title, $metaDescription, $teaser);
 
-        self::assertSame($robots, $head->getMetaRobots(), 'ProductHead setzt nie Robots — kein noindex (Entscheidung 3).');
+        self::assertSame($robots, $head->getMetaRobots(), 'ProductHead setzt nie Robots — kein noindex.');
 
         return $head;
     }
@@ -263,13 +263,13 @@ class ProductHeadTest extends TestCase
     }
 
     /**
-     * Der echte ProductUrlGenerator — er ist final. Gedoppelt sind nur seine
-     * Zulieferer, wie in ProductUrlGeneratorTest.
+     * The real ProductUrlGenerator — it is final. Only its suppliers are
+     * doubled, as in ProductUrlGeneratorTest.
      */
     private function productUrls(ProductPageRepositoryInterface $repository): ProductUrlGenerator
     {
-        // Wie Symfonys Generator: {alias} kennt die Route, alles andere hängt
-        // er als Query an.
+        // Like Symfony's generator: the route knows {alias}, everything else it
+        // appends as a query.
         $urls = $this->createMock(ContentUrlGenerator::class);
         $urls->method('generate')->willReturnCallback(
             static function (object $content, array $values): string {
@@ -298,7 +298,7 @@ class ProductHeadTest extends TestCase
         $framework = $this->createMock(ContaoFramework::class);
         $framework->method('getAdapter')->with(PageModel::class)->willReturn($adapter);
 
-        // Dasselbe Schema wie in ProductUrlGeneratorTest — ShopLanguages fragt beide.
+        // The same schema as in ProductUrlGeneratorTest — ShopLanguages asks both.
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $connection->executeStatement(
             "CREATE TABLE tl_page (

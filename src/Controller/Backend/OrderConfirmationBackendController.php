@@ -89,7 +89,7 @@ final class OrderConfirmationBackendController
         }
 
         // Contao prints messages unescaped; the address is what the customer
-        // typed in the checkout (review 2026-09-25).
+        // typed in the checkout.
         $message = $this->framework->getAdapter(Message::class);
         $number = StringUtil::specialchars((string) $row['orderNumber']);
         $rootId = $this->source->rootOf((int) $row['shop'], (string) $row['language']);
@@ -98,7 +98,7 @@ final class OrderConfirmationBackendController
 
         if (null !== ($row['anonymizedAt'] ?? null)) {
             // D-5: no address any more, and a new token would reopen what the
-            // anonymisation closed (Fable review D-5).
+            // anonymisation closed (D-5).
             $message->addError(\sprintf($GLOBALS['TL_LANG']['tl_consho_order']['resendAnonymized'] ?? '%s', $number));
         } elseif (null === $rootId || null === $orderPage) {
             // Without an order page the mail would link nowhere — the same

@@ -82,7 +82,7 @@
                 <tbody>
                     {# data-cellheadline like "Meine Bestellungen": themes that
                        hide th on narrow screens put it before each cell
-                       (acceptance Abo-7). #}
+                       (Abo-7). #}
                     {% for subscription in subscriptions %}
                         <tr>
                             <td data-cellheadline="{{ 'CONSHO.mySubscriptions.number'|trans({}, 'contao_default') }}"><a href="{{ subscription.orderUrl }}">{{ subscription.number }}</a></td>

@@ -59,9 +59,9 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * F-1, F13: Ob eine Zeile körperlich ist, wird beim Kauf eingefroren —
-     * Widerruf und Lieferung hängen daran, der Produkttyp kann sich ändern.
-     * Eine Kostenzeile ist keine Ware.
+     * F-1, F13: whether a line is physical is frozen at purchase — withdrawal
+     * and delivery depend on it, the product type can change. A cost line is
+     * not goods.
      */
     public function testFriertKoerperlichOderDigitalEin(): void
     {
@@ -79,9 +79,9 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * Abo-2, P13: Die Zeile trägt ihr Modell, ihre Bedingungen und ihre
-     * Art (DL1) — eingefroren, wie Name und Preis. Artikel 2 ist eine Dienstleistung,
-     * sein Monatsabo (Regel 5) kostet 1,00 netto.
+     * Abo-2, P13: the line carries its model, its terms and its kind (DL1) —
+     * frozen, like name and price. Article 2 is a service, its monthly
+     * subscription (rule 5) costs 1.00 net.
      */
     public function testFriertModellBedingungenUndWiderrufsartEin(): void
     {
@@ -97,15 +97,15 @@ class OrderFactoryTest extends TestCase
 
         self::assertSame('1.0000', $this->writtenItems[0]['unitPrice'], 'der Preis des Abos, nicht der Einmalkauf');
         self::assertSame([5, 0, 0], array_column($this->writtenItems, 'subscriptionRule'));
-        // Brutto: 1,00 × 2 = 2,00 netto + 20 %.
+        // Gross: 1.00 × 2 = 2.00 net + 20 %.
         self::assertSame(['Bedingungen 5 zu 2.4000', '', ''], array_column($this->writtenItems, 'subscriptionTerms'));
         self::assertSame(['service', 'physical', ''], array_column($this->writtenItems, 'kind'));
     }
 
     public function testDieVerlaengerungStehtNurAnDerAboZeile(): void
     {
-        // Abo-7b (P69): die Zeile nennt das verlängerte Abo; eine
-        // Einmalkauf-Zeile mit derselben Angabe trüge sie nicht weiter.
+        // Abo-7b (P69): the line names the renewed subscription; a
+        // one-off line with the same detail would not carry it on.
         $this->factory()->create(
             $this->draft('AT'),
             [
@@ -144,8 +144,8 @@ class OrderFactoryTest extends TestCase
 
         $factory->create($this->draft('AT'), [OrderLineDraft::product(1, '2')], 1_757_000_000);
 
-        // Die Summen tragen die Stellen der Währung, der Satz nicht: ein
-        // Steuersatz ist kein Geldbetrag und bleibt vierstellig.
+        // The totals carry the currency's decimal places, the rate does not: a
+        // tax rate is not an amount of money and stays at four places.
         self::assertSame('20.00', $this->writtenOrders[0]['netTotal']);
         self::assertSame('4.00', $this->writtenOrders[0]['taxTotal']);
         self::assertSame('24.00', $this->writtenOrders[0]['grandTotal']);
@@ -154,14 +154,14 @@ class OrderFactoryTest extends TestCase
 
     public function testTheTotalsAddUpTheLinesAsAnInvoiceShowsThem(): void
     {
-        // Derselbe Befund wie im Warenkorb (920f74e), an der Stelle, an der er
-        // schwerer wiegt: 8.3367 netto, 20 %, zwei Zeilen à Menge 1.
+        // The same effect as in the basket (920f74e), at the place where it
+        // weighs heavier: 8.3367 net, 20 %, two lines of quantity 1.
         //
-        //   Zeilennetto  8.3367 → angezeigt 8,34, zweimal   = 16,68
-        //   Zeilenbrutto 10.0040 → angezeigt 10,00, zweimal = 20,00
-        //   roh summiert 16.6734 bzw. 20.0080 → 16,67 / 20,01
+        //   line net    8.3367 → shown 8.34, twice   = 16.68
+        //   line gross 10.0040 → shown 10.00, twice  = 20.00
+        //   summed raw 16.6734 and 20.0080 → 16.67 / 20.01
         //
-        // Beide Spalten ergäben also nicht die Zahl unter sich.
+        // So neither column would add up to the number below it.
         $factory = $this->factory('8.3367');
 
         $factory->create(
@@ -170,41 +170,39 @@ class OrderFactoryTest extends TestCase
             1_757_000_000,
         );
 
-        // Die Zeilenfelder bleiben vierstellig: Netto ist der Anker, die
-        // Steuer entsteht weiterhin aus dem ungerundeten Zeilennetto, und
-        // DocumentPayloadBuilder rechnet netto = lineTotal − taxAmount.
+        // The line fields stay at four places: net is the anchor, the tax
+        // still comes from the unrounded line net, and
+        // DocumentPayloadBuilder computes net = lineTotal − taxAmount.
         self::assertSame('1.6673', $this->writtenItems[0]['taxAmount']);
         self::assertSame('10.0040', $this->writtenItems[0]['lineTotal']);
 
         self::assertSame('16.68', $this->writtenOrders[0]['netTotal']);
         self::assertSame('20.00', $this->writtenOrders[0]['grandTotal']);
 
-        // Die Steuer ist seit 2026-09-23 die Differenz, keine eigene Summe —
-        // sonst widerspräche die Bestellung wieder der Seite, von der sie
-        // kommt. 3,32 statt 3,34: der Preis dafür, dass die Brutto-Spalte
-        // aufgeht.
+        // The tax is the difference, not a sum of its own — otherwise the
+        // order would again contradict the page it comes from. 3.32 instead
+        // of 3.34: the price for the gross column adding up.
         self::assertSame('3.32', $this->writtenOrders[0]['taxTotal']);
     }
 
     /**
-     * 🔴 Diese Zusicherung stand bis zum 2026-09-23 auf dem Kopf.
+     * 🔴 This assertion used to stand on its head.
      *
-     * Sie hielt fest, dass die Brutto-Spalte je Zeile NICHT aufgeht — und
-     * genau diese Spalte ist die, die der Checkout summiert. Damit zementierte
-     * sie eine Bestellsumme, die von dem abweicht, was der Kunde über dem
-     * Kaufknopf gelesen und mit § 8 FAGG bestätigt hat. Gemessen: bei 16,7 %
-     * aller Bruttopreise zwischen 1,00 und 99,99 zu 20 %, schon bei 1,05 €.
+     * It recorded that the gross column per line does NOT add up — and that
+     * column is exactly the one the checkout sums. So it cemented an order
+     * total that differs from what the customer read above the buy button and
+     * confirmed under § 8 FAGG. Measured: for 16.7 % of all gross prices
+     * between 1.00 and 99.99 at 20 %, already at €1.05.
      *
-     * Gefunden im Fable-Review zu C-7 (F1). Ein handwerklich einwandfreier
-     * Test, der einen Fehler festschreibt, verteidigt ihn von da an — Punkt 26
-     * der Vault-Notiz „Prüfungen, die nicht prüfen was man glaubt".
+     * A technically flawless test that pins down a bug defends it from then
+     * on.
      */
     public function testDieBestellsummeIstDieAufDieDerKundeGeklicktHat(): void
     {
-        // Zwei Zeilen à 8.3367 netto, 20 %: je Zeile 10.0040, angezeigt 10,00.
-        // Der Kunde addiert 10,00 + 10,00 und erwartet 20,00 — der Warenkorb
-        // zeigt 20,00 (CartPricerTest), und die Bestellung muss dasselbe
-        // sagen. Netto und Steuer getrennt gerundet ergäben 20,02.
+        // Two lines of 8.3367 net, 20 %: 10.0040 per line, shown 10.00.
+        // The customer adds 10.00 + 10.00 and expects 20.00 — the basket
+        // shows 20.00 (CartPricerTest), and the order must say the same.
+        // Net and tax rounded separately would give 20.02.
         $factory = $this->factory('8.3367');
 
         $factory->create(
@@ -228,11 +226,11 @@ class OrderFactoryTest extends TestCase
             'Die Summe der angezeigten Zeilen IST die Bestellsumme. Weicht sie ab, bekommt der Kunde eine Rechnung über einen anderen Betrag als den, dem er zugestimmt hat.',
         );
 
-        // Und der Preis dafür, offen ausgewiesen: netto + steuer ergibt hier
-        // nicht grandTotal. Drei Spalten, zwei Rundungen — eine kann nicht
-        // aufgehen, und das ist ab jetzt diese. Die Differenz ist auf einen
-        // Cent JE STEUERSATZ begrenzt; die Brutto-Variante wuchs mit jeder
-        // Zeile.
+        // And the price for it, shown openly: net + tax does not give
+        // grandTotal here. Three columns, two roundings — one cannot add up,
+        // and from now on it is this one. The difference is limited to one
+        // cent PER TAX RATE; the gross variant grew with every
+        // line.
         self::assertSame('16.68', $this->writtenOrders[0]['netTotal']);
         self::assertSame('3.32', $this->writtenOrders[0]['taxTotal']);
     }
@@ -250,9 +248,9 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * Block R (O1, R2, R4): ohne „Steuer im Bestimmungsland" der Satz des
-     * Shops — auch für den Versand, der der Ware folgt —, und jede Zeile hält
-     * fest, wohin geliefert wurde.
+     * Block R (O1, R2, R4): without "tax in the country of destination" the
+     * shop's rate — also for the shipping that follows the goods —, and every
+     * line records where it was delivered.
      */
     public function testOhneSchalterDerSatzDesShopsUndDasBestimmungsland(): void
     {
@@ -267,8 +265,8 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * Block GARAN (GA6): Dauer und Label stehen an der Position, wie sie vor
-     * dem Knopf standen; ohne Garantie 0 und NULL.
+     * Block GARAN (GA6): duration and label stand on the item as they stood
+     * before the button; without a guarantee 0 and NULL.
      */
     public function testDieGarantieStehtAnDerPosition(): void
     {
@@ -279,9 +277,9 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * WG3: Der Gutschein mit Klasse „nicht steuerbar" ist keine Zeile zu 0 %
-     * eines Landes, sondern nicht steuerbar — ohne Land. Neben einer Ware
-     * zum normalen Satz.
+     * WG3: the gift card with class "not taxable" is not a line at 0 % of a
+     * country, but not taxable — without a country. Next to goods at the
+     * standard rate.
      */
     public function testDerGutscheinIstNichtSteuerbarUndOhneLand(): void
     {
@@ -293,14 +291,13 @@ class OrderFactoryTest extends TestCase
         ]);
         self::assertSame(['19.0000', 'DE', 'list'], [$this->writtenItems[1]['taxRate'], $this->writtenItems[1]['taxCountry'], $this->writtenItems[1]['priceSource']]);
 
-        // WG-4: der Wert des Gutscheins eingefroren wie sein Preis; an der Ware 0.
+        // WG-4: the gift card's value frozen like its price; 0 on the goods.
         self::assertSame(['50.0000', '0.0000'], array_column($this->writtenItems, 'voucherValue'));
     }
 
     /**
-     * Auch unter Reverse Charge: Der Verkauf eines Mehrzweck-Gutscheins ist
-     * keine Leistung, deren Steuer übergehen könnte — „nicht steuerbar"
-     * geht vor.
+     * Under reverse charge too: the sale of a multi-purpose voucher is not a
+     * supply whose tax could pass over — "not taxable" takes precedence.
      */
     public function testNichtSteuerbarGehtReverseChargeVor(): void
     {
@@ -310,14 +307,50 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * Ein Gutschein mit steuerbarer Klasse wird verkauft, wie eingerichtet —
-     * besteuert; den Fehler meldet der Befund, nicht die Bestellung.
+     * A gift card with a taxable class is sold as set up — taxed; the issue
+     * reports the mistake, not the order.
      */
     public function testEinGutscheinMitSteuerbarerKlasseBleibtBesteuert(): void
     {
         $this->factory()->create($this->draft('DE', taxAtDestination: true), [OrderLineDraft::product(5, '1')], 1_757_000_000);
 
         self::assertSame(['19.0000', 'DE', 'list'], [$this->writtenItems[0]['taxRate'], $this->writtenItems[0]['taxCountry'], $this->writtenItems[0]['priceSource']]);
+    }
+
+    /**
+     * EZ-1, EZ-5, F5: a single-purpose voucher is sold taxed at the shop's
+     * rate, whatever the switch "Steuer im Bestimmungsland" says, and frozen
+     * as single-purpose. The multi-purpose one beside it is not.
+     */
+    public function testEinEinzweckGutscheinTraegtDenSatzDesHeimatlands(): void
+    {
+        $this->factory()->create($this->draft('DE', taxAtDestination: true), [OrderLineDraft::product(6, '1'), OrderLineDraft::product(4, '1')], 1_757_000_000);
+
+        self::assertSame(['20.0000', 'AT', 'DE', 'list', '60.0000', 1], [
+            $this->writtenItems[0]['taxRate'], $this->writtenItems[0]['taxCountry'], $this->writtenItems[0]['destinationCountry'],
+            $this->writtenItems[0]['priceSource'], $this->writtenItems[0]['lineTotal'], $this->writtenItems[0]['voucherSinglePurpose'],
+        ]);
+        self::assertSame(0, $this->writtenItems[1]['voucherSinglePurpose']);
+    }
+
+    /**
+     * A sale that taxed nothing makes no single-purpose voucher: the class
+     * "not taxable" (the finding says so) and reverse charge.
+     */
+    public function testOhneSteuerBeimVerkaufKeinEinzweckGutschein(): void
+    {
+        $this->factory()->create($this->draft('AT'), [OrderLineDraft::product(7, '1')], 1_757_000_000);
+        self::assertSame(['notTaxable', 0], [$this->writtenItems[0]['priceSource'], $this->writtenItems[0]['voucherSinglePurpose']]);
+    }
+
+    /**
+     * Under reverse charge the sale of a single-purpose voucher is a supply
+     * whose tax passes over — not "nicht steuerbar" as for a multi-purpose one.
+     */
+    public function testUnterReverseChargeKeinEinzweckGutschein(): void
+    {
+        $this->factory()->create($this->draft('DE', $this->vatCheck(VatIdStatus::Valid)), [OrderLineDraft::product(6, '1')], 1_757_000_000);
+        self::assertSame(['reverseCharge', 0], [$this->writtenItems[0]['priceSource'], $this->writtenItems[0]['voucherSinglePurpose']]);
     }
 
     public function testAppliesReverseChargeForAVerifiedIdAcrossTheBorder(): void
@@ -337,9 +370,8 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * C-12 (Michael, 2026-09-26: „1a nur mit eigener UID"): Ohne UID des
-     * Shops keine steuerfreie Lieferung — Art. 11 Abs. 2 UStG 1994 Anhang
-     * (Binnenmarkt) verlangt sie auf der Rechnung.
+     * C-12: without the shop's VAT ID no tax-exempt supply — Art. 11 Abs. 2
+     * UStG 1994 annex (internal market) requires it on the invoice.
      */
     public function testOhneEigeneUidDesShopsKeinReverseCharge(): void
     {
@@ -429,27 +461,26 @@ class OrderFactoryTest extends TestCase
 
     public function testEineVarianteOhnePreiszeileErbtDenPreisIhresHauptprodukts(): void
     {
-        // Der Fall, an dem der Kaufklick bis C-7 gescheitert wäre: Artikel 2
-        // hat keine eigene Preiszeile und erbt sie vom Hauptprodukt — in
-        // Liste und Detailseite seit jeher, beim Bestellen erst jetzt. Auf c5
-        // ist das „Schwedenbitter 250 ml".
+        // The case the purchase click would have failed on until C-7: article 2
+        // has no price row of its own and inherits it from the main product —
+        // in list and detail page all along, when ordering only now.
         $factory = $this->factory();
 
         $factory->create($this->draft('AT'), [OrderLineDraft::product(2, '1')], 1_757_000_000);
 
         self::assertSame('10.0000', $this->writtenItems[0]['unitPrice']);
 
-        // Die Artikelnummer bleibt die der VARIANTE — sie wird nie vererbt,
-        // und sie ist das Einzige, was zwei Varianten eines Produkts im
-        // Warenkorb wie auf der Rechnung unterscheidet.
+        // The SKU stays that of the VARIANT — it is never inherited,
+        // and it is the only thing that tells two variants of a product apart
+        // in the basket as on the invoice.
         self::assertSame('SB-250-KL', $this->writtenItems[0]['sku']);
     }
 
     public function testDieGewinnendeKundengruppeStehtAnDerZeileNichtAmKopf(): void
     {
-        // Zwei Gruppen, zwei Preise: die günstigere gewinnt, und die Zeile
-        // sagt, welche es war. Ein Feld am Kopf könnte das nicht — dieselbe
-        // Bestellung kann eine zweite Zeile aus der anderen Gruppe haben.
+        // Two groups, two prices: the cheaper one wins, and the line
+        // says which one it was. A field on the header could not do that — the same
+        // order can have a second line from the other group.
         $factory = $this->factory('10.0000', [
             new PriceRow('9.0000', 'EUR', 7, '1.0000'),
             new PriceRow('8.0000', 'EUR', 9, '1.0000'),
@@ -468,10 +499,10 @@ class OrderFactoryTest extends TestCase
 
     public function testEineSummeDieNichtZumCheckoutPasstSchreibtKeineBestellung(): void
     {
-        // Der Gürtel zur Prüfsumme: Die Prüfsumme belegt, dass sich die
-        // EINGABE nicht geändert hat, dieser Vergleich, dass zwei Rechenwege
-        // über dieselbe Eingabe dasselbe ergeben. Zwei verschiedene Fragen —
-        // und die zweite war bis zum Review vom 2026-09-23 unbeantwortet.
+        // The belt next to the checksum's braces: the checksum proves that the
+        // INPUT has not changed, this comparison that two ways of computing
+        // over the same input give the same result. Two different questions —
+        // and the second one used to go unanswered.
         $factory = $this->factory();
 
         $this->expectException(TotalDisagreesWithCheckout::class);
@@ -483,8 +514,8 @@ class OrderFactoryTest extends TestCase
                 1_757_000_000,
             );
         } finally {
-            // Und zwar VOR dem Nummernkreis: eine Bestellnummer, die an einer
-            // Abweichung verbrennt, ist nicht wiederzubekommen.
+            // And BEFORE the number range: an order number burnt on a
+            // deviation cannot be got back.
             self::assertSame([], $this->writtenOrders);
             self::assertSame([], $this->writtenItems);
         }
@@ -492,9 +523,9 @@ class OrderFactoryTest extends TestCase
 
     public function testDieErwarteteSummeDarfFehlen(): void
     {
-        // Leer heißt „kein Vergleich" — für Aufrufer, die keine Kasse hinter
-        // sich haben (Backend, Migration, Test). Der Kaufklick füllt sie
-        // immer, und PurchaseHandlerTest sichert genau das zu.
+        // Empty means "no comparison" — for callers without a checkout
+        // behind them (backend, migration, test). The purchase click always
+        // fills it, and PurchaseHandlerTest asserts exactly that.
         $factory = $this->factory();
 
         $factory->create($this->draft('AT'), [OrderLineDraft::product(1, '1')], 1_757_000_000);
@@ -508,8 +539,8 @@ class OrderFactoryTest extends TestCase
 
         $factory->create($this->draft('AT'), [OrderLineDraft::product(1, '1')], 1_757_000_000);
 
-        // 0, nicht null: die Spalte ist unsigned und „keine Gruppe" ist kein
-        // fehlender Wert, sondern die Aussage „gilt für alle".
+        // 0, not null: the column is unsigned and "no group" is not a
+        // missing value, but the statement "applies to all".
         self::assertSame(0, $this->writtenItems[0]['customerGroup']);
     }
 
@@ -532,20 +563,20 @@ class OrderFactoryTest extends TestCase
         self::assertSame('Paket', $shipping['productName']);
         self::assertSame('5.0000', $shipping['unitPrice']);
 
-        // Steuerklasse 2 steht in diesem Test auf 10 % — der Beleg dafür, dass
-        // die Versandzeile ihre EIGENE Klasse benutzt und nicht die der Ware.
+        // Tax class 2 is at 10 % in this test — the proof that the
+        // shipping line uses its OWN class and not that of the goods.
         self::assertSame('10.0000', $shipping['taxRate']);
 
-        // Kein Produkt, aber eine Herkunft: die Versandart, die sie erzeugt hat.
+        // No product, but an origin: the shipping method that produced it.
         self::assertSame(0, $shipping['product']);
         self::assertSame(4, $shipping['source']);
     }
 
     public function testJedeZeileTraegtIhreSteuerklasse(): void
     {
-        // C-10: Wer die Zahlungsart wechselt, verteilt einen neuen Betrag wie
-        // beim Kauf über die Klassen der Ware. Der Satz allein reicht dafür
-        // nicht — zwei Klassen können heute denselben Satz haben.
+        // C-10: whoever switches the payment method distributes a new amount
+        // over the goods' classes as at purchase. The rate alone is not enough
+        // for that — two classes can have the same rate today.
         $factory = $this->factory();
 
         $factory->create(
@@ -576,23 +607,23 @@ class OrderFactoryTest extends TestCase
             1_757_000_000,
         );
 
-        // 10.00 − 0.10 netto, beide zu 20 %.
+        // 10.00 − 0.10 net, both at 20 %.
         self::assertSame('9.90', $this->writtenOrders[0]['netTotal']);
         self::assertSame('1.98', $this->writtenOrders[0]['taxTotal']);
         self::assertSame('11.88', $this->writtenOrders[0]['grandTotal']);
 
-        // Das Vorzeichen kommt aus dem Checkout und wird hier NICHT noch
-        // einmal gedreht — sonst wäre aus dem Nachlass ein Aufschlag geworden
-        // und die Summe hätte trotzdem gestimmt.
+        // The sign comes from the checkout and is NOT flipped once more
+        // here — otherwise the discount would have become a surcharge
+        // and the total would still have been right.
         self::assertSame('-0.1000', $this->writtenItems[1]['unitPrice']);
         self::assertSame('-0.0200', $this->writtenItems[1]['taxAmount']);
     }
 
     public function testEineZahlungsgebuehrWirdMitIhrerSteuerklasseGespeichert(): void
     {
-        // E-1, Z3: Die Steuer der Gebühr hat der Betreiber an der Zahlungsart
-        // gewählt, der Checkout hat sie in Anteile mit Klasse zerlegt. Bis E-1
-        // wurde jede Gebühr abgelehnt (Entscheidung 2026-09-23).
+        // E-1, Z3: the operator chose the fee's tax on the payment method,
+        // the checkout split it into shares with a class. Until E-1
+        // every fee was refused.
         $factory = $this->factory();
 
         $factory->create(
@@ -610,8 +641,8 @@ class OrderFactoryTest extends TestCase
         self::assertSame('Nachnahme', $fee['productName']);
         self::assertSame('3.0000', $fee['unitPrice']);
 
-        // Klasse 2 steht hier auf 10 %, die Ware auf 20 %: Die Gebühr trägt
-        // die Klasse ihres Anteils, nicht die der Ware.
+        // Class 2 is at 10 % here, the goods at 20 %: the fee carries
+        // the class of its share, not that of the goods.
         self::assertSame('10.0000', $fee['taxRate']);
     }
 
@@ -649,9 +680,9 @@ class OrderFactoryTest extends TestCase
         self::assertSame('Vorkasse', $order['paymentMethodTitle']);
         self::assertSame('<p>Binnen 7 Tagen.</p>', $order['paymentInstructions']);
 
-        // Die Grenze steht neben dem Datum, weil sie sich ändern kann: 16
-        // heute belegt nicht, dass die Bestellung rechtmäßig war, wenn damals
-        // 18 galt.
+        // The limit stands next to the date because it can change: 16
+        // today does not prove that the order was lawful if 18 applied
+        // back then.
         self::assertSame(18, $order['minimumAge']);
         self::assertSame('1979-04-12', $order['dateOfBirth']);
         self::assertSame(1_757_000_000, $order['termsAcceptedAt']);
@@ -674,7 +705,7 @@ class OrderFactoryTest extends TestCase
      * The whole point of the C-7 change is that an order prices an article
      * through the same inheritance the storefront uses, and a mock would let
      * that regress without a word. Article 2 below deliberately has no price
-     * row of its own — it is the "Schwedenbitter 250 ml" case from c5.
+     * row of its own — a variant that inherits its price from the main product.
      *
      * @param list<PriceRow> $extraRows rows for article 3, the customer-group case
      */
@@ -688,7 +719,7 @@ class OrderFactoryTest extends TestCase
         $prices = $this->createMock(PriceRepositoryInterface::class);
         $prices->method('findCandidates')->willReturnCallback(
             static fn (int $productId, string $currency, array $groups, int $timestamp = 0, int $rule = 0): array => match (true) {
-                // Abo-2: das Monatsabo (Regel 5) des Hauptprodukts 1.
+                // Abo-2: the monthly subscription (rule 5) of main product 1.
                 5 === $rule => 1 === $productId ? [new PriceRow('1.0000', 'EUR', null, '1.0000')] : [],
                 0 !== $rule => [],
                 default => match ($productId) {
@@ -698,8 +729,8 @@ class OrderFactoryTest extends TestCase
                 // article 1, its main product.
                 2 => [],
                 3 => $extraRows,
-                // WG3: Wertgutscheine zu 50,00.
-                4, 5 => [new PriceRow('50.0000', 'EUR', null, '1.0000')],
+                // WG3: gift cards at 50.00.
+                4, 5, 6, 7 => [new PriceRow('50.0000', 'EUR', null, '1.0000')],
                 default => [],
                 },
             },
@@ -707,7 +738,7 @@ class OrderFactoryTest extends TestCase
 
         $rates = $this->createMock(TaxRateRepositoryInterface::class);
         $rates->method('findRate')->willReturnCallback(
-            // Klasse 9 ist „nicht steuerbar" — das Repository antwortet überall 0 (WG3).
+            // Class 9 is "not taxable" — the repository answers 0 everywhere (WG3).
             static fn (int $classId, string $country): string|null => 9 === $classId ? '0.0000' : match ($country) {
                 'AT' => 2 === $classId ? '10.0000' : '20.0000',
                 'DE' => '19.0000',
@@ -718,13 +749,16 @@ class OrderFactoryTest extends TestCase
         $products = $this->createMock(OrderProductRepositoryInterface::class);
         $products->method('snapshot')->willReturnCallback(
             static fn (int $id): array|null => match ($id) {
-                // Block GARAN: mit Haltbarkeitsgarantie des Herstellers.
+                // Block GARAN: with the manufacturer's durability guarantee.
                 1 => ['name' => 'Schwedenbitter', 'sku' => 'SB-250', 'taxClass' => 1, 'mainProduct' => 1, 'kind' => 'physical', 'durabilityYears' => '5', 'durabilityLabel' => str_repeat("\x07", 16)],
                 2 => ['name' => 'Schwedenbitter', 'sku' => 'SB-250-KL', 'taxClass' => 1, 'mainProduct' => 1, 'kind' => 'service'],
                 3 => ['name' => 'Kräutersalz', 'sku' => 'KS-200', 'taxClass' => 1, 'mainProduct' => 3, 'kind' => 'physical'],
                 4 => ['name' => 'Gutschein 50 €', 'sku' => 'GS-50', 'taxClass' => 9, 'mainProduct' => 4, 'kind' => 'voucher', 'voucherValue' => '50.0000'],
-                // Falsch eingerichtet: ein Gutschein mit steuerbarer Klasse.
+                // Set up wrongly: a gift card with a taxable class.
                 5 => ['name' => 'Gutschein 50 € (falsch)', 'sku' => 'GS-50X', 'taxClass' => 1, 'mainProduct' => 5, 'kind' => 'voucher'],
+                // EZ-1: a single-purpose voucher; 7 set up wrongly in the class "not taxable".
+                6 => ['name' => 'Wandergutschein', 'sku' => 'WG-50', 'taxClass' => 1, 'mainProduct' => 6, 'kind' => 'voucher', 'singlePurpose' => true, 'voucherValue' => '50.0000'],
+                7 => ['name' => 'Wandergutschein (falsch)', 'sku' => 'WG-50X', 'taxClass' => 9, 'mainProduct' => 7, 'kind' => 'voucher', 'singlePurpose' => true],
                 default => null,
             },
         );
@@ -749,8 +783,8 @@ class OrderFactoryTest extends TestCase
         $taxes = new TaxResolver($rates, new CountryProvider($countries));
 
         $taxClasses = $this->createMock(ArticleTaxClassesInterface::class);
-        // Der Gutschein (4) in der Klasse „nicht steuerbar" (WG3).
-        $taxClasses->method('taxClassOf')->willReturnCallback(static fn (int $articleId): int => 4 === $articleId ? 9 : 1);
+        // The gift card (4) in the class "not taxable" (WG3).
+        $taxClasses->method('taxClassOf')->willReturnCallback(static fn (int $articleId): int => \in_array($articleId, [4, 7], true) ? 9 : 1);
 
         $resolver = new ArticlePriceResolver(
             new PriceCalculator($prices),
@@ -760,8 +794,8 @@ class OrderFactoryTest extends TestCase
             $taxClasses,
         );
 
-        // Der Satz selbst ist in SubscriptionTermsTest geprüft; hier zählt,
-        // welche Regel, welcher Betrag und ob netto hineingehen.
+        // The sentence itself is checked in SubscriptionTermsTest; what counts
+        // here is which rule, which amount and whether net goes in.
         $lineTerms = $this->createMock(SubscriptionLineTerms::class);
         $lineTerms->method('of')->willReturnCallback(
             static fn (int $rule, string $amount): string|null => $rule > 0 ? 'Bedingungen '.$rule.' zu '.$amount : null,
@@ -778,10 +812,10 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
-     * Abo-4, P25 (A9): Die Folgezeile eines Abos trägt, was beim Kauf
-     * eingefroren wurde. Artikel 99 gibt es weder im Katalog noch in der
-     * Preistabelle — über product() würde die Zeile scheitern. Nur der
-     * Steuersatz wird neu bestimmt.
+     * Abo-4, P25 (A9): the follow-up line of a subscription carries what was
+     * frozen at purchase. Article 99 exists neither in the catalogue nor in
+     * the price table — through product() the line would fail. Only the tax
+     * rate is determined anew.
      */
     public function testEineEingefroreneZeileFragtDenKatalogNicht(): void
     {
@@ -791,15 +825,15 @@ class OrderFactoryTest extends TestCase
 
         self::assertSame([99, 'E-Book', 'EB-001', '2.0000', '1.0000', 1], [$item['product'], $item['productName'], $item['sku'], $item['quantity'], $item['unitPrice'], $item['taxClass']]);
         self::assertSame(['20.0000', '0.4000', '2.4000'], [$item['taxRate'], $item['taxAmount'], $item['lineTotal']]);
-        // Eingefroren, nicht neu gebaut: SubscriptionLineTerms sagte „Bedingungen 1 zu …",
-        // der Katalog kennt Artikel 99 nicht.
+        // Frozen, not rebuilt: SubscriptionLineTerms would say "Bedingungen 1 zu …",
+        // the catalogue does not know article 99.
         self::assertSame([1, 'Bedingungen beim Kauf', 'digital'], [$item['subscriptionRule'], $item['subscriptionTerms'], $item['kind']]);
         self::assertSame([OrderLineType::Product->value, PriceSource::List->value], [$item['lineType'], $item['priceSource']]);
     }
 
     /**
-     * DL4, Spec 6.5: Folgebestellung eines Dienstleistungs-Abos nach dem
-     * Umzug — Lieferland DE, die Zeile bleibt im Land des Shops (AT, 20 %).
+     * DL4, Spec 6.5: follow-up order of a service subscription after a move —
+     * delivery country DE, the line stays in the shop's country (AT, 20 %).
      */
     public function testDieFolgezeileEinerDienstleistungBleibtImLandDesShops(): void
     {
@@ -812,16 +846,16 @@ class OrderFactoryTest extends TestCase
 
     public function testDerSteuersatzDerFolgezeileFolgtDemGeltendenRecht(): void
     {
-        // Klasse 2 hat in AT 10 %: der Satz kommt aus der Klasse zum Zeitpunkt
-        // der Folgebestellung, nicht aus der ersten Bestellung.
+        // Class 2 has 10 % in AT: the rate comes from the class at the time
+        // of the follow-up order, not from the first order.
         $this->factory()->create($this->draft('AT'), [$this->frozenLine(taxClass: 2)], 1_757_000_000);
 
         self::assertSame(['10.0000', '0.2000', '2.2000'], [$this->writtenItems[0]['taxRate'], $this->writtenItems[0]['taxAmount'], $this->writtenItems[0]['lineTotal']]);
     }
 
     /**
-     * P26: Reverse Charge nach dem eingefrorenen Kennzeichen, ohne neue
-     * UID-Prüfung. Gegenprobe: ohne Kennzeichen und ohne Prüfung → 19 % DE.
+     * P26: reverse charge by the frozen flag, without a new VAT ID check.
+     * Control case: without the flag and without a check → 19 % DE.
      */
     public function testReverseChargeFolgtDemEingefrorenenKennzeichen(): void
     {
@@ -839,7 +873,7 @@ class OrderFactoryTest extends TestCase
 
         self::assertSame(7, $this->writtenOrders[0]['subscription']);
         self::assertSame([1_793_288_184, 1_795_966_584], [$this->writtenOrders[0]['servicePeriodFrom'], $this->writtenOrders[0]['servicePeriodUntil']]);
-        // Ein Kauf ist keine Folgebestellung.
+        // A purchase is not a follow-up order.
         self::assertSame(0, $this->writtenOrders[1]['subscription']);
         self::assertSame([null, null], [$this->writtenOrders[1]['servicePeriodFrom'], $this->writtenOrders[1]['servicePeriodUntil']]);
     }
@@ -868,7 +902,7 @@ class OrderFactoryTest extends TestCase
         return new OrderDraft(
             shopId: 1,
             currency: 'EUR',
-            billing: new Address(firstname: 'Michael', lastname: 'Morgenbesser', street: 'Hauptstraße 5', postal: '1100', city: 'Wien', country: 'AT', email: 'kunde@example.org'),
+            billing: new Address(firstname: 'Eva', lastname: 'Example', street: 'Hauptstraße 5', postal: '1100', city: 'Wien', country: 'AT', email: 'kunde@example.org'),
             shipping: new Address(street: 'Lagerweg 9', postal: '1110', city: 'Wien', country: $deliveryCountry),
             shopCountry: 'AT',
             shopVatId: 'ATU12345678',
@@ -882,8 +916,8 @@ class OrderFactoryTest extends TestCase
 
     public function testWithoutAHomeCountryNoSaleCountsAsCrossBorder(): void
     {
-        // Die sichere Richtung: Ohne Heimatland ist keine Grenze bestimmbar —
-        // also wird versteuert, nie still steuerfrei geliefert.
+        // The safe direction: without a home country no border can be
+        // determined — so tax is charged, never delivered silently tax-free.
         $factory = $this->factory();
 
         $factory->create(
@@ -904,8 +938,8 @@ class OrderFactoryTest extends TestCase
             shopId: 1,
             currency: 'EUR',
             billing: new Address(
-                firstname: 'Michael',
-                lastname: 'Morgenbesser',
+                firstname: 'Eva',
+                lastname: 'Example',
                 street: 'Hauptstraße 5',
                 postal: '1100',
                 city: 'Wien',

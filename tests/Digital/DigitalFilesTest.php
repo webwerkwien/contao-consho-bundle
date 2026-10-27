@@ -20,8 +20,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\DigitalDeliveryLi
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * F-5, F18: Die Datei eines digitalen Artikels — nur aus einem geschützten
- * Ordner, gestreamt, nur mit gültiger Berechtigung der eigenen Bestellung.
+ * F-5, F18: The file of a digital article — only from a protected folder,
+ * streamed, only with a valid entitlement of one's own order.
  */
 class DigitalFilesTest extends TestCase
 {
@@ -56,8 +56,8 @@ class DigitalFilesTest extends TestCase
         $c->insert('tl_files', ['uuid' => self::PUBLIC, 'path' => 'files/public/flyer.pdf']);
         $c->insert('tl_files', ['uuid' => self::GONE, 'path' => 'files/shop/weg.pdf']);
 
-        // 1: E-Book mit Datei; 2: Variante ohne eigene → erbt; 3: öffentliche
-        // Datei; 4: Datei fehlt auf der Platte; 5: keine gewählt.
+        // 1: e-book with file; 2: variant without one of its own → inherits;
+        // 3: public file; 4: file missing on the disk; 5: none selected.
         // Published explicitly: the DCA default is 0 (the hand-written table
         // had DEFAULT 1), and the issue source only counts published articles.
         $c->insert('tl_consho_product', ['id' => 1, 'title' => 'E-Book', 'published' => 1, 'digitalDelivery' => 'file', 'digitalFile' => self::PROTECTED]);
@@ -103,7 +103,7 @@ class DigitalFilesTest extends TestCase
         self::assertSame(str_replace('\\', '/', $this->dir.'/files/shop/ebook.pdf'), str_replace('\\', '/', $response->getFile()->getPathname()));
         self::assertStringContainsString('attachment; filename=ebook.pdf', (string) $response->headers->get('Content-Disposition'));
         self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
-        self::assertStringContainsString('private', (string) $response->headers->get('Cache-Control'), 'Abnahme: nicht public');
+        self::assertStringContainsString('private', (string) $response->headers->get('Cache-Control'), 'nicht public');
         self::assertStringNotContainsString('public', (string) $response->headers->get('Cache-Control'));
         self::assertSame([[1, $now]], array_map(static fn (array $r): array => [(int) $r['pid'], (int) $r['downloadedAt']], $this->connection->fetchAllAssociative('SELECT pid, downloadedAt FROM tl_consho_download')), 'protokolliert, ohne IP');
 
@@ -120,8 +120,8 @@ class DigitalFilesTest extends TestCase
     }
 
     /**
-     * Abo-5 (P33): Eine ruhende Berechtigung gibt nichts heraus — und lebt
-     * sie wieder auf, geht es ohne weiteres Zutun.
+     * Abo-5 (P33): A suspended entitlement hands out nothing — and when it
+     * revives, it works without anything further being done.
      */
     public function testEineRuhendeBerechtigungGibtNichtsHeraus(): void
     {
@@ -132,7 +132,7 @@ class DigitalFilesTest extends TestCase
 
         self::assertNull($downloads->download(5, 1, 2_000));
         self::assertFalse($downloads->view(5, 2_000)[0]['active']);
-        // Abnahme Abo-5: „ruht", nicht „nicht mehr gültig".
+        // Abo-5: "suspended", not "no longer valid".
         self::assertTrue($downloads->view(5, 2_000)[0]['resting']);
 
         $this->connection->update('tl_consho_entitlement', ['suspendedAt' => null], ['id' => 1]);
@@ -143,8 +143,8 @@ class DigitalFilesTest extends TestCase
     }
 
     /**
-     * DL3: Die Bestellseite erkennt eine Dienstleistung — ohne Datei, mit Abo
-     * oder ohne, und mit dem Tag, an dem sie als erbracht gemeldet wurde.
+     * DL3: The order page recognises a service — without a file, with a
+     * subscription or without, and with the day it was reported as performed.
      */
     public function testDieBestellseiteKenntDieDienstleistung(): void
     {
@@ -162,9 +162,9 @@ class DigitalFilesTest extends TestCase
     }
 
     /**
-     * Review S3: Nach einer Stornierung oder einem angenommenen Widerruf der
-     * ganzen Zeile gibt die Bestellseite nichts mehr heraus — ein noch nicht
-     * entschiedener Widerruf ändert nichts.
+     * After a cancellation or an accepted withdrawal of the whole line the
+     * order page hands out nothing any more — a withdrawal not yet decided
+     * changes nothing.
      */
     public function testNachStornoOderAngenommenemWiderrufKeinDownload(): void
     {

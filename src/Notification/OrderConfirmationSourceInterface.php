@@ -48,7 +48,8 @@ interface OrderConfirmationSourceInterface
     /**
      * The start point an order belongs to, for a resend from the back end —
      * the purchase knew it, the order does not store it. The shop's start
-     * point in the order's language, otherwise any of the shop's.
+     * point in the order's language, otherwise its fallback root, otherwise
+     * any of the shop's; published ones first.
      */
     public function rootOf(int $shopId, string $language): int|null;
 

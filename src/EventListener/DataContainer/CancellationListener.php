@@ -76,7 +76,7 @@ class CancellationListener
         if ($pending) {
             $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields']['state']['options'] = ['received', 'accepted', 'rejected'];
 
-            // The operator decides a day, not a minute (acceptance Abo-7:
+            // The operator decides a day, not a minute (Abo-7:
             // "31.10.2026" was refused for lacking hh:mm) — 00:00 of that day,
             // like the customer's requested date. Shown as date and time
             // again once decided.
@@ -143,7 +143,7 @@ class CancellationListener
 
     /**
      * A posted field of this record, trimmed. "Mehrere bearbeiten" names it
-     * `<field>_<id>` (review Abo-7, L2).
+     * `<field>_<id>` (Abo-7).
      */
     private function posted(string $field, int $id): string
     {

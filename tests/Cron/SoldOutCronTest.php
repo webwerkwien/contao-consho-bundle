@@ -11,7 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block Verfügbarkeit, V1: das stündliche Netz.
+ * Block availability, V1: the hourly safety net.
  */
 class SoldOutCronTest extends TestCase
 {
@@ -23,9 +23,9 @@ class SoldOutCronTest extends TestCase
     }
 
     /**
-     * Gemessen auf c5 beim Deploy (2026-10-09 11:21): Zwischen Entpacken und
-     * contao:migrate lief der Cron, die Tabelle fehlte, und der Fehler nahm
-     * den ganzen Cron-Lauf der Minute mit.
+     * During an upgrade the cron can run between unpacking and
+     * contao:migrate: the table is missing, and the error took the whole
+     * cron run of that minute down with it.
      */
     public function testOhneTabelleTutErNichts(): void
     {

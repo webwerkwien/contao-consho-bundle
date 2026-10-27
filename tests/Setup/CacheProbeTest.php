@@ -9,9 +9,9 @@ use Webwerkwien\ContaoConshoBundle\Setup\CacheProbe;
 
 class CacheProbeTest extends TestCase
 {
-    public function testDieWerteVonC5(): void
+    public function testDieWerteEinerEchtenInstallation(): void
     {
-        // Gemessen bei der Spec (2026-10-08).
+        // Header values as measured on a real installation.
         self::assertSame(
             ['result' => CacheProbe::CACHED, 'detail' => 'Age 6368 s'],
             CacheProbe::classify(['cache-control' => ['public, s-maxage=86400'], 'age' => ['6368']]),
@@ -38,8 +38,8 @@ class CacheProbeTest extends TestCase
 
     public function testEineWeiterleitungIstKeineMessung(): void
     {
-        // Review I, L8: nach erschöpften Weiterleitungen beschreiben die Header
-        // die Weiterleitung, nicht die Seite.
+        // I: after exhausted redirects the headers describe the redirect, not
+        // the page.
         $client = new MockHttpClient([new MockResponse('', ['http_code' => 301, 'response_headers' => ['Cache-Control: public, max-age=3600']])]);
 
         self::assertSame(['result' => CacheProbe::FAILED, 'detail' => 'HTTP 301'], (new CacheProbe($client, static function (): void {}))->measure('https://shop.example/'));

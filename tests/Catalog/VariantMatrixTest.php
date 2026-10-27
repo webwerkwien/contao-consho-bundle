@@ -8,11 +8,11 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VariantOptionView;
 use Webwerkwien\ContaoConshoBundle\Catalog\VariantRow;
 
 /**
- * Rein, ohne Datenbank und ohne Contao: Die Matrix bekommt sichtbare Varianten
- * und Achsen und entscheidet nur, wohin jeder Link führt.
+ * Pure, without a database and without Contao: the matrix gets visible
+ * variants and axes and only decides where each link leads.
  *
- * Größe S/M/L × Farbe rot/blau. Die Varianten-IDs tragen die Kombination:
- * 101 S/rot, 102 S/blau, 103 M/rot, 104 M/blau, 105 L/rot, 106 L/blau.
+ * Size S/M/L × colour red/blue. The variant IDs carry the combination:
+ * 101 S/red, 102 S/blue, 103 M/red, 104 M/blue, 105 L/red, 106 L/blue.
  */
 class VariantMatrixTest extends TestCase
 {
@@ -25,7 +25,7 @@ class VariantMatrixTest extends TestCase
     private const RED = 21;
     private const BLUE = 22;
 
-    // ── Ohne Wahl ────────────────────────────────────────────────────────
+    // ── Without a choice ─────────────────────────────────────────────────
 
     public function testWithoutAChoiceEveryOptionLeadsToTheFirstVariantThatHasIt(): void
     {
@@ -40,7 +40,7 @@ class VariantMatrixTest extends TestCase
         foreach ($matrix->axes() as $axis) {
             foreach ($axis->options as $option) {
                 self::assertFalse($option->selected);
-                // Ohne Wahl gibt es nichts, was ein Klick mitändern könnte.
+                // Without a choice there is nothing a click could change along with it.
                 self::assertFalse($option->changesOthers);
             }
         }
@@ -57,7 +57,7 @@ class VariantMatrixTest extends TestCase
         self::assertNull($axes[0]->options[1]->url);
     }
 
-    // ── Mit Wahl ─────────────────────────────────────────────────────────
+    // ── With a choice ────────────────────────────────────────────────────
 
     public function testAChoiceKeepsTheOtherAxes(): void
     {
@@ -72,15 +72,16 @@ class VariantMatrixTest extends TestCase
         self::assertTrue($this->option($matrix, self::COLOUR, self::RED)->selected);
         self::assertFalse($this->option($matrix, self::SIZE, self::M)->selected);
 
-        // Die gewählte Option zeigt auf die gewählte Variante selbst.
+        // The chosen option points to the chosen variant itself.
         self::assertSame(101, $this->option($matrix, self::SIZE, self::S)->targetId);
     }
 
     public function testAChoiceLaterInTheListStillKeepsTheOtherAxes(): void
     {
-        // Gegenprobe zu oben: Bei S/rot ist „die erste Variante mit dieser
-        // Option" zufällig auch die richtige. Bei M/blau nicht — hier fiele eine
-        // Zielwahl ohne Regel 1 auf S/rot und L/rot statt auf S/blau und M/rot.
+        // Counter-check to the above: with S/red, "the first variant with this
+        // option" happens to be the right one too. With M/blue it is not — here a
+        // target choice without rule 1 would land on S/red and L/red instead of
+        // on S/blue and M/red.
         $matrix = (new VariantMatrix($this->all(), $this->axes()))->withSelection(104);
         self::assertNotNull($matrix);
 
@@ -103,9 +104,9 @@ class VariantMatrixTest extends TestCase
 
     public function testOnATieTheDisplayOrderDecides(): void
     {
-        // M/rot gewählt, „blau" gibt es als S/blau und L/blau — beide stimmen in
-        // null Achsen überein. Es entscheidet die Reihenfolge der Liste
-        // (v.sorting, v.id aus dem Repository), nicht die ID.
+        // M/red chosen, "blue" exists as S/blue and L/blue — both agree in
+        // zero axes. The order of the list decides
+        // (v.sorting, v.id from the repository), not the ID.
         $variants = $this->without(104);
 
         $matrix = (new VariantMatrix($variants, $this->axes()))->withSelection(103);
@@ -124,8 +125,8 @@ class VariantMatrixTest extends TestCase
 
     public function testAnOptionWithoutAVisibleVariantIsNotLinked(): void
     {
-        // „L" gibt es nur als unveröffentlichte Variante: Die Option steht da,
-        // damit nichts verrutscht, führt aber nirgends hin.
+        // "L" only exists as an unpublished variant: the option is there
+        // so that nothing shifts, but leads nowhere.
         $variants = array_values(array_filter($this->all(), static fn (VariantRow $v) => !\in_array($v->id, [105, 106], true)));
 
         foreach ([new VariantMatrix($variants, $this->axes()), (new VariantMatrix($variants, $this->axes()))->withSelection(101)] as $matrix) {
@@ -138,7 +139,7 @@ class VariantMatrixTest extends TestCase
         }
     }
 
-    // ── Wahl nötig? ──────────────────────────────────────────────────────
+    // ── Choice needed? ───────────────────────────────────────────────────
 
     public function testTheOnlyVariantIsTheChosenOne(): void
     {
@@ -165,8 +166,8 @@ class VariantMatrixTest extends TestCase
 
     public function testAVariantMissingAnAxisIsReachableThroughTheAxesItHas(): void
     {
-        // 202 hat keine Farbe. Über „M" ist sie erreichbar; gewählt ist in der
-        // Farbachse nichts markiert.
+        // 202 has no colour. It is reachable via "M"; nothing is marked as
+        // chosen on the colour axis.
         $variants = [
             $this->row(201, self::S, self::RED),
             new VariantRow(202, [self::SIZE => self::M]),
@@ -189,8 +190,8 @@ class VariantMatrixTest extends TestCase
 
     public function testWithoutVariantsThereIsNothingToChoose(): void
     {
-        // Auch mit übergebenen Achsen: Ohne sichtbare Variante führte jeder Link
-        // ins Leere — dann keine Achse.
+        // Even with axes passed: without a visible variant every link would lead
+        // nowhere — then no axis.
         foreach ([new VariantMatrix([], []), new VariantMatrix([], $this->axes())] as $matrix) {
             self::assertSame([], $matrix->axes());
             self::assertNull($matrix->selectedId());
@@ -200,8 +201,8 @@ class VariantMatrixTest extends TestCase
 
     public function testTheVisibleVariantsAreListedInDisplayOrderWhateverIsChosen(): void
     {
-        // Für den „ab"-Preis ohne Wahl: Das Element fragt je sichtbarer Variante
-        // den Preis ab und liest dafür keine zweite Liste aus der Datenbank.
+        // For the "ab" price without a choice: the element asks for the price of
+        // each visible variant and reads no second list from the database for it.
         $matrix = new VariantMatrix($this->all(), $this->axes());
 
         self::assertSame([101, 102, 103, 104, 105, 106], $matrix->variantIds());
@@ -211,7 +212,7 @@ class VariantMatrixTest extends TestCase
 
     public function testASelectionOutsideTheListIsRefused(): void
     {
-        // Der Controller antwortet darauf 404 (Entscheidung 3).
+        // The controller answers 404 to that.
         $matrix = new VariantMatrix($this->all(), $this->axes());
 
         self::assertNull($matrix->withSelection(99));
@@ -225,7 +226,7 @@ class VariantMatrixTest extends TestCase
         new VariantMatrix($this->all(), $this->axes(), 99);
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
      * @return list<VariantRow>

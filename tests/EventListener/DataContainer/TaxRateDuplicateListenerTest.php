@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\TaxRateDuplicateL
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Ein gespeicherter Satz je Klasse, Land und „Gültig ab" (offener Punkt
- * block A vom 2026-10-11).
+ * One stored rate per class, country and "Valid from" (an open point of
+ * Block A).
  */
 class TaxRateDuplicateListenerTest extends TestCase
 {
@@ -58,7 +58,7 @@ class TaxRateDuplicateListenerTest extends TestCase
     }
 
     /**
-     * Ein leerer Text ist ein leerer Beginn, nicht der 01.01.1970.
+     * An empty text is an empty start, not 01.01.1970.
      */
     public function testEinLeererBeginnIstKeinBeginn(): void
     {
@@ -75,7 +75,7 @@ class TaxRateDuplicateListenerTest extends TestCase
     }
 
     /**
-     * Wer den vorhandenen Satz selbst speichert, trifft nur sich selbst.
+     * Whoever saves the existing rate itself only meets itself.
      */
     public function testDerSatzSelbstIstKeinPaar(): void
     {
@@ -85,8 +85,8 @@ class TaxRateDuplicateListenerTest extends TestCase
     }
 
     /**
-     * Ein späterer Beginn löst den früheren ab — gewollt, kein Paar. Ebenso
-     * ein anderes Land, eine andere Klasse.
+     * A later start supersedes the earlier one — intended, not a pair. Likewise
+     * another country, another class.
      */
     public function testAndererBeginnLandOderKlasse(): void
     {
@@ -106,7 +106,7 @@ class TaxRateDuplicateListenerTest extends TestCase
     }
 
     /**
-     * Wird ein Satz nur im Datum geändert, zählt das gespeicherte Land.
+     * If a rate is only changed in its date, the stored country counts.
      */
     public function testDasGespeicherteZaehltMit(): void
     {
@@ -116,7 +116,7 @@ class TaxRateDuplicateListenerTest extends TestCase
     }
 
     /**
-     * Ein Entwurf (ungespeicherte Kopie) ist kein Satz, mit dem man kollidiert.
+     * A draft (unsaved copy) is not a rate one collides with.
      */
     public function testEinEntwurfIstKeinPaar(): void
     {
@@ -127,8 +127,8 @@ class TaxRateDuplicateListenerTest extends TestCase
     }
 
     /**
-     * „Mehrere kopieren" stempelt die Kopie mit time() und führt kein
-     * onbeforesubmit aus — sie wird zum Entwurf und zählt erst gespeichert.
+     * "Copy multiple" stamps the copy with time() and runs no onbeforesubmit —
+     * it becomes a draft and only counts once saved.
      */
     public function testEineGestempelteKopieWirdZumEntwurf(): void
     {

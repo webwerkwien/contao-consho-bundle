@@ -18,13 +18,13 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Startpunkt 1 (de, Shop 1, EUR, Seiten-Cache 3600 s) mit Listenseite 12;
- * Startpunkt 2 ohne Shop mit Seite 20. Liste 50 auf Seite 12 mit Vorgabe
- * „250 ml" (Option 11).
+ * Start point 1 (de, shop 1, EUR, page cache 3600 s) with list page 12;
+ * start point 2 without a shop with page 20. List 50 on page 12 with the
+ * default "250 ml" (option 11).
  *
- * Produkt 1 hat 250 ml, Produkt 2 nichts, Produkt 3 nichts, ist aber in Liste 50
- * angeheftet, Produkt 4 hat keinen Preis (sichtbar, aber nicht gelistet — das
- * meldet schon die Startseite).
+ * Product 1 has 250 ml, product 2 nothing, product 3 nothing but is pinned
+ * in list 50, product 4 has no price (visible but not listed — the start
+ * page already reports that).
  */
 class CatalogCoverageTest extends TestCase
 {
@@ -57,9 +57,9 @@ class CatalogCoverageTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_facet_page');
 
         $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
-        // consho_currency am Startpunkt, nicht am Shop: Seit C-1c liest der
-        // Sichtbarkeits-Projektor die Währung von hier. Ohne sie wäre jedes
-        // Produkt unbepreist und die Projektion leer.
+        // consho_currency on the start point, not on the shop: since C-1c the
+        // visibility projector reads the currency from here. Without it every
+        // product would be unpriced and the projection empty.
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'title' => 'Shop DE', 'language' => 'de', 'published' => 1, 'consho_shop' => 1, 'consho_currency' => 'EUR', 'includeCache' => 1, 'cache' => 3600]);
         $this->connection->insert('tl_page', ['id' => 12, 'pid' => 1, 'title' => 'Kräuterbitter']);
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'title' => 'Andere Website', 'language' => 'en']);
@@ -77,7 +77,7 @@ class CatalogCoverageTest extends TestCase
         $this->connection->insert('tl_content', ['id' => 50, 'pid' => 120, 'type' => 'consho_product_list', 'tstamp' => 1, 'conshoFilter' => serialize(['11'])]);
         $this->connection->insert('tl_content', ['pid' => 50, 'ptable' => 'tl_content', 'type' => 'consho_product_pin', 'conshoProduct' => 3, 'tstamp' => 1]);
 
-        // unlisted() fragt ProductQuery, und die liest seit B-10 die Projektion.
+        // unlisted() asks ProductQuery, which reads the projection since B-10.
         $this->project();
     }
 
@@ -93,7 +93,7 @@ class CatalogCoverageTest extends TestCase
 
     public function testNamesTheProductNoListingShows(): void
     {
-        // 1 über die Vorgabe, 3 über die Anheftung, 4 ohne Preis gar nicht sichtbar.
+        // 1 through the default, 3 through the pin, 4 without a price not visible at all.
         self::assertSame(
             [['rootId' => 1, 'rootTitle' => 'Shop DE', 'productId' => 2, 'title' => 'Kräutersalz']],
             $this->coverage()->unlisted(self::NOW),
@@ -111,7 +111,7 @@ class CatalogCoverageTest extends TestCase
     {
         $this->connection->update('tl_content', ['conshoPinsOnly' => 1, 'conshoFilter' => null], ['id' => 50]);
 
-        // Nach Titel: Kräutersalz vor Schwedenbitter.
+        // By title: Kräutersalz before Schwedenbitter.
         self::assertSame([2, 1], array_column($this->coverage()->unlisted(self::NOW), 'productId'));
     }
 
@@ -131,7 +131,7 @@ class CatalogCoverageTest extends TestCase
 
     public function testAnUnpublishedStartPointIsNotVerifiedButStillDescribed(): void
     {
-        // Auf c5 gemessen: Test-Startpunkte ohne Listen ließen verify dauerhaft scheitern.
+        // Start points without lists, such as ones set up for testing, would otherwise make verify fail permanently.
         $this->connection->update('tl_page', ['published' => 0], ['id' => 1]);
 
         self::assertSame([], $this->coverage()->unlisted(self::NOW));
@@ -140,25 +140,25 @@ class CatalogCoverageTest extends TestCase
 
     public function testEinStartpunktWirdInSeinerEigenenWaehrungGeprueft(): void
     {
-        // Der DACH-Fall: ein zweiter deutscher Startpunkt in Franken. Die
-        // Währung kommt vom Startpunkt, das Heimatland vom Shop — dieselbe
-        // Regel, die MarketCriteria für die Listenpreise ausspricht (Spec 4.0).
+        // The DACH case: a second German start point in francs. The
+        // currency comes from the start point, the home country from the shop — the
+        // same rule that MarketCriteria states for the list prices (Spec 4.0).
         //
-        // Nahm der Bericht statt dessen die Shop-Währung, prüfte er die
-        // Frankenseite in Euro, und zwar auf beiden Seiten des Vergleichs: Er
-        // meldete für sie dieselben Produkte wie für die Euroseite, obwohl
-        // dort kein einziges einen Frankenpreis hat und die Seite in
-        // Wirklichkeit gar nichts zeigen kann.
+        // If the report took the shop currency instead, it would check the
+        // franc page in euros, and on both sides of the comparison: it
+        // would report the same products for it as for the euro page, although
+        // not a single one has a franc price there and the page in
+        // reality cannot show anything.
         $this->connection->insert('tl_page', ['id' => 3, 'type' => 'root', 'title' => 'Shop CH', 'language' => 'de', 'published' => 1, 'consho_shop' => 1, 'consho_currency' => 'CHF']);
         $this->project();
 
-        // Unverändert: nur der Euro-Startpunkt hat etwas zu melden.
+        // Unchanged: only the euro start point has something to report.
         self::assertSame(
             [['rootId' => 1, 'rootTitle' => 'Shop DE', 'productId' => 2, 'title' => 'Kräutersalz']],
             $this->coverage()->unlisted(self::NOW),
         );
 
-        // Und im Bericht steht es ausdrücklich: sichtbar ja, bepreist nein.
+        // And the report says it explicitly: visible yes, priced no.
         $summary = $this->coverage()->summary(self::NOW);
 
         self::assertSame([4, 0], [$summary[1]['visible'], $summary[1]['priced']]);
@@ -174,9 +174,9 @@ class CatalogCoverageTest extends TestCase
     }
 
     /**
-     * Contao speichert Seitentitel kodiert („Shop &#40;DE&#41;"). Die Konsole
-     * zeigte das roh (Spec C, offene Punkte) — wie die Produkttitel schon
-     * vorher dekodiert.
+     * Contao stores page titles encoded ("Shop &#40;DE&#41;"). The console
+     * showed that raw (Spec C, open points) — decoded like the product titles
+     * already were before.
      */
     public function testStartPointTitlesAreDecoded(): void
     {

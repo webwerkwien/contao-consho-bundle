@@ -17,12 +17,12 @@ use Webwerkwien\ContaoConshoBundle\Checkout\MethodOption;
 class CheckoutFingerprintTest extends TestCase
 {
     /**
-     * Die Zusicherung, auf der alles andere ruht: Zweimal dasselbe gerechnet
-     * ergibt dieselbe Prüfsumme. Ohne sie wäre jeder Kaufklick eine Abweichung
-     * und niemand könnte bestellen.
+     * The assurance everything else rests on: computing the same thing twice
+     * gives the same checksum. Without it every purchase click would be a
+     * deviation and nobody could order.
      *
-     * Das geht nur, weil `CheckoutCalculator` ohne Nebenwirkungen rechnet —
-     * die Zusicherung aus C-5, die dort keinen Abnehmer hatte.
+     * That only works because `CheckoutCalculator` computes without side
+     * effects — the assurance from C-5 that had no consumer there.
      */
     public function testDieselbenEingabenErgebenDieselbePruefsumme(): void
     {
@@ -35,13 +35,13 @@ class CheckoutFingerprintTest extends TestCase
     }
 
     /**
-     * 🔴 Ein geänderter Rechtstext ändert die Prüfsumme (F3, 2026-09-23).
+     * 🔴 A changed legal text changes the checksum.
      *
-     * Der Kaufklick friert die AGB und die Widerrufsbelehrung ein, indem er
-     * die Elemente NEU liest. Speichert der Betreiber zwischen Seitenaufruf
-     * und Klick eine neue Fassung, hätte der Kunde v1 gelesen und v2
-     * unterschrieben — mit seinem Zeitstempel daneben. Genau der Fall, für
-     * den es den Schnappschuss gibt.
+     * The purchase click freezes the terms and conditions and the withdrawal
+     * information by reading the elements AGAIN. If the operator saves a new
+     * version between page view and click, the customer would have read v1
+     * and signed v2 — with his timestamp next to it. Exactly the case the
+     * snapshot exists for.
      */
     public function testEinGeaenderterRechtstextAendertDiePruefsumme(): void
     {
@@ -55,9 +55,9 @@ class CheckoutFingerprintTest extends TestCase
 
     public function testEinVerschwundenerRechtstextAendertDiePruefsumme(): void
     {
-        // Ein Element, das zwischen Anzeige und Klick aus seinem Zeitfenster
-        // fällt, ist auch eine Änderung — sonst entstünde eine Bestellung mit
-        // Häkchen und ohne Text.
+        // An element that drops out of its time window between display and
+        // click is a change too — otherwise an order with a tick and without
+        // a text would be created.
         $fingerprints = new CheckoutFingerprint();
 
         self::assertNotSame(
@@ -68,9 +68,9 @@ class CheckoutFingerprintTest extends TestCase
 
     public function testDieReihenfolgeDerRechtstexteAendertNichts(): void
     {
-        // Sonst hinge die Prüfsumme daran, in welcher Reihenfolge die Quelle
-        // die Texte zurückgibt — und ein Kauf schlüge fehl, weil eine Abfrage
-        // anders sortiert hat.
+        // Otherwise the checksum would depend on the order in which the source
+        // returns the texts — and a purchase would fail because a query sorted
+        // differently.
         $fingerprints = new CheckoutFingerprint();
 
         self::assertSame(
@@ -80,10 +80,10 @@ class CheckoutFingerprintTest extends TestCase
     }
 
     /**
-     * Jede einzelne Änderung, die den Kaufwillen berührt, ändert die
-     * Prüfsumme. Ein Test je Feld statt eines Sammeltests: Fällt ein Feld aus
-     * der Berechnung, soll genau dieser Fall rot werden und nicht „irgendeine"
-     * Abweichung.
+     * Every single change that touches the intent to buy changes the
+     * checksum. One test per field instead of a collective test: if a field
+     * drops out of the calculation, exactly this case should turn red and not
+     * "some" deviation.
      */
     #[DataProvider('aenderungen')]
     public function testJedeAenderungAendertDiePruefsumme(CheckoutState $geaendert): void
@@ -117,20 +117,20 @@ class CheckoutFingerprintTest extends TestCase
         yield 'Lieferadresse getrennt' => [self::build(separateShipping: true)];
         yield 'UID' => [self::build(vatId: 'ATU12345678')];
         yield 'Geburtsdatum' => [self::build(dateOfBirth: '1990-01-01')];
-        // Abo-2: dasselbe Geld, ein anderer Vertrag — Monatsabo statt Einmalkauf.
+        // Abo-2: the same money, a different contract — monthly subscription instead of a one-off purchase.
         yield 'Modell' => [self::build(subscriptionRule: 5)];
-        // Fable-Review Abo-2, L2: Der Kunde las den Satz zu digitalen Inhalten,
-        // inzwischen steht das Produkt auf „Dienstleistung" — die Bestellung
-        // friert die neue Art ein und die Bestätigung nennt einen Satz, den er
-        // nie gesehen hat.
+        // Abo-2: the customer read the sentence on digital content,
+        // meanwhile the product is set to "service" — the order
+        // freezes the new kind and the confirmation names a sentence he
+        // has never seen.
         yield 'Widerrufsart' => [self::build(withdrawalKinds: ['service'])];
     }
 
     public function testEineVerlaengerungIstEinAndererVertragAlsEinNeuesAbo(): void
     {
-        // Abo-7b, Review L1: dasselbe Modell, derselbe Betrag — einmal neu,
-        // einmal als Verlängerung von Abo 31. Gegen das Modell verglichen,
-        // nicht gegen den Einmalkauf, sonst unterschiede schon die Regel.
+        // Abo-7b: the same model, the same amount — once new,
+        // once as a renewal of subscription 31. Compared against the model,
+        // not against the one-off purchase, otherwise the rule alone would differ.
         $fingerprints = new CheckoutFingerprint();
 
         self::assertNotSame($fingerprints->of(self::build(subscriptionRule: 5)), $fingerprints->of(self::build(subscriptionRule: 5, renews: 31)));
@@ -140,8 +140,8 @@ class CheckoutFingerprintTest extends TestCase
 
     public function testOhneDigitaleZeilenBleibtDiePruefsummeWieVorAbo2(): void
     {
-        // Leer schreibt nichts dazu: Eine Kasse, die beim Deploy offen ist,
-        // wird nicht abgelehnt.
+        // Empty adds nothing: a checkout that is open during an update
+        // is not refused.
         $fingerprints = new CheckoutFingerprint();
 
         self::assertSame($fingerprints->of(self::build()), $fingerprints->of(self::build(withdrawalKinds: [])));
@@ -149,11 +149,12 @@ class CheckoutFingerprintTest extends TestCase
     }
 
     /**
-     * 🔴 Der Zeitstempel der VIES-Abfrage darf die Prüfsumme NICHT ändern.
+     * 🔴 The timestamp of the VIES query must NOT change the checksum.
      *
-     * Eine Prüfung, die abgelaufen ist und im Hintergrund neu lief, während
-     * der Kunde die Angaben las, ist dieselbe Vereinbarung. Stünde sie mit
-     * drin, wäre der Kauf für jeden UID-Kunden ein Glücksspiel gegen die Uhr.
+     * A check that expired and ran again in the background while the customer
+     * read the details is the same agreement. If it were included, the
+     * purchase would be a gamble against the clock for every customer with a
+     * VAT ID.
      */
     public function testDerZeitpunktDerUidPruefungAendertNichts(): void
     {
@@ -166,10 +167,10 @@ class CheckoutFingerprintTest extends TestCase
     }
 
     /**
-     * 🔴 Und das AGB-Häkchen ebenso wenig: Es steht auf genau dem Formular,
-     * das die Prüfsumme trägt. Zählte es mit, machte jedes Häkchen die
-     * Prüfsumme ungültig, mit der es abgeschickt wurde — der Kauf wäre nie
-     * möglich, und zwar nur bei Shops, die das Häkchen verlangen.
+     * 🔴 Nor the terms-and-conditions tick: it sits on exactly the form that
+     * carries the checksum. If it counted, every tick would invalidate the
+     * checksum it was submitted with — buying would never be possible, and
+     * only in shops that require the tick.
      */
     public function testDasAgbHaeckchenAendertNichts(): void
     {
@@ -182,9 +183,9 @@ class CheckoutFingerprintTest extends TestCase
     }
 
     /**
-     * Ein korrigierter Tippfehler im Titel einer Versandart ist keine
-     * Änderung an der Abmachung. Betrag und ID entscheiden — die stehen in
-     * der Prüfsumme, der Anzeigetext nicht.
+     * A corrected typo in the title of a shipping method is no change to the
+     * agreement. Amount and ID decide — they are in the checksum, the display
+     * text is not.
      */
     public function testEinGeaenderterTitelAendertNichts(): void
     {
@@ -198,9 +199,9 @@ class CheckoutFingerprintTest extends TestCase
 
     public function testEineLeerePruefsummePasstNie(): void
     {
-        // Ein Formular ohne das Feld — ein altes Template, ein Bot, ein
-        // abgeschnittener POST. hash_equals('…', '') wäre sonst nur zufällig
-        // falsch.
+        // A form without the field — an old template, a bot, a
+        // truncated POST. hash_equals('…', '') would otherwise be false only
+        // by chance.
         self::assertFalse((new CheckoutFingerprint())->matches($this->state(), ''));
     }
 
@@ -242,8 +243,8 @@ class CheckoutFingerprintTest extends TestCase
         $line = new CartLine(1, $articleId, $articleId, $quantity, '10.0000', '10.0000', $lineGross, $taxClassId, $subscriptionRule, $renews);
 
         $data = new CheckoutData(
-            billing: new Address(lastname: 'Morgenbesser', street: 'Teststraße 1', postal: '1100', city: $billingCity, country: 'AT', email: 'test@example.org'),
-            shipping: new Address(lastname: 'Morgenbesser', street: 'Anderswo 9', postal: '8010', city: 'Graz', country: 'AT'),
+            billing: new Address(lastname: 'Example', street: 'Teststraße 1', postal: '1100', city: $billingCity, country: 'AT', email: 'test@example.org'),
+            shipping: new Address(lastname: 'Example', street: 'Anderswo 9', postal: '8010', city: 'Graz', country: 'AT'),
             separateShipping: $separateShipping,
             shippingMethod: null === $shipping ? 0 : $shipping->id,
             paymentMethod: null === $payment ? 0 : $payment->id,

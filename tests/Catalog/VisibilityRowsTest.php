@@ -9,17 +9,17 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityCriteria;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityRows;
 
 /**
- * Die Zeilen, die die Projektion der Sichtbarkeit halten muss (B-10, 5.7) —
- * gegen eine echte Datenbank, weil es eine SQL-Regel ist.
+ * The rows the visibility projection has to hold (B-10, 5.7) —
+ * against a real database, because it is an SQL rule.
  *
- * Die Sichtbarkeitsregeln selbst prüft VisibilityCriteriaTest. Hier geht es um
- * das, was dazukommt: bepreist, Ab-Preis, Variantenzeilen, Sprache.
+ * VisibilityCriteriaTest checks the visibility rules themselves. This is
+ * about what comes on top: priced, from-price, variant rows, language.
  */
 class VisibilityRowsTest extends TestCase
 {
     use CatalogSchema;
 
-    // Zehnstellig wie ein echter Zeitstempel — siehe VisibilityCriteriaTest.
+    // Ten digits like a real timestamp — see VisibilityCriteriaTest.
     private const NOW = 1_790_000_000;
     private const SHOP = 1;
 
@@ -41,8 +41,8 @@ class VisibilityRowsTest extends TestCase
 
     public function testOnlyTheListPriceOfTheShopsHomeCountryCounts(): void
     {
-        // C25: Zwei Euro-Shops in AT und DE — dieselbe Währung, verschiedene Brutto.
-        // Die deutsche Zeile ist für den österreichischen Shop kein Preis.
+        // C25: two euro shops in AT and DE — the same currency, different gross.
+        // The German row is no price for the Austrian shop.
         $this->main(1);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => 'DE', 'net' => '10.0000', 'gross' => '11.9000']);
 
@@ -195,8 +195,8 @@ class VisibilityRowsTest extends TestCase
     }
 
     /**
-     * Beträge auf vier Stellen: SQLite gibt NUMERIC als 12 oder 12.0 zurück,
-     * MySQL als "12.0000".
+     * Amounts to four places: SQLite returns NUMERIC as 12 or 12.0,
+     * MySQL as "12.0000".
      *
      * @param array<string, mixed> $params
      * @param array<string, mixed> $types

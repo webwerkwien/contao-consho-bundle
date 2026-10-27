@@ -31,7 +31,7 @@ use Webwerkwien\ContaoConshoBundle\Order\StockShortAtPurchase;
  * row locked, a second purchase of the last code waits here. Then it counts
  * again — and sees the first purchase only because OrderPlacer runs the
  * purchase in READ COMMITTED: under MySQL's REPEATABLE READ the count would
- * read the snapshot from before the wait (review G, B2). "Lizenz verlängern"
+ * read the snapshot from before the wait (G). "Lizenz verlängern"
  * lines take no code (Abo-7b).
  *
  * Short anywhere: StockShortAtPurchase, and the caller's transaction rolls

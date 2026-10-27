@@ -13,7 +13,7 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\KeyPoolListener;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * F-6, F19: Der Schlüsselvorrat — ein Code je Stück, alle oder keiner.
+ * F-6, F19: The key pool — one code per piece, all or none.
  */
 class KeyPoolTest extends TestCase
 {
@@ -43,7 +43,7 @@ class KeyPoolTest extends TestCase
     {
         $listener = new KeyPoolListener($this->connection, new KeyPool($this->connection));
 
-        // Das Feld bleibt leer: import() gibt null zurück, die Codes stehen in tl_consho_key.
+        // The field stays empty: import() returns null, the codes are in tl_consho_key.
         $listener->import("AAA-1\r\n\r\n  BBB-2 \nAAA-1\n", $this->dc(7));
         $listener->import("BBB-2\nCCC-3", $this->dc(7));
         $listener->import('AAA-1', $this->dc(8));
@@ -53,9 +53,9 @@ class KeyPoolTest extends TestCase
     }
 
     /**
-     * Was ein Befehl zurückgibt (CLI-Abdeckung K2): nur Zahlen, nie die Codes.
-     * Übersprungen zählt, was schon im Vorrat liegt — auch innerhalb derselben
-     * Liste; Leerzeilen zählen gar nicht.
+     * What a command returns (CLI coverage K2): only numbers, never the codes.
+     * Skipped counts what is already in the pool — also within the same list;
+     * empty lines do not count at all.
      */
     public function testDerDienstNenntNurZahlen(): void
     {
@@ -64,8 +64,8 @@ class KeyPoolTest extends TestCase
         self::assertSame(['added' => 2, 'skipped' => 1, 'left' => 2], $pool->add(7, "AAA-1\n\n BBB-2\nAAA-1", 1_000));
         self::assertSame(['added' => 1, 'skipped' => 2, 'left' => 3], $pool->add(7, "BBB-2\r\nCCC-3\nAAA-1\n", 2_000));
 
-        // Ein vergebener Code liegt noch im Vorrat, ist aber nicht mehr frei —
-        // und wird trotzdem nicht ein zweites Mal aufgenommen.
+        // An assigned code is still in the pool but no longer free —
+        // and is still not taken in a second time.
         $this->connection->update('tl_consho_key', ['entitlement' => 9], ['code' => 'AAA-1']);
         self::assertSame(['added' => 0, 'skipped' => 1, 'left' => 2], $pool->add(7, 'AAA-1', 3_000));
 
@@ -74,8 +74,8 @@ class KeyPoolTest extends TestCase
     }
 
     /**
-     * Die Spalte fasst 255 Zeichen: ein längerer Code wird gekürzt wie in der
-     * Maske, und sein gekürzter Zwilling gilt danach als schon vorhanden.
+     * The column holds 255 characters: a longer code is shortened as in the
+     * form, and its shortened twin then counts as already present.
      */
     public function testEinLangerCodeWirdGekuerzt(): void
     {
@@ -98,15 +98,15 @@ class KeyPoolTest extends TestCase
     }
 
     /**
-     * Zwei Freigaben verschiedener Bestellungen sperren nicht denselben
-     * Vorrat — ein Code, den die andere schon genommen hat, wird übersprungen.
+     * Two releases of different orders do not lock the same pool — a code the
+     * other one has already taken is skipped.
      */
     public function testEinGenommenerCodeWirdUebersprungen(): void
     {
         (new KeyPoolListener($this->connection, new KeyPool($this->connection)))->import("A\nB", $this->dc(7));
         $handler = new KeyPoolHandler($this->connection);
 
-        // Zwischen Auswahl und Übernahme: A gehört schon Berechtigung 9.
+        // Between selection and taking over: A already belongs to entitlement 9.
         $this->connection->update('tl_consho_key', ['entitlement' => 9], ['code' => 'A']);
 
         self::assertTrue($handler->release($this->entitlement(1, '1.0000')));
@@ -128,8 +128,8 @@ class KeyPoolTest extends TestCase
     }
 
     /**
-     * Ein gelöschtes Hauptprodukt nimmt seine Varianten mit
-     * (VariantDeleteListener) — und damit deren freie Codes.
+     * A deleted main product takes its variants with it
+     * (VariantDeleteListener) — and with them their free codes.
      */
     public function testDieVariantenNehmenIhreFreienCodesMit(): void
     {
@@ -149,8 +149,8 @@ class KeyPoolTest extends TestCase
         self::assertSame([], $this->codes(8));
         self::assertSame(['C'], $this->codes(9));
 
-        // AiContract-Prüfung (2026-10-22): die freien Codes gehen in den
-        // Undo-Eintrag des Artikels, „Wiederherstellen" bringt sie zurück.
+        // The free codes go into the article's undo entry, "restore" brings
+        // them back.
         $undo = $this->connection->fetchAssociative('SELECT data, affectedRows FROM tl_undo WHERE id = ?', [$undoId]);
         self::assertIsArray($undo);
         $data = unserialize((string) $undo['data']);
@@ -160,8 +160,8 @@ class KeyPoolTest extends TestCase
     }
 
     /**
-     * Ohne freie Codes bleibt der Undo-Eintrag unberührt; ohne Undo-Eintrag
-     * wird nichts gelöscht — gekaufte Codes gingen sonst endgültig verloren.
+     * Without free codes the undo entry stays untouched; without an undo entry
+     * nothing is deleted — purchased codes would otherwise be lost for good.
      */
     public function testOhneUndoEintragBleibtDerVorrat(): void
     {

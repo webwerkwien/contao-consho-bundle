@@ -79,7 +79,7 @@
                     template never asks who is logged in, so an amount and the
                     sentence under it cannot come from two different answers.
                 #}
-                {#- Acceptance WG-7: not taxable — no tax sentence, shipping if any. #}
+                {#- WG-7: not taxable — no tax sentence, shipping if any. #}
                 {% if not untaxed|default(false) or (shipped ?? true) %}<p class="consho-detail__tax">{{ untaxed|default(false) ? "CONSHO.priceShippingOnly"|trans({}, "contao_default") : ("CONSHO." ~ ((shipped ?? true) ? "priceTaxNotice" : "priceTaxOnly") ~ (price.showsNet ? "Net" : ""))|trans({}, "contao_default") }}</p>{% endif %}
 
                 {% if price.scale is not empty %}
@@ -224,7 +224,7 @@
                     <input type="hidden" name="main" value="{{ stockNotice.main }}">
                     <input type="hidden" name="page" value="{{ stockNotice.pageId }}">
                     {% if stockNotice.state == 'subscribed' %}
-                        {# Right after subscribing the result line already says it (Abnahme G-8). #}
+                        {# Right after subscribing the result line already says it (G-8). #}
                         {% if stockNoticeResult|default(null) is null or stockNoticeResult.value != 'subscribed' %}
                             <p>{{ "CONSHO.stockNotice.subscribed"|trans({}, "contao_default") }}</p>
                         {% endif %}
@@ -261,8 +261,8 @@
             {#- Trimmed to how a person would write the number down: the column
                always carries four decimals ("5.0000", "1.0000").
 
-               ⚠️ Also for `value`, and that was missing until Michael saw it
-               in the front end on 2026-09-21: the comment that used to stand
+               ⚠️ Also for `value`, and it was missing at first:
+               the comment that used to stand
                further down argued these were "display text, not an HTML
                attribute value" — true of the hint, and wrong about `value`,
                whose content is exactly what the browser PRINTS IN THE FIELD.

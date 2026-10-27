@@ -10,10 +10,10 @@ use Webwerkwien\ContaoConshoBundle\Document\NumberPrefixIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Spec C, offene Punkte (Abnahme C-12): Zwei Belegnummernkreise mit demselben
- * Präfix vergeben dieselbe Nummer zweimal — „RE-00005" im Testshop und in
- * seiner Kopie. Ein Hinweis, keine Warnung: zwei Unternehmen dürfen dasselbe
- * Präfix haben, nur weiß der Kern nicht, ob es zwei sind.
+ * Spec C, open points (C-12): Two document number ranges with the same
+ * prefix hand out the same number twice — "RE-00005" in one shop and in
+ * its copy. A notice, not a warning: two companies may have the same
+ * prefix, only the core does not know whether they are two.
  */
 final class NumberPrefixIssueSourceTest extends TestCase
 {
@@ -53,7 +53,7 @@ final class NumberPrefixIssueSourceTest extends TestCase
         self::assertFalse($issues[0]->finding->isWarning());
     }
 
-    /** Auch im selben Shop: Rechnung RE-00001 und Storno RE-00001. */
+    /** Also within the same shop: invoice RE-00001 and cancellation RE-00001. */
     public function testZweiBelegartenEinesShopsMitDemselbenPraefix(): void
     {
         $this->connection->update('tl_consho_number_range', ['prefix' => 're-'], ['pid' => 1, 'type' => 'cancellation']);

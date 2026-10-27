@@ -139,7 +139,7 @@ class OrderEventMail
             'items' => $items,
             'released' => self::released($released),
             'viewUrl' => $viewUrl,
-            // The invoice this release issued (acceptance DL, find 4): attached.
+            // The invoice this release issued (DL): attached.
             'invoice' => (string) ($invoice['documentNumber'] ?? ''),
         ], $attachments, $transport, $from);
     }
@@ -304,8 +304,7 @@ class OrderEventMail
     }
 
     /**
-     * "Ihre digitalen Inhalte ruhen" (Nachlese E5; Michael, 2026-10-09: "E5
-     * Infomail umsetzen"): a one-time purchase on account is past its term
+     * "Ihre digitalen Inhalte ruhen" (Nachlese E5): a one-time purchase on account is past its term
      * and grace (PurchaseDelinquency). Built like subscriptionSuspended(): the
      * open invoice attached, what is open and since when, the order page for
      * the payment details. To the customer only — the operator sees the
@@ -481,7 +480,7 @@ class OrderEventMail
      * @param int                                                                                                                                                                                                  $orderId      the latest order of the subscription, for address and language
      * Ends it later than the earliest possible end (a later date asked for),
      * the mail says that periods beginning before the end are still billed
-     * in full (P55; review Abo-7, S1).
+     * in full (P55; Abo-7).
      *
      * @param array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null} $cancellation
      *

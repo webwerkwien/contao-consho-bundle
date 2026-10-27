@@ -9,9 +9,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Bestellnummern sind je Shop eindeutig, wie die Nummernkreise
- * (tl_consho_number_range.pid) und die Belege. Michael, 2026-10-07:
- * „ja, Bestellnummer je Shop wie empfohlen".
+ * Order numbers are unique per shop, like the number ranges
+ * (tl_consho_number_range.pid) and the documents.
  */
 final class OrderNumberKeyTest extends TestCase
 {

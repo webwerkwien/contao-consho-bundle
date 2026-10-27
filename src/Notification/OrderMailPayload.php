@@ -23,7 +23,7 @@ final class OrderMailPayload
     /**
      * From the frozen order rows, with the payment block, the operator's notes
      * (the reverse charge note) and the expected delivery period of the
-     * standing invoice — all frozen at its issue (review 2026-09-25, F3).
+     * standing invoice — all frozen at its issue.
      * Without an invoice there are none.
      *
      * @param array<string, mixed>                                                       $order
@@ -36,7 +36,7 @@ final class OrderMailPayload
         $payment = \is_array($invoice['payload']['payment'] ?? null) ? $invoice['payload']['payment'] : [];
 
         // Without an invoice (a method that invoices on payment), the
-        // instructions frozen on the order itself (review 2026-09-25, F2).
+        // instructions frozen on the order itself.
         $instructions = (string) ($payment['instructions'] ?? '');
 
         if ('' === $instructions) {

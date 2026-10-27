@@ -14,10 +14,10 @@
  * declaration itself stays what arrived. Not deletable ever: the
  * confirmation on a durable medium refers to it.
  *
- * `number` is derived from the order number (decision E3, 2026-09-27): a
+ * `number` is derived from the order number (E3): a
  * missing number range must never make a withdrawal fail.
  *
- * ── Not assigned (WA, 2026-10-22) ─────────────────────────────────────────
+ * ── Not assigned (WA) ─────────────────────────────────────────────────────
  *
  * `pid` 0: a declaration from the form whose order number and e-mail matched
  * no order. It is stored anyway (§ 356a Abs. 2 BGB: the consumer gives
@@ -37,7 +37,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         'notSortable' => true,
         'notDeletable' => true,
         // Unique per ORDER, not globally: order numbers are unique per shop
-        // only, and two shops may both have a WEB-00073.
+        // only, and two shops may both have a SHOP-00073.
         'sql' => ['keys' => ['id' => 'primary', 'pid,number' => 'unique', 'number' => 'index', 'shop' => 'index']],
     ],
 
@@ -85,7 +85,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         'refundDue' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundDueColumn']],
         'amount' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_withdrawal']['amountColumn']],
 
-        // "WEB-00073-W1" — the order number and a running count per order.
+        // "SHOP-00073-W1" — the order number and a running count per order.
         'number' => [
             'inputType' => 'text',
             'search' => true,

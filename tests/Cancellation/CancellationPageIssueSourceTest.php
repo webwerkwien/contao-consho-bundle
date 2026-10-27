@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-7, P63: Ein Shop, der Abos verkauft, braucht eine erreichbare Seite mit
- * „Verträge hier kündigen" — ohne Anmeldung (§ 312k BGB).
+ * Abo-7, P63: A shop that sells subscriptions needs a reachable page with
+ * "Verträge hier kündigen" — without login (§ 312k BGB).
  */
 final class CancellationPageIssueSourceTest extends TestCase
 {
@@ -39,7 +39,7 @@ final class CancellationPageIssueSourceTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_product_shop');
         DcaSchema::create($this->connection, 'tl_consho_subscription');
 
-        // Shop 1 verkauft ein Abo-Produkt; Startpunkt 1 mit Kündigungsseite 10.
+        // Shop 1 sells a subscription product; start point 1 with cancellation page 10.
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Webshop']);
         $this->connection->insert('tl_consho_product', ['id' => 4, 'published' => 1, 'saleSubscription' => 1]);
         $this->connection->insert('tl_consho_product_shop', ['pid' => 4, 'shop' => 1]);
@@ -92,8 +92,8 @@ final class CancellationPageIssueSourceTest extends TestCase
     }
 
     /**
-     * N1 (Nachlese Stufe 2): Ein unveröffentlichter Startpunkt meldet nichts,
-     * für die Einrichtungsseite aber schon.
+     * N1 (Nachlese stage 2): An unpublished start point reports nothing,
+     * but it does for the setup page.
      */
     public function testUnveroeffentlichterStartpunktNurFuerDieEinrichtung(): void
     {
@@ -123,13 +123,13 @@ final class CancellationPageIssueSourceTest extends TestCase
         $withoutSubscriptions = $this->issues();
         self::assertSame([], $withoutSubscriptions);
 
-        // Ein laufendes Abo reicht auch ohne Abo-Produkt im Verkauf.
+        // A running subscription is enough even without a subscription product on sale.
         $this->connection->insert('tl_consho_subscription', ['subscriptionNumber' => 'WEB-1-1', 'shop' => 1, 'state' => 'active']);
 
         $withRunning = $this->issues();
         self::assertCount(1, $withRunning);
 
-        // Pausiert ist auch ein laufender Vertrag (P106).
+        // Paused is a running contract too (P106).
         $this->connection->update('tl_consho_subscription', ['state' => 'paused'], ['subscriptionNumber' => 'WEB-1-1']);
         self::assertCount(1, $this->issues());
     }

@@ -2,8 +2,7 @@
 
 /*
  * A purchase list (Block G, G-7): what the operator decided to reorder, saved
- * the moment it was handed out — clipboard, print or CSV (Michael, 2026-10-05:
- * "drückt man eines davon -> die Einkaufliste wird vermerkt").
+ * the moment it was handed out — clipboard, print or CSV.
  *
  * Not a purchase order: no prices, no supplier invoice, nothing sent to the
  * supplier. Consho knows what was ordered and what has come; how it is

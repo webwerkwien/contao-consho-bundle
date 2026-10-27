@@ -12,7 +12,7 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
  * Obtained at the first purchase: OrderView::$recurring tells start() that
  * the order contains subscription lines (P93), and the handler asks its
  * provider to keep the payment method — Stripe `setup_future_usage`, a PayPal
- * vault, Klarna `buy_and_tokenize` (research 2026-10-03, docs/block-abo.md).
+ * vault, Klarna `buy_and_tokenize` (Block Abo).
  * The notification that confirms the payment hands the mandate back through
  * NotificationResult::paid(…, mandate); the core keeps it on the
  * subscription together with the method.

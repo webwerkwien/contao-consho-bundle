@@ -18,7 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherIssuer;
 /**
  * Releases the digital lines of an order once they are due (F-4).
  *
- * ── When (F10, F16, Michael 2026-09-28) ──────────────────────────────────
+ * ── When (F10, F16) ──────────────────────────────────
  *
  * Two conditions, both needed:
  *
@@ -71,8 +71,8 @@ class DigitalRelease
         private readonly DeliveryHandlers $handlers,
         private readonly DeliveryReported $deliveries,
         // The invoice a release issues is archived after the release's commit
-        // (review Abo-4, S2). Required: an optional one would be missing in
-        // silence (Regel 25).
+        // (Abo-4). Required: an optional one would be missing in
+        // silence.
         private readonly DocumentArchiverInterface $archiver,
         // Block Wertgutscheine (WG-4): the voucher lines become vouchers here.
         // Required for the same reason as the archiver.
@@ -80,7 +80,7 @@ class DigitalRelease
         // For a release that no other mail announces (F-7, F20).
         private readonly OrderPageLink|null $links = null,
         private readonly OrderEventMail|null $mail = null,
-        // Nachlese E5a: an unpaid one-time purchase rests (review S2).
+        // Nachlese E5a: an unpaid one-time purchase rests.
         private readonly PurchaseDelinquency|null $purchases = null,
     ) {
     }
@@ -96,7 +96,7 @@ class DigitalRelease
     public function releaseDue(int $orderId, int $now, bool $notify = false): int
     {
         /*
-         * Back to exactly the level we found, on any failure (review B1). A
+         * Back to exactly the level we found, on any failure. A
          * single rollBack() at level 2 only releases a savepoint in DBAL 4,
          * and the cron would then run every later order inside a transaction
          * that is never committed.
@@ -108,10 +108,9 @@ class DigitalRelease
             $released = $this->releaseLocked($orderId, $now);
 
             // Released late — a key pool refilled — into an order that already
-            // rests: it rests with its siblings at once (review Nachlese, S2).
+            // rests: it rests with its siblings at once (Nachlese).
             // Only joining, never lifting or starting a rest: those are
-            // SubscriptionDelinquencyRun's, which mails them (second review,
-            // S-1) — a change decided here would be swallowed without a mail.
+            // SubscriptionDelinquencyRun's, which mails them — a change decided here would be swallowed without a mail.
             if ($released > 0) {
                 $this->purchases?->joinRest($orderId, $now);
             }
@@ -119,8 +118,7 @@ class DigitalRelease
             $this->connection->commit();
         } catch (\Throwable $e) {
             // A rollback that throws as well — the connection is gone — must
-            // not replace the cause on its way to the caller (second review,
-            // K-A). Nothing more can be undone on such a connection anyway.
+            // not replace the cause on its way to the caller. Nothing more can be undone on such a connection anyway.
             try {
                 while ($this->connection->getTransactionNestingLevel() > $level) {
                     $this->connection->rollBack();
@@ -144,15 +142,14 @@ class DigitalRelease
         $this->unlocked = 0;
 
         // The invoice the release issued, after this commit rather than
-        // inside it (review Abo-4, S2). archive() never throws.
+        // inside it (Abo-4). archive() never throws.
         if (null !== $pending) {
             $this->archiver->archive($pending);
         }
 
         /*
          * The mail also goes out where the release issued the invoice (an
-         * "on shipment" method such as "Auf Rechnung"; acceptance DL, find 4,
-         * Michael 2026-10-02: „ja, Fund 4 wie vorgeschlagen"). The release
+         * "on shipment" method such as "Auf Rechnung"; DL). The release
          * runs after the confirmation, so nothing else would carry that
          * invoice to the customer — the order page was the only place.
          */
@@ -193,7 +190,7 @@ class DigitalRelease
         /*
          * The consent lapses the right of withdrawal only once the
          * confirmation on a durable medium is with the consumer (§ 18 Abs. 1
-         * Z 11 lit. c FAGG, § 356 Abs. 6 Nr. 2 lit. d BGB; review S2). Until
+         * Z 11 lit. c FAGG, § 356 Abs. 6 Nr. 2 lit. d BGB). Until
          * the confirmation mail has left, the consent does not count, and the
          * order waits like one without it: for a resend from the back end
          * (then at once), or for the end of the period — which runs anyway
@@ -220,7 +217,7 @@ class DigitalRelease
      * Counted the way block D counts its window (WithdrawalWindow): to the
      * END of the day, in the installation's time zone, plus the shop's
      * grace days. A day too late costs nothing; a day too early releases
-     * while the right still stands (review S1).
+     * while the right still stands.
      *
      * @param array<string, mixed> $order
      */
@@ -274,7 +271,7 @@ class DigitalRelease
         }
 
         /*
-         * A withdrawal that is declared and not yet decided (review B2): the
+         * A withdrawal that is declared and not yet decided: the
          * customer may have left the contract. Nothing is supplied until the
          * operator has decided — an accepted one then takes the lines out of
          * openGoods, a rejected one lets them through.
@@ -333,7 +330,7 @@ class DigitalRelease
 
             // Released while the subscription rests (a key pool refilled
             // late): it rests from the start, not only from the next run of
-            // the cron (review Abo-5, L3).
+            // the cron (Abo-5).
             $suspendedAt = false !== $subscription && 'suspended' === (string) $subscription['state'] ? $now : null;
 
             if (false !== $subscription) {
@@ -511,8 +508,7 @@ class DigitalRelease
      *
      * The order arrives in two shapes: straight from the database (NULL) and
      * through PaymentChangeRepositoryInterface::lockOrder(), which casts
-     * EVERY value to a string — NULL becomes ''. Found at the acceptance on
-     * c5 (2026-09-29): with `null !== $order['cancelledAt']` every order read
+     * EVERY value to a string — NULL becomes ''. With `null !== $order['cancelledAt']` every order read
      * under the lock counted as cancelled, and nothing was ever released.
      * The unit tests had handed in real NULLs — the double answered what its
      * author expected, not what the repository returns (rule 25).

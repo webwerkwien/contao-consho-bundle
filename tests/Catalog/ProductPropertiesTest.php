@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductPropertiesRefused;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Connect Stufe 2, CW-4: Eigenschaften und Variantenachsen ohne Maske.
- * set…() prüft, was dort die Optionsliste sicherstellt; die Dublettenregel der
- * Varianten gilt auf beiden Wegen (ProductPropertiesListenerTest).
+ * Connect stage 2, CW-4: properties and variant axes without the mask.
+ * set…() checks what the option list ensures there; the duplicate rule of
+ * the variants applies on both paths (ProductPropertiesListenerTest).
  */
 class ProductPropertiesTest extends TestCase
 {

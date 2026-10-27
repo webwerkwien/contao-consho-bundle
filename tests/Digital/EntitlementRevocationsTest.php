@@ -17,8 +17,9 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\EntitlementRevoke
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Nachlese E6: Ein Auslieferungsmodul mit `revoke()` erfährt, welche
- * Berechtigungen gesperrt wurden — aus dem Widerruf wie vom Häkchen im Backend.
+ * Nachlese E6: A delivery module with `revoke()` learns which entitlements
+ * were blocked — from the withdrawal as well as from the tick in the
+ * backend.
  */
 final class EntitlementRevocationsTest extends TestCase
 {
@@ -64,7 +65,7 @@ final class EntitlementRevocationsTest extends TestCase
         $revocations = $this->revocations();
         $listener = new EntitlementRevokedListener($revocations);
 
-        // Nummer 3 wird gesperrt: Beim Speichern noch nicht, nach dem Schreiben schon.
+        // Number 3 is blocked: not yet on saving, but after the write.
         $dc = $this->createStub(DataContainer::class);
         $dc->method('__get')->willReturnCallback(static fn (string $key): mixed => 'id' === $key ? 3 : null);
         $dc->method('getCurrentRecord')->willReturn(['id' => 3, 'revoked' => '']);
@@ -94,9 +95,9 @@ final class EntitlementRevocationsTest extends TestCase
     }
 
     /**
-     * Review Nachlese, S1: erst nach dem Commit. Solange eine Transaktion
-     * läuft, wartet die Meldung; eine zurückgerollte Sperre (wieder
-     * revoked = 0) meldet sie nie.
+     * Nachlese: only after the commit. While a transaction is running, the
+     * notification waits; a block that is rolled back (revoked = 0 again)
+     * never reports it.
      */
     public function testErstNachDemCommitUndNieNachEinemRollback(): void
     {

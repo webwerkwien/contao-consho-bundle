@@ -31,17 +31,16 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockBooking;
  * "Einkauf", its output and "Eingang" (Block G, G-7) — `key` actions of the
  * module consho_stock (config.php).
  *
- * Michael, 2026-10-05: "bei der Liste einen Button 'Einkauf' -> öffnet PopUp
- * mit Meldebestand, aber Einträge können ergänzt oder rausgenommen werden.
- * Anzeige Bestand, daneben bis zu 2 Felder, aktiv je nachdem ob Einzelstücke
- * oder VPE, über Sollbestand wird vorausgefüllt. Die Liste kann in die
- * Zwischenablage, Druckansicht oder CSV-Export, drückt man eines davon -> die
- * Einkaufliste wird vermerkt … Einkaufslisten … dort kann man sie erneut
- * ausgeben, oder den Eingang als ganzes oder Teilweise bestätigen".
+ * The button "Einkauf" at the list opens a dialog with the articles at their
+ * reorder level; entries can be added or taken out. Beside the stock up to
+ * two fields, single pieces or packing units, prefilled from the target
+ * stock. Copied to the clipboard, printed or exported as CSV, the list is
+ * recorded as a purchase list — there it can be output again, and its
+ * receipt confirmed in whole or in part.
  *
  * The module right is asked here as well: a `key` action runs after
  * Backend::getBackendModule() checked it, but this is the one place a request
- * of its own would reach without that (the lesson of SubscriptionPause, B2).
+ * of its own would reach without that (the lesson of SubscriptionPause).
  *
  * Downloads and the print view are THROWN as responses — returned, the back
  * end would paste them into its frame (DocumentBackendController).
@@ -89,7 +88,7 @@ final class PurchaseBackendController
             }
 
             // Saved — now to the list's own page, never the same form again
-            // (review G-7, S1). The clipboard page is the output itself.
+            // (G-7). The clipboard page is the output itself.
             $format = $post->getString('format');
             $target = $this->router->generate('contao_backend', array_filter([
                 'do' => self::MODULE,
@@ -369,8 +368,8 @@ final class PurchaseBackendController
     }
 
     /**
-     * A cell Excel would read as a formula gets a leading apostrophe (review
-     * G-7, L3): titles and supplier names are typed in the back end.
+     * A cell Excel would read as a formula gets a leading apostrophe
+     * (G-7): titles and supplier names are typed in the back end.
      *
      * @internal public for the test only
      */
@@ -382,7 +381,7 @@ final class PurchaseBackendController
     private function loadLanguage(): void
     {
         // The module's table is tl_consho_stock; the texts of these pages live
-        // in the purchase tables' files (review G-7, S3).
+        // in the purchase tables' files (G-7).
         $system = $this->framework->getAdapter(System::class);
         $system->loadLanguageFile('tl_consho_purchase_list');
         $system->loadLanguageFile('tl_consho_purchase_item');

@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
- * A shop's start point without a domain (acceptance Abo-4): the links in every
+ * A shop's start point without a domain (Abo-4): the links in every
  * mail sent from the cron or the console lead to `https://localhost/…`.
  *
  * In a request, a start point without a domain answers for the host that was

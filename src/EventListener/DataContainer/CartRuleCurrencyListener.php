@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartRuleCurrency;
 
 /**
  * A cart rule that states an amount — a fixed discount or a minimum order
- * value — needs its currency (review H, L5). The rule is CartRuleCurrency's,
+ * value — needs its currency (H). The rule is CartRuleCurrency's,
  * which a command asks with the record (Connect Stufe 2, CW-4b); this
  * listener feeds it the posted form.
  *
@@ -23,7 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartRuleCurrency;
  * fields (edit multiple names them per record) is left alone — better no
  * check than a refusal of a field nobody filled in.
  *
- * Nor on an auto-submit (second review H, L-A): switching `effect` to
+ * Nor on an auto-submit (H): switching `effect` to
  * "amount" submits the form before the operator could type a currency.
  * Contao lets empty mandatory fields through then (DataContainer, #4077),
  * but not an exception from a save callback — the message would come before

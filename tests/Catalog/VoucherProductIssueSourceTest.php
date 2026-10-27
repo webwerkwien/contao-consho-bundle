@@ -10,8 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * WG3: Art „Wertgutschein" und Klasse „nicht steuerbar" gehören zusammen.
- * Typ 1 Gutschein, 2 Ware; Klasse 7 nicht steuerbar, 8 gewöhnlich.
+ * WG3: kind "Wertgutschein" (voucher) and class "nicht steuerbar" (not
+ * taxable) belong together. Type 1 voucher, 2 goods; class 7 not taxable,
+ * 8 ordinary.
  */
 class VoucherProductIssueSourceTest extends TestCase
 {
@@ -57,8 +58,8 @@ class VoucherProductIssueSourceTest extends TestCase
     }
 
     /**
-     * Die Varianten tragen den Wert, das Grundprodukt wird nicht verkauft.
-     * Die Art kommt vom Typ des Grundprodukts.
+     * The variants carry the value, the base product is not sold.
+     * The kind comes from the type of the base product.
      */
     public function testVariantenStattGrundprodukt(): void
     {
@@ -70,6 +71,26 @@ class VoucherProductIssueSourceTest extends TestCase
             [[ConfigurationFinding::VoucherValueMissing, 'Gutschein ohne Wert']],
             array_map(static fn ($issue): array => [$issue->finding, $issue->context['product']], (new VoucherProductIssueSource($this->connection))->issues()),
         );
+    }
+
+    /**
+     * EZ-1: a single-purpose voucher belongs in a taxed class — there it is no
+     * mistake; in the class "nicht steuerbar" it is, and the switch is read
+     * from the base product.
+     */
+    public function testEinzweckGehoertInEineBesteuerteKlasse(): void
+    {
+        $this->product(1, 'Wandergutschein', 1, 8, '50');
+        $this->product(2, 'Wandergutschein steuerfrei', 1, 7, '50');
+        $this->product(3, 'Gutschein', 1, 7);
+        $this->product(4, 'Gutschein 25 € steuerfrei', 0, 7, '25', 3);
+        $this->connection->executeStatement('UPDATE tl_consho_product SET voucherSinglePurpose = 1 WHERE id IN (1, 2, 3)');
+
+        self::assertSame(
+            [[ConfigurationFinding::SinglePurposeVoucherNotTaxed, 'Wandergutschein steuerfrei'], [ConfigurationFinding::SinglePurposeVoucherNotTaxed, 'Gutschein 25 € steuerfrei']],
+            array_map(static fn ($issue): array => [$issue->finding, $issue->context['product']], (new VoucherProductIssueSource($this->connection))->issues()),
+        );
+        self::assertTrue(ConfigurationFinding::SinglePurposeVoucherNotTaxed->isWarning());
     }
 
     public function testUnveroeffentlichtZaehltNicht(): void

@@ -9,9 +9,9 @@ use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
- * The row of an entitlement in the back end (F-4). Found at the acceptance on
- * c5 (2026-09-29): the plain label format said "4 × 1.0000 — …" — the
- * article's id and a raw decimal(10,4), the trap of Fall 30. Now the name
+ * The row of an entitlement in the back end (F-4). The plain label format said
+ * "4 × 1.0000 — …" — the article's id and a raw decimal(10,4), which MySQL
+ * returns with its trailing zeros. Now the name
  * frozen on the order line, the quantity as a person writes it, the end or
  * "dauerhaft", and "gesperrt" where it is.
  */

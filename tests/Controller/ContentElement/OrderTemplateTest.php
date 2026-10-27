@@ -7,9 +7,9 @@ use Webwerkwien\ContaoConshoBundle\Order\DeliveryState;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentState;
 
 /**
- * Textprüfungen an der Vorlage der Bestellseite, wie CartTemplateTest: kein
- * Rendering, aber jedes Formular einzeln und jeder Schlüssel in beiden
- * Sprachdateien.
+ * Text checks on the order page template, like CartTemplateTest: no
+ * rendering, but every form on its own and every key in both language
+ * files.
  */
 class OrderTemplateTest extends TestCase
 {
@@ -19,15 +19,15 @@ class OrderTemplateTest extends TestCase
     {
         preg_match_all('#<form\b.*?</form>#s', (string) file_get_contents(self::TEMPLATE), $matches);
 
-        self::assertCount(11, $matches[0], '„Neuen Link anfordern" ohne gültigen Link (D-6, T4), der Knopf beim ersten Öffnen und „Vertrag widerrufen" daneben (D-2, E5), „Vertrag widerrufen" auf der Seite und die Erklärung (D-2), „Erneut versuchen" (C-11), ein Formular je Beleg-Format, eines für den Wechsel, „Herunterladen" (F-5) und je Stück eines Moduls Download und Knopf (LZ-1).');
+        self::assertCount(12, $matches[0], '„Neuen Link anfordern" ohne gültigen Link (D-6, T4), der Knopf beim ersten Öffnen und „Vertrag widerrufen" daneben (D-2, E5), „Vertrag widerrufen" auf der Seite und die Erklärung (D-2), „Erneut versuchen" (C-11), ein Formular je Beleg-Format, eines für den Wechsel, „Herunterladen" (F-5), je Stück eines Moduls Download und Knopf (LZ-1) und „Kundenkonto anlegen" (K1).');
 
         foreach ($matches[0] as $form) {
             /*
-             * Abnahme D-2: „Vertrag widerrufen" ist ein Knopf in einem GET-
-             * Formular — wie die übrigen Knöpfe vom Theme gestaltet, ändert
-             * aber nichts. Kein Anfrage-Token (er landete in der Adresse),
-             * dafür das Bestell-Token als Feld: Ein GET-Formular ersetzt die
-             * Abfrage der Seitenadresse.
+             * D-2: "Vertrag widerrufen" (withdraw from contract) is a button in a
+             * GET form — styled by the theme like the other buttons, but it changes
+             * nothing. No request token (it ended up in the address), but the
+             * order token as a field: a GET form replaces the query of the page
+             * address.
              */
             if (str_contains($form, 'method="get"')) {
                 self::assertStringNotContainsString('REQUEST_TOKEN', $form);
@@ -40,17 +40,17 @@ class OrderTemplateTest extends TestCase
             self::assertSame(1, substr_count($form, 'name="REQUEST_TOKEN"'));
             self::assertSame(1, substr_count($form, 'name="consho_order_action"'));
 
-            // Kein action-Attribut: Das Formular muss an die eigene Adresse
-            // gehen, Token eingeschlossen.
+            // No action attribute: the form has to go to its own address, token
+            // included.
             self::assertStringNotContainsString('action=', $form);
         }
     }
 
     /**
-     * Nachlese Stufe 2: Der Composer-Zugang des Lizenz-Pakets ist zweizeilig
-     * (Repository, dann Anmeldung). In einem `<code>` ohne Umbruch liefen beide
-     * Befehle in eine Zeile — kopiert ein Befehl, der nicht geht. `nl2br`
-     * escapt vorher, der Text bleibt fremder Text.
+     * Nachlese stage 2: the Composer access of the licence package has two
+     * lines (repository, then authentication). In a `<code>` without a line
+     * break both commands ran into one line — what gets copied is a command
+     * that does not work. `nl2br` escapes first, the text stays foreign text.
      */
     public function testEinMehrzeiligerModultextBehaeltSeineZeilen(): void
     {
@@ -70,10 +70,10 @@ class OrderTemplateTest extends TestCase
     }
 
     /**
-     * Abnahme C-10: Das Demo-Theme blendet unter 640 px jedes `<th>` aus und
-     * schreibt `attr(data-cellheadline)` vor jede Zelle. Ein Artikelname im
-     * Zeilenkopf verschwand dort ganz, und jede Zelle begann mit „: ".
-     * Also: im Rumpf keine Zeilenköpfe, und jede Zelle trägt ihre Überschrift.
+     * C-10: the demo theme hides every `<th>` below 640 px and writes
+     * `attr(data-cellheadline)` in front of every cell. An article name in the
+     * row header vanished there entirely, and every cell started with ": ".
+     * So: no row headers in the body, and every cell carries its heading.
      *
      * @dataProvider tabellen
      */
@@ -120,7 +120,7 @@ class OrderTemplateTest extends TestCase
 
         $keys = array_unique($matches[1]);
 
-        // Die zusammengesetzten Schlüssel, jeder Fall einzeln.
+        // The composed keys, each case on its own.
         foreach (PaymentState::cases() as $state) {
             $keys[] = 'CONSHO.orderPage.paymentStates.'.$state->value;
         }
@@ -133,7 +133,7 @@ class OrderTemplateTest extends TestCase
             $keys[] = 'CONSHO.orderPage.notice.'.$notice;
         }
 
-        // C-11: die Sätze zur Online-Zahlung.
+        // C-11: the sentences on online payment.
         foreach (['confirmed', 'reported', 'none', 'failed', 'cancelled'] as $online) {
             $keys[] = 'CONSHO.orderPage.online.'.$online;
         }
@@ -155,12 +155,12 @@ class OrderTemplateTest extends TestCase
             $keys[] = 'CONSHO.invoice.types.'.$type;
         }
 
-        // DL3: die Überschrift der Berechtigungen nach ihrer Art.
+        // DL3: the heading of the entitlements by their kind.
         foreach (['entitlements', 'entitlementsServices', 'entitlementsMixed'] as $heading) {
             $keys[] = 'CONSHO.orderPage.'.$heading;
         }
 
-        // DL3: die Sätze der Mails nach dem, was freigeschaltet wurde.
+        // DL3: the sentences of the mails by what was unlocked.
         foreach (['digital', 'service', 'mixed'] as $what) {
             $keys[] = 'CONSHO.mail.paymentReceived.ready.'.$what;
             $keys[] = 'CONSHO.mail.digitalReleased.'.$what.'.subject';
@@ -178,8 +178,8 @@ class OrderTemplateTest extends TestCase
                 $value = \is_array($value) ? ($value[$part] ?? null) : null;
             }
 
-            // Ein Präfix wie 'CONSHO.orderPage.notice.' endet auf einen Punkt
-            // und wird von der Suche oben nicht erfasst.
+            // A prefix such as 'CONSHO.orderPage.notice.' ends in a dot and is not
+            // caught by the search above.
             self::assertIsString($value, \sprintf('%s fehlt in %s.', $key, $language));
         }
 

@@ -11,9 +11,9 @@ use Webwerkwien\ContaoConshoBundle\Order\NumberRangeChange;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * CW-5 (I4), Michael 2026-10-11: „Nächste Nummer frei" in Maske und Befehlen.
- * Shop 1 hat die Rechnungen RE-00001 bis RE-00003 und RE-2027-00001, die
- * Bestellungen B-10 und B-14 (Lücke) und in Shop 2 die Rechnung RE-00009.
+ * CW-5 (I4): "Next free number" in the form and in the commands.
+ * Shop 1 has the invoices RE-00001 to RE-00003 and RE-2027-00001, the
+ * orders B-10 and B-14 (gap), and shop 2 has the invoice RE-00009.
  */
 class NumberRangeChangeTest extends TestCase
 {
@@ -54,8 +54,8 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Der Jahreswechsel: neues Präfix, Zähler 0. Und „RE-2027-00001" zählt
-     * nicht unter „RE-" — der Rest ist keine Zahl.
+     * The turn of the year: new prefix, counter 0. And "RE-2027-00001" does
+     * not count under "RE-" — the rest is not a number.
      */
     public function testNeuesPraefixBeginntBeiNull(): void
     {
@@ -69,8 +69,8 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Bestellnummern haben Lücken: ein Zähler in der Lücke kollidiert ein
-     * paar Bestellungen später.
+     * Order numbers have gaps: a counter in the gap collides a few orders
+     * later.
      */
     public function testBestellnummernMitLuecke(): void
     {
@@ -79,8 +79,8 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Genannt wird die höchste Nummer, nicht die zuletzt gelesene: Als Text
-     * steht „B-100" vor „B-20".
+     * The highest number is named, not the last one read: as text "B-100"
+     * comes before "B-20".
      */
     public function testGenanntWirdDieHoechsteNummer(): void
     {
@@ -98,10 +98,10 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Die vier Belegarten sind ein Nummernraum (Michael, 2026-10-12, CW-6):
-     * Eine Gutschrift mit „RE-" bei 0 druckte RE-00001 neben die Rechnung
-     * RE-00001 — und eine Gutschrift ist umsatzsteuerlich eine Rechnung.
-     * Die Bestellnummer bleibt eine eigene Reihe.
+     * The four document types are one number space:
+     * a credit note with "RE-" at 0 printed RE-00001 next to the invoice
+     * RE-00001 — and for VAT purposes a credit note is an invoice.
+     * The order number stays a series of its own.
      */
     public function testEinPraefixGiltUeberAlleBelegarten(): void
     {
@@ -115,8 +115,8 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Ein Präfix mit Zeichen, die ein LIKE deuten würde („_", „%", „\"):
-     * Entschieden wird in PHP, also zählen sie als sie selbst.
+     * A prefix with characters a LIKE would interpret ("_", "%", "\"):
+     * the decision is made in PHP, so they count as themselves.
      */
     public function testZeichenDieLikeDeutet(): void
     {
@@ -131,8 +131,8 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Kleinschreibung kann die Länge eines Zeichens ändern („İ" → „i̇").
-     * Der Rest wird aus derselben Form geschnitten wie das Präfix.
+     * Lower-casing can change the length of a character ("İ" → "i̇").
+     * The rest is cut from the same form as the prefix.
      */
     public function testKleinschreibungMitAndererLaenge(): void
     {
@@ -152,8 +152,8 @@ class NumberRangeChangeTest extends TestCase
         self::assertSame(['current' => 5], $listener->refuseIssuedNumber(['current' => 5], $dc));
         self::assertSame(['prefix' => 'RE-2028-', 'current' => 0], $listener->refuseIssuedNumber(['prefix' => 'RE-2028-', 'current' => 0], $dc));
 
-        // Ein Altbestand unter der vergebenen Nummer sperrt keine Änderung,
-        // die den Zähler nicht berührt.
+        // Existing numbers below the assigned number do not block a change
+        // that does not touch the counter.
         $legacy = $this->createStub(DataContainer::class);
         $legacy->method('getCurrentRecord')->willReturn(['id' => 8, 'pid' => 1, 'type' => 'invoice', 'prefix' => 'RE-', 'current' => 1]);
         self::assertSame(['padding' => 6], $listener->refuseIssuedNumber(['padding' => 6], $legacy), 'nur die Stellen: nichts zu prüfen');
@@ -163,7 +163,7 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Aus der Bestellreihe in die Belege: geprüft wird gegen die Belege.
+     * From the order series into the documents: checked against the documents.
      */
     public function testDieArtZuWechselnPrueftDieNeueArt(): void
     {
@@ -176,8 +176,8 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Nur das Präfix zu ändern ist auch eine Änderung, die prüft (Review
-     * CW-6, K3): „RE-2028-" bei 0 auf „RE-" fiele unter RE-00003.
+     * Changing only the prefix is also a change that checks (CW-6):
+     * "RE-2028-" at 0 to "RE-" would fall below RE-00003.
      */
     public function testNurDasPraefixZuAendernPrueft(): void
     {
@@ -190,10 +190,10 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Zwei Belegarten auf einem Präfix treffen sich später, wie die Zähler
-     * heute auch stehen: Rechnungen bei 3, Gutschriften ab 50 — bei 51 doppelt.
-     * Groß-/Kleinschreibung und Leerzeichen trennen kein Präfix; die
-     * Bestellnummer hat ihren eigenen Raum.
+     * Two document types on one prefix meet later, however the counters stand
+     * today: invoices at 3, credit notes from 50 — at 51 doubled.
+     * Upper/lower case and spaces do not separate a prefix; the order number
+     * has its own space.
      */
     public function testZweiBelegartenTeilenKeinPraefix(): void
     {
@@ -217,9 +217,9 @@ class NumberRangeChangeTest extends TestCase
     }
 
     /**
-     * Der Weg durch die Maske (Review CW-6, zweiter Durchgang, S1): Der eigene
-     * Kreis teilt sein Präfix nicht mit sich selbst, und wer die Art wechselt,
-     * wird mit der neuen Art geprüft.
+     * The way through the form (CW-6): the range itself does not share its
+     * prefix with itself, and whoever switches the type is checked with the
+     * new type.
      */
     public function testDieMaskePrueftDasPraefixMitIdUndNeuerArt(): void
     {

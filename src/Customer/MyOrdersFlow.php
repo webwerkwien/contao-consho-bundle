@@ -16,16 +16,16 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
  * finding the page, the shop and the member, which is MyOrdersController's.
  *
  * Its own class so the rules can be tested without Contao's page objects
- * (Fable review D-4, B1): the element is the one place where a member id,
+ * (D-4): the element is the one place where a member id,
  * an order id from the query and a token meet.
  *
  *  - `consho_open=<id>`: only an order MemberOrders::owns() gets a token —
  *    an hour, confirming no address — and a redirect to the order page.
  *  - POST `request`: the confirmation mail, limited per account AND per
  *    address. Without a name: the account's name is whatever its holder
- *    typed, and the addressee may be somebody else (Fable review D-4, S1).
+ *    typed, and the addressee may be somebody else (D-4).
  *  - POST `confirm`: GuestOrderConfirmation decides. Never on a GET.
- *  - `consho_my_orders=<notice>`: only the known keys (review, S3) — a free
+ *  - `consho_my_orders=<notice>`: only the known keys — a free
  *    text in the query must not end up as a sentence on the shop's page.
  */
 class MyOrdersFlow

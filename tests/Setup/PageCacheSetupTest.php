@@ -42,7 +42,7 @@ class PageCacheSetupTest extends TestCase
 
     public function testEinschaltenMitVersion(): void
     {
-        // Review I, L5: before the change, and after it — read at the call.
+        // I: before the change, and after it — read at the call.
         $cached = fn (): int => (int) $this->connection->fetchOne('SELECT includeCache FROM tl_page WHERE id = 1');
         $versions = $this->createMock(Versions::class);
         $versions->expects(self::once())->method('initialize')->willReturnCallback(static fn () => self::assertSame(0, $cached()));
@@ -55,11 +55,11 @@ class PageCacheSetupTest extends TestCase
 
     public function testGemessenWerdenEinstiegsseiteUndDieErsteKatalogseiteDiesesStartpunkts(): void
     {
-        // Wie auf c5: gleiche Sortierung, „/" liefert die Seite mit Alias index.
+        // As on a real installation: same sorting, "/" delivers the page with alias index.
         $this->connection->insert('tl_page', ['id' => 4, 'pid' => 1, 'sorting' => 0, 'title' => 'Produkt', 'alias' => 'produkt', 'published' => 1]);
         $this->connection->insert('tl_page', ['id' => 2, 'pid' => 1, 'sorting' => 0, 'title' => 'Home', 'alias' => 'index', 'published' => 1]);
         $this->connection->insert('tl_page', ['id' => 5, 'pid' => 1, 'sorting' => 256, 'title' => 'Shop', 'published' => 1]);
-        // Eine Ebene tiefer — und eine Fremdseite mit kleinerer ID.
+        // One level deeper — and a foreign page with a smaller ID.
         $this->connection->insert('tl_page', ['id' => 3, 'pid' => 5, 'title' => 'Kräuter', 'published' => 1]);
         $this->connection->insert('tl_page', ['id' => 8, 'title' => 'Andere Website', 'type' => 'root', 'published' => 1]);
         $this->connection->insert('tl_page', ['id' => 9, 'pid' => 8, 'title' => 'Fremder Katalog', 'published' => 1]);

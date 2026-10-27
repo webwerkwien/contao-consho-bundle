@@ -5,13 +5,12 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Ein kopierter Shop kopiert seine Nummernkreise (ctable) — der Zählerstand
- * darf nicht mitwandern. Gefunden bei der Abnahme von C-12 (2026-09-26):
- * „Testshop 2" war eine Kopie und stand bei vier Rechnungen, ohne je eine
- * ausgestellt zu haben; seine erste Rechnung wäre RE-00005 gewesen.
+ * A copied shop copies its number ranges (ctable) — the counter must not
+ * travel along. C-12: a shop that was a copy stood at four invoices without
+ * ever having issued one; its first invoice would have been the fifth.
  *
- * Geprüft wird die DCA-Datei, nicht DC_Table::copy(): Contao lässt beim
- * Kopieren jedes Feld mit `doNotCopy` auf seinem Vorgabewert (0).
+ * What is checked is the DCA file, not DC_Table::copy(): when copying,
+ * Contao leaves every field with `doNotCopy` at its default value (0).
  */
 class NumberRangeCopyTest extends TestCase
 {

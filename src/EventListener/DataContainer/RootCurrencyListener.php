@@ -36,7 +36,7 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopCurrencies;
  * ⚠️ `consho_shop` has no `submitOnChange`, on purpose. An auto-submit would
  * set tstamp = time() (DC_Table::submit()) and so end the tstamp = 0 state
  * reviseTable() uses to clean up abandoned new records — the reason the price
- * mask lost its auto-submit on 2026-09-15. The price of leaving it out is
+ * mask lost its auto-submit. The price of leaving it out is
  * mild: after picking a shop the editor saves once, and from then on the
  * currencies match.
  *

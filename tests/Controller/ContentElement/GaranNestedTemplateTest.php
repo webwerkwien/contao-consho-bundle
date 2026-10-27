@@ -10,9 +10,9 @@ use Twig\TwigFunction;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductTile;
 
 /**
- * GA8 (review GA8, 3): das geschachtelte GARAN-Label durch die ganze Kette
- * der echten Vorlagen — Liste (`garanTiles[product.id]`) → Kachel → Teil-
- * vorlage. Wie StockTemplateTest, nur mit der Liste davor.
+ * GA8 (GA8): the nested GARAN label through the whole chain of the real
+ * templates — list (`garanTiles[product.id]`) → tile → partial template.
+ * Like StockTemplateTest, only with the list in front.
  */
 class GaranNestedTemplateTest extends TestCase
 {

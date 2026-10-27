@@ -10,7 +10,7 @@
  *
  * A column on tl_consho_product would not do: currency belongs to the shop, and
  * one product can be visible in several shops with different currencies.
- * See docs/block-a-fundament.md, section 3.1.
+ * See Block A, section 3.1.
  *
  * Both net and gross are projected, which is a deviation from the plan — it had
  * one `listPrice` column, and contradicted itself about which of the two it

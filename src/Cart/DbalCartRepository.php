@@ -429,8 +429,8 @@ final class DbalCartRepository implements CartConversionInterface
      * Of the three ways out, this is the one that moves the evidence to where
      * it belongs: "this visitor has bought" is a fact about the ORDER.
      *
-     * 🔴 **And no fresh cookie follows**, although this said so until the
-     * review of 2026-09-23 (F9). It was planned and turned out to be
+     * 🔴 **And no fresh cookie follows**, although this once said so
+     * (F9). It was planned and turned out to be
      * unnecessary: with the hash gone, the next "add to basket" from the same
      * cookie finds nothing, creates a basket, and the unique key it would have
      * collided with is free. Issuing a cookie as well would log the visitor
@@ -444,11 +444,11 @@ final class DbalCartRepository implements CartConversionInterface
      * 🔴 **Written out rather than passed as an array**, and that is the whole
      * reason this is not a three-line update(). `order` is a reserved word in
      * MySQL AND SQLite, and Connection::update()/insert() do NOT quote the
-     * columns they are given — measured against DBAL 4.4.4 on 2026-09-23, and
-     * the comment in tl_consho_cart.php claimed the opposite until then.
+     * columns they are given — measured against DBAL 4.4.4, and
+     * the comment in tl_consho_cart.php once claimed the opposite.
      *
      * Nothing had ever written this column, so nothing had ever found out. The
-     * first caller would have been this one, and it would have failed on c5
+     * first caller would have been this one, and it would have failed on MySQL
      * with a syntax error that names the column and explains nothing.
      */
     public function markConverted(int $cartId, int $orderId, int $now): void

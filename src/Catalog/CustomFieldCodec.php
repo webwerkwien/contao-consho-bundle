@@ -6,7 +6,7 @@ namespace Webwerkwien\ContaoConshoBundle\Catalog;
  * Encodes and decodes custom field values.
  *
  * Custom fields are deliberately NOT filterable, which is why they live in one
- * JSON column instead of a value table — see docs/block-a-fundament.md,
+ * JSON column instead of a value table — see Block A,
  * section 3.1. The column is `text` rather than a native `json` type: whether
  * Contao's schema generator migrates a json column cleanly is unverified, and
  * a column type that fails during contao:migrate blocks the whole rollout.

@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Seo\FilterStateCodec;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen SQLite statt gegen Mocks: FilterResolver und ListingPageRepository sind
- * final und stellen echte Abfragen — genau die sollen hier mitgeprüft werden.
+ * Against SQLite instead of mocks: FilterResolver and ListingPageRepository
+ * are final and run real queries — exactly those are to be checked here too.
  */
 class FacetStateListenerTest extends TestCase
 {
@@ -37,11 +37,11 @@ class FacetStateListenerTest extends TestCase
 
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Eigenschaften wie in FilterResolverTest.
+        // Properties as in FilterResolverTest.
         DcaSchema::create($this->connection, 'tl_consho_property_group');
         DcaSchema::create($this->connection, 'tl_consho_property_option');
 
-        // Artikel und Elemente wie in ListingPageRepositoryTest.
+        // Articles and elements as in ListingPageRepositoryTest.
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (
                 id INTEGER PRIMARY KEY,
@@ -69,7 +69,7 @@ class FacetStateListenerTest extends TestCase
             )",
         );
 
-        // Aus der DCA, also so streng wie sie: beide UNIQUE-Indizes hängen an pid.
+        // From the DCA, so as strict as it is: both UNIQUE indexes hang on pid.
         DcaSchema::create($this->connection, 'tl_consho_facet_page');
 
         $this->group(1, 'colour');
@@ -83,7 +83,7 @@ class FacetStateListenerTest extends TestCase
         $this->group(3, 'intern', filterable: false);
         $this->option(31, 3, 'ja');
 
-        // Seite 12: Kategorieliste ohne Vorgabe.
+        // Page 12: category list without a preset.
         $this->listingOn(self::PAGE, article: 100, element: 636);
     }
 
@@ -112,8 +112,8 @@ class FacetStateListenerTest extends TestCase
 
     public function testDropsAnOptionTypedTwice(): void
     {
-        // Doppelt gespeichert ergäbe „colour:red,red" — eine Adresse, die die
-        // Filterbedienung nie erzeugt. Die Landingpage wäre unerreichbar.
+        // Saved twice it would give "colour:red,red" — a URL that the filter
+        // controls never produce. The landing page would be unreachable.
         self::assertSame('colour:red', $this->save('colour:red,red'));
     }
 
@@ -144,19 +144,19 @@ class FacetStateListenerTest extends TestCase
 
     public function testRefusesAvailableOnly(): void
     {
-        // Block Verfügbarkeit, V5: eine Sicht nach Lager, nie eine Landingpage —
-        // gesagt, nicht still weggelassen.
+        // Block Verfügbarkeit, V5: a view by stock, never a landing page —
+        // said, not silently left out.
         $this->expectExceptionMessage('available: volume:250ml;only_available:1');
 
         $this->save('volume:250ml;only_available:1');
     }
 
-    // ── Gegen die Eigenschaften ──────────────────────────────────────────
+    // ── Against the properties ───────────────────────────────────────────
 
     public function testRefusesAnUnknownOption(): void
     {
-        // Stillschweigend verworfen zeigte die Landingpage unter eigenem Titel
-        // die ganze Kategorie.
+        // Silently discarded, the landing page would show the whole category
+        // under its own title.
         $this->expectExceptionMessage('unknown: volume:999ml');
 
         $this->save('volume:999ml');
@@ -171,14 +171,14 @@ class FacetStateListenerTest extends TestCase
 
     public function testRefusesAGroupThatIsNotFilterable(): void
     {
-        // Der Besucher könnte sie nie wählen — FilterResolver verwirft sie auch
-        // vorne, die Landingpage zeigte also die ganze Kategorie.
+        // The visitor could never choose it — FilterResolver discards it in
+        // the front end too, so the landing page would show the whole category.
         $this->expectExceptionMessage('unknown: intern:ja');
 
         $this->save('intern:ja');
     }
 
-    // ── Gegen die Listenseite ────────────────────────────────────────────
+    // ── Against the list page ────────────────────────────────────────────
 
     public function testRefusesAPageWithoutAFollowingListing(): void
     {
@@ -190,11 +190,11 @@ class FacetStateListenerTest extends TestCase
     public function testAnOldRecordStillPointingAtAStartPointGetsASentenceInsteadOfACrash(): void
     {
         /*
-         * Vor B-4 zeigte pid auf den Shop. Ein solcher Altdatensatz zeigt nach
-         * dem Umbau still auf die Seite mit derselben ID — auf dem Testserver
-         * Shop 1 → Seite 1, ein Startpunkt ohne Artikel. Beim Speichern meldet
-         * Contao für pid „Pflichtfeld" (Seite 1 steht nicht in der Auswahl),
-         * und getActiveRecord() liefert dann weiter die gespeicherte 1.
+         * Before B-4, pid pointed to the shop. Such a legacy record silently
+         * points to the page with the same ID after the rebuild — say shop 1
+         * → page 1, a root page without articles. On save Contao reports
+         * "mandatory field" for pid (page 1 is not among the options), and
+         * getActiveRecord() then keeps delivering the saved 1.
          */
         $this->expectExceptionMessage('without listing: 1');
 
@@ -203,8 +203,8 @@ class FacetStateListenerTest extends TestCase
 
     public function testDoesNotAskForAListingBeforeAPageIsChosen(): void
     {
-        // pid ist Pflichtfeld und meldet sich selbst. Eine zweite Meldung
-        // „Seite 0 hat keine Liste" hülfe niemandem.
+        // pid is mandatory and reports itself. A second message "page 0 has
+        // no list" would help nobody.
         self::assertSame('volume:250ml', $this->save('volume:250ml', pid: 0));
     }
 
@@ -233,8 +233,8 @@ class FacetStateListenerTest extends TestCase
 
     public function testKeepsACombinationWithinAPresetOverTwoGroups(): void
     {
-        // Die Vorgabe grenzt in BEIDEN Gruppen ein; die Kombination bleibt in
-        // beiden innerhalb — nicht nur die einer einzelnen Gruppe wie oben.
+        // The preset narrows down in BOTH groups; the combination stays inside
+        // in both — not just in a single group as above.
         $this->listingOn(20, article: 200, element: 700, preset: [11, 12, 21, 22]);
 
         self::assertSame('colour:red;volume:250ml', $this->save('colour:red;volume:250ml', pid: 20));
@@ -242,9 +242,9 @@ class FacetStateListenerTest extends TestCase
 
     public function testRefusesACombinationTouchingBothGroupsOfAPresetButOutsideOne(): void
     {
-        // Dieselbe zweigruppige Vorgabe wie oben — die Kombination berührt
-        // beide Gruppen, liegt aber in „volume" außerhalb (1000ml ist zwar
-        // eine bekannte, filterbare Option, nur nicht Teil der Vorgabe).
+        // The same two-group preset as above — the combination touches both
+        // groups but lies outside in "volume" (1000ml is a known, filterable
+        // option, just not part of the preset).
         $this->option(23, 2, '1000ml');
         $this->listingOn(20, article: 200, element: 700, preset: [11, 12, 21, 22]);
 
@@ -253,12 +253,12 @@ class FacetStateListenerTest extends TestCase
         $this->save('colour:red;volume:1000ml', pid: 20);
     }
 
-    // ── Deckungsgleich mit der Kategorie (Entscheidung 2026-09-13) ─────────
+    // ── Congruent with the category ──────────────────────────────────────
 
     public function testRefusesACombinationThatMatchesTheCategoryPresetExactly(): void
     {
-        // Dieselben Produkte wie die Kategorie selbst — eine Landingpage
-        // dafür hätte denselben Inhalt.
+        // The same products as the category itself — a landing page for it
+        // would have the same content.
         $this->listingOn(20, article: 200, element: 700, preset: [11, 21]);
 
         $this->expectExceptionMessage('matches category: colour:red;volume:250ml');
@@ -268,9 +268,9 @@ class FacetStateListenerTest extends TestCase
 
     public function testRefusesTheSameCategoryPresetTypedInAnotherOrder(): void
     {
-        // Der Vergleich läuft über den normalisierten Zustand (Codec) — die
-        // Reihenfolge, in der Vorgabe und Eingabe die Gruppen nennen, ist
-        // unabhängig voneinander und darf keine Rolle spielen.
+        // The comparison runs on the normalised state (codec) — the order in
+        // which preset and input name the groups is independent of each other
+        // and must not matter.
         $this->listingOn(20, article: 200, element: 700, preset: [21, 11]);
 
         $this->expectExceptionMessage('matches category: colour:red;volume:250ml');
@@ -280,7 +280,7 @@ class FacetStateListenerTest extends TestCase
 
     public function testKeepsACombinationNarrowerThanTheCategoryPreset(): void
     {
-        // Enger als die Vorgabe: eine von zwei Optionen der Vorgabe-Gruppe.
+        // Narrower than the preset: one of two options of the preset group.
         $this->listingOn(20, article: 200, element: 700, preset: [11, 12]);
 
         self::assertSame('colour:red', $this->save('colour:red', pid: 20));
@@ -288,10 +288,10 @@ class FacetStateListenerTest extends TestCase
 
     public function testRefusesAMatchWhenThePresetAlsoUsesAGroupNobodyCanFilterBy(): void
     {
-        // Vorgabe „Farbe rot" plus die nicht filterbare Gruppe „intern: ja" —
-        // der Fall aus FilterResolver::group() („Aktion"). Getippt werden kann
-        // nur der filterbare Teil. Er zeigt dieselben Produkte wie die
-        // Kategorie, weil „intern: ja" ohnehin immer gilt.
+        // Preset "colour red" plus the non-filterable group "internal: yes" —
+        // the case from FilterResolver::group() ("promotion"). Only the
+        // filterable part can be typed. It shows the same products as the
+        // category, because "internal: yes" always applies anyway.
         $this->listingOn(20, article: 200, element: 700, preset: [11, 31]);
 
         $this->expectExceptionMessage('matches category: colour:red');
@@ -308,12 +308,12 @@ class FacetStateListenerTest extends TestCase
 
     public function testDoesNotCompareAgainstACategoryWithoutAPreset(): void
     {
-        // Randfall: Seite 12 (siehe setUp) hat keine Vorgabe — nichts zu
-        // vergleichen, die Kombination bleibt erlaubt.
+        // Edge case: page 12 (see setUp) has no preset — nothing to compare,
+        // the combination stays allowed.
         self::assertSame('colour:red;volume:250ml', $this->save('colour:red;volume:250ml'));
     }
 
-    // ── Dubletten ────────────────────────────────────────────────────────
+    // ── Duplicates ───────────────────────────────────────────────────────
 
     public function testRefusesACombinationAnotherLandingPageOnThePageAlreadyHolds(): void
     {
@@ -330,7 +330,7 @@ class FacetStateListenerTest extends TestCase
 
     public function testKeepsTheSameCombinationOnAnotherPage(): void
     {
-        // Zwei Kategorien, zwei Mengen — die Freigabe gehört der Seite.
+        // Two categories, two sets — the approval belongs to the page.
         $this->listingOn(20, article: 200, element: 700);
         $this->facet(id: 3, page: 20, state: 'volume:250ml', alias: 'schwedenbitter-250-ml');
 

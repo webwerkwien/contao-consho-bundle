@@ -18,8 +18,8 @@ use Doctrine\DBAL\Connection;
  *  - Gleiche Laufzeit: the term moves on by one length, from the start (P17),
  *    price frozen; the reminder is due again for the new term (P45).
  *  - Unbefristet ("läuft weiter, jederzeit kündbar"): billed monthly from now
- *    on without an end (P46). Only a monthly plan may be one (variant A,
- *    2026-10-08: the conversion of a yearly plan into the monthly plan's price
+ *    on without an end (P46). Only a monthly plan may be one (variant A:
+ *    the conversion of a yearly plan into the monthly plan's price
  *    is gone, A8/P47/P73); a rule from before that is billed otherwise ends,
  *    so the transition has an answer for it.
  *
@@ -81,7 +81,7 @@ class SubscriptionLifecycle
             && 'minimum' === (string) $row['phase']
             && 0 === (int) $row['reminderSentAt']
             && 0 === (int) ($row['endsAt'] ?? 0)
-            // Renewed already (Abo-7b, review S4): "ends on … — renew" would
+            // Renewed already (Abo-7b): "ends on … — renew" would
             // offer what is done.
             && 0 === (int) ($row['renewedBy'] ?? 0)
             && $days > 0
@@ -126,7 +126,7 @@ class SubscriptionLifecycle
     /**
      * Every period of the minimum term billed — the last one ends with it.
      *
-     * Or a pause reaches the end of the term (review Abo pausieren, B1): a
+     * Or a pause reaches the end of the term (Abo pausieren): a
      * pause from the last period's end moved the term's end to its own, and
      * there is nothing to bill in a pause. Without this, billing waited for
      * the transition (`next < minimumEndsAt`) and the transition for billing
@@ -143,8 +143,8 @@ class SubscriptionLifecycle
 
     private function end(int $subscriptionId, int $endsAt, int $now): LifecycleChange
     {
-        // The mandate goes with the contract (Michael, 2026-10-03: „ja, beim
-        // Ende leeren"): an ended subscription charges nothing, and a renewal
+        // The mandate goes with the contract — emptied at the
+        // end: an ended subscription charges nothing, and a renewal
         // is a purchase that brings its own (Abo-4b, P98).
         $this->connection->update('tl_consho_subscription', ['state' => 'ended', 'endsAt' => $endsAt, 'mandate' => '', 'mandateMethod' => 0, 'tstamp' => $now], ['id' => $subscriptionId]);
 

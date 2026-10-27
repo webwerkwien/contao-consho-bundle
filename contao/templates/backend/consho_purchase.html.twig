@@ -3,8 +3,8 @@
 
   Every article kept in stock by hand. Those at or below their Meldebestand
   come ticked, with what fills them up to the Sollbestand less what is on
-  order (E1), in whole packs (E2); the others can be ticked and filled in
-  (Michael: "Einträge können ergänzt oder rausgenommen werden").
+  order (E1), in whole packs (E2); the others can be ticked and filled in,
+  and ticked ones can be taken out.
 
   One field per line: packs where the article has a pack size (VPE > 1),
   pieces otherwise (E2: "bis zu 2 Felder, aktiv je nachdem ob Einzelstücke
@@ -14,7 +14,7 @@
 {{ messages|raw }}
 
 <div class="tl_formbody_edit consho-purchase-page">
-    {# One list per submit (review G-7, S1): the buttons disable themselves. #}
+    {# One list per submit (G-7): the buttons disable themselves. #}
     <form action="{{ action }}" method="post" onsubmit="var f = this; setTimeout(function () { f.querySelectorAll('button').forEach(function (b) { b.disabled = true; }); }, 0);">
         <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
 

@@ -12,8 +12,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * Decimal fields in Consho's masks, shown the way the back end's language
  * writes numbers: "1" rather than the column's "1.0000", "2,5" in German,
  * amounts with two decimals at least — "25,00", and "12,3456" where a net
- * really has four. Reported by Michael on 2026-10-24 at the price mask's
- * minimum quantity; the same stood in some fifty fields.
+ * really has four. Some fifty fields showed the column's
+ * form before, the price mask's minimum quantity among them.
  *
  * Every text field over a decimal column of a tl_consho_ table gets a
  * load_callback, unless it brings its own (durabilityYears) or is alwaysSave.

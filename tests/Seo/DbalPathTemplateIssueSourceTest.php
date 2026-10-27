@@ -23,7 +23,7 @@ class DbalPathTemplateIssueSourceTest extends TestCase
 
     public function testValidAndEmptyTemplatesAreNoFinding(): void
     {
-        // Leer heißt Standardvorlage — kein Befund.
+        // Empty means the default template — no issue.
         $this->page(1, '{alias}');
         $this->page(2, '{manufacturer}/{alias}');
         $this->page(3, '');
@@ -33,7 +33,7 @@ class DbalPathTemplateIssueSourceTest extends TestCase
 
     public function testAnInvalidTemplateIsAFinding(): void
     {
-        // Am Backend vorbei geschrieben: kein Platzhalter, der ein Produkt bestimmt.
+        // Written past the backend: no placeholder that determines a product.
         $this->page(4, '{manufacturer}', 'Produkt');
 
         self::assertEquals(
@@ -44,7 +44,7 @@ class DbalPathTemplateIssueSourceTest extends TestCase
 
     public function testEveryKindOfInvalidTemplateCounts(): void
     {
-        // Dieselben Regeln wie beim Speichern: unbekannt, doppelt, ohne Bestimmung.
+        // The same rules as on save: unknown, doubled, without determination.
         $this->page(5, '{unbekannt}/{alias}', 'A');
         $this->page(6, '{alias}/{alias}', 'B');
         $this->page(7, 'fest', 'C');
@@ -57,7 +57,7 @@ class DbalPathTemplateIssueSourceTest extends TestCase
 
     public function testOnlyProductPagesAreRead(): void
     {
-        // Eine andere Seite mit Resten in der Spalte ist kein Befund.
+        // Another page with leftovers in the column is not an issue.
         $this->page(8, '{manufacturer}', 'Alt', 'regular');
 
         self::assertSame([], $this->issues());
@@ -65,7 +65,7 @@ class DbalPathTemplateIssueSourceTest extends TestCase
 
     public function testItIsAWarning(): void
     {
-        // Der Rückfall ändert still die Adressen aller Produkte der Seite — nichts zum Wegklicken.
+        // The fallback silently changes the addresses of all products of the page — nothing to click away.
         self::assertTrue(ConfigurationFinding::PathTemplateInvalid->isWarning());
     }
 

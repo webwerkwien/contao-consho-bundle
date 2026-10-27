@@ -49,7 +49,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_attempt'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],

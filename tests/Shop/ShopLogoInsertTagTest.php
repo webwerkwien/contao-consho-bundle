@@ -23,8 +23,8 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopLogoInsertTag;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 
 /**
- * L6 (Michael, 2026-10-10: „L6a", als <figure> wie Contao): {{consho_logo}}
- * gibt das Logo des Shops der aktuellen Seite über Contaos FigureRenderer aus.
+ * L6 (variant L6a, as a <figure> like Contao): {{consho_logo}} outputs the
+ * logo of the current page's shop through Contao's FigureRenderer.
  */
 class ShopLogoInsertTagTest extends TestCase
 {
@@ -70,9 +70,9 @@ class ShopLogoInsertTagTest extends TestCase
     }
 
     /**
-     * Review L6, 2: aus einem Redaktionsfeld nur Templates des Template
-     * Studios (`@Contao/…`) und die Figure-Templates des Image Studios —
-     * kein fremder Namespace.
+     * L6: from an editorial field only templates of the Template Studio
+     * (`@Contao/…`) and the figure templates of the Image Studio —
+     * no foreign namespace.
      */
     public function testNurTemplatesDesTemplateStudios(): void
     {
@@ -81,8 +81,8 @@ class ShopLogoInsertTagTest extends TestCase
     }
 
     /**
-     * Review L6, 1: ein Template, das es nicht gibt, lässt den Tag leer —
-     * nicht die Seite mit 500 stehen.
+     * L6: a template that does not exist leaves the tag empty —
+     * not the page standing with a 500.
      */
     public function testEinFehlendesTemplateLaesstDenTagLeer(): void
     {
@@ -90,8 +90,8 @@ class ShopLogoInsertTagTest extends TestCase
     }
 
     /**
-     * Review L6, 5: das Original aus einem nicht öffentlichen Ordner wäre ein
-     * 403 — leer. Mit Bildgröße schreibt Contao eine Kopie nach assets/images.
+     * L6: the original from a non-public folder would be a 403 —
+     * empty. With an image size, Contao writes a copy to assets/images.
      */
     public function testOriginalAusGeschuetztemOrdnerNurMitBildgroesse(): void
     {
@@ -114,8 +114,8 @@ class ShopLogoInsertTagTest extends TestCase
     }
 
     /**
-     * Leer, nie ein kaputtes Bild: keine Seite, kein Shop, kein Logo, eine
-     * Datei, die es nicht mehr gibt, eine Größe, die das Image Studio ablehnt.
+     * Empty, never a broken image: no page, no shop, no logo, a file that
+     * no longer exists, a size the Image Studio rejects.
      */
     public function testLeerStattKaputt(): void
     {

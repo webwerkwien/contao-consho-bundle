@@ -24,8 +24,8 @@ use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 
 /**
- * "Testmail senden" at a mail configuration (C-9, Michael 2026-09-25:
- * „Testmail-Funktion, wo man einen Empfänger eintragen kann").
+ * "Testmail senden" at a mail configuration (C-9), sent to a
+ * recipient typed in.
  *
  * The first real confirmation failed on the SMTP login, and it took a
  * purchase to find out. A test mail says the same in one click — with the
@@ -39,8 +39,7 @@ use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
  *
  * ⚠️ Contao prints messages as HTML, unescaped (Message.php). The recipient
  * is typed in, and the error is the SERVER's answer — for Graph a response
- * body from Microsoft or a proxy. Both are escaped before they go in
- * (review 2026-09-25).
+ * body from Microsoft or a proxy. Both are escaped before they go in.
  *
  * The page is RETURNED as a string, unlike the document actions: this is a
  * form that belongs inside the back end frame, which is exactly what
@@ -74,7 +73,7 @@ final class MailTransportTestController
             throw new NotFoundHttpException();
         }
 
-        // An update rather than a read (review 2026-09-25): sending uses the
+        // An update rather than a read: sending uses the
         // stored credentials and the shop's sender address.
         if (!$this->security->isGranted(ContaoCorePermissions::DC_PREFIX.'tl_consho_mail_transport', new UpdateAction('tl_consho_mail_transport', $row))) {
             throw new AccessDeniedHttpException();
@@ -106,8 +105,7 @@ final class MailTransportTestController
             /*
              * The page is not a Contao list or mask, and those are what print
              * the stored messages (Message::generate() in DC_Table). Without
-             * this the confirmation waited unseen for the next list (Michael,
-             * 2026-09-25: „keine optische Bestätigung im BE").
+             * this the confirmation waited unseen for the next list.
              */
             'messages' => (string) $this->framework->getAdapter(Message::class)->generate(),
             // Decoded: Twig escapes, and "&#40;" would show as such.
@@ -125,7 +123,7 @@ final class MailTransportTestController
      * SPF, DMARC and alignment next to the technical test (D-7, M5).
      *
      * Block A (4.x) promised this as a finding "in the mask"; the checker was
-     * built on 2026-09-09 with its tests and never called — measured in D-7.
+     * built with its tests and never called until D-7.
      * Here, not on the start page: it asks DNS, and the start page is built
      * on every back end request. A technically successful send alone is the
      * green tick that hid a dead Brevo key (spec A).

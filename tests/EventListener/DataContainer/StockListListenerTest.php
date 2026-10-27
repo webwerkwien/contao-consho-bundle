@@ -15,8 +15,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block G, G-7 (G16): die Spalten der Seite „Lagerstand" — Bestand, bestellt
- * (E1), Zustand, Wünsche, Lieferant; bei Schlüsseln die freien Codes.
+ * Block G, G-7 (G16): the columns of the "Stock level" page — stock,
+ * ordered (E1), state, wishes, supplier; for keys the free codes.
  */
 class StockListListenerTest extends TestCase
 {
@@ -70,9 +70,9 @@ class StockListListenerTest extends TestCase
     }
 
     /**
-     * Nachlese K4 (Review G-7, L4): Die Spalten aller Zeilen kommen mit der
-     * ersten Zeile, nicht vier Abfragen je Zeile. Belegt daran, dass eine
-     * spätere Zeile zeigt, was beim ersten Laden galt.
+     * Nachlese K4 (G-7): the columns of all rows come with the first row, not
+     * four queries per row. Proven by a later row showing what applied at the
+     * first load.
      */
     public function testDieSpaltenAllerZeilenKommenMitDerErsten(): void
     {

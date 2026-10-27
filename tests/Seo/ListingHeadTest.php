@@ -28,14 +28,14 @@ use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
 use Webwerkwien\ContaoConshoBundle\Seo\ListingHead;
 
 /**
- * Mit echtem ResponseContext, echter HtmlHeadBag und echtem ContentUrlGenerator.
+ * With a real ResponseContext, real HtmlHeadBag and real ContentUrlGenerator.
  *
- * Seite 12 „Kräuter" auf example.org, Listenelement 7. Der Kopf ist so
- * vorbelegt, wie CoreResponseContextFactory ihn vor dem Element füllt: Titel
- * und Beschreibung der Seite, Robots `index,follow`.
+ * Page 12 "Kräuter" on example.org, list element 7. The head is prefilled
+ * the way CoreResponseContextFactory fills it before the element: title
+ * and description of the page, robots `index,follow`.
  *
- * Jeder Aufruf prüft zusätzlich, dass Robots unverändert bleibt — nie
- * `noindex` (Entscheidung 3, Googles Linie aus Block A 2).
+ * Every call additionally checks that robots stays unchanged — never
+ * `noindex` (Google's line from Block A 2).
  */
 class ListingHeadTest extends TestCase
 {
@@ -43,12 +43,12 @@ class ListingHeadTest extends TestCase
 
     private const PAGE_DESCRIPTION = 'Alles über Kräuter';
 
-    // ── Wer den Kopf schreibt ────────────────────────────────────────────
+    // ── Who writes the head ──────────────────────────────────────────────
 
     public function testOnlyTheFirstListingInAnArticleWritesTheHead(): void
     {
-        // Übergabe aus Task 6: Zwei adressfolgende Listen setzten sonst beide
-        // den Canonical, und die zuletzt gerenderte gewönne.
+        // Otherwise two address-following lists would both set
+        // the canonical, and the one rendered last would win.
         $first = new ListingElement(7, 12, [], true, true);
 
         self::assertTrue(ListingHead::isWrittenBy($first, 7));
@@ -58,9 +58,9 @@ class ListingHeadTest extends TestCase
     public function testWithoutAListingInAnArticleTheListingThatRendersWritesIt(): void
     {
         /*
-         * Übergabe aus Task 7: firstOnPage() findet eine Liste im Layout-Bereich
-         * nie. Ohne diese Regel bekäme eine Kategorie, deren Liste im Layout
-         * steht, weder Landingpage-Titel noch Canonical.
+         * firstOnPage() never finds a list in a layout section.
+         * Without this rule a category whose list sits in the layout
+         * would get neither the landing page title nor a canonical.
          */
         self::assertTrue(ListingHead::isWrittenBy(null, 700));
     }
@@ -77,10 +77,9 @@ class ListingHeadTest extends TestCase
 
     public function testPageOneOrAListingWithoutPaginationKeepsNoPageNumber(): void
     {
-        // Der Controller übergibt 1 für Seite 1 UND für eine Liste ohne
-        // Blätterung. Dort ist ?page_c7=… von Hand getippt; bliebe es im
-        // Canonical, wäre jede beliebige Zahl eine eigene kanonische Adresse.
-        // Auf dem Testserver am 2026-09-13 so gemessen (?page_c636=0).
+        // The controller passes 1 for page 1 AND for a list without
+        // paging. There ?page_c7=… was typed by hand; if it stayed in the
+        // canonical, any number would be a canonical address of its own.
         $head = $this->apply(ListingAddress::category(new FilterState()), 1);
 
         self::assertSame([], $head->getKeepParamsForCanonical());
@@ -92,8 +91,8 @@ class ListingHeadTest extends TestCase
 
     public function testContaoThenPointsPageTwoOfTheCategoryAtPageTwo(): void
     {
-        // Ohne das keep param würfe Contao page_c7 weg, Seite 2 zeigte auf
-        // Seite 1 — Google: „Don't use the first page … as the canonical".
+        // Without the keep param Contao would throw page_c7 away, page 2 would point
+        // to page 1 — Google: "Don't use the first page … as the canonical".
         $head = $this->apply(ListingAddress::category(new FilterState()), 2);
 
         self::assertSame(
@@ -104,9 +103,9 @@ class ListingHeadTest extends TestCase
 
     public function testACanonicalLinkMaintainedOnTheCategoryStays(): void
     {
-        // canonicalLink und canonicalKeepParams der Seite hat die Factory schon
-        // gesetzt. Die Kategorie selbst fasst Consho nicht an — nur die
-        // Seitenzahl kommt zu den gepflegten Parametern dazu.
+        // The factory has already set the page's canonicalLink and
+        // canonicalKeepParams. Consho does not touch the category itself — only the
+        // page number is added to the maintained parameters.
         $head = $this->pageHead();
         $head->setCanonicalUri('https://example.org/gepflegt.html');
         $head->setKeepParamsForCanonical(['utm_*']);
@@ -144,8 +143,8 @@ class ListingHeadTest extends TestCase
 
     public function testASortedLandingPageIsCanonicalToItsUnsortedFirstPage(): void
     {
-        // Sortiert zeigt Seite 3 andere Produkte als unsortiert Seite 3. Die
-        // Seitenzahl bliebe also nur als falsche Behauptung stehen.
+        // Sorted, page 3 shows different products than unsorted page 3. The
+        // page number would thus only remain as a false claim.
         $head = $this->apply($this->landing('volume:250ml', 'price_asc'), 3);
 
         self::assertSame('Schwedenbitter 250 ml', $head->getTitle());
@@ -154,8 +153,8 @@ class ListingHeadTest extends TestCase
 
     public function testALandingPageOverridesACanonicalLinkMaintainedOnTheCategory(): void
     {
-        // Genau deshalb wird der Canonical gesetzt und nicht dem Standard
-        // überlassen: Sonst gewönne der gepflegte Link der Kategorie.
+        // This is exactly why the canonical is set and not left to the
+        // default: otherwise the category's maintained link would win.
         $head = $this->pageHead();
         $head->setCanonicalUri('https://example.org/gepflegt.html');
 
@@ -166,8 +165,8 @@ class ListingHeadTest extends TestCase
 
     public function testAReleasedCombinationInTheParameterTakesTheHeadOfItsLandingPage(): void
     {
-        // Altes Lesezeichen /kraeuter.html?cq=volume:250ml — keine 301,
-        // aber Titel und Canonical der Landingpage (Michael, 2026-09-13).
+        // Old bookmark /kraeuter.html?cq=volume:250ml — no 301,
+        // but title and canonical of the landing page.
         $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']])));
 
         self::assertSame('Schwedenbitter 250 ml', $head->getTitle());
@@ -178,9 +177,9 @@ class ListingHeadTest extends TestCase
 
     public function testPageTwoOfAReleasedCombinationInTheParameterIsPageTwoOfTheLandingPage(): void
     {
-        // Abweichung von der Plan-Skizze, die die Seitenzahl nur auf der
-        // Pfadadresse behielt: Unsortiert zeigt ?cq=volume:250ml&page_c7=2
-        // dieselben Produkte wie Seite 2 der Landingpage.
+        // The page number stays on the parameter address too, not only on the
+        // path address: unsorted, ?cq=volume:250ml&page_c7=2 shows
+        // the same products as page 2 of the landing page.
         $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']])), 2);
 
         self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html?page_c7=2', $head->getCanonicalUri());
@@ -195,9 +194,9 @@ class ListingHeadTest extends TestCase
 
     public function testNurVerfuegbareLaesstDieSeitenzahlWeg(): void
     {
-        // Block Verfügbarkeit: „Nur verfügbare" verengt die Menge — Seite 2
-        // davon ist keine Seite der Landingpage. Der Canonical bleibt die
-        // Landingpage, ohne Häkchen.
+        // Block Verfügbarkeit (availability): "Nur verfügbare" narrows the set —
+        // page 2 of it is not a page of the landing page. The canonical stays the
+        // landing page, without the tick.
         $head = $this->apply(ListingAddress::category(new FilterState(['volume' => ['250ml']], '', true)), 2);
         self::assertSame('https://example.org/kraeuter/schwedenbitter-250-ml.html', $head->getCanonicalUri());
 
@@ -214,8 +213,8 @@ class ListingHeadTest extends TestCase
         self::assertSame('', $head->getCanonicalUri());
         self::assertSame([], $head->getKeepParamsForCanonical());
 
-        // Contaos Standard wirft cq und Seitenzahl weg: Canonical ist die
-        // Kategorie. Die Kombinatorik gehört nicht in den Index (Block A 2).
+        // Contao's default throws cq and the page number away: the canonical is the
+        // category. The combinatorics do not belong in the index (Block A 2).
         self::assertSame(
             'https://example.org/kraeuter.html',
             $head->getCanonicalUriForRequest(Request::create('https://example.org/kraeuter.html?cq=colour:red&page_c7=2')),
@@ -232,9 +231,9 @@ class ListingHeadTest extends TestCase
 
     public function testAParameterThatDecodesToNothingIsTheBareCategory(): void
     {
-        // Übergabe aus Task 4: ?cq=Foo dekodiert zu einem leeren Zustand und
-        // wird wie die Kategorie behandelt — cq fällt aus dem Canonical, die
-        // Seitenzahl bleibt.
+        // ?cq=Foo decodes to an empty state and
+        // is treated like the category — cq drops out of the canonical, the
+        // page number stays.
         $codec = new FilterStateCodec();
         $head = $this->apply(ListingAddress::category($codec->decode('Foo')), 2);
 
@@ -246,9 +245,9 @@ class ListingHeadTest extends TestCase
 
     public function testAnInputEncodedTitleIsDecodedTheWayTheCoreDoes(): void
     {
-        // Wie CoreResponseContextFactory: HtmlDecoder::inputEncodedToPlainText().
-        // Das Template kodiert beim Ausgeben selbst — doppelt kodiert stünde
-        // sonst "&amp;amp;" im Titel.
+        // Like CoreResponseContextFactory: HtmlDecoder::inputEncodedToPlainText().
+        // The template encodes itself on output — double-encoded, "&amp;amp;"
+        // would otherwise be in the title.
         $head = $this->apply($this->landing('material:glas'));
 
         self::assertSame('Kräuter & Co', $head->getTitle());
@@ -257,8 +256,8 @@ class ListingHeadTest extends TestCase
 
     public function testAnInvalidAddressLeavesTheHeadAlone(): void
     {
-        // Das Listenelement antwortet dort 404 (Task 7). Kommt es trotzdem
-        // hierher, darf keine Seitenzahl als kanonisch markiert werden.
+        // The list element answers 404 there. If it still gets
+        // here, no page number may be marked as canonical.
         $head = $this->apply(ListingAddress::invalid(), 2);
 
         self::assertSame(self::PAGE_TITLE, $head->getTitle());
@@ -268,8 +267,8 @@ class ListingHeadTest extends TestCase
 
     public function testWithoutAResponseContextNothingHappens(): void
     {
-        // Etwa beim Rendern außerhalb einer Seite. Die Datenbank wird dann
-        // gar nicht erst gefragt.
+        // For example when rendering outside a page. The database is then
+        // not even asked.
         $repository = $this->createMock(FacetPageRepositoryInterface::class);
         $repository->expects(self::never())->method('findByState');
 
@@ -280,7 +279,7 @@ class ListingHeadTest extends TestCase
 
     public function testAResponseContextWithoutAHeadIsLeftAlone(): void
     {
-        // createResponseContext() ohne Webseite legt keine HtmlHeadBag an.
+        // createResponseContext() without a web page creates no HtmlHeadBag.
         $context = new ResponseContext();
 
         $this->listingHead($this->accessor($context), $this->repository())
@@ -300,7 +299,7 @@ class ListingHeadTest extends TestCase
 
         $this->listingHead($this->accessor($context), $this->repository())->apply($this->kraeuter(), $address, 7, $pageNumber);
 
-        self::assertSame($robots, $head->getMetaRobots(), 'ListingHead setzt nie Robots — kein noindex (Entscheidung 3).');
+        self::assertSame($robots, $head->getMetaRobots(), 'ListingHead setzt nie Robots — kein noindex.');
 
         return $head;
     }
@@ -321,7 +320,7 @@ class ListingHeadTest extends TestCase
     }
 
     /**
-     * Freigegeben unter Seite 12, Schlüssel ist die kodierte Kombination.
+     * Released under page 12; the key is the encoded combination.
      *
      * @return array<string, FacetPageRecord>
      */
@@ -369,7 +368,7 @@ class ListingHeadTest extends TestCase
     }
 
     /**
-     * Wie in FilterUrlGeneratorTest: der echte Generator, ohne Datenbank.
+     * As in FilterUrlGeneratorTest: the real generator, without a database.
      */
     private function contentUrls(): ContentUrlGenerator
     {

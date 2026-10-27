@@ -103,10 +103,10 @@ $conshoBackendModules = [
                 'tl_consho_delivery_item',
                 'tl_consho_document',
 
-                // Missing until 2026-09-23, and the `legal` operation of
-                // tl_consho_order has pointed at it since C-7: Contao refuses a
-                // table a module does not list ("Table … is not allowed in
-                // module …"), so the button answered with a 403 every time.
+                // Required: the `legal` operation of tl_consho_order points at it
+                // (C-7), and Contao refuses a table a module does not list ("Table …
+                // is not allowed in module …") — without it the button answers with
+                // a 403 every time.
                 'tl_consho_order_legal',
 
                 // D-2.
@@ -156,7 +156,7 @@ $conshoBackendModules = [
         ],
 
         /*
-         * D-3 (F11, Michael 2026-09-27): the withdrawals of all orders in one
+         * D-3 (F11): the withdrawals of all orders in one
          * list. They are rare, which is exactly why they must not hide inside
          * an order — the refund is due 14 days after receipt. The same table
          * as under the order, listed flat here (WithdrawalListListener).
@@ -179,7 +179,7 @@ $conshoBackendModules = [
 
         /*
          * Block G (G16, G-7): the stock — "auf der Ebene, wo auch die
-         * Bestellungen sitzen" (Michael, 2026-10-05) — in their group, after the
+         * Bestellungen sitzen" — in their group, after the
          * withdrawals: the subscriptions stay right after the orders (P20). The list of articles
          * with limited stock, their movements, and the purchase lists with
          * their lines; "Einkauf" builds one, "Eingang" books what came.

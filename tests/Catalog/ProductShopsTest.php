@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductShopsRefused;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Connect Stufe 2, CW-3 (F3): die Shop-Zuordnung eines Produkts ohne Maske.
- * assign() schreibt, was die Maske über ihre Optionen schon begrenzt hat;
- * set() prüft, was ein Befehl ohne Formular mitbringt.
+ * Connect stage 2, CW-3 (F3): the shop assignment of a product without the
+ * mask. assign() writes what the mask has already limited through its
+ * options; set() checks what a command brings without a form.
  */
 class ProductShopsTest extends TestCase
 {
@@ -44,7 +44,7 @@ class ProductShopsTest extends TestCase
     }
 
     /**
-     * Eine Differenz, kein Neuschreiben: Unveränderte Zeilen bleiben stehen.
+     * A difference, not a rewrite: unchanged rows stay in place.
      */
     public function testUnveraenderteZuordnungBleibtStehen(): void
     {
@@ -65,8 +65,8 @@ class ProductShopsTest extends TestCase
     }
 
     /**
-     * Spezifikation A 3.7: eine Variante darf die Shops ihres Hauptprodukts
-     * einschränken, nie erweitern.
+     * Specification A 3.7: a variant may narrow the shops of its main product,
+     * never widen them.
      */
     public function testEineVarianteNurInnerhalbDesHauptprodukts(): void
     {

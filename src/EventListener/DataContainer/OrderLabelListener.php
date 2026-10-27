@@ -37,7 +37,7 @@ class OrderLabelListener
      *
      * The third entry is the payment STATE for the title: the colour alone
      * cannot name it — "refunded" is grey like "open", and a cancelled,
-     * refunded order read "Zahlung: offen" (found by the dashboard, 2026-10-07).
+     * refunded order read "Zahlung: offen" (the dashboard showed it).
      *
      * @var array<int, array{0: StatusColour, 1: StatusColour, 2: string}>
      */

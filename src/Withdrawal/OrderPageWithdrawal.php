@@ -47,10 +47,10 @@ class OrderPageWithdrawal
      * cancelled before shipping — nothing is said then, there is nothing to
      * withdraw from).
      *
-     * `late` (WA, B2, 2026-10-22): the window's estimated end has passed. The
+     * `late` (WA): the window's estimated end has passed. The
      * button stays — the window counts from shipping, the period from
      * receipt — with the sentence "Nach unseren Daten ist die Frist
-     * abgelaufen. Der Widerruf wird entsprechend geprüft." (Michael's wording,
+     * abgelaufen. Der Widerruf wird entsprechend geprüft." (worded
      * neutral between du and Sie). Until then it was an `expired` state with
      * the shop's address instead of the button.
      *
@@ -86,7 +86,7 @@ class OrderPageWithdrawal
             }
 
             // Everything already withdrawn — the whole order, or every
-            // position (acceptance Abo-8): no button for nothing.
+            // position (Abo-8): no button for nothing.
             if ([] === $items) {
                 $state = null;
             }
@@ -134,7 +134,7 @@ class OrderPageWithdrawal
             foreach ($post->all('consho_withdraw_quantity') as $itemId => $quantity) {
                 // A nested field (quantity[1][x]=1) is not a quantity. Refused
                 // here, not converted — `(string)` on an array is a warning,
-                // and under Symfony's error handler a 500 (Fable review D-2).
+                // and under Symfony's error handler a 500 (D-2).
                 if (!\is_scalar($quantity)) {
                     return ['notice' => 'withdrawInvalid', 'form' => true];
                 }

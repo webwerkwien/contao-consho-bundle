@@ -8,8 +8,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
- * Decisions on cancellations whose mail did not leave (E10; Michael,
- * 2026-10-08: "E-Punkte passen"), per shop. Until then that stood only in
+ * Decisions on cancellations whose mail did not leave (E10), per shop. Until then that stood only in
  * the log. `decisionSentAt` NULL after a decision says it; 0 is a decision
  * from before the field and says nothing (DecisionSentMigration).
  *

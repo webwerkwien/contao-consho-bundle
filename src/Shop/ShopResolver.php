@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Model\ShopModel;
  * Resolves a page to its shop configuration.
  *
  * n root pages : 1 shop. A multilingual site is several root pages in Contao,
- * but one shop — see docs/block-a-fundament.md, section 4.
+ * but one shop — see Block A, section 4.
  */
 final class ShopResolver
 {
@@ -61,7 +61,7 @@ final class ShopResolver
          * start point", which is true of a root page and of nothing else. An
          * unwalked sub page was handed back as its own start point, carried no
          * `consho_shop`, and "add to basket" answered 400 from every page a
-         * visitor buys from (c5, 2026-09-20). Saying "I do not know" lets the
+         * visitor buys from. Saying "I do not know" lets the
          * caller answer "no shop here" instead of resolving the wrong record.
          *
          * Deliberately NOT loadDetails() here: it throws NoRootPageFoundException
@@ -97,7 +97,7 @@ final class ShopResolver
      * The currency belongs to the audience and therefore to the start point,
      * the home country to the shop that writes the invoice: an Austrian shop
      * selling over /en/ in pounds is the market pair (GBP, AT). See
-     * docs/block-a-fundament.md, section 4.0.
+     * Block A, section 4.0.
      *
      * An empty string where the start point is gone or carries no currency.
      * Callers pass that on unchanged rather than falling back to the euro: no
@@ -122,8 +122,8 @@ final class ShopResolver
          * of tl_page but a property PageModel fills in while walking up the
          * tree. Without it rootOf() hands back the sub page itself — and the
          * currency sits on the start point, so the answer would be empty on
-         * every page a visitor actually buys from. That is the shape of the
-         * bug found on c5 on 2026-09-20, where the same missing walk made
+         * every page a visitor actually buys from. That is the shape of an
+         * earlier bug, where the same missing walk made
          * "add to basket" answer 400 below the start point.
          *
          * It costs nothing where the front end index has already done it:

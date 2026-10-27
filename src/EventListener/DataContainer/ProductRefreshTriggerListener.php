@@ -51,8 +51,7 @@ class ProductRefreshTriggerListener
      * Reports the variants too, while they still exist: VariantDeleteListener
      * deletes them in a later ondelete (lower priority), so by the end of the
      * request the projector can no longer widen the main product to them, and
-     * a variant's list price row would stay behind (found at the acceptance on
-     * 2026-10-14). The deleted ids themselves stand for themselves in the
+     * a variant's list price row would stay behind. The deleted ids themselves stand for themselves in the
      * projector and lose their rows.
      */
     #[AsCallback(table: 'tl_consho_product', target: 'config.ondelete')]

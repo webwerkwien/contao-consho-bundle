@@ -18,7 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  *   to enter.
  * - SubscriptionNotListed: sold only by rules limited to customer groups.
  *   Listings show plans open to everyone (Abo-2b, P91), so the product is in
- *   none — only on its page. Since variant A (2026-10-08, A3) a rule's
+ *   none — only on its page. Since variant A (A3) a rule's
  *   renewal kind no longer matters here; until then "sameTerm" counted as
  *   closed and had a note of its own (SubscriptionConsumersExcluded, gone
  *   with the fixed business-only lock).

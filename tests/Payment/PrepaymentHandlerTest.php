@@ -38,7 +38,7 @@ class PrepaymentHandlerTest extends TestCase
 
     public function testDieRechnungEntstehtBeiBestellung(): void
     {
-        // C6: bei Vorkasse gehört die Rechnungsnummer auf die Rechnung vor der Zahlung.
+        // C6: with prepayment the invoice number goes on the invoice before payment.
         self::assertSame(DocumentTrigger::OnOrder, (new PrepaymentHandler())->documentTrigger([]));
     }
 
@@ -61,7 +61,7 @@ class PrepaymentHandlerTest extends TestCase
 
     public function testRueckkehrUndBenachrichtigungSchreibenNichts(): void
     {
-        // Den Zahlungseingang trägt der Betreiber in A's Maske ein.
+        // The operator enters the incoming payment in Block A's form.
         $handler = new PrepaymentHandler();
 
         self::assertSame(AttemptState::Pending, $handler->handleReturn(new Request(), $this->attempt(), []));

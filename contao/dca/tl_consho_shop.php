@@ -8,7 +8,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\BuyButtonLabel;
  * An entity of its own; root pages select one. Several root pages may point at
  * the same shop — a multilingual site is several root pages in Contao, but one
  * shop, and its order numbers have to be shared.
- * See docs/block-a-fundament.md, section 4.
+ * See Block A, section 4.
  *
  * The palette is deliberately small. Tax configuration, number ranges and
  * mail transports arrived with A-3, A-6 and A-9, shipping and payment
@@ -113,7 +113,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * ⚠️ Out of the palette since C-1c, still in the table on purpose.
          *
          * C-1c task 3 copies the value into `currencies` and into the start
-         * pages; the column is dropped only after the acceptance run on c5 —
+         * pages; the column is dropped only in a later release —
          * same course as `gross` on tl_consho_price in C-1b. A migration that
          * removes the source in the same release leaves nothing to fall back
          * on if the copy turns out wrong on real data.
@@ -122,8 +122,8 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * the cart and detail controllers) is rewritten in tasks 2 and 3, not
          * here. It stays editable through neither mask in the meantime.
          *
-         * ⚠️ The default is '' since C-1c, no longer 'EUR' (Michael, 2026-09-21:
-         * "lieber laut als still, ich denke das wäre auch internationaler").
+         * ⚠️ The default is '' since C-1c, no longer 'EUR' :
+         * loud rather than silent, and more international.
          * Both halves of that matter, and the second outlives this column:
          *
          * LOUD — a shop created before task 3 fills `currencies` now has no
@@ -232,14 +232,12 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * has to be liable for the VAT they then have to add themselves.
          */
         /*
-         * The base group of the shop's customers (D-4, decision of
-         * 2026-09-25 in spec C): accounts WITHOUT an order show up in the
+         * The base group of the shop's customers (D-4): accounts WITHOUT an order show up in the
          * customer list through it. Members with an order and guests come from
          * the orders themselves.
          *
-         * Mandatory without a condition (Michael: „Bei Betreiber müsste das
-         * dann ein Pflichtfeld sein", „ich bin auch eher gegen automatisch
-         * anlegen"): accounts also come from Contao's registration, which
+         * Mandatory without a condition, and never created automatically:
+         * accounts also come from Contao's registration, which
          * assigns its own groups, so Consho cannot know whether a shop has
          * accounts at all. The operator creates the group and sets the
          * registration to it.
@@ -248,8 +246,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'inputType' => 'select',
             'exclude' => true,
             'foreignKey' => 'tl_member_group.name',
-            // The three group fields side by side (Michael, 2026-09-28:
-            // „Gruppenfelder 3 spaltig bitte im BE").
+            // The three group fields side by side.
             'eval' => ['mandatory' => true, 'includeBlankOption' => true, 'chosen' => true, 'tl_class' => 'w33 clr'],
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
         ],
@@ -266,8 +263,8 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * answers for (C19). Consho does not verify anything itself and never
          * writes to tl_member_group; it only reads which groups count.
          *
-         * One of TWO ways to reach an article from 16 or 18 (Michael,
-         * 2026-09-22: "Einer genügt"). The other is a shipping method that
+         * One of TWO ways to reach an article from 16 or 18, and one is
+         * enough. The other is a shipping method that
          * checks on hand-over. Either one opens the order; with neither
          * configured the article cannot be ordered at all, which is the
          * correct default — an unverifiable age is not a formality.
@@ -402,7 +399,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         ],
         /*
          * The invoice sender (9, 11.1) — who issues the bill, in separate
-         * fields (Michael, 2026-09-22: "Einzelfelder").
+         * fields.
          *
          * Not a text block, although one would be quicker to fill in: a
          * structured invoice (ZUGFeRD/Factur-X) needs the parts apart, and
@@ -473,7 +470,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'sql' => ['type' => 'string', 'length' => 255, 'default' => ''],
         ],
         /*
-         * The logo on the invoice (C-8, Michael 2026-09-24).
+         * The logo on the invoice (C-8).
          *
          * The snapshot keeps the file's UUID AND its hash, not the image: a
          * UUID belongs to the path, and Contao keeps it when a file is
@@ -496,8 +493,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'sql' => ['type' => 'binary', 'length' => 16, 'notnull' => false],
         ],
         /*
-         * The expected delivery time in working days (C-8, Michael 2026-09-24:
-         * "Lieferzeit-Spanne am Shop").
+         * The expected delivery time in working days (C-8).
          *
          * § 11 Abs 1 Z 3 lit d UStG asks for the day of delivery, and a
          * prepayment invoice is written at the purchase, before anything is
@@ -523,9 +519,8 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'default' => 0],
         ],
         /*
-         * The rest after a partial shipment (E-6b, Michael 2026-09-28: „1.
-         * Sendung plus x Tage, x soll der Betreiber ausfüllen pro Bestellung,
-         * ggf. mit globalen Grundwert"). The default; an order may carry its own.
+         * The rest after a partial shipment (E-6b): the first
+         * shipment plus a number of days the operator sets. The default; an order may carry its own.
          */
         'remainderDeliveryDays' => [
             'inputType' => 'text',
@@ -536,8 +531,8 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         /*
          * How long the withdrawal function stays open (D-2, W4).
          *
-         * The operator sets it, the statutory 14 days are the default
-         * (Michael, 2026-09-27). 0 means no withdrawal function at all — a shop
+         * The operator sets it, the statutory 14 days are the default.
+         * 0 means no withdrawal function at all — a shop
          * that only delivers outside the EU. A period under 14 days while a
          * delivery country lies in the EU/EEA is a warning, never a block
          * (DbalConfigurationIssueSource).
@@ -568,7 +563,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * counted from the end of the calendar year of its latest document.
          * Mandatory WITHOUT a default: the number is a legal judgement of the
          * operator's — AT and DE differ (the help names the primary texts),
-         * and Consho sets no legal wording (Michael, 2026-09-22). 0 in the
+         * and Consho sets no legal wording. 0 in the
          * column means "not set", never "keep nothing".
          */
         'retentionYears' => [
@@ -592,9 +587,9 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         ],
         /*
          * Two texts the operator writes and Consho freezes into every
-         * invoice (C-8, Michael 2026-09-24: "Betreiber-Texte, eingefroren").
+         * invoice (C-8).
          *
-         * Consho sets no legal wording (2026-09-22). What an invoice has to say
+         * Consho sets no legal wording. What an invoice has to say
          * beyond the figures — the registry entry, the bank, the note on the
          * reverse charge — depends on the operator's legal form and country,
          * and a text the bundle shipped would be wrong for the next shop.
@@ -649,10 +644,9 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * show folders only without it. The picker is the browser's side;
          * the SERVER checks "folders only" in FileTree::checkValue() with
          * `$this->files === false` — strictly false, not merely falsy. Left
-         * out, a crafted POST could make a file the archive folder. (Taken
-         * out once on 2026-09-24 in the name of "switch options off by
-         * leaving them out", and put back the same hour: that rule is about
-         * options Contao reads as truthy, not about a value it asks for.)
+         * out, a crafted POST could make a file the archive folder. (The rule
+         * "switch options off by leaving them out" is about options Contao
+         * reads as truthy, not about a value it asks for.)
          */
         'invoiceArchiveFolder' => [
             'inputType' => 'fileTree',

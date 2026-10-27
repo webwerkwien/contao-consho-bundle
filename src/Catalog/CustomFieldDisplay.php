@@ -6,8 +6,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\CustomFieldTranslations;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 
 /**
- * The custom fields of the article a product page shows (ZW-4; Z3, Michael
- * 2026-10-14: „ja, alles wie empfohlen"): only filled ones, in the order of
+ * The custom fields of the article a product page shows (ZW-4; Z3): only filled ones, in the order of
  * the product type, the title and a text in the page's language.
  *
  * Which text counts, per field (Z1, Z2):
@@ -37,7 +36,7 @@ class CustomFieldDisplay
     {
         // The fields first: a type without custom fields — most shops, most
         // products — costs two queries here, not a reading of every value. The
-        // catalogue JSON asks once per article (review ZW-C, S1).
+        // catalogue JSON asks once per article (ZW-C).
         $fields = $this->values->fieldsOf($articleId);
 
         if ([] === $fields) {
@@ -116,8 +115,7 @@ class CustomFieldDisplay
             $formatter->setAttribute(\NumberFormatter::GROUPING_USED, 0);
 
             // Beyond 15 digits a float rounds (9007199254740993 would show as
-            // …992): the digits as given, only the separator of the language
-            // (Codex review 2026-10-14).
+            // …992): the digits as given, only the separator of the language.
             if (\strlen(ltrim(str_replace(['-', '.'], '', $value), '0')) > 15) {
                 return str_replace('.', $formatter->getSymbol(\NumberFormatter::DECIMAL_SEPARATOR_SYMBOL), $value);
             }
@@ -129,7 +127,7 @@ class CustomFieldDisplay
 
         if (CustomField::DATE === $type) {
             // The round trip as in CustomFieldValues::normalize(): 2024-02-30
-            // parses as 1 March, which nobody entered (Codex review 2026-10-14).
+            // parses as 1 March, which nobody entered.
             $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value);
             $date = false !== $date && $date->format('Y-m-d') === $value ? $date : false;
             $formatted = false === $date ? false : (new \IntlDateFormatter($locale, \IntlDateFormatter::MEDIUM, \IntlDateFormatter::NONE, date_default_timezone_get()))->format($date);

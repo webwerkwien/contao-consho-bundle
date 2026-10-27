@@ -44,7 +44,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxPlace;
 class ZugferdInvoice
 {
     /**
-     * The places of the document's currency (second review R, B3): the PDF
+     * The places of the document's currency (R): the PDF
      * rounds to them (summariseTax), so the XML does too. Set per call.
      */
     private int $digits = 2;
@@ -163,7 +163,28 @@ class ZugferdInvoice
             $this->position($builder, $index + 1, $item, $categories[$index], $sign);
         }
 
-        $totals = $this->taxes($builder, $items, $categories, $sign);
+        /*
+         * EZ-4 (F1): what a single-purpose voucher paid was taxed at its
+         * sale. The lines stay whole; the voucher is a document allowance at
+         * its rate, so the breakdown and the total carry this invoice's tax
+         * only — as a payment it would state the tax twice.
+         */
+        $prepaid = [];
+
+        foreach (\is_array($payload['prepaid'] ?? null) ? $payload['prepaid'] : [] as $entry) {
+            if (\is_array($entry) && is_numeric($entry['net'] ?? null) && is_numeric($entry['tax'] ?? null) && is_numeric($entry['rate'] ?? null)) {
+                $prepaid[] = $entry;
+            }
+        }
+
+        $totals = $this->taxes($builder, $items, $categories, $sign, $prepaid);
+
+        // An XML that disagrees with the PDF is worse than none.
+        if (null === $totals) {
+            $this->logger?->warning(\sprintf('%s has no e-invoice XML: a single-purpose voucher meets no line at its rate, or more than the lines at it.', $number));
+
+            return null;
+        }
 
         $notes = \is_array($payload['notes'] ?? null) ? $payload['notes'] : [];
 
@@ -171,24 +192,34 @@ class ZugferdInvoice
             $builder->addDocumentNote(trim((string) $notes['reverseCharge']));
         }
 
-        $prepaid = BigDecimal::zero();
+        $paid = BigDecimal::zero();
+        $payments = \is_array($payload['payment']['payments'] ?? null) ? $payload['payment']['payments'] : [];
 
-        foreach (\is_array($payload['payment']['payments'] ?? null) ? $payload['payment']['payments'] : [] as $payment) {
-            $prepaid = $prepaid->plus((string) ($payment['amount'] ?? '0'));
+        foreach ($payments as $payment) {
+            $paid = $paid->plus((string) ($payment['amount'] ?? '0'));
         }
 
-        $grand = $totals['net']->plus($totals['tax']);
-        $this->payment($builder, $payload, $order, $credit, $grand->minus($prepaid)->isPositive());
+        // The allowance already took off what single-purpose vouchers paid;
+        // as a prepayment too it would count twice.
+        if ([] !== $payments) {
+            foreach ($totals['vouchers'] as $gross) {
+                $paid = $paid->minus($gross);
+            }
+        }
+
+        $basis = $totals['net']->minus($totals['allowance']);
+        $grand = $basis->plus($totals['tax']);
+        $this->payment($builder, $payload, $order, $credit, $grand->minus($paid)->isPositive());
         $builder->setDocumentSummation(
             $this->amount($grand),
-            $this->amount($grand->minus($prepaid)),
+            $this->amount($grand->minus($paid)),
             $this->amount($totals['net']),
             0.0,
-            0.0,
-            $this->amount($totals['net']),
+            $this->amount($totals['allowance']),
+            $this->amount($basis),
             $this->amount($totals['tax']),
             null,
-            $this->amount($prepaid),
+            $this->amount($paid),
         );
 
         $validator = new ZugferdXsdValidator($builder);
@@ -323,14 +354,21 @@ class ZugferdInvoice
      * (DocumentPayloadBuilder::summariseTax, C-8): the ROUNDED line nets and
      * grosses summed, the tax their difference. So the XML states the PDF's
      * figures to the cent, and BT-106 is the sum of the rounded line nets
-     * (BR-CO-10) — review R, F3: rounding the sums instead was a cent off.
+     * (BR-CO-10) — rounding the sums instead was a cent off.
+     *
+     * A single-purpose voucher (EZ-4) comes off its rate as a document
+     * allowance: the group's basis less the voucher's net, its tax less the
+     * tax the voucher carried. `net` stays the sum of the lines (BT-106).
+     * Null when a voucher meets no group at its rate or takes the group's
+     * basis or tax below zero — the XML could not state the PDF's figures.
      *
      * @param list<array<string, string>> $items
      * @param array<int, string>          $categories
+     * @param list<array<string, mixed>>  $prepaid
      *
-     * @return array{net: BigDecimal, tax: BigDecimal}
+     * @return array{net: BigDecimal, allowance: BigDecimal, tax: BigDecimal, vouchers: list<BigDecimal>}|null
      */
-    private function taxes(ZugferdDocumentBuilder $builder, array $items, array $categories, int $sign): array
+    private function taxes(ZugferdDocumentBuilder $builder, array $items, array $categories, int $sign, array $prepaid): array|null
     {
         $groups = [];
 
@@ -344,6 +382,51 @@ class ZugferdInvoice
         }
 
         $net = BigDecimal::zero();
+        $allowance = BigDecimal::zero();
+        $vouchers = [];
+
+        foreach ($groups as $group) {
+            $net = $net->plus($group['net']);
+        }
+
+        foreach ($prepaid as $entry) {
+            // The same form as the groups' rate (self::rate()).
+            $rate = (string) BigDecimal::of((string) $entry['rate'])->toScale(2, RoundingMode::HalfUp);
+            $key = 'S|'.$rate;
+
+            // Covered only where its rate stands on the document (F2, F4).
+            if (!isset($groups[$key])) {
+                return null;
+            }
+
+            $voucherNet = BigDecimal::of((string) $entry['net'])->toScale($this->digits, RoundingMode::HalfUp)->multipliedBy($sign);
+            $voucherTax = BigDecimal::of((string) $entry['tax'])->toScale($this->digits, RoundingMode::HalfUp)->multipliedBy($sign);
+            $builder->addDocumentAllowanceCharge(
+                $this->amount($voucherNet),
+                false,
+                'S',
+                ZugferdVatTypeCodes::VALUE_ADDED_TAX,
+                (float) $rate,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                self::text((string) ($entry['label'] ?? '')) ?? 'Single-purpose voucher',
+            );
+            $groups[$key]['net'] = $groups[$key]['net']->minus($voucherNet);
+            $groups[$key]['gross'] = $groups[$key]['gross']->minus($voucherNet)->minus($voucherTax);
+
+            // Never more than the lines at that rate (BR-S-08, BR-S-09).
+            if ($groups[$key]['net']->isNegative() || $groups[$key]['gross']->isLessThan($groups[$key]['net'])) {
+                return null;
+            }
+
+            $allowance = $allowance->plus($voucherNet);
+            $vouchers[] = $voucherNet->plus($voucherTax);
+        }
+
         $tax = BigDecimal::zero();
 
         foreach ($groups as $group) {
@@ -358,11 +441,10 @@ class ZugferdInvoice
                 null,
                 self::EXEMPTION[$group['category']] ?? null,
             );
-            $net = $net->plus($groupNet);
             $tax = $tax->plus($groupTax);
         }
 
-        return ['net' => $net, 'tax' => $tax];
+        return ['net' => $net, 'allowance' => $allowance, 'tax' => $tax, 'vouchers' => $vouchers];
     }
 
     /**
@@ -392,8 +474,7 @@ class ZugferdInvoice
         } elseif ($owed) {
             /*
              * A credit note asks nothing of the buyer, but its amount is "due"
-             * all the same, and BR-CO-25 knows no document type (second review
-             * R, B2): it states that it is refunded. In the order's language,
+             * all the same, and BR-CO-25 knows no document type (R): it states that it is refunded. In the order's language,
              * like the method's title (B6).
              */
             $german = str_starts_with((string) ($order['language'] ?? ''), 'de');

@@ -22,7 +22,7 @@
     {# "Nur verfügbare" (block Verfügbarkeit): a link like every option —
        ticking it changes the address, no form, no JavaScript. Marked up like
        the options, not as role="checkbox": a link does not toggle with the
-       space bar, and a screen reader would promise it does (review). #}
+       space bar, and a screen reader would promise it does. #}
     {% if available|default(null) is not null %}
         <p class="consho-filter__available{% if available.selected %} is-selected{% endif %}">
             {% if available.url %}

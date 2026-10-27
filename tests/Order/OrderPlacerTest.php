@@ -61,7 +61,7 @@ class OrderPlacerTest extends TestCase
     /** @var array<string, bool> token hash => confirmsEmail */
     private array $storedTokens = [];
 
-    // Block G (review B2): the isolation level as the double holds it.
+    // Block G: the isolation level as the double holds it.
     private TransactionIsolationLevel $isolation = TransactionIsolationLevel::REPEATABLE_READ;
 
     protected function setUp(): void
@@ -116,14 +116,14 @@ class OrderPlacerTest extends TestCase
         self::assertSame(77, $placed->orderId);
         self::assertFalse($placed->wasAlreadyPlaced);
 
-        // Den Klartext gibt es hier und nie wieder — gespeichert ist nur sein
-        // Hash. Ein zweites Token für den Zahlungsversuch entsteht hier NICHT
-        // mehr (F5): den hielte niemand fest, und findByHash() fände die Zeile
-        // nie wieder.
+        // The plain text exists here and never again — only its hash is
+        // stored. A second token for the payment attempt is NO LONGER
+        // created here: nobody would hold on to it, and findByHash() would
+        // never find the row again.
         self::assertSame(64, \strlen($placed->viewToken));
 
-        // C-10: zwei Tokens — die Umleitung bestätigt nichts, nur der Link aus
-        // der Mail belegt die Adresse.
+        // C-10: two tokens — the redirect confirms nothing, only the link from
+        // the mail proves the address.
         self::assertSame(64, \strlen($placed->mailToken));
         self::assertNotSame($placed->viewToken, $placed->mailToken);
         self::assertFalse($this->storedTokens[hash('sha256', $placed->viewToken)]);
@@ -133,9 +133,10 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * Abo-3: Die Abos entstehen in DERSELBEN Transaktion wie die Bestellung,
-     * nach ihr und vor dem konvertierten Warenkorb — sonst gäbe es eine
-     * Abo-Bestellung ohne Abo, und niemand könnte es kündigen.
+     * Abo-3: the subscriptions are created in the SAME transaction as the
+     * order, after it and before the converted basket — otherwise there would
+     * be a subscription order without a subscription, and nobody could cancel
+     * it.
      */
     public function testDieAbosEntstehenInDerTransaktionNachDerBestellung(): void
     {
@@ -165,14 +166,15 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * Block G (G4): der Bestand wird in der Transaktion abgebucht, nach den
-     * Abos — fehlt etwas, rollt alles zurück, auch die Bestellung.
+     * Block G (G4): the stock is booked off inside the transaction, after the
+     * subscriptions — if something is missing, everything rolls back, the
+     * order too.
      */
     /**
-     * Block G, review B2 (zweites Review): Der Kaufklick läuft in READ
-     * COMMITTED — wer auf die Bestandszeile eines Schlüsselvorrats gewartet
-     * hat, zählt sonst mit dem Schnappschuss von vorher. Danach gilt wieder
-     * die vorige Stufe, auch wenn der Kauf scheitert.
+     * Block G: the purchase click runs in READ COMMITTED — whoever waited for
+     * the stock row of a key pool would otherwise count with the snapshot from
+     * before. Afterwards the previous level applies again, even when the
+     * purchase fails.
      */
     public function testDerKaufklickLaeuftInReadCommitted(): void
     {
@@ -223,8 +225,8 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * Block H (H-4, W5): Die Einlösung zählt in der Transaktion der
-     * Bestellung, für den Code, das Mitglied und die Adresse des Käufers.
+     * Block H (H-4, W5): the redemption counts inside the order's transaction,
+     * for the code, the member and the buyer's address.
      */
     public function testDieEinloesungZaehltInDerTransaktion(): void
     {
@@ -321,7 +323,7 @@ class OrderPlacerTest extends TestCase
 
     public function testDerRecorderIstPflicht(): void
     {
-        // Regel 25 (Fall 42): Eine nullbare Abhängigkeit fehlt still.
+        // Checked on the constructor the container calls: a nullable dependency goes missing silently.
         $parameter = array_values(array_filter(
             (new \ReflectionClass(OrderPlacer::class))->getConstructor()?->getParameters() ?? [],
             static fn (\ReflectionParameter $p): bool => SubscriptionRecorderInterface::class === $p->getType()?->__toString(),
@@ -335,23 +337,23 @@ class OrderPlacerTest extends TestCase
     public function testDerKaufklickLegtKeinenZahlungsversuchAn(): void
     {
         /*
-         * F5 des Reviews vom 2026-09-23. Der Versuch entsteht dort, wo eine
-         * Zahlung beginnt — in start() (C-10/C-11), das den Klartext für die
-         * Rücksprung- und Benachrichtigungsadresse in der Hand hält.
+         * The attempt is created where a payment begins — in start()
+         * (C-10/C-11), which holds the plain text for the return and
+         * notification address in its hand.
          *
-         * Hier entstand er mit einem Token, den der Request mitnahm und
-         * niemand las: eine Zeile in `open`, die findByHash() nie wiederfindet
-         * und die 7.5 („offene Versuche abbrechen") mitzählt. Was sie festhielt
-         * — Art, Titel, Betrag, Währung — steht im Bestellkopf.
+         * Here it used to be created with a token that the request took along
+         * and nobody read: a row in `open` that findByHash() never finds again
+         * and that 7.5 ("cancel open attempts") counts. What it held — method,
+         * title, amount, currency — is in the order header.
          */
         $this->carts->method('lockForPurchase')->willReturn(['state' => 'open', 'order' => 0]);
         $this->orders->method('create')->willReturn(77);
 
         /*
-         * Am Konstruktor geprüft, nicht an einem Doppel mit `never`: Der
-         * Placer kennt das Versuchs-Repository gar nicht mehr, und ein
-         * `expects(never)` auf einem Doppel, das niemand hineinreicht, wäre
-         * genau die Art Prüfung, die nichts prüft.
+         * Checked on the constructor, not on a double with `never`: the
+         * placer does not know the attempt repository any more, and an
+         * `expects(never)` on a double that nobody passes in would be
+         * exactly the kind of check that checks nothing.
          */
         self::assertNotContains(
             PaymentAttemptRepositoryInterface::class,
@@ -375,9 +377,9 @@ class OrderPlacerTest extends TestCase
 
     public function testEinDoppelklickErzeugtKeineZweiteBestellung(): void
     {
-        // Die zweite Anfrage hat auf die Sperre gewartet; inzwischen hat die
-        // erste festgeschrieben. Sie bekommt dieselbe Bestellung, ein eigenes
-        // Ansichts-Token — und legt nichts an.
+        // The second request waited for the lock; meanwhile the first one
+        // committed. It gets the same order, a view token of its own —
+        // and creates nothing.
         $this->carts->method('lockForPurchase')->willReturn(['state' => 'converted', 'order' => 77]);
         $this->orders->expects(self::never())->method('create');
 
@@ -404,9 +406,9 @@ class OrderPlacerTest extends TestCase
 
     public function testEinFehlerNachDerBestellungRolltAllesZurueck(): void
     {
-        // Der Fall, für den die Transaktion überhaupt da ist: Bis C-7 wären
-        // hier eine Bestellung ohne Positionen und eine verbrauchte Nummer
-        // zurückgeblieben — und eine Bestellnummer, die weg ist, ist weg.
+        // The case the transaction exists for in the first place: until C-7
+        // an order without items and a used-up number would have been left
+        // behind here — and an order number that is gone is gone.
         $this->carts->method('lockForPurchase')->willReturn(['state' => 'open', 'order' => 0]);
         $this->orders->method('create')->willReturn(77);
 
@@ -432,9 +434,10 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * D-2, E1 — Michael: „Sperre bei AGB ist schon falsch, man muss keine
-     * haben." Ohne AGB-Häkchen verkauft der Shop ohne AGB, und die
-     * vorhandene Belehrung wird trotzdem eingefroren.
+     * D-2, E1: blocking on missing terms and conditions is wrong — a shop
+     * does not have to have any. Without a terms tick the shop sells without
+     * terms, and the withdrawal information that exists is frozen all the
+     * same.
      */
     public function testOhnePflichtFuerAgbEntstehtDieBestellungOhneAgb(): void
     {
@@ -454,11 +457,11 @@ class OrderPlacerTest extends TestCase
 
     public function testOhneBeideRechtstexteEntstehtKeineBestellung(): void
     {
-        // 🔴 Nebenpunkt zu F3: Die Prüfsumme fängt einen Text, der sich
-        // zwischen Anzeige und Klick geändert hat. Dies fängt den schmalen
-        // Streifen danach — ein Element, dessen Zeitfenster in diesen
-        // Millisekunden endet. Eine Bestellung mit Häkchen und ohne Wortlaut
-        // belegt nichts und sieht aus, als belegte sie etwas.
+        // 🔴 Next to the checksum: it catches a text that changed between
+        // display and click. This catches the narrow strip after it — an
+        // element whose time window ends in those milliseconds. An order with
+        // a tick and without the wording proves nothing and looks as if it
+        // proved something.
         $this->carts->method('lockForPurchase')->willReturn(['state' => 'open', 'order' => 0]);
         $this->orders->method('create')->willReturn(77);
         $this->carts->expects(self::never())->method('markConverted');
@@ -483,8 +486,8 @@ class OrderPlacerTest extends TestCase
 
     public function testOhneWarenkorbEntstehtKeineBestellung(): void
     {
-        // Der Aufräum-Cron entfernt offene Warenkörbe nach dreißig Tagen. Ein
-        // Checkout, der über diese Grenze offen lag, findet hier nichts mehr.
+        // The clean-up cron removes open baskets after thirty days. A
+        // checkout that stayed open beyond that limit finds nothing here any more.
         $this->carts->method('lockForPurchase')->willReturn(null);
         $this->orders->expects(self::never())->method('create');
 
@@ -506,8 +509,8 @@ class OrderPlacerTest extends TestCase
 
     public function testOhneAusloeserBeiBestellungEntstehtNochKeineRechnung(): void
     {
-        // Eine Kartenzahlung wartet auf das Geld (C-6). Die Rechnung entsteht
-        // dann beim Zahlungseingang, nicht hier.
+        // A card payment waits for the money (C-6). The invoice is then created
+        // when the payment comes in, not here.
         $this->carts->method('lockForPurchase')->willReturn(['state' => 'open', 'order' => 0]);
         $this->orders->method('create')->willReturn(77);
 
@@ -539,11 +542,12 @@ class OrderPlacerTest extends TestCase
         VoucherRedemption|null $vouchers = null,
     ): OrderPlacer {
         /*
-         * ⚠️ Als MAP, nach `kind->value` benannt — so gibt `forRoot()` sie
-         * heraus. Bis zum 2026-09-23 lieferte dieses Double eine Liste, und
-         * das fiel nicht auf, solange der Placer nur darüber iterierte.
-         * Sobald er nach einer Art fragte, war das Doppel fähiger als das
-         * Original (Punkt 23 der Prüfungsnotiz, andersherum).
+         * ⚠️ As a MAP, keyed by `kind->value` — that is how `forRoot()` hands
+         * them out. This double used to deliver a list, and that went
+         * unnoticed as long as the placer only iterated over it. As soon as
+         * it asked for one kind, the double was more capable than the
+         * original (for every property a double answers: does the original
+         * ALWAYS have it — here the other way round).
          */
         $texts = $this->createMock(DbalLegalTextSource::class);
         $texts->method('forRoot')->willReturn(
@@ -618,9 +622,9 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * C-8: Das PDF für die Ablage entsteht NACH dem Commit — die Sperre auf
-     * dem Nummernkreis hielte sonst jede andere Bestellung des Shops auf,
-     * solange dompdf rechnet.
+     * C-8: the PDF for the archive is created AFTER the commit — otherwise
+     * the lock on the number range would hold up every other order of the
+     * shop while dompdf computes.
      */
     public function testDieAblageLaeuftNachDemCommitMitDerAusgestelltenRechnung(): void
     {
@@ -652,10 +656,10 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * WG15: Eine Bestellung, die nichts schuldet, ist mit dem Kaufklick
-     * bezahlt — in DERSELBEN Transaktion, nach der Bestellung und vor dem
-     * konvertierten Warenkorb. Die dabei ausgestellte Rechnung geht nach dem
-     * Commit in die Ablage wie die beim Kauf.
+     * WG15: an order that owes nothing is paid with the purchase click — in
+     * the SAME transaction, after the order and before the converted basket.
+     * The invoice issued with it goes into the archive after the commit like
+     * the one at purchase.
      */
     public function testEineBestellungOhneOffenenBetragIstMitDemKaufklickBezahlt(): void
     {
@@ -684,9 +688,9 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * WG-5 (E4): Die Gutscheine zahlen in derselben Transaktion — vor der
-     * Rechnung, damit eine Vorkasse-Rechnung sie nennt und nur den Rest
-     * verlangt, und vor der Prüfung „nichts offen".
+     * WG-5 (E4): the gift cards pay in the same transaction — before the
+     * invoice, so that a prepayment invoice names them and asks only for the
+     * rest, and before the "nothing open" check.
      */
     public function testDieGutscheineZahlenVorRechnungUndAbschluss(): void
     {
@@ -721,8 +725,8 @@ class OrderPlacerTest extends TestCase
     }
 
     /**
-     * E4: Zahlt ein Gutschein nicht mehr, was die Seite zeigte, wird nichts
-     * bestellt — alles davor rollt zurück.
+     * E4: if a gift card no longer pays what the page showed, nothing is
+     * ordered — everything before rolls back.
      */
     public function testEinGeaenderterGutscheinRolltZurueck(): void
     {

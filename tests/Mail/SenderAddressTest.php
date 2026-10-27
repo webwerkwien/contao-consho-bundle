@@ -6,8 +6,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Mail\SenderAddress;
 
 /**
- * Contao speichert Maskeneingaben kodiert — im Absender einer Mail liest der
- * Kunde, was dort steht (Nachlese Stufe 2).
+ * Contao stores form input encoded — in the sender of a mail the customer
+ * reads what is stored there (Nachlese stage 2).
  */
 class SenderAddressTest extends TestCase
 {

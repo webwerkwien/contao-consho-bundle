@@ -22,9 +22,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 require_once __DIR__.'/OrderConfirmationTest.php';
 
 /**
- * Die Mails nach Zahlung und Versand (D-1, Z3 und Z4), mit den echten
- * Vorlagen und den echten Sprachdateien. Bis D-1 benutzten beide Vorlagen
- * Schlüssel, die es nicht gab — gerendert hätten sie „consho.mail.…".
+ * The mails after payment and shipping (D-1, Z3 and Z4), with the real
+ * templates and the real language files. Until D-1 both templates used
+ * keys that did not exist — they would have rendered "consho.mail.…".
  */
 final class OrderEventMailTest extends TestCase
 {
@@ -61,14 +61,14 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * D-7, M7: Die dreizeilige Zahlungsmail landete bei Gmail im Spam — jetzt
-     * mit dem Block, den auch die Versandmail trägt: Datum, Anschrift,
-     * Versandart und die Artikel, ohne Versand- und Zahlungszeilen.
+     * D-7, M7: The three-line payment mail landed in spam at Gmail — now with
+     * the block the shipping mail carries too: date, address, shipping method
+     * and the articles, without shipping and payment lines.
      */
     /**
-     * GARAN Teil 2 (Review 3): auch die Ereignismails tragen Kopf und Fuß —
-     * mit dem Shop der Bestellung und der Sprache des Kunden; die Kopie an
-     * den Betreiber nicht.
+     * GARAN part 2: the event mails carry header and footer too — with the
+     * shop of the order and the customer's language; the copy to the operator
+     * does not.
      */
     public function testKopfUndFussAuchInDenEreignismails(): void
     {
@@ -99,9 +99,9 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * F-7, F20: Hat die Zahlung digitale Inhalte freigegeben, sagt es die
-     * Zahlungsmail; die eigene Mail „bereit" kommt nur nach einer Freigabe,
-     * die keine andere Mail ankündigt — ohne Schlüssel darin.
+     * F-7, F20: If the payment has released digital content, the payment mail
+     * says so; the separate "ready" mail only comes after a release that no
+     * other mail announces — without keys in it.
      */
     public function testDigitaleInhalteInDerZahlungsmailUndAlsEigeneMail(): void
     {
@@ -126,9 +126,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * WG4: „Ihr Gutschein" — mit dem Code im Klartext (anders als ein
-     * Lizenzschlüssel, F20: ein Geschenk wird weitergegeben) und je Gutschein
-     * einem PDF im Anhang.
+     * WG4: "Your voucher" — with the code in plain text (unlike a licence key,
+     * F20: a gift gets passed on) and one PDF attached per voucher.
      */
     public function testDieGutscheinmailBringtCodeUndPdf(): void
     {
@@ -156,8 +155,7 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * DL3: Eine Dienstleistung ist freigeschaltet, nicht „bereit"; gemischt
-     * nennt beides.
+     * DL3: A service is activated, not "ready"; a mixed order names both.
      */
     public function testEineDienstleistungIstFreigeschaltet(): void
     {
@@ -177,8 +175,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abnahme DL, Fund 4: Die Rechnung, die eine Freigabe ausgestellt hat,
-     * liegt der Freigabemail bei — und die Mail sagt es.
+     * DL: The invoice a release has issued is attached to the release mail —
+     * and the mail says so.
      */
     public function testDieFreigabemailTraegtIhreRechnung(): void
     {
@@ -228,9 +226,9 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Nach der Abnahme: Die nackte Versandmail landete als einzige im Junk.
-     * Datum, Anschrift und Versandart unterscheiden sie von Paket-Phishing —
-     * und die Anschrift ist Kundeneingabe, also maskiert.
+     * The bare shipping mail was the only one to land in junk. Date, address
+     * and shipping method set it apart from parcel phishing — and the address
+     * is customer input, so escaped.
      */
     public function testVersendetTraegtDatumUndAnschriftMaskiert(): void
     {
@@ -259,9 +257,9 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * D-2: Eingangsbestätigung mit dem Inhalt der Erklärung und Datum UND
-     * Uhrzeit des Eingangs (§ 356a Abs. 3 BGB, § 13a FAGG). Die Kopie geht
-     * immer an den Betreiber.
+     * D-2: Acknowledgement of receipt with the content of the declaration and
+     * date AND time of receipt (§ 356a Abs. 3 BGB, § 13a FAGG). The copy
+     * always goes to the operator.
      */
     public function testWiderrufsbestaetigungMitDatumUhrzeitUndErklaerung(): void
     {
@@ -294,8 +292,8 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('<script>', $html);
         self::assertStringNotContainsString('CONSHO.', $html);
 
-        // D-7, M7: dazu die Bestellung, zu der die Erklärung gehört — ohne
-        // diesen Block landete die Bestätigung bei Gmail im Spam.
+        // D-7, M7: plus the order the declaration belongs to — without this
+        // block the confirmation landed in spam at Gmail.
         self::assertStringContainsString('Die Bestellung:', $html);
         self::assertStringContainsString('<li>1 × Wanderstock</li>', $html);
         self::assertStringContainsString('Lieferadresse', $html);
@@ -305,17 +303,16 @@ final class OrderEventMailTest extends TestCase
         self::assertSame('office@web.example.net', $copy->getTo()[0]->getAddress());
         self::assertSame('Widerruf eingegangen: Bestellung WEB-00054', $copy->getSubject());
         self::assertStringContainsString('über die Bestellseite', (string) $copy->getHtmlBody());
-        // Abnahme D-2: Die Kopie sagte dem Betreiber „Ihre Nachricht".
+        // D-2: The copy told the operator "Ihre Nachricht" (your message).
         self::assertStringContainsString('Nachricht des Kunden', (string) $copy->getHtmlBody());
         self::assertStringNotContainsString('Ihre Nachricht', (string) $copy->getHtmlBody());
         self::assertStringNotContainsString('CONSHO.', (string) $copy->getHtmlBody());
     }
 
     /**
-     * WA, A3: Ein Widerruf, der zu keiner Bestellung passt, wird an die
-     * EINGEGEBENE Adresse bestätigt — mit Erklärung, Datum und Uhrzeit, aber
-     * ohne ein Wort über eine Bestellung: die Adresse kann jeder eingetippt
-     * haben.
+     * WA, A3: A withdrawal that matches no order is confirmed to the ENTERED
+     * address — with declaration, date and time, but without a word about an
+     * order: anyone could have typed in the address.
      */
     public function testNichtZugeordneterWiderrufOhneBestelldaten(): void
     {
@@ -340,7 +337,7 @@ final class OrderEventMailTest extends TestCase
         self::assertStringContainsString('WEB-0005', $html, 'die eingetippte Bestellnummer');
         self::assertStringContainsString('Erika &lt;b&gt;Muster&lt;/b&gt;', $html);
         self::assertStringNotContainsString('<script>', $html);
-        // Review WA, S3: jede Stelle mit dem Namen, nicht nur die Anrede.
+        // WA: every place with the name, not only the salutation.
         self::assertStringNotContainsString('<b>', $html);
         self::assertStringNotContainsString('WEB-00054', $html, 'nichts aus einer Bestellung');
         self::assertStringNotContainsString('Lieferadresse', $html);
@@ -368,7 +365,7 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('Bestellung ansehen', $html);
     }
 
-    /** D-3, F6: die Begründung des Betreibers, wörtlich und maskiert. */
+    /** D-3, F6: the operator's reason, verbatim and escaped. */
     public function testAblehnungMitDerBegruendungDesBetreibers(): void
     {
         self::assertTrue($this->mail()->withdrawalRejected(7, 'WEB-00054-W1', "Die Frist war abgelaufen.\n<i>Gruß</i>", 'https://shop.test/x'));
@@ -384,7 +381,7 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('CONSHO.', $html);
     }
 
-    /** D-3, F4: Erstattung mit dem Beleg im Anhang. */
+    /** D-3, F4: refund with the document attached. */
     public function testErstattungMitBelegImAnhang(): void
     {
         self::assertTrue($this->mail()->refundBooked(7, 'WEB-00054-W1', '30,00 €', '30,00 €', [16], 'https://shop.test/x'));
@@ -400,8 +397,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo-8, P81: keine neue Mail — „Erstattung gebucht" nennt den
-     * einbehaltenen Wertersatz und das beendete Abo.
+     * Abo-8, P81: no new mail — "refund booked" names the retained
+     * compensation for value and the ended subscription.
      */
     public function testErstattungNenntWertersatzUndBeendetesAbo(): void
     {
@@ -415,7 +412,7 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * WG-6 (WG11): die Mail sagt, was davon auf den Gutschein zurückging.
+     * WG-6 (WG11): the mail says how much of it went back to the voucher.
      */
     public function testErstattungNenntDenTeilAufDemGutschein(): void
     {
@@ -444,10 +441,10 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo-4, P30: die Rechnung einer Folgebestellung. Abonummer, Leistungs-
-     * zeitraum und die Rechnung im Anhang — und keine Widerrufsbelehrung, kein
-     * Zustimmungssatz: eine Folgebestellung öffnet kein neues Fenster (A12).
-     * Die Kopie geht an den Betreiber.
+     * Abo-4, P30: the invoice of a follow-up order. Subscription number,
+     * service period and the invoice attached — and no withdrawal notice, no
+     * consent sentence: a follow-up order opens no new window (A12). The copy
+     * goes to the operator.
      */
     public function testRechnungZumAboMitZeitraumUndOhneWiderrufsbelehrung(): void
     {
@@ -478,7 +475,7 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('CONSHO.', $html);
         self::assertSame(['RE-00016.pdf'], array_map(static fn ($p): string => (string) $p->getFilename(), $mail->getAttachments()), 'die Rechnung hängt an');
 
-        // A12: Gegenprobe gegen die Bestätigungsmail, die beides trägt.
+        // A12: control case against the confirmation mail, which carries both.
         self::assertStringNotContainsString('Widerruf', $html);
         self::assertStringNotContainsString('verlange', $html);
 
@@ -489,8 +486,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo-4b, P97: die zweite Fassung — abgebucht am Tag X über die Zahlungsart
-     * der Bestellung; beim Betreiber ebenso, nicht „Auf Rechnung".
+     * Abo-4b, P97: the second version — debited on day X via the order's
+     * payment method; the same for the operator, not "on account".
      */
     public function testRechnungZumAboAbgebucht(): void
     {
@@ -533,9 +530,9 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo-5 (P37): „ruht" mit offener Rechnung im Anhang, Zahlungsziel und
-     * offenem Betrag, sachlich — keine Mahnung, keine Drohung. Kopie an den
-     * Betreiber, ohne Anhang.
+     * Abo-5 (P37): "suspended" with the open invoice attached, due date and
+     * open amount, matter-of-fact — no reminder, no threat. Copy to the
+     * operator, without attachment.
      */
     public function testAboRuhtMitOffenerRechnungUndBetrag(): void
     {
@@ -574,8 +571,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo pausieren (P110): von wann bis wann, was es bedeutet; Kopie an den
-     * Betreiber.
+     * Pausing a subscription (P110): from when to when, what it means; copy
+     * to the operator.
      */
     public function testPauseBestaetigt(): void
     {
@@ -605,9 +602,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Nachlese E5 (Michael, 2026-10-09: „E5 Infomail umsetzen"): ein
-     * Einmalkauf über Ziel und Nachfrist — die offene Rechnung im Anhang,
-     * sachlich, nur an den Kunden.
+     * Nachlese E5: a one-off purchase past due date and grace period — the
+     * open invoice attached, matter-of-fact, only to the customer.
      */
     public function testEinmalkaufRuhtMitOffenerRechnung(): void
     {
@@ -656,13 +652,13 @@ final class OrderEventMailTest extends TestCase
         $mail = $this->transport->sent[0];
         self::assertSame('Ihr Abo WEB-00084-1 ist wieder aktiv', $mail->getSubject());
         self::assertStringNotContainsString('CONSHO.', (string) $mail->getHtmlBody());
-        // Auch nach einer Stornierung richtig: kein „Danke für Ihre Zahlung".
+        // Correct after a cancellation too: no "thank you for your payment".
         self::assertStringNotContainsString('Zahlung', (string) $mail->getHtmlBody());
     }
 
     /**
-     * E7: eine ausstehende Abbuchung — Betrag, Zeitraum, Zahlungsart, und
-     * dass die Rechnung mit der Zahlung kommt. Nur an den Kunden.
+     * E7: a pending debit — amount, period, payment method, and that the
+     * invoice comes with the payment. Only to the customer.
      */
     public function testAbbuchungGestartetMitBetragZeitraumUndZahlungsart(): void
     {
@@ -697,13 +693,13 @@ final class OrderEventMailTest extends TestCase
         yield 'endet' => ['ends', ['endet das Abo', 'Neu abschließen', 'https://shop.test/produkt/e-book.html'], ['kündigen Sie']];
         yield 'gleiche Laufzeit' => ['sameTerm', ['verlängert es sich um 1 Jahr', 'bis spätestens 17. Januar 2027'], ['Neu abschließen']];
         yield 'unbefristet' => ['indefinite', ['unbefristet zu den bisherigen Bedingungen', 'mit 14 Tagen Frist', 'bis spätestens 17. Januar 2027'], ['zu derzeit']];
-        // Variante A: eine Altregel ohne monatliche Zahlung endet.
+        // Variant A: a legacy rule without monthly payment ends.
         yield 'Altregel ohne monatliche Zahlung' => ['endsNoMonthly', ['endet das Abo', 'Neu abschließen'], ['zu derzeit']];
     }
 
     /**
-     * Abo-6 (P42, P43): die Erinnerung vor dem Ende der Mindestlaufzeit, je
-     * nach dem, was danach kommt — nur an den Kunden.
+     * Abo-6 (P42, P43): the reminder before the end of the minimum term,
+     * depending on what comes after — only to the customer.
      *
      * @param list<string> $contains
      * @param list<string> $absent
@@ -745,8 +741,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo-7b (P71): „Lizenz verlängern" auf „Meine Abos" statt „Neu
-     * abschließen" auf der Produktseite — wo der Shop die Seite nennt.
+     * Abo-7b (P71): "renew licence" on "my subscriptions" instead of
+     * "subscribe again" on the product page — where the shop names the page.
      */
     public function testVorDemEndeVerlinktDieErinnerungMeineAbos(): void
     {
@@ -762,7 +758,7 @@ final class OrderEventMailTest extends TestCase
         self::assertStringContainsString('Lizenz verlängern', $html);
         self::assertStringNotContainsString('produkt.html', $html);
 
-        // Ohne die Seite: wie bisher die Produktseite.
+        // Without the page: the product page, as before.
         self::assertTrue($this->mail()->subscriptionReminder(7, $reminder + ['renewUrl' => null], 'https://shop.test/x'));
         $html = (string) $this->transport->sent[1]->getHtmlBody();
         self::assertStringContainsString('href="https://shop.test/produkt.html"', $html);
@@ -770,8 +766,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Abo-7, P62 (§ 312k Abs. 4 BGB): Inhalt der Kündigung, Datum und Uhrzeit
-     * des Eingangs und das Vertragsende; Kopie an den Betreiber.
+     * Abo-7, P62 (§ 312k Abs. 4 BGB): content of the cancellation, date and
+     * time of receipt and the end of the contract; copy to the operator.
      */
     public function testKuendigungsbestaetigungMitEingangInhaltUndEnde(): void
     {
@@ -812,8 +808,8 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
-     * Review Abo-7, S1: ein späteres Ende als das frühestmögliche — die Mail
-     * sagt, dass angebrochene Perioden noch voll berechnet werden.
+     * Abo-7: an end later than the earliest possible one — the mail says that
+     * periods begun are still charged in full.
      */
     public function testEinSpaeteresEndeSagtWasEsKostet(): void
     {

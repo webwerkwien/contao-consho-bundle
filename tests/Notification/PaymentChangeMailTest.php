@@ -20,8 +20,8 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 require_once __DIR__.'/OrderConfirmationTest.php';
 
 /**
- * 7.5 Schritt 3 (C-10, E4): Nach dem Wechsel der Zahlungsart eine Mail an den
- * Kunden mit Storno und neuer Rechnung, und eine Kopie an den Betreiber.
+ * 7.5 step 3 (C-10, E4): After the change of payment method a mail to the
+ * customer with cancellation and new invoice, and a copy to the operator.
  */
 class PaymentChangeMailTest extends TestCase
 {
@@ -59,8 +59,8 @@ class PaymentChangeMailTest extends TestCase
         self::assertStringContainsString('Die Rechnung RE-00014 ist damit storniert, die Stornorechnung ST-00002 liegt bei.', $html);
         self::assertStringContainsString('Die neue Rechnung RE-00016', $html);
 
-        // Die Bank der NEUEN Rechnung, nicht die der stornierten — und der
-        // Verwendungszweck ist die neue Nummer.
+        // The bank of the NEW invoice, not that of the cancelled one — and the
+        // remittance information is the new number.
         self::assertStringContainsString('AT48 3200 0000 1234 5864', $html);
         self::assertStringNotContainsString('AT61 1904 3002 3457 3201', $html);
         self::assertMatchesRegularExpression('#Verwendungszweck</th><td[^>]*>RE-00016</td>#', $html);

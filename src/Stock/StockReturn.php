@@ -38,10 +38,10 @@ class StockReturn
      * Once, from where `cancelledAt` is set (ContaoOrderStatusWriter,
      * OrderStatusListener) — that mark is set only once. Gives back what the
      * line took, less what a return already brought back and what an earlier
-     * call gave; the amount goes to stockCancelled (second review G, S1).
+     * call gave; the amount goes to stockCancelled (G).
      *
      * $user: the backend user who set the cancelling status; 0 when Consho
-     * did (a payment provider's cancellation) — Abnahme G-8.
+     * did (a payment provider's cancellation) — G-8.
      */
     public function afterCancellation(int $orderId, int $now, int $user = 0): void
     {
@@ -74,7 +74,7 @@ class StockReturn
 
     /**
      * Codes an order no longer waits for — cancelled, or withdrawn before
-     * delivery (review G, L2). No booking says so, and the product page
+     * delivery (G). No booking says so, and the product page
      * would stay cached as "derzeit nicht verfügbar" while the notice cron
      * already mails "wieder lieferbar".
      */
@@ -123,7 +123,7 @@ class StockReturn
         $already = BigDecimal::of(StockBooking::scaled($row['restockedQuantity']));
         $returned = BigDecimal::of(StockBooking::scaled($row['returnedQuantity']));
         // What the cancellation gave back is no longer the return's to give
-        // (second review G, S1): before it the cap is what the line took,
+        // (G): before it the cap is what the line took,
         // after it what the return held back then. An untick after the
         // cancellation still takes the damaged piece out again.
         $cap = BigDecimal::of(StockBooking::scaled($row['stockBooked']))->minus(BigDecimal::of(StockBooking::scaled($row['stockCancelled'])));

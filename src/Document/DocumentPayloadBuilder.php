@@ -31,7 +31,7 @@ final class DocumentPayloadBuilder
         // titles are the copies the order itself froze at the purchase.
         'language', 'createdAt', 'shippingMethodTitle', 'paymentMethodTitle',
         // The VIES result beside the VAT ID it belongs to: whether the ID is
-        // printed depends on it (InvoiceView, Michael 2026-09-24).
+        // printed depends on it (InvoiceView).
         'vatIdStatus',
     ];
 
@@ -48,7 +48,7 @@ final class DocumentPayloadBuilder
     ];
 
     /**
-     * 🔴 `lineType` is in here since C-7 (F6 of the review of 2026-09-23).
+     * 🔴 `lineType` is in here since C-7 (F6).
      *
      * Before C-7 every line was an article and the list did not need to say
      * so. Now shipping, a payment fee and a payment discount are lines of
@@ -58,8 +58,8 @@ final class DocumentPayloadBuilder
      *
      * Added NOW rather than with the invoice layout it is for (C-8), because
      * a snapshot is written once: an invoice issued today without this field
-     * cannot be given it later. The seven invoices already on c5 predate
-     * line types, so a reader has to treat a MISSING lineType as `product` —
+     * cannot be given it later. Invoices issued before predate line types,
+     * so a reader has to treat a MISSING lineType as `product` —
      * which is what they were.
      *
      * `source` and `customerGroup` stay out. They are ids, and the first
@@ -74,6 +74,8 @@ final class DocumentPayloadBuilder
         // Block R (R-2): what the line was, for the OSS threshold — a
         // service is taxed where the shop is, also on a correction.
         'kind',
+        // Version 12 (EZ-3): sold as a single-purpose voucher.
+        'voucherSinglePurpose',
     ];
 
     /**
@@ -131,13 +133,30 @@ final class DocumentPayloadBuilder
      * on a correction's lines, for the OSS threshold since R-2). Absent
      * before, which reads as "no e-invoice".
      *
+     * 11 (L-1) adds `delivery.advance` — true on an invoice issued before
+     * shipping whose customer pays before the goods go out (prepayment,
+     * online, vouchers): it then says it covers an advance payment (UStR 2000
+     * Rz 1524). Absent on a purchase on account or cash on delivery, and
+     * before; a version 10 snapshot with the flag prints no note.
+     *
+     * 13 (Wertgutscheine, EZ-4) adds `prepaid`: per single-purpose voucher
+     * that paid, its masked name, the country and rate its sale was taxed at
+     * and the net, tax and gross of what it paid, refunds to it deducted —
+     * tax already charged when the voucher was sold, which the invoice
+     * deducts instead of charging it again. Empty where none paid, and absent
+     * before, which reads the same.
+     *
+     * 12 (Wertgutscheine, EZ-3) adds `voucherSinglePurpose` to every item:
+     * 1 on a line that sold a single-purpose voucher, which the invoice notes
+     * beside the line. Absent before, which reads as a multi-purpose one.
+     *
      * InvoiceView reads every version; a version 1 snapshot is
      * shown with what it has, never completed from today's shop.
      *
      * A delivery note (dev#2) carries the same number but a shape of its
      * own, without a single amount — see deliveryNote().
      */
-    private const FORMAT_VERSION = 10;
+    private const FORMAT_VERSION = 13;
 
     /**
      * The key of summariseTax() for lines sold "nicht steuerbar" (WG3) —
@@ -151,12 +170,13 @@ final class DocumentPayloadBuilder
      * @param array{
      *     issuer?: array<string, string>,
      *     logo?: array{uuid: string, hash: string}|null,
-     *     payment?: array{instructions: string, details: array<string, string>, giroCode?: bool, dueDays?: int|null, meansCode?: string},
+     *     payment?: array{instructions: string, details: array<string, string>, giroCode?: bool, dueDays?: int|null, meansCode?: string, advance?: bool},
      *     notes?: array{footer: string, reverseCharge: string},
      *     eInvoice?: bool,
      *     deliveryDays?: array{min: int, max: int},
-     *     delivery?: array{from: string, to: string, kind?: string}|null,
+     *     delivery?: array{from: string, to: string, kind?: string, advance?: bool}|null,
      *     subscription?: array{number: string, from: string, to: string}|null,
+     *     prepaid?: list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>,
      * } $context what DocumentSourceInterface read from the shop and the method
      *
      * @return array{
@@ -168,8 +188,9 @@ final class DocumentPayloadBuilder
      *     logo: array{uuid: string, hash: string}|null,
      *     payment: array{instructions: string, details: array<string, string>, meansCode: string},
      *     notes: array{footer: string, reverseCharge: string},
-     *     delivery: array{from: string, to: string, kind?: string}|null,
+     *     delivery: array{from: string, to: string, kind?: string, advance?: bool}|null,
      *     subscription: array{number: string, from: string, to: string}|null,
+     *     prepaid: list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>,
      *     eInvoice: bool,
      * }
      */
@@ -206,6 +227,8 @@ final class DocumentPayloadBuilder
             // Abo-4 (P31): which subscription, which period — frozen on the
             // order, copied here as the invoice states it.
             'subscription' => $context['subscription'] ?? null,
+            // Version 13 (EZ-4): what single-purpose vouchers paid, already taxed.
+            'prepaid' => $context['prepaid'] ?? [],
             // Without the Giro-Code wish: the code needs the document number,
             // which is allocated after this snapshot is built. DocumentIssuer
             // adds the finished payload to an invoice.
@@ -284,9 +307,21 @@ final class DocumentPayloadBuilder
             $summary[$rate] = array_map(fn ($amount): string => $this->negated((string) $amount), $entry);
         }
 
+        // EZ-4: the deduction is reversed with the lines it was taken from.
+        $prepaid = [];
+
+        foreach (\is_array($invoice['prepaid'] ?? null) ? $invoice['prepaid'] : [] as $entry) {
+            foreach (['net', 'tax', 'gross'] as $field) {
+                $entry[$field] = $this->negated((string) ($entry[$field] ?? '0'));
+            }
+
+            $prepaid[] = $entry;
+        }
+
         $payload['order'] = $order;
         $payload['items'] = $items;
         $payload['taxSummary'] = $summary;
+        $payload['prepaid'] = $prepaid;
         $payload['payment'] = ['instructions' => '', 'details' => []];
         $payload['delivery'] = null;
         $payload['cancels'] = ['number' => $invoiceNumber, 'issuedAt' => (string) $invoiceIssuedAt];
@@ -307,12 +342,16 @@ final class DocumentPayloadBuilder
      *
      * `corrects` names the invoice, `withdrawal` the withdrawal it answers.
      *
+     * `prepaid` is not the invoice's (EZ-4): only what this refund books back
+     * onto single-purpose vouchers, negative — the deduction it takes back.
+     *
      * @param array<string, mixed>        $invoice the decoded snapshot of the invoice
      * @param list<array<string, string>> $lines
+     * @param list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}> $prepaid
      *
      * @return array<string, mixed>
      */
-    public function correctionOf(array $invoice, string $invoiceNumber, int $invoiceIssuedAt, array $lines, string $withdrawalNumber): array
+    public function correctionOf(array $invoice, string $invoiceNumber, int $invoiceIssuedAt, array $lines, string $withdrawalNumber, array $prepaid = []): array
     {
         $payload = $invoice;
 
@@ -349,6 +388,7 @@ final class DocumentPayloadBuilder
         $payload['order'] = $order;
         $payload['items'] = $items;
         $payload['taxSummary'] = $summary;
+        $payload['prepaid'] = $prepaid;
         $payload['payment'] = ['instructions' => '', 'details' => []];
         $payload['delivery'] = null;
         $payload['corrects'] = ['number' => $invoiceNumber, 'issuedAt' => (string) $invoiceIssuedAt];
@@ -437,11 +477,11 @@ final class DocumentPayloadBuilder
      * else here: summed as floats, a column of net amounts drifts in the last
      * decimal and the invoice no longer adds up to its own total.
      *
-     * ── Gross minus net, PER RATE (Michael, 2026-09-24) ─────────────────
+     * ── Gross minus net, PER RATE ─────────────────
      *
      * The order sums ROUNDED line grosses, because that is the figure the
      * buyer pressed the button on, and takes taxTotal as the difference to
-     * the sum of rounded line nets (C-7, F1 of the review of 2026-09-23).
+     * the sum of rounded line nets (C-7, F1).
      * Until C-8 this method summed the raw line taxes instead and could
      * exceed taxTotal by a cent per rate: an invoice contradicting its own
      * tax total.
@@ -459,7 +499,7 @@ final class DocumentPayloadBuilder
      * Rounded to the currency's own places, as the order is. An unknown or
      * empty currency falls back to two, the same as Symfony's own default.
      *
-     * ── Per country as well, where there are two (DL4, Michael 2026-10-01) ─
+     * ── Per country as well, where there are two (DL4) ─
      *
      * A service is taxed in the shop's country, the goods beside it in the
      * customer's: one invoice can carry French 20 % on an e-book and

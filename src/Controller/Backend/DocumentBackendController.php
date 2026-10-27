@@ -28,7 +28,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentDelivery;
  * because a key action is not a DataContainer action and would otherwise not
  * ask at all. What it can answer today is only the module access again:
  * Consho has no voter for tl_consho_document, so Contao's TableAccessVoter
- * decides (Fable review 2026-09-24). It is the place where a restriction per
+ * decides. It is the place where a restriction per
  * shop or per user takes effect the day such a voter exists — not a check that
  * already distinguishes documents.
  *
@@ -39,8 +39,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentDelivery;
  * only a RedirectResponse on its own; any other Response it unwraps with
  * getContent() and appends to the back end page (Backend.php, the `key`
  * branch). Returned, the invoice appeared inside the back end frame — and the
- * PDF would have been its bytes pasted into HTML. Found at the acceptance on
- * c5, 2026-09-24.
+ * PDF would have been its bytes pasted into HTML.
  *
  * ⚠️ What went wrong is said to the operator, never printed on the invoice:
  * an archived file that no longer matches, or a logo that is gone, becomes a
@@ -96,7 +95,7 @@ final class DocumentBackendController
         $rendered = $this->delivery->html((int) $row['id']) ?? throw new NotFoundHttpException();
 
         // The document NUMBER in the message, not the id or the file name —
-        // it is what the operator finds in the list (acceptance 2026-09-24).
+        // it is what the operator finds in the list.
         $this->warn(false, $rendered['logoMissing'], (string) $row['documentNumber']);
 
         throw new ResponseException(new Response($rendered['html'], 200, ['Content-Type' => 'text/html; charset=utf-8'] + self::privateHeaders()));

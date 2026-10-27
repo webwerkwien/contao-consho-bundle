@@ -2,7 +2,7 @@
 
 /*
  * Translations of every entity with visible text — one table, addressed via
- * ptable/pid, like tl_content. See docs/mehrsprachigkeit.md, 3.2.
+ * ptable/pid, like tl_content. See Block M, 3.2.
  *
  * No back end view of its own: it is served from the parent table's mask
  * (M-4). The DCA exists for the schema and for tl_undo.

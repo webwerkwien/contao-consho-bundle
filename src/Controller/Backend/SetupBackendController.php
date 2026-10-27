@@ -87,7 +87,7 @@ final class SetupBackendController
         // Finding and shop the start page reports too: there a published start
         // point is involved. What only the setup page sees concerns unpublished
         // ones alone, and the start page's sentence ("… der Checkout ist
-        // gesperrt") is not true for it (acceptance N1 on c5).
+        // gesperrt") is not true for it (N1).
         $published = [];
 
         foreach ($live as $issue) {
@@ -190,7 +190,7 @@ final class SetupBackendController
         $results = $lang['probeResults'] ?? [];
         $roots = [];
 
-        // Review I, L8: a host that cannot reach itself costs the full timeout
+        // Block I: a host that cannot reach itself costs the full timeout
         // per request — with several start points that outlasts a proxy's
         // patience. Past the budget the rest is said, not measured.
         $deadline = microtime(true) + $this->probeBudget;
@@ -382,7 +382,7 @@ final class SetupBackendController
         $rootEdits = array_map(
             fn (array $root): array => [
                 // Decoded: Contao stores brackets encoded, and Twig would escape
-                // the ampersand — "Shop &#40;DE&#41;" on screen (review I, L4).
+                // the ampersand — "Shop &#40;DE&#41;" on screen (I).
                 'label' => \sprintf($lang['rootEdit'] ?? 'Startpunkt „%s" bearbeiten', StringUtil::decodeEntities($root['title'])),
                 'url' => $this->url(['do' => 'page', 'act' => 'edit', 'id' => $root['id']]),
             ],

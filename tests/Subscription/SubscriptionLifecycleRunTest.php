@@ -22,8 +22,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycleRun;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-6: WEN der Lauf fragt und welche Erinnerung er daraus macht. Das Urteil
- * selbst prüft SubscriptionLifecycleTest.
+ * Abo-6: WHOM the run asks and which reminder it makes of it. The verdict
+ * itself is checked by SubscriptionLifecycleTest.
  */
 final class SubscriptionLifecycleRunTest extends TestCase
 {
@@ -58,24 +58,24 @@ final class SubscriptionLifecycleRunTest extends TestCase
 
         $base = ['firstOrder' => 90, 'orderItem' => 5, 'product' => 4, 'quantity' => '2.0000', 'termLength' => 1, 'termUnit' => 'year', 'noticeDays' => 14, 'reminderDays' => 30, 'renewal' => 'indefinite', 'billingInterval' => 0];
 
-        // Erinnerung fällig in 20 Tagen → Kandidat.
+        // Reminder due in 20 days → candidate.
         $this->subscription(1, ['minimumEndsAt' => self::NOW + 20 * self::DAY] + $base);
-        // Schon erinnert, zu früh, gekündigt, ohne Vorlauf, beendet → keine Kandidaten.
+        // Already reminded, too early, cancelled, without lead time, ended → no candidates.
         $this->subscription(2, ['minimumEndsAt' => self::NOW + 20 * self::DAY, 'reminderSentAt' => 5] + $base);
         $this->subscription(3, ['minimumEndsAt' => self::NOW + 60 * self::DAY] + $base);
         $this->subscription(4, ['minimumEndsAt' => self::NOW + 20 * self::DAY, 'endsAt' => self::NOW + 20 * self::DAY] + $base);
         $this->subscription(5, ['minimumEndsAt' => self::NOW + 20 * self::DAY, 'reminderDays' => 0] + $base);
         $this->subscription(6, ['minimumEndsAt' => self::NOW + 20 * self::DAY, 'state' => 'ended'] + $base);
-        // Abo-7b, Review S4: schon verlängert → kein Kandidat.
+        // Abo-7b: already renewed → no candidate.
         $this->subscription(11, ['minimumEndsAt' => self::NOW + 20 * self::DAY, 'renewedBy' => 1] + $base);
-        // Ende der Mindestlaufzeit erreicht → Übergang; ein bekanntes Ende auch in Unbefristet.
+        // End of the minimum term reached → transition; a known end in open-ended too.
         $this->subscription(7, ['minimumEndsAt' => self::NOW - 60] + $base);
         $this->subscription(8, ['minimumEndsAt' => self::NOW - 400 * self::DAY, 'phase' => 'indefinite', 'endsAt' => self::NOW - 60] + $base);
-        // Unbefristet ohne Ende, beendet → kein Übergang.
+        // Open-ended without an end, ended → no transition.
         $this->subscription(9, ['minimumEndsAt' => self::NOW - 400 * self::DAY, 'phase' => 'indefinite'] + $base);
         $this->subscription(10, ['minimumEndsAt' => self::NOW - 60, 'state' => 'ended', 'endsAt' => self::NOW - 60] + $base);
-        // Abo pausieren (P106): pausiert → Erinnerung und Übergang wie aktiv;
-        // die Pause hat das Ende ja verschoben, es kommt trotzdem.
+        // Pausing a subscription (P106): paused → reminder and transition as when active;
+        // the pause has moved the end, after all, but it still comes.
         $this->subscription(12, ['minimumEndsAt' => self::NOW + 20 * self::DAY, 'state' => 'paused'] + $base);
         $this->subscription(13, ['minimumEndsAt' => self::NOW - 60, 'state' => 'paused'] + $base);
     }
@@ -96,9 +96,9 @@ final class SubscriptionLifecycleRunTest extends TestCase
     }
 
     /**
-     * Die Mail geht an die neueste Bestellung (Anschrift, Sprache). Variante A:
-     * einen Monatsbetrag nennt sie nicht mehr — eine Altregel ohne monatliche
-     * Zahlung endet.
+     * The mail goes to the newest order (address, language). Variant A:
+     * it no longer names a monthly amount — a legacy rule without monthly
+     * payment ends.
      */
     public function testDieErinnerungGehtAnDieNeuesteBestellung(): void
     {
@@ -115,9 +115,9 @@ final class SubscriptionLifecycleRunTest extends TestCase
     }
 
     /**
-     * Review Abo-6, S2: Vor einer Verlängerung ist die Erinnerung die
-     * Mitteilung nach § 6 Abs. 1 Z 2 KSchG. Ging sie nicht hinaus, gilt sie
-     * nicht als verschickt — die nächste Stunde versucht es erneut.
+     * Abo-6: before a renewal the reminder is the
+     * notice under § 6 para. 1 no. 2 KSchG. If it did not go out, it does
+     * not count as sent — the next hour tries again.
      */
     public function testEineNichtVerschickteErinnerungWirdZurueckgesetzt(): void
     {
@@ -161,9 +161,9 @@ final class SubscriptionLifecycleRunTest extends TestCase
     }
 
     /**
-     * Abo-7b (P71): „Meine Abos" vom Startpunkt der Bestellsprache — die
-     * Seite, die der Betreiber in `consho_subscriptionsPage` nennt; ohne sie
-     * null, und die Mail verlinkt die Produktseite.
+     * Abo-7b (P71): "My subscriptions" from the root page of the order language — the
+     * page the operator names in `consho_subscriptionsPage`; without it
+     * null, and the mail links the product page.
      */
     public function testDieErinnerungFindetMeineAbos(): void
     {
@@ -174,7 +174,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
         $this->lifecycleRun($this->pageUrls())->remind(self::NOW);
         self::assertSame('https://shop.test/seite-77.html', $this->mails[0]['renewUrl']);
 
-        // Ohne Seite am Startpunkt: keine.
+        // Without a page on the root page: none.
         $this->connection->update('tl_page', ['consho_subscriptionsPage' => 0], ['id' => 1]);
         $this->connection->update('tl_consho_subscription', ['reminderSentAt' => 0], ['id' => 1]);
         $this->lifecycleRun($this->pageUrls())->remind(self::NOW);

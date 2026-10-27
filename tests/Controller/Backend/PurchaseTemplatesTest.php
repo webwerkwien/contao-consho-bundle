@@ -8,11 +8,11 @@ use Twig\Loader\FilesystemLoader;
 use Webwerkwien\ContaoConshoBundle\Controller\Backend\PurchaseBackendController;
 
 /**
- * Block G, G-7: die fünf Vorlagen von Einkauf und Einkaufslisten, gerendert
- * mit den ECHTEN Sprachdateien — Review G-7, B1: Der Knopf „Eingang buchen"
- * las `l.receive`, und das ist die Beschriftung der Operation, eine Liste.
- * Twig brach mit „Array to string conversion" ab; kein Test hatte die
- * Vorlage je gerendert (Regel 24: die Vorlage ist die Stelle).
+ * Block G, G-7: the five templates of purchasing and purchase lists,
+ * rendered with the REAL language files — G-7: the button "Eingang buchen"
+ * (book receipt) read `l.receive`, and that is the label of the operation,
+ * a list. Twig aborted with "Array to string conversion"; no test had ever
+ * rendered the template (the template is the place to test).
  */
 class PurchaseTemplatesTest extends TestCase
 {

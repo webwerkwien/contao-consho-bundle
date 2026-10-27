@@ -29,7 +29,7 @@ final class SubscriptionCalendar
     public function addMonths(int $start, int $months): int
     {
         /*
-         * The zone is read HERE, not in the constructor (review Abo-3, S1):
+         * The zone is read HERE, not in the constructor (Abo-3):
          * Contao sets the installation's zone when the framework initialises,
          * and on the command line a command's services are built before
          * execute() does that — a zone taken at construction would be

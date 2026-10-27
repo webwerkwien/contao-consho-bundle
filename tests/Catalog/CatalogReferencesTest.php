@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\CatalogReferences;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Connect Stufe 2, CW-4b (H4): wer einen Produkttyp, Hersteller, eine
- * Eigenschaft oder einen ihrer Werte noch verwendet.
+ * Connect stage 2, CW-4b (H4): who still uses a product type, manufacturer,
+ * property or one of its values.
  */
 class CatalogReferencesTest extends TestCase
 {
@@ -42,8 +42,8 @@ class CatalogReferencesTest extends TestCase
     }
 
     /**
-     * In einer Liste zählt nur der ganze Wert: 5 steckt auch in 15 und im
-     * Index „i:5;" der serialisierten Liste.
+     * In a list only the whole value counts: 5 is also contained in 15 and in
+     * the index "i:5;" of the serialised list.
      */
     public function testInEinerRegelZaehltNurDerGanzeWert(): void
     {
@@ -82,8 +82,8 @@ class CatalogReferencesTest extends TestCase
     }
 
     /**
-     * Die Eigenschaft geht mit ihren Werten in den Papierkorb: verwendet,
-     * sobald einer davon verwendet wird — oder ein Produkttyp sie nennt.
+     * The property goes to the recycle bin with its values: in use
+     * as soon as one of them is in use — or a product type names it.
      */
     public function testEineEigenschaftUeberIhreWerteUndDenProdukttyp(): void
     {
@@ -98,8 +98,8 @@ class CatalogReferencesTest extends TestCase
     }
 
     /**
-     * CW-5 (I6): jeder Verweis auf den Shop hält ihn fest — außer einem
-     * offenen Warenkorb.
+     * CW-5 (I6): every reference to the shop holds on to it — except an
+     * open cart.
      */
     public function testEinShop(): void
     {
@@ -139,8 +139,8 @@ class CatalogReferencesTest extends TestCase
     }
 
     /**
-     * CW-5 (I1): Versand- und Zahlungsart, Abo-Regel und Steuerklasse fragen
-     * dieselbe Stelle wie Maske und Befehle.
+     * CW-5 (I1): shipping and payment method, subscription rule and tax class
+     * ask the same place as mask and commands.
      */
     public function testArtenUndRegeln(): void
     {
@@ -186,7 +186,7 @@ class CatalogReferencesTest extends TestCase
 
     public function testAndereTabellenUndKeineId(): void
     {
-        // Ein Produkt ohne Typ hält keinen „Typ 0" fest.
+        // A product without a type does not hold on to a "type 0".
         $this->connection->insert('tl_consho_product', ['id' => 5]);
 
         self::assertSame([], $this->references()->usedBy('tl_consho_custom_field', 1));
@@ -198,11 +198,11 @@ class CatalogReferencesTest extends TestCase
     }
 
     /**
-     * 🔴 Die Liste der Verweise darf keine Behauptung sein (wie bei der
-     * Steuerklasse, TaxClassReferencesTest): Sie kommt aus den DCAs — jedes
-     * Feld, dessen `foreignKey` oder `relation.table` eine der erfassten
-     * Tabellen nennt, ohne `pid` einer Kindtabelle und ohne NOT_COUNTED. Dazu
-     * nur die Verweise, deren Feld keine Tabelle nennt (WITHOUT_DCA_LINK).
+     * 🔴 The list of references must not be a claim (as with the
+     * tax class, TaxClassReferencesTest): it comes from the DCAs — every
+     * field whose `foreignKey` or `relation.table` names one of the covered
+     * tables, without the `pid` of a child table and without NOT_COUNTED. Plus
+     * only the references whose field names no table (WITHOUT_DCA_LINK).
      */
     public function testDieListeDerVerweiseIstVollstaendig(): void
     {
@@ -211,7 +211,7 @@ class CatalogReferencesTest extends TestCase
         foreach (glob(__DIR__.'/../../contao/dca/*.php') ?: [] as $file) {
             unset($GLOBALS['TL_DCA']);
 
-            // Siehe TaxClassReferencesTest: Dateien, die Kerntabellen erweitern.
+            // See TaxClassReferencesTest: files that extend core tables.
             $GLOBALS['TL_DCA']['tl_member']['palettes']['default'] = '{personal_legend},firstname,lastname;';
             $GLOBALS['TL_DCA']['tl_page']['palettes']['root'] = '{title_legend},title,alias;';
             $GLOBALS['TL_DCA']['tl_page']['palettes']['rootfallback'] = '{title_legend},title,alias;';
@@ -229,7 +229,7 @@ class CatalogReferencesTest extends TestCase
                         continue;
                     }
 
-                    // Kindzeilen gehen mit in den Papierkorb (ctable).
+                    // Child rows go to the recycle bin along with it (ctable).
                     if ('pid' === $field && $target === ($definition['config']['ptable'] ?? null)) {
                         continue;
                     }

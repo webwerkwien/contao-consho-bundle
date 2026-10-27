@@ -20,7 +20,7 @@ use Webwerkwien\ContaoConshoBundle\Digital\DigitalRelease;
  * the others.
  *
  * What an accepted withdrawal took back is never released, so it no longer
- * keeps an order a candidate (spec F, review K1). An unpaid prepayment stays
+ * keeps an order a candidate (spec F). An unpaid prepayment stays
  * one until the operator cancels (block G decided so for stock), and an empty
  * key pool on purpose: the hourly look is what releases once it is refilled.
  */

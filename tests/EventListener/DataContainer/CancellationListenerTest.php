@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CancellationListe
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-7, P57: Die Maske einer Kündigung — nur die Entscheidung über eine
- * wartende außerordentliche Kündigung ist bearbeitbar.
+ * Abo-7, P57: the form of a cancellation — only the decision about a
+ * pending extraordinary cancellation is editable.
  */
 final class CancellationListenerTest extends TestCase
 {
@@ -51,7 +51,7 @@ final class CancellationListenerTest extends TestCase
 
         self::assertTrue($fields['name']['eval']['readonly']);
         self::assertSame(['received', 'accepted', 'rejected'], $fields['state']['options'], '„wirksam" ist keine Entscheidung');
-        // Abnahme: ein Tag genügt, „31.10.2026" ohne Uhrzeit.
+        // A day is enough: "31.10.2026" without a time.
         self::assertSame('date', $fields['effectiveAt']['eval']['rgxp']);
         self::assertTrue($GLOBALS['TL_DCA']['tl_consho_cancellation']['config']['hideVersionMenu']);
     }
@@ -83,7 +83,7 @@ final class CancellationListenerTest extends TestCase
 
         self::assertSame('datim', $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields']['effectiveAt']['eval']['rgxp'], 'entschieden: mit Uhrzeit');
 
-        // Kein Wiederherstellen einer unentschiedenen Fassung.
+        // No restoring of an undecided version.
         self::assertTrue($GLOBALS['TL_DCA']['tl_consho_cancellation']['config']['hideVersionMenu']);
     }
 
@@ -118,7 +118,7 @@ final class CancellationListenerTest extends TestCase
     }
 
     /**
-     * Review Abo-7, L2: „Mehrere bearbeiten" hängt die Id an den Feldnamen.
+     * Abo-7: "Edit multiple" appends the id to the field names.
      */
     public function testMehrereBearbeitenMitIdImFeldnamen(): void
     {
@@ -179,8 +179,8 @@ final class CancellationListenerTest extends TestCase
     }
 
     /**
-     * Nachlese Stufe 2: gebaut erst, wenn eine Entscheidung anzuwenden ist —
-     * der Terminate-Listener entsteht bei jeder Anfrage.
+     * Nachlese stage 2: built only when a decision is to be applied — the
+     * terminate listener is created on every request.
      */
     public function testOhneEntscheidungWirdCancellationDecisionNieGebaut(): void
     {

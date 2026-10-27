@@ -13,11 +13,11 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block G, G-7: Einkauf und Einkaufslisten (Michael, 2026-10-05, E1–E5).
+ * Block G, G-7: Purchasing and purchase lists.
  *
- * Wanderstock (1): Meldebestand 5, Sollbestand 20, VPE 6, Bestand 3.
- * Rucksack (2): Meldebestand 2, kein Sollbestand, Einzelstücke, Bestand 10.
- * Schlüssel (3): digital, Auslieferung Schlüssel — nie im Einkauf (E4).
+ * Hiking pole (1): reorder level 5, target stock 20, pack size 6, stock 3.
+ * Backpack (2): reorder level 2, no target stock, single items, stock 10.
+ * Key (3): digital, delivery by key — never in purchasing (E4).
  */
 class PurchaseListsTest extends TestCase
 {
@@ -49,20 +49,20 @@ class PurchaseListsTest extends TestCase
         $lines = $this->byArticle($this->lists()->candidates());
 
         self::assertSame([1, 2], array_keys($lines), 'Schlüssel nie im Einkauf (E4)');
-        // 20 − 3 = 17, auf ganze VPE zu 6: 18.
+        // 20 − 3 = 17, rounded up to whole packs of 6: 18.
         self::assertSame('18.0000', $lines[1]['proposed']);
         self::assertSame('Bergsport KG', $lines[1]['supplier']);
         self::assertSame('L-77', $lines[1]['supplierSku']);
         self::assertNull($lines[2]['proposed'], 'über dem Meldebestand: nicht vorgeschlagen, aber wählbar');
 
-        // Ohne Sollbestand: eine Packung, hier ein Stück.
+        // Without a target stock: one pack, here one item.
         $this->stock(2, '2');
         self::assertSame('1.0000', $this->byArticle($this->lists()->candidates())[2]['proposed']);
     }
 
     /**
-     * E1: Was bestellt ist, kommt nicht noch einmal — und zählt zum Bestand,
-     * wenn der Meldebestand gefragt wird.
+     * E1: What is on order does not come again — and counts towards the stock
+     * when the reorder level is asked.
      */
     public function testBestelltesWirdAbgezogen(): void
     {
@@ -70,7 +70,7 @@ class PurchaseListsTest extends TestCase
 
         $line = $this->byArticle($this->lists()->candidates())[1];
         self::assertSame('12.0000', $line['ordered']);
-        // 3 + 12 > 5: nicht mehr unter dem Meldebestand.
+        // 3 + 12 > 5: no longer below the reorder level.
         self::assertNull($line['proposed']);
     }
 
@@ -79,7 +79,7 @@ class PurchaseListsTest extends TestCase
         $this->stock(1, '0');
         $this->lists()->create([1 => '2'], 7, 1000);
 
-        // 0 + 2 ≤ 5: weiter vorgeschlagen, 20 − 0 − 2 = 18 → drei VPE zu 6.
+        // 0 + 2 ≤ 5: still suggested, 20 − 0 − 2 = 18 → three packs of 6.
         self::assertSame('18.0000', $this->byArticle($this->lists()->candidates())[1]['proposed']);
     }
 
@@ -114,7 +114,7 @@ class PurchaseListsTest extends TestCase
         $movement = $this->connection->fetchAssociative("SELECT reason, purchaseList, user FROM tl_consho_stock_movement WHERE reason = 'receipt' ORDER BY id LIMIT 1");
         self::assertSame(['receipt', $listId, 9], [$movement['reason'] ?? null, (int) ($movement['purchaseList'] ?? 0), (int) ($movement['user'] ?? 0)]);
 
-        // Mehr als offen: abgelehnt, nichts gebucht.
+        // More than is open: rejected, nothing booked.
         self::assertSame('invalidQuantity', $this->lists()->receive($listId, [$stick => '7'], [], 9, 2001));
         self::assertSame('15.0000', $this->stockOf(1));
 
@@ -123,8 +123,8 @@ class PurchaseListsTest extends TestCase
     }
 
     /**
-     * Review G-7, S2: das Häkchen „Rest nicht lieferbar" neben der
-     * vorbelegten Menge — das hätte Ware gebucht, die nie kam.
+     * G-7: the checkbox "rest not deliverable" next to the
+     * pre-filled quantity — that would have booked goods that never came.
      */
     public function testNichtLieferbarMitDemGanzenRestIstEinWiderspruch(): void
     {
@@ -134,14 +134,14 @@ class PurchaseListsTest extends TestCase
         self::assertSame('unavailableWithRest', $this->lists()->receive($listId, [$item => '18'], [$item => true], 9, 2000));
         self::assertSame('3.0000', $this->stockOf(1));
 
-        // Ein Teil kam, der Rest nicht: gebucht und geschlossen.
+        // Part came, the rest did not: booked and closed.
         self::assertNull($this->lists()->receive($listId, [$item => '6'], [$item => true], 9, 2001));
         self::assertSame('9.0000', $this->stockOf(1));
         self::assertSame(['unavailable'], $this->itemStates($listId));
     }
 
     /**
-     * Review G-7, L2: ohne Bestandszeile kein stilles „eingegangen".
+     * G-7: without a stock row, no silent "received".
      */
     public function testOhneBestandszeileWirdNichtsAlsEingegangenVermerkt(): void
     {
@@ -154,8 +154,8 @@ class PurchaseListsTest extends TestCase
     }
 
     /**
-     * E3: Der Lieferant kann nicht liefern — der Rest zählt nicht mehr als
-     * bestellt, der Artikel kommt im nächsten Einkauf wieder.
+     * E3: The supplier cannot deliver — the rest no longer counts as
+     * ordered, the article comes back in the next purchase.
      */
     public function testNichtLieferbarBringtDenArtikelZurueck(): void
     {
@@ -193,8 +193,8 @@ class PurchaseListsTest extends TestCase
     }
 
     /**
-     * E5 a: Groß-/Kleinschreibung und Leerzeichen werden an einen
-     * vorhandenen Namen angeglichen; „KG" ist ein anderer Name.
+     * E5 a: Upper/lower case and spaces are aligned to an existing name;
+     * "KG" is a different name.
      */
     public function testDerLieferantWirdAngeglichen(): void
     {

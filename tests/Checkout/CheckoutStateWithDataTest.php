@@ -10,8 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutState;
 /**
  * `withData()` copies every field by hand. Block R added `taxAtDestination`
  * and forgot the copy: the purchase click wrote the order without the switch,
- * and the total check refused it — found only at the acceptance on c5, no
- * test called `withData()` at all.
+ * and the total check refused it — no test called `withData()` at all.
  *
  * So the state is built here with every field at a value that is NOT its
  * default, and every field but `data` has to come through. A field added to

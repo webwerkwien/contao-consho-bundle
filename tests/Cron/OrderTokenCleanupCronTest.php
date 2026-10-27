@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Cron\OrderTokenCleanupCron;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * D-4 (K4): Abgelaufene Tokens gehen, Tokens ohne Ablauf (aus den Mails)
- * bleiben — sie sind der einzige Weg zur Bestellung.
+ * D-4 (K4): Expired tokens go, tokens without expiry (from the mails)
+ * stay — they are the only way to the order.
  */
 final class OrderTokenCleanupCronTest extends TestCase
 {

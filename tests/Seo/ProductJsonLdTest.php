@@ -159,7 +159,7 @@ class ProductJsonLdTest extends TestCase
 
     public function testAnOpenChoiceGetsAnAggregateOfferOverTheVariantPrices(): void
     {
-        // Dieselben Preise wie der Ab-Preis der Seite: günstigste und teuerste sichtbare Variante.
+        // The same prices as the page's from-price: cheapest and most expensive visible variant.
         $jsonLd = $this->build(price: null, variantPrices: ['29.9000', '13.0000', '19.5000'], gtin: self::VALID_GTIN);
 
         self::assertNotNull($jsonLd);
@@ -183,7 +183,7 @@ class ProductJsonLdTest extends TestCase
 
     public function testWithoutAnyPriceThereIsNoMarkupAtAll(): void
     {
-        // E3: Google verlangt für Produkt-Snippets ein Angebot.
+        // E3: Google requires an offer for product snippets.
         self::assertNull($this->build(price: null, variantPrices: []));
     }
 
@@ -219,7 +219,7 @@ class ProductJsonLdTest extends TestCase
 
         $script = $manager->collectFinalScriptFromGraphs();
 
-        // Contao gibt das JSON eingerückt aus — die Prüfung hängt nicht an Leerzeichen.
+        // Contao outputs the JSON indented — the check does not depend on whitespace.
         self::assertMatchesRegularExpression('/"@type":\s*"Product"/', $script);
         self::assertMatchesRegularExpression('/"@type":\s*"AggregateOffer"/', $script);
         self::assertMatchesRegularExpression('/"@type":\s*"Brand"/', $script);

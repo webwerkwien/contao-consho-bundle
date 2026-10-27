@@ -32,6 +32,7 @@ use Webwerkwien\ContaoConshoBundle\Stock\Availability;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxPlace;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxRateNotFound;
 use Webwerkwien\ContaoConshoBundle\Voucher\AppliedVoucher;
+use Webwerkwien\ContaoConshoBundle\Voucher\CoverablePots;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
 
 /**
@@ -105,6 +106,8 @@ final class CheckoutCalculator
         // Block Wertgutscheine (WG-5): what the typed vouchers pay. Optional
         // like the ones above; the purchase click books under a lock.
         private readonly VoucherWallet|null $vouchers = null,
+        // EZ-1: what single-purpose vouchers may pay. Without it they pay nothing.
+        private readonly CoverablePots|null $pots = null,
     ) {
     }
 
@@ -147,8 +150,7 @@ final class CheckoutCalculator
         /*
          * The currency's own places, needed as early as stage 3: the shipping
          * split has to land on them, or the invoice lines do not add up to the
-         * amount the visitor was quoted (measured in the review of 2026-09-22:
-         * 4,95 split 50/50 became 2,4750 + 2,4750 → 2,48 + 2,48 → 4,96).
+         * amount the visitor was quoted (4,95 split 50/50 became 2,4750 + 2,4750 → 2,48 + 2,48 → 4,96).
          */
         $digits = Currencies::getFractionDigits($currency);
 
@@ -211,9 +213,8 @@ final class CheckoutCalculator
 
         // ── 3 ── shipping methods ──────────────────────────────────────────
         /*
-         * Only digital lines: the ELECTRONIC DELIVERY (F-2, F14; Michael,
-         * 2026-09-28: „dass es keinen Versand gibt, heißt ja nicht, dass es
-         * kein Versandschritt geben muss"). One option, in code, free, not a
+         * Only digital lines: the ELECTRONIC DELIVERY (F-2, F14): no shipping does
+         * not mean no shipping step. One option, in code, free, not a
          * record the operator could delete or forget. The step keeps its
          * place, so the step labels need no layout without shipping, and the
          * age gate below runs as for any method that does not check at the
@@ -281,13 +282,11 @@ final class CheckoutCalculator
                 );
 
                 /*
-                 * ⚠️ Das Brutto der Option kommt aus den ANTEILEN, nicht aus
-                 * der Steuerklasse der Versandart. Bei `proportional` dient
-                 * die Klasse laut 5.1 nur der Umrechnung einer Brutto-Eingabe
-                 * — sie als Satz zu nehmen, ergäbe eine andere Zahl als die
-                 * Summe der Rechnungszeilen. Im Review vom 2026-09-22
-                 * gemessen: 4,95 netto auf 50/50 in 20 % und 10 % gaben 5,94
-                 * an der Option und 5,6925 in den Zeilen.
+                 * ⚠️ The option's gross comes from the SHARES, not from the shipping
+                 * method's tax class. With `proportional` the class only converts a gross
+                 * input (5.1) — taken as the rate, it would give a different figure than
+                 * the sum of the invoice lines: 4,95 net split 50/50 into 20 % and 10 % gave
+                 * 5,94 at the option and 5,6925 in the lines.
                  */
                 $corrected = new MethodOption(
                     $shipping->id,
@@ -298,10 +297,9 @@ final class CheckoutCalculator
                 );
 
                 /*
-                 * Auch in der LISTE ersetzen, nicht nur in der Auswahl: sonst
-                 * trüge derselbe Eintrag zwei verschiedene Bruttobeträge, je
-                 * nachdem, wo eine Vorlage ihn liest. Im zweiten Review vom
-                 * 2026-09-22 benannt.
+                 * Replaced in the LIST too, not only in the choice: otherwise the same
+                 * entry would carry two different gross amounts, depending on where a
+                 * template reads it.
                  */
                 foreach ($shippingOptions as $index => $option) {
                     if ($option->id === $corrected->id) {
@@ -370,12 +368,12 @@ final class CheckoutCalculator
             if (null !== $discount && $discount->freeShipping) {
                 /*
                  * Every option at 0, also where the chosen one costs nothing
-                 * anyway (second review H, L-B): another one picked would be
+                 * anyway (H): another one picked would be
                  * free as well, and the list has to say so.
                  *
                  * But free shipping where there is none to save — an
                  * electronic delivery, a method that costs nothing — takes
-                 * nothing off and must not use the code up (review H, L1;
+                 * nothing off and must not use the code up (H;
                  * OrderPlacer redeems what the state carries).
                  */
                 $shippingOptions = array_map(static fn (MethodOption $o): MethodOption => new MethodOption($o->id, $o->title, $o->available, '0.0000', '0.0000'), $shippingOptions);
@@ -410,15 +408,17 @@ final class CheckoutCalculator
          * voucher, so such a basket always leaves something to pay.
          */
         $voucherLines = $this->voucherLinesGross($cart);
+        // EZ-1, F2: the articles a single-purpose voucher may pay, after the discount.
+        $pots = $this->pots?->of($cart->lines, $discountShares, $now, $reverseCharge, $taxCountry) ?? [];
         $coveredByVouchers = false;
         $vouchersPay = false;
 
         if (null !== $this->vouchers && [] !== $voucherCodes && [] !== $cart->lines) {
             $before = $this->grossBeforePayment($cart->gross, [...$shares, ...$discountShares], $digits);
             $coverable = $before->minus($voucherLines);
-            $paid = $coverable->isPositive() ? $this->appliedSum($this->vouchers->apply($voucherCodes, $shopId, $currency, (string) $coverable, $digits, $now)) : BigDecimal::zero();
+            $paid = $coverable->isPositive() ? $this->appliedSum($this->vouchers->apply($voucherCodes, $shopId, $currency, (string) $coverable, $digits, $now, $pots)) : BigDecimal::zero();
 
-            // Review WG-7, S3 (Michael, 2026-10-06: „kein Skonto bei Gutscheinen").
+            // WG-7: no cash discount on vouchers.
             $vouchersPay = $paid->isPositive();
             $coveredByVouchers = $voucherLines->isZero() && !$this->hasSubscriptionLine($cart) && $before->isPositive() && $paid->isEqualTo($before);
         }
@@ -498,8 +498,7 @@ final class CheckoutCalculator
              * value. The method stays on offer, without it.
              */
             /*
-             * And no discount where a voucher pays (review WG-7, S3; Michael,
-             * 2026-10-06: „kein Skonto bei Gutscheinen"): the discount would
+             * And no discount where a voucher pays (WG-7): the discount would
              * lower a total the voucher then covers — a reward for a method
              * that collects little or nothing. A fee stays (E2).
              */
@@ -532,7 +531,7 @@ final class CheckoutCalculator
              * may cost whatever it costs.
              */
             $parts = $this->grossed(
-                // A discount per class and country (review H, S1); a fee follows the delivery.
+                // A discount per class and country (H); a fee follows the delivery.
                 $this->splitter->split($adjustment->net, $mode, $class, $cart->lines, $digits, PaymentAdjustmentOrigin::Discount === $adjustment->origin),
                 $taxCountry,
                 $now,
@@ -598,7 +597,7 @@ final class CheckoutCalculator
 
         if (null !== $this->vouchers && [] !== $voucherCodes && [] !== $cart->lines) {
             $coverable = $grossTotal->minus($voucherLines);
-            $vouchers = $this->vouchers->apply($voucherCodes, $shopId, $currency, (string) ($coverable->isPositive() ? $coverable : BigDecimal::zero()), $digits, $now);
+            $vouchers = $this->vouchers->apply($voucherCodes, $shopId, $currency, (string) ($coverable->isPositive() ? $coverable : BigDecimal::zero()), $digits, $now, $pots);
             $payable = $grossTotal->minus($this->appliedSum($vouchers));
         }
 
@@ -812,13 +811,13 @@ final class CheckoutCalculator
         }
 
         /*
-         * And the shop's own VAT ID (C-12, Michael 2026-09-26: "1a nur mit
-         * eigener UID"). An invoice over a tax-free intra-community supply
+         * And the shop's own VAT ID (C-12): reverse charge only with
+         * the shop's own VAT ID. An invoice over a tax-free intra-community supply
          * has to state the supplier's VAT ID as well as the recipient's —
          * Art. 11 Abs. 2 UStG 1994 Anhang (Binnenmarkt), read at the RIS on
          * 2026-09-26. A shop without one charges the tax as for anyone else.
-         * Found at the acceptance: RE-00024 went out tax-free with neither
-         * the shop's VAT ID nor a reverse charge note.
+         * Without this an invoice could go out tax-free with neither the
+         * shop's VAT ID nor a reverse charge note.
          */
         if ('' === trim($shopVatId)) {
             return false;
@@ -836,7 +835,7 @@ final class CheckoutCalculator
      * carrier's convenience, not a requirement.
      *
      * ⚠️ The mail address is required on the BILLING address and on nothing
-     * else. Two mistakes were in here until the review of 2026-09-22:
+     * else. Two mistakes were in here before:
      *
      *   - "e-mail OR company" let a business order through with no mail
      *     address at all. OrderFactory writes $billing->email onto the order,
@@ -982,7 +981,7 @@ final class CheckoutCalculator
     {
         return array_map(
             fn (ShippingShare $share): ShippingShare => $share->withGross(
-                // A reduction at the country of what it reduces (review H, S1).
+                // A reduction at the country of what it reduces (H).
                 $this->grossOf($share->net, $share->taxClassId, '' !== $share->taxCountry ? $share->taxCountry : $country, $now, $reverseCharge),
             ),
             $shares,

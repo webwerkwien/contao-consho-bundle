@@ -26,8 +26,8 @@ final class CatalogContextFactory
          * one domain — the application's own: `framework.router.default_uri`
          * on the console and in a cron, the request's host in a request.
          * Setting a domain on one start point only would make Contao prefer
-         * it for that host and hide the others (measured on the test server,
-         * 2026-10-10: every address answered 404).
+         * it for that host and hide the others (every address then answered
+         * 404).
          */
         #[Autowire(service: 'router.request_context')]
         private readonly RequestContext|null $requestContext = null,
@@ -54,8 +54,7 @@ final class CatalogContextFactory
         $now = $now > 0 ? $now : time();
 
         /*
-         * A start point being prepared is no catalogue (Fable review
-         * Connect-1, W2): its links answer 404, and a feed or the public JSON
+         * A start point being prepared is no catalogue (Connect-1): its links answer 404, and a feed or the public JSON
          * would hand out a language nobody has released. Contao's own rule:
          * published, start and stop as strings, empty for none.
          */
@@ -91,7 +90,7 @@ final class CatalogContextFactory
 
         /*
          * No country asked: the shop's own — or, where it does not deliver
-         * there, the first it does (review W2/H7: an Austrian shop selling
+         * there, the first it does (an Austrian shop selling
          * only to Germany had no readable catalogue at all).
          */
         if ('' === $country) {

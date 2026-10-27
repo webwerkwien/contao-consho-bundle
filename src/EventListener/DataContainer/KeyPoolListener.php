@@ -87,8 +87,7 @@ class KeyPoolListener
      * (VariantDeleteListener, which runs after this and lets it still find
      * them).
      *
-     * Into the article's undo entry, as VariantDeleteListener does (AiContract
-     * review, 2026-10-22): the codes were bought from a supplier, and until
+     * Into the article's undo entry, as VariantDeleteListener does : the codes were bought from a supplier, and until
      * then deleting the article — in the mask or with consho:product:delete —
      * lost them for good, while "Wiederherstellen" brought the article back
      * with an empty pool.

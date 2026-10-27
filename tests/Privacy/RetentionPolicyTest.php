@@ -8,9 +8,9 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Privacy\RetentionPolicy;
 
 /**
- * D-5, L2/L6 — die Frist beginnt mit dem Schluss des Kalenderjahres des
- * jüngsten Belegs (§ 132 Abs. 1 BAO; § 147 Abs. 4 AO), ohne Beleg mit dem
- * Bestelldatum, und endet am 31.12. des Jahres „Beleg-Jahr + N".
+ * D-5, L2/L6 — the period begins at the close of the calendar year of the
+ * most recent record (§ 132 Abs. 1 BAO; § 147 Abs. 4 AO), without a record
+ * with the order date, and ends on 31.12. of the year "record year + N".
  */
 final class RetentionPolicyTest extends TestCase
 {
@@ -36,7 +36,7 @@ final class RetentionPolicyTest extends TestCase
         $this->order(10, 1, '2018-05-01');
         // Numbered as real documents are: shop,type,documentNumber is unique.
         $this->connection->insert('tl_consho_document', ['pid' => 10, 'documentNumber' => 'RE-00001', 'issuedAt' => strtotime('2018-05-02')]);
-        $this->connection->insert('tl_consho_document', ['pid' => 10, 'type' => 'cancellation', 'documentNumber' => 'ST-00001', 'issuedAt' => strtotime('2019-02-01')]); // Storno im Folgejahr
+        $this->connection->insert('tl_consho_document', ['pid' => 10, 'type' => 'cancellation', 'documentNumber' => 'ST-00001', 'issuedAt' => strtotime('2019-02-01')]); // cancellation in the following year
 
         self::assertSame(mktime(23, 59, 59, 12, 31, 2026), $this->policy()->endOfOrder(10));
         self::assertSame([], $this->ids($this->policy()->due(strtotime('2026-12-31 12:00'))), 'am letzten Tag noch nicht');
@@ -52,12 +52,12 @@ final class RetentionPolicyTest extends TestCase
 
     public function testNurMitFristUndNurWasFaelligIst(): void
     {
-        $this->order(20, 1, '2010-01-01');                        // fällig
-        $this->order(21, 1, '2025-01-01');                        // noch lange nicht
-        $this->order(22, 2, '2010-01-01');                        // Shop ohne Frist
-        $this->order(23, 3, '2010-01-01');                        // Shop ohne Automatik, kein Antrag
-        $this->order(24, 3, '2010-01-01', erasureRequested: true); // Shop ohne Automatik, Antrag
-        $this->order(25, 1, '2010-01-01', anonymized: true);      // schon erledigt
+        $this->order(20, 1, '2010-01-01');                        // due
+        $this->order(21, 1, '2025-01-01');                        // not for a long time
+        $this->order(22, 2, '2010-01-01');                        // shop without a period
+        $this->order(23, 3, '2010-01-01');                        // shop without automation, no request
+        $this->order(24, 3, '2010-01-01', erasureRequested: true); // shop without automation, request
+        $this->order(25, 1, '2010-01-01', anonymized: true);      // already done
 
         $due = $this->policy()->due(strtotime('2026-09-28'));
 
@@ -67,8 +67,8 @@ final class RetentionPolicyTest extends TestCase
 
     public function testFaelligInDenNaechstenTagen(): void
     {
-        $this->order(30, 1, '2019-06-01');   // Ende 31.12.2026
-        $this->order(31, 1, '2020-06-01');   // Ende 31.12.2027
+        $this->order(30, 1, '2019-06-01');   // ends 31.12.2026
+        $this->order(31, 1, '2020-06-01');   // ends 31.12.2027
 
         self::assertSame([30], $this->ids($this->policy()->dueBetween(strtotime('2026-12-15'), strtotime('2027-01-14'))));
         self::assertSame([], $this->ids($this->policy()->dueBetween(strtotime('2026-09-28'), strtotime('2026-10-28'))));

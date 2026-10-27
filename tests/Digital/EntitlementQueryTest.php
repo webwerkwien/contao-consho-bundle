@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Digital\EntitlementQuery;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-5 (P40): die Andockstelle, über die Module fragen, ob eine Berechtigung
- * jetzt zählt — dieselbe Antwort wie die Bestellseite.
+ * Abo-5 (P40): the extension point through which modules ask whether an
+ * entitlement counts right now — the same answer as the order page.
  */
 final class EntitlementQueryTest extends TestCase
 {
@@ -32,7 +32,7 @@ final class EntitlementQueryTest extends TestCase
         $this->connection->insert('tl_consho_order', ['id' => 6, 'orderNumber' => 'WEB-00006']);
         $this->connection->insert('tl_consho_order_item', ['id' => 11, 'pid' => 6, 'quantity' => '1']);
 
-        // Kunde 7, Produkt 4: aktiv, ruhend, gesperrt, abgelaufen; dazu fremder Kunde und fremdes Produkt.
+        // Customer 7, product 4: active, suspended, blocked, expired; plus a foreign customer and a foreign product.
         $this->entitlement(1, 5, 10, 7, 4);
         $this->entitlement(2, 5, 10, 7, 4, ['suspendedAt' => 1_500]);
         $this->entitlement(3, 5, 10, 7, 4, ['revoked' => 1]);
@@ -51,7 +51,7 @@ final class EntitlementQueryTest extends TestCase
     {
         $this->entitlement(8, 5, 10, 0, 4);
 
-        self::assertSame([], $this->query()->activeFor(0, 4, self::NOW), 'Review L4: nicht die Gäste aller');
+        self::assertSame([], $this->query()->activeFor(0, 4, self::NOW), 'nicht die Gäste aller');
     }
 
     public function testEinzelneBerechtigung(): void

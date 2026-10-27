@@ -46,8 +46,8 @@ class ShopCurrenciesListener
     /**
      * Refuses a selection that names no usable currency.
      *
-     * What `mandatory` does and does not cover here — read off Contao 5.7 on
-     * 2026-09-21, because the answer is not the obvious one:
+     * What `mandatory` does and does not cover here — read off Contao 5.7,
+     * because the answer is not the obvious one:
      *
      * `Widget::validator()` recurses into an array and RETURNS before the
      * mandatory branch, which therefore only ever sees scalars — an empty array
@@ -92,7 +92,7 @@ class ShopCurrenciesListener
     /**
      * The back end language, in the spelling Symfony's Intl data uses.
      *
-     * ⚠️ The hyphen is not cosmetic, measured on 2026-09-21. Contao hands out a
+     * ⚠️ The hyphen is not cosmetic. Contao hands out a
      * language TAG: `ContaoFramework::setDefaultLanguage()` and `PageRegular`
      * both write `LocaleUtil::formatAsLanguageTag()`, which is a
      * `str_replace('_', '-', …)`. Symfony's data directory is named the other

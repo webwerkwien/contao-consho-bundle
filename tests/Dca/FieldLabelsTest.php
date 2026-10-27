@@ -6,20 +6,19 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Jedes Eingabefeld, das Consho anlegt, hat in beiden Sprachen eine
- * Beschriftung.
+ * Every input field that Consho creates has a label in both languages.
  *
- * Issue #2 (Bernhard Renner, 2026-10-17, Version 0.1.3): `conshoSort` und
- * `conshoPerPage` am Inhaltselement zeigten ihre Feldnamen. Bis dahin gab es
- * diese Prüfung nur für einzelne Tabellen (SubscriptionDcaTest,
- * NetPriceGroupsDcaTest) — genau die übrigen fehlten.
+ * Issue #2 (version 0.1.3): `conshoSort` and `conshoPerPage` on the content
+ * element showed their field names. Until then this check only existed for
+ * single tables (SubscriptionDcaTest, NetPriceGroupsDcaTest) — exactly the
+ * remaining ones were missing.
  *
- * Gelesen werden die DCA-Dateien des Pakets selbst. Bei Contaos eigenen
- * Tabellen (tl_content, tl_page, …) zählen nur die Felder, die Consho
- * hinzufügt: was die Datei neu in `fields` schreibt.
+ * The package's own DCA files are read. For Contao's own tables
+ * (tl_content, tl_page, …) only the fields that Consho adds count: what the
+ * file newly writes into `fields`.
  *
- * In eigenen Prozessen: Contaos DCA-Dateien deklarieren Klassen (`tl_content`,
- * …), und andere Tests laden dieselben Dateien.
+ * In separate processes: Contao's DCA files declare classes (`tl_content`,
+ * …), and other tests load the same files.
  */
 #[RunTestsInSeparateProcesses]
 class FieldLabelsTest extends TestCase
@@ -60,7 +59,7 @@ class FieldLabelsTest extends TestCase
 
     public function testDerTestFindetFelder(): void
     {
-        // Ein Test, der nichts findet, wäre immer grün.
+        // A test that finds nothing would always be green.
         self::assertArrayHasKey('conshoSort', $this->fieldsOf('tl_content', self::DCA.'/tl_content.php'));
         self::assertGreaterThan(20, \count(glob(self::DCA.'/*.php') ?: []));
     }

@@ -13,12 +13,12 @@ use Brick\Math\BigDecimal;
  *
  * **Specificity decides, not the smaller number.** A bulk discount must not
  * silently override a group price, or the notice shown to the customer would
- * name the wrong reason. See docs/block-a-fundament.md, section 5.1.
+ * name the wrong reason. See Block A, section 5.1.
  *
  * Every comparison runs on decimals, never floats: goods sold by length come
  * in 0.1 steps, and a scale price from 5 m must not be reached at 4.9 m.
  *
- * Promotions (block H, docs/block-h-preise.md) live in the same rows: a row
+ * Promotions (Block H) live in the same rows: a row
  * with a validity window beats one of equal rank without (H2) and is a
  * promotion when it is the cheaper of the two (B). A promotion never makes
  * anyone pay more — it holds across higher thresholds of its relationship (A)
@@ -100,7 +100,7 @@ final class PriceCalculator
      * that applies to everyone, when no group price exists.
      *
      * ⚠️ Why the resolution runs per group and only THEN compares amounts
-     * (C-4, after the review of 2026-09-21): the order at the top of this class
+     * (C-4): the order at the top of this class
      * describes ONE customer relationship. A member of two groups stands in
      * two of them and takes the better, which is what "der günstigste Preis
      * über alle Gruppen" (decision E2) means.
@@ -145,7 +145,7 @@ final class PriceCalculator
         foreach ($byGroup as $rows) {
             /*
              * The group's own rows ALONE, and the general ones are not missing
-             * here (noticed in the second review round): within one
+             * here: within one
              * relationship a group price beats a list price whatever the
              * amounts — "specificity decides" — so a general row could never
              * win this comparison anyway. Passing them in looked careful and

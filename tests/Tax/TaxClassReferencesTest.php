@@ -16,7 +16,7 @@ class TaxClassReferencesTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        foreach (['tl_consho_tax_class', 'tl_consho_product', 'tl_consho_shipping_method', 'tl_consho_payment_method'] as $table) {
+        foreach (['tl_consho_tax_class', 'tl_consho_product', 'tl_consho_shipping_method', 'tl_consho_payment_method', 'tl_consho_voucher'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
         SubscriptionSchema::create($this->connection);
@@ -39,8 +39,8 @@ class TaxClassReferencesTest extends TestCase
 
     public function testEinVerweisAufEineGeloeschteKlasseWirdGenannt(): void
     {
-        // Der Weg, den der Voter nicht schließen kann: das Produkt war vor der
-        // Klasse gelöscht und kam per Papierkorb danach zurück.
+        // The path the voter cannot close: the product was deleted before the
+        // class and came back from the recycle bin afterwards.
         $this->connection->insert('tl_consho_product', ['id' => 5, 'title' => 'Wanderstock', 'taxClass' => 99]);
         $this->connection->insert('tl_consho_shipping_method', ['id' => 6, 'title' => 'Paket', 'taxClass' => 99]);
 
@@ -54,20 +54,17 @@ class TaxClassReferencesTest extends TestCase
     }
 
     /**
-     * 🔴 **Der erste Entwurf nahm `taxClass = 0` aus**, mit der Begründung,
-     * ein frischer Katalog würde den Abschnitt sonst mit Zeilen füllen — und
-     * mit einem Verweis auf einen „Pflichtfeld-Befund", den es im Code nicht
-     * gibt. Beides fiel im Fremdmodell-Review vom 2026-09-23 auf.
+     * 🔴 **An earlier draft excluded `taxClass = 0`**, reasoning that a fresh
+     * catalogue would otherwise fill the section with rows.
      *
-     * Nachgemessen war die Begründung doppelt falsch: Das Feld ist in beiden
-     * Masken `mandatory`, eine über das Backend gespeicherte Zeile kann also
-     * gar nicht 0 sein; und eine Variante trägt ihre **eigene** Klasse, erbt
-     * also keine (auf c5: `pid = 1`, `taxClass = 2`). Es gibt kein
-     * berechtigtes 0, mit dem Lärm entstehen könnte — ein 0 kommt aus einem
-     * Import, aus rohem SQL oder aus einer Installation von vor dem Feld.
+     * Checked, the reasoning was wrong twice: the field is `mandatory` in both
+     * forms, so a row saved through the backend cannot be 0 at all; and a
+     * variant carries its **own** class, so it inherits none (for example
+     * `pid = 1`, `taxClass = 2`). There is no legitimate 0 that could cause
+     * noise — a 0 comes from an import, from raw SQL or from an installation
+     * from before the field.
      *
-     * Und der Schaden ist derselbe: `findRate()` antwortet für 0 wie für 99
-     * mit `null`.
+     * And the damage is the same: `findRate()` answers `null` for 0 as for 99.
      */
     public function testAuchEineLeereZuordnungIstEinVerwaisterVerweis(): void
     {
@@ -80,9 +77,9 @@ class TaxClassReferencesTest extends TestCase
     }
 
     /**
-     * Für die Versandart wiegt es schwerer als für das Produkt:
-     * `DbalShippingMethodRepository` filtert `taxClass > 0`, die Art
-     * verschwindet also aus der Auswahl, ohne dass irgendwo etwas steht.
+     * For the shipping method it weighs more heavily than for the product:
+     * `DbalShippingMethodRepository` filters `taxClass > 0`, so the method
+     * disappears from the selection without anything being said anywhere.
      */
     public function testEineVersandartOhneKlasseWirdEbenfallsGenannt(): void
     {
@@ -95,9 +92,9 @@ class TaxClassReferencesTest extends TestCase
     }
 
     /**
-     * E-1: Eine Zahlungsart braucht eine Gebühren-Steuerklasse nur bei einer
-     * festen Gebühr. Ihre 0 ist „keine", kein verwaister Verweis — eine
-     * gelöschte Klasse dagegen schon, und sie hält die Klasse fest.
+     * E-1: A payment method only needs a fee tax class with a fixed fee. Its
+     * 0 means "none", not an orphaned reference — a deleted class, on the
+     * other hand, is one, and it holds on to the class.
      */
     public function testEineZahlungsartOhneGebuehrenklasseIstNichtVerwaist(): void
     {
@@ -112,8 +109,8 @@ class TaxClassReferencesTest extends TestCase
     }
 
     /**
-     * Abo-3: Das Abo friert die Klasse ein, nicht den Satz (A9). Jede
-     * Folgeabrechnung fragt die Klasse neu — ohne sie keine Rechnung.
+     * Abo-3: The subscription freezes the class, not the rate (A9). Every
+     * follow-up billing asks for the class anew — without it, no invoice.
      */
     public function testEinAboHaeltSeineSteuerklasse(): void
     {
@@ -123,9 +120,9 @@ class TaxClassReferencesTest extends TestCase
     }
 
     /**
-     * Abo-6 (P51): Ein beendetes Abo wird nie wieder abgerechnet — es hält
-     * die Klasse nicht mehr und ist auch keine Waise. Ruhend und gekündigt
-     * laufen noch.
+     * Abo-6 (P51): An ended subscription is never billed again — it no longer
+     * holds the class and is not an orphan either. Suspended and cancelled
+     * ones are still running.
      */
     public function testNurEinLaufendesAboHaeltDieKlasse(): void
     {
@@ -142,7 +139,27 @@ class TaxClassReferencesTest extends TestCase
     }
 
     /**
-     * Das Abo hat keine Spalte `title` — die Abfrage nennt es bei seiner Nummer.
+     * EZ-5: a single-purpose voucher with a balance holds its class; a spent
+     * or blocked one does not, and a multi-purpose one (0) is no orphan.
+     */
+    public function testEinEinzweckGutscheinMitGuthabenHaeltSeineKlasse(): void
+    {
+        $this->connection->insert('tl_consho_voucher', ['id' => 7, 'code' => 'AAAABBBBCCCCDDDD', 'taxClass' => 1, 'balance' => '0.0000']);
+        $this->connection->insert('tl_consho_voucher', ['id' => 8, 'code' => 'EEEEFFFFGGGGHHHH', 'taxClass' => 1, 'balance' => '10.0000', 'blocked' => 1]);
+        $this->connection->insert('tl_consho_voucher', ['id' => 9, 'code' => 'JJJJKKKKMMMMNNNN', 'taxClass' => 0, 'balance' => '10.0000']);
+
+        self::assertFalse($this->references()->isInUse(1));
+        self::assertSame([], $this->references()->orphans());
+
+        $this->connection->update('tl_consho_voucher', ['blocked' => 0], ['id' => 8]);
+        self::assertTrue($this->references()->isInUse(1));
+
+        $this->connection->update('tl_consho_voucher', ['taxClass' => 99], ['id' => 8]);
+        self::assertSame([['table' => 'tl_consho_voucher', 'id' => 8, 'title' => 'EEEEFFFFGGGGHHHH', 'taxClass' => 99]], $this->references()->orphans());
+    }
+
+    /**
+     * The subscription has no `title` column — the query names it by its number.
      */
     public function testEinVerwaistesAboWirdMitSeinerNummerGenannt(): void
     {
@@ -160,13 +177,13 @@ class TaxClassReferencesTest extends TestCase
 
         self::assertTrue($this->references()->isInUse(1));
         self::assertFalse($this->references()->isInUse(2));
-        // Keine Abfrage für eine ID, die es nicht geben kann.
+        // No query for an ID that cannot exist.
         self::assertFalse($this->references()->isInUse(0));
     }
 
     /**
-     * CW-5: wer die Klasse hält, für eine Ablehnung, die ihn nennt — höchstens
-     * so viele wie verlangt, über alle Tabellen zusammen.
+     * CW-5: who holds the class, for a rejection that names them — at most as
+     * many as requested, across all tables together.
      */
     public function testUsedByNenntHoechstensDieVerlangteZahl(): void
     {
@@ -187,29 +204,28 @@ class TaxClassReferencesTest extends TestCase
 
     public function testUsedByOhneKlasse(): void
     {
-        // Ein Produkt ohne Klasse hält keine „Klasse 0" fest.
+        // A product without a class does not hold a "class 0".
         $this->connection->insert('tl_consho_product', ['id' => 5, 'title' => 'Ohne', 'taxClass' => 0]);
 
         self::assertSame([], $this->references()->usedBy(0));
     }
 
     /**
-     * 🔴 **Die Liste der verweisenden Tabellen darf keine Behauptung sein.**
+     * 🔴 **The list of referencing tables must not be a claim.**
      *
-     * Sie steht als Konstante in der Klasse, und eine Konstante, die niemand
-     * prüft, liest sich wie Wissen — derselbe Fehler wie F7 im Review vom
-     * 2026-09-23, wo zwei von drei geprüften Schlüsseln ins Leere sahen.
+     * It stands as a constant in the class, and a constant nobody checks reads
+     * like knowledge.
      *
-     * Hier kommt sie aus den DCAs selbst: jedes Feld, dessen `foreignKey`
-     * diese Tabelle nennt. Kommt eine dritte Tabelle mit einer Steuerklasse
-     * dazu, scheitert dieser Test und nennt sie, statt dass der Löschschutz
-     * still weniger deckt, als er behauptet.
+     * Here it comes from the DCAs themselves: every field whose `foreignKey`
+     * names this table. If a third table with a tax class is added, this test
+     * fails and names it, instead of the deletion protection silently covering
+     * less than it claims.
      *
-     * ⚠️ **Die Sätze sind ausgenommen**, und zwar begründet, nicht
-     * weggelassen: `tl_consho_tax_rate.pid` nennt dieselbe Tabelle, aber die
-     * Sätze sind Kindzeilen (`ptable`) und gehen mit der Klasse in den
-     * Papierkorb. Sie festzuhalten hieße, eine Klasse mit Sätzen wäre nie
-     * löschbar — also praktisch keine.
+     * ⚠️ **The rates are excluded**, with a reason, not left out:
+     * `tl_consho_tax_rate.pid` names the same table, but the rates are child
+     * rows (`ptable`) and go to the recycle bin with the class. Holding on to
+     * them would mean a class with rates could never be deleted — so
+     * practically no class could.
      */
     public function testDieListeDerVerweisendenTabellenIstVollstaendig(): void
     {
@@ -218,9 +234,8 @@ class TaxClassReferencesTest extends TestCase
         foreach (glob(__DIR__.'/../../contao/dca/*.php') ?: [] as $file) {
             unset($GLOBALS['TL_DCA']);
 
-            // Siehe EveryDcaSurvivesContaoMigrationsTest: zwei Dateien
-            // erweitern Kerntabellen und greifen nach einer Palette, die
-            // Contao deklariert.
+            // See EveryDcaSurvivesContaoMigrationsTest: two files extend core
+            // tables and reach for a palette that Contao declares.
             $GLOBALS['TL_DCA']['tl_member']['palettes']['default'] = '{personal_legend},firstname,lastname;';
             $GLOBALS['TL_DCA']['tl_page']['palettes']['root'] = '{title_legend},title,alias;';
             $GLOBALS['TL_DCA']['tl_page']['palettes']['rootfallback'] = '{title_legend},title,alias;';
@@ -233,10 +248,9 @@ class TaxClassReferencesTest extends TestCase
 
                 foreach ($definition['fields'] ?? [] as $field => $config) {
                     /*
-                     * Nur `pid` einer Kindtabelle ist ausgenommen, nicht die
-                     * ganze Tabelle — sonst fiele ein zweites Feld daneben
-                     * still aus der Prüfung. Im Review vom 2026-09-23 als zu
-                     * weit gefasst erkannt.
+                     * Only the `pid` of a child table is excluded, not the whole
+                     * table — otherwise a second field next to it would silently
+                     * drop out of the check.
                      */
                     if ($childOf && 'pid' === $field) {
                         continue;

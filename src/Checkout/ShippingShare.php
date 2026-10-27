@@ -7,8 +7,7 @@ namespace Webwerkwien\ContaoConshoBundle\Checkout;
  * line of type `shipping` on the order (spec 5.2).
  *
  * Also the shape of a reduction's part — the payment discount, a cart rule's
- * discount. Those carry the country of the supplies they reduce (review H,
- * S1): a reduction lowers the consideration of each supply at that supply's
+ * discount. Those carry the country of the supplies they reduce (H): a reduction lowers the consideration of each supply at that supply's
  * own rate, and a service is taxed in the shop's country while goods are
  * taxed in the customer's (DL4). '' = the delivery country, as for shipping.
  */

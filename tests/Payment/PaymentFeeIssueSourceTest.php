@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentFeeIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * E-3: Nachnahme mit Gebühr, aber ohne Steuerwahl, wird im Checkout nicht
- * angeboten (E-1, Z3). Ohne Warnung fehlte sie dort still.
+ * E-3: cash on delivery with a fee but without a tax choice is not offered
+ * at checkout (E-1, Z3). Without a warning it would be missing there silently.
  */
 class PaymentFeeIssueSourceTest extends TestCase
 {

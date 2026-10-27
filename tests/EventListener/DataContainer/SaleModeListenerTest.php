@@ -13,9 +13,9 @@ use Webwerkwien\ContaoConshoBundle\Shipping\DbalArticleShippingData;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-1, P2: Verkaufsart nur am Grundprodukt; die Variante behält ihre Laufzeit.
- * DL5: Der Abschnitt „Auslieferung und Gültigkeit" folgt der Art des Typs —
- * Typ 1 digital, 2 Dienstleistung, 3 körperlich.
+ * Abo-1, P2: sale mode only on the base product; the variant keeps its term.
+ * DL5: the section "Delivery and validity" follows the kind of the type —
+ * type 1 digital, 2 service, 3 physical.
  */
 class SaleModeListenerTest extends TestCase
 {
@@ -51,7 +51,7 @@ class SaleModeListenerTest extends TestCase
         $palette = $this->palette();
 
         self::assertStringContainsString(self::DIGITAL, $palette);
-        // Die Laufzeit steckt in der Subpalette des Einmalkaufs.
+        // The term sits in the subpalette of the one-off purchase.
         self::assertStringNotContainsString('entitlementMonths', $palette);
         self::assertSame('entitlementMonths', $GLOBALS['TL_DCA']['tl_consho_product']['subpalettes']['saleOnce']);
     }
@@ -97,8 +97,8 @@ class SaleModeListenerTest extends TestCase
     }
 
     /**
-     * WG3: Der Gutschein zeigt Wert und Gültigkeit, aber nichts zum
-     * Ausliefern und keine Verkaufsart; die Variante nur ihren Wert.
+     * WG3: the voucher shows value and validity, but nothing about delivery and
+     * no sale mode; the variant only its value.
      */
     public function testDerGutscheinZeigtWertUndGueltigkeit(): void
     {
@@ -106,7 +106,7 @@ class SaleModeListenerTest extends TestCase
 
         $this->listener('edit')->onLoad($this->dc(1));
         $palette = $this->palette();
-        self::assertStringContainsString('taxClass,voucherValue,voucherValidMonths,unit', $palette);
+        self::assertStringContainsString('taxClass,voucherValue,voucherValidMonths,voucherSinglePurpose,unit', $palette);
         self::assertStringNotContainsString('digital_legend', $palette);
 
         require __DIR__.'/../../../contao/dca/tl_consho_product.php';
@@ -136,8 +136,8 @@ class SaleModeListenerTest extends TestCase
     }
 
     /**
-     * Abnahme DL, Fund 1: Was die Art nicht verwendet, aber belegt ist, bleibt
-     * sichtbar und sagt es — sonst verlangt der Befund etwas Unerreichbares.
+     * DL: what the kind does not use but is filled stays visible and says so —
+     * otherwise the finding demands something unreachable.
      */
     public function testBelegteFelderBleibenBeiDerDienstleistungSichtbar(): void
     {
@@ -156,8 +156,8 @@ class SaleModeListenerTest extends TestCase
     }
 
     /**
-     * Spec Wertgutscheine, offene Punkte: Gewicht und Maße standen auch bei
-     * Gutschein, E-Book und Dienstleistung in der Maske. Nur Ware hat sie.
+     * WG: weight and dimensions were in the form for voucher, e-book and
+     * service as well. Only goods have them.
      */
     public function testVersandfelderNurBeiKoerperlicherWare(): void
     {
@@ -172,7 +172,7 @@ class SaleModeListenerTest extends TestCase
         }
     }
 
-    /** Wie bei den digitalen Feldern: Belegtes bleibt sichtbar und sagt es. */
+    /** As with the digital fields: what is filled stays visible and says so. */
     public function testBelegtesGewichtBleibtBeimGutscheinSichtbar(): void
     {
         $this->connection->update('tl_consho_product', ['productType' => 4, 'weight' => '0.2500'], ['id' => 1]);
@@ -197,7 +197,7 @@ class SaleModeListenerTest extends TestCase
 
     public function testInDerListeAendertSichNichts(): void
     {
-        // In der Liste ist die id die des Elternsatzes oder keine.
+        // In the list the id is that of the parent record or none.
         $before = $this->palette();
 
         $this->listener('')->onLoad($this->dc(2));
@@ -207,7 +207,7 @@ class SaleModeListenerTest extends TestCase
 
     public function testDerTypSchicktDieMaskeAb(): void
     {
-        // Die Felder folgen der Art sofort, nicht erst nach dem Speichern.
+        // The fields follow the kind immediately, not only after saving.
         self::assertTrue($GLOBALS['TL_DCA']['tl_consho_product']['fields']['productType']['eval']['submitOnChange']);
     }
 

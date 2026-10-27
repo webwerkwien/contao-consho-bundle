@@ -105,7 +105,7 @@ final class DbalCatalogCompletenessIssueSource implements ConfigurationIssueSour
             // where it IS what stops the counting.
             if ([] === $currencies) {
                 // With the shop: since block I this finding stops "ready" —
-                // of this shop, not of every shop (second review I, B1).
+                // of this shop, not of every shop (I).
                 $issues[] = new ConfigurationIssue(ConfigurationFinding::CurrencyMissing, ['shop' => (string) $shop['title']], $shopId);
 
                 continue;

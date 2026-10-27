@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\DbalPinRepository;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Spaltentypen wie auf c5 (SHOW COLUMNS, 2026-09-13): invisible tinyint,
- * start/stop varchar(10) mit '' als „nicht gesetzt", ptable varchar.
+ * Column types as on a real installation (SHOW COLUMNS): invisible tinyint,
+ * start/stop varchar(10) with '' as "not set", ptable varchar.
  */
 class DbalPinRepositoryTest extends TestCase
 {
@@ -51,7 +51,7 @@ class DbalPinRepositoryTest extends TestCase
     {
         $this->pin(product: 1);
         $this->pin(product: 2, pid: 51);
-        // Gleiche pid, aber im Artikel 50 statt im Element 50 — dynamicPtable.
+        // Same pid, but in article 50 instead of in element 50 — dynamicPtable.
         $this->pin(product: 3, ptable: 'tl_article');
         $this->pin(product: 4, type: 'text');
         $this->pin(product: 0);
@@ -72,7 +72,7 @@ class DbalPinRepositoryTest extends TestCase
 
     public function testThePreviewShowsThemAll(): void
     {
-        // Wie ContentModel::findPublishedByPidAndTable() in der Vorschau.
+        // Like ContentModel::findPublishedByPidAndTable() in the preview.
         $this->pin(product: 1);
         $this->pin(product: 2, invisible: true);
         $this->pin(product: 3, start: (string) (self::NOW + 60));

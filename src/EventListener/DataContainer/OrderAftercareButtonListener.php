@@ -9,9 +9,8 @@ use Doctrine\DBAL\Connection;
 /**
  * The withdrawal and complaint buttons in the order list (D-3, F13).
  *
- * Michael: „das Icon für Widerrufe ist immer grün und anwählbar, es wäre
- * besser wenn es nur bei einem widerruf so ist" — „was für das Widerruf icon
- * gilt, gilt auch für die Reklamation".
+ * Each button stands out only where the order has a withdrawal or a
+ * complaint — before, the withdrawal icon was always green and clickable.
  *
  *  - Withdrawals come only from the customer. Without one there is nothing
  *    to open: the button is disabled like Contao's own.

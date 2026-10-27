@@ -40,7 +40,7 @@ class SubscriptionCron
         private readonly SubscriptionBillingRun $run,
         private readonly SubscriptionDelinquencyRun $delinquency,
         private readonly SubscriptionLifecycleRun $lifecycle,
-        // Required (second review Abo-4b): an optional one that the
+        // Required (Abo-4b): an optional one that the
         // container failed to wire would make the cron skip P94/P96 in silence.
         private readonly SubscriptionCharger $charger,
         private readonly SubscriptionChargeFallback $fallback,

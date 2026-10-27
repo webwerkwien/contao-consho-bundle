@@ -44,8 +44,8 @@ class AddressShapeIsOwnedInOnePlaceTest extends TestCase
         'src/Seo/RedirectRecorder.php',
         /*
          * Has to know which placeholders a pattern uses, so it can pass only
-         * those. Handing the generator all four put the unused ones into a
-         * query string — measured on 2026-09-11 on a live canonical address.
+         * those. Handing the generator all four put the unused ones into the
+         * query string of a live canonical address.
          */
         'src/Seo/ProductUrlGenerator.php',
     ];

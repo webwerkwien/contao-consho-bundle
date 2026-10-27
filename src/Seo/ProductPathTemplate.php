@@ -21,7 +21,7 @@ namespace Webwerkwien\ContaoConshoBundle\Seo;
  *
  * The category is the placeholder people will ask for, because every other
  * system offers it. Shopware, WooCommerce, Magento and PrestaShop all had to
- * invent a "main category" once they did — see docs/block-b-katalog-frontend.md,
+ * invent a "main category" once they did — see Block B,
  * section 4.2. A product is honestly in several categories, and which one is
  * "the real" one is a question without an answer.
  *
@@ -61,7 +61,7 @@ final class ProductPathTemplate
      * ist nicht eindeutig") — with a template of only {sku}, two main products
      * sharing a number got one address and ProductAddressLookup found just one
      * of them, and a product without a number had none at all. {sku} stays
-     * allowed next to {alias} (Michael, 2026-10-22: "Variante 1").
+     * allowed next to {alias}.
      */
     private const IDENTIFYING = self::ALIAS;
 

@@ -137,7 +137,7 @@ class ProductDetailController extends AbstractContentElementController
         private readonly SubscriptionOffers|null $offers = null,
         private readonly SubscriptionLineTerms|null $lineTerms = null,
         /*
-         * The kind of the article (DL1; acceptance DL, find 2): "zzgl.
+         * The kind of the article (DL1): "zzgl.
          * Versandkosten" only where something is shipped. Optional for the
          * tests built by hand — without it the sentence stays as it was.
          */
@@ -154,7 +154,7 @@ class ProductDetailController extends AbstractContentElementController
         private readonly Security|null $security = null,
         private readonly StockNotices|null $notices = null,
         private readonly GuestOrderConfirmation|null $confirmations = null,
-        // Block Wertgutscheine (acceptance WG-7): no "inkl. USt." under a
+        // Block Wertgutscheine (WG-7): no "inkl. USt." under a
         // price that is not taxable. Optional like the one above.
         private readonly NotTaxableArticles|null $notTaxable = null,
         // Block GARAN: the manufacturer's durability guarantee. Optional like
@@ -276,7 +276,7 @@ class ProductDetailController extends AbstractContentElementController
         ]);
 
         // The chosen article's texts, or the product's without a choice
-        // (plan B-5, handover from task 8). Never falls back to another language.
+        // (B-5). Never falls back to another language.
         $safety = $this->safety->forProduct($detail->articleId, $language, $fallback);
         $template->set('safety', $safety);
 
@@ -292,12 +292,12 @@ class ProductDetailController extends AbstractContentElementController
         /*
          * The one-time offer (Connect-1, K2): null for an article not sold
          * once — a one-time price row left over from before is no offer, not
-         * up top, not in the markup (Fable review Abo-2, L4a). OneTimeOffer
+         * up top, not in the markup (Abo-2). OneTimeOffer
          * holds that rule and the struck price; the catalogue reader asks it
          * too. Home country twice: market and tax country are one here (C25).
          *
          * The offers are asked once and handed over: the plans below need
-         * them as well (review Connect-1, H5).
+         * them as well (Connect-1).
          */
         $offered = $matrix->needsChoice() || null === $this->offers
             ? null
@@ -454,7 +454,7 @@ class ProductDetailController extends AbstractContentElementController
             // One-time prices only: a monthly amount is no schema.org price
             // either. So with mixed variants the markup's lowPrice can lie
             // above the "from" the page shows, and offerCount counts only
-            // the one-time ones (second Fable review Abo-2b, 4) — deliberate.
+            // the one-time ones (Abo-2b) — deliberate.
             array_values(array_map(static fn (array $offer): string => $offer['price']->gross, array_filter($variantPrices, static fn (array $offer): bool => 0 === $offer['rule']))),
             $currency,
             $this->offerUrl($request, $matrix, $productId, $rootPageId),
@@ -559,7 +559,7 @@ class ProductDetailController extends AbstractContentElementController
     /**
      * The price of every visible variant that has one, in display order —
      * each variant's FIRST offer with a price, as up top for a single article
-     * (Abo-2b, Fable review S1): the one-time sale, or for a product not sold
+     * (Abo-2b): the one-time sale, or for a product not sold
      * once its first plan. The tile takes the same figure (P88); without this
      * a variant product sold only as a plan had a "from" price on the tile
      * and none on its page.
@@ -617,7 +617,7 @@ class ProductDetailController extends AbstractContentElementController
          * Which offer the figure is: among those at the cheapest amount, the
          * one-time sale first, then the lowest rule id — the tie rule of the
          * tile (DbalProductTileRepository, ORDER BY amount, subscriptionRule;
-         * second Fable review Abo-2b, 1). fromPrice() alone would take the
+         * Abo-2b). fromPrice() alone would take the
          * first in display order, and a tile reading "5,00 €" would face a
          * page reading "5,00 €" with the terms of a plan.
          */

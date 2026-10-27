@@ -12,7 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingRun;
 
 /**
  * Runs the subscription billing now (Abo-4, P32) — what the cron does every
- * hour, for an operator who does not want to wait and for the acceptance.
+ * hour, for an operator who does not want to wait and for a test run.
  *
  * No option to bill "as of" another moment: the orders would carry today's
  * date for a period the clock has not reached, and an invoice with a wrong
@@ -35,7 +35,7 @@ class BillSubscriptionsCommand extends Command
     {
         // Before anything is computed: Contao sets the installation's time
         // zone here, and the period boundaries are wall-clock times in it
-        // (Abo-3, review S1 — a command's services exist before this line).
+        // (Abo-3 — a command's services exist before this line).
         $this->framework->initialize();
 
         $io = new SymfonyStyle($input, $output);

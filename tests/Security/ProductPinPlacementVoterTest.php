@@ -15,8 +15,8 @@ use Symfony\Component\Security\Core\Authorization\Voter\VoterInterface;
 use Webwerkwien\ContaoConshoBundle\Security\ProductPinPlacementVoter;
 
 /**
- * Elternelemente: 10 Produktliste, 11 Akkordeon (verschachtelbar, ohne
- * Typliste — der Kern ließe dort jeden Typ zu), 12 Text.
+ * Parent elements: 10 product list, 11 accordion (nestable, without a type
+ * list — the core would allow any type there), 12 text.
  */
 class ProductPinPlacementVoterTest extends TestCase
 {
@@ -38,7 +38,7 @@ class ProductPinPlacementVoterTest extends TestCase
 
     public function testAPinMayNotBeCreatedInAnArticle(): void
     {
-        // Genau das lässt der Kern durch: Er prüft nur ptable = tl_content.
+        // Exactly this is what the core lets through: it only checks ptable = tl_content.
         self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new CreateAction('tl_content', $this->pin('tl_article', 10))));
     }
 
@@ -70,7 +70,7 @@ class ProductPinPlacementVoterTest extends TestCase
 
     public function testEditingAPinInItsListingIsAllowed(): void
     {
-        // Umschalten der Sichtbarkeit: new trägt nur das geänderte Feld.
+        // Toggling visibility: new carries only the changed field.
         $action = new UpdateAction('tl_content', $this->pin('tl_content', 10) + ['id' => 20], ['invisible' => 1]);
 
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($action));

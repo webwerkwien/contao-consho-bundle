@@ -25,6 +25,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Controller\ContentElement\OrderController;
 use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityLabelImages;
+use Webwerkwien\ContaoConshoBundle\Customer\AccountFromOrder;
+use Webwerkwien\ContaoConshoBundle\Customer\AccountRequestOutcome;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentDeliveryInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceView;
@@ -71,7 +73,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Digital\FakePresentableHandler;
 require_once __DIR__.'/../../Notification/OrderConfirmationTest.php';
 
 /**
- * Die Bestellseite (7.7, C21, C-10).
+ * The order page (7.7, C21, C-10).
  */
 class OrderControllerTest extends TestCase
 {
@@ -95,13 +97,16 @@ class OrderControllerTest extends TestCase
 
     private InMemoryPaymentAttempts $attempts;
 
-    // Block GARAN: null — keine Garantie, wie bisher.
+    // Block GARAN: null — no guarantee, as before.
     private DurabilityLabelImages|null $durability = null;
 
-    // Block Lizenz (LZ-1): null — keine Berechtigungen, wie bisher.
+    // Block Lizenz (LZ-1): null — no entitlements, as before.
     private OrderPageDownloads|null $downloads = null;
 
     private FakePresentableHandler|null $module = null;
+
+    // K1: null — no account box, as before.
+    private AccountFromOrder|null $account = null;
 
     private ResponseContext $context;
 
@@ -122,7 +127,7 @@ class OrderControllerTest extends TestCase
         $this->connection = SqliteWithoutRowLocks::connection(); // the withdrawal locks its order (K2)
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy: a hand-written schema goes stale with the next column.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -158,19 +163,20 @@ class OrderControllerTest extends TestCase
         self::assertSame('WEB-00054', $data['order']['orderNumber']);
         self::assertSame('open', $data['payment_state']);
 
-        // Nur die Ware zählt: Versand- und Zahlungszeilen reist keine
-        // Lieferung je aus, sie hielten den Stand für immer bei „teilweise".
+        // Only the goods count: no delivery ever ships shipping and payment
+        // lines, they would keep the state at "partial" forever.
         self::assertSame('open', $data['delivery_state']);
 
-        // D-3: die Rechnungskorrektur steht neben der Rechnung.
+        // D-3: the invoice correction stands next to the invoice.
         self::assertSame(['RE-00014', 'RK-00001'], array_column($data['documents'], 'number'));
         self::assertTrue($response->headers->getCacheControlDirective('private'));
         self::assertTrue($response->headers->getCacheControlDirective('no-store'));
         self::assertSame('no-referrer', $this->context->getHeaderBag()->get('Referrer-Policy'));
         self::assertSame('noindex, nofollow', $this->context->getHeaderBag()->get('X-Robots-Tag'));
 
-        // Abnahme auf c5: Der Webserver überschreibt den Header. Die Angabe im
-        // Dokument gilt trotzdem — genau einmal, auch wenn schon eine stand.
+        // On a real installation the web server overwrites the header. The
+        // value in the document applies anyway — exactly once, even if one was
+        // there already.
         $head = $this->context->get(HtmlHeadBag::class);
         self::assertSame('noindex,nofollow', $head->getMetaRobots());
 
@@ -180,13 +186,13 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Abnahme WG-7: wer einen Teil mit Gutschein zahlt, sieht auf der
-     * Bestellseite die Zahlung und was offen ist — vorher nur „teilweise
-     * bezahlt". Ohne Zahlung nichts davon (der Zahlungshinweis sagt es).
+     * WG-7: whoever pays a part with a voucher sees the payment and what is
+     * open on the order page — before, only "teilweise bezahlt" (partly
+     * paid). Without a payment none of that (the payment notice says it).
      */
     /**
-     * Block GARAN (GA6): die Garantien, wie sie an den Positionen eingefroren
-     * sind — aus den Zeilen der Bestellung.
+     * Block GARAN (GA6): the guarantees as they are frozen on the lines —
+     * from the rows of the order.
      */
     public function testDieSeiteZeigtDieEingefrorenenGarantien(): void
     {
@@ -208,14 +214,14 @@ class OrderControllerTest extends TestCase
 
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '10.00', 'method' => 'Gutschein …ZZ3P', 'reference' => 'voucher:2']);
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-2.00', 'method' => 'refund']);
-        // WG-6: eine Rückbuchung auf den Gutschein trägt dessen Namen, ist aber eine Erstattung.
+        // WG-6: a chargeback onto the voucher carries its name, but is a refund.
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-1.00', 'method' => 'Gutschein …ZZ3P', 'reference' => 'voucher:2']);
 
         [$data] = $this->render();
 
         self::assertSame(['Gutschein …ZZ3P', '', 'Gutschein …ZZ3P'], array_column($data['payments'], 'label'));
         self::assertSame([false, true, true], array_column($data['payments'], 'refund'));
-        // 13,90 − 10 + 2 + 1 = 6,90 offen
+        // 13.90 − 10 + 2 + 1 = 6.90 open
         self::assertSame('6,90 €', str_replace("\u{a0}", ' ', $data['outstanding']));
     }
 
@@ -232,7 +238,7 @@ class OrderControllerTest extends TestCase
 
     public function testIstDieWareRausIstDieBestellungVersandt(): void
     {
-        // Nur die Produktzeile wird geliefert — die Versandzeile nie.
+        // Only the product line is delivered — the shipping line never.
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => self::ORDER, 'reportedAt' => 1_790_000_000]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => 1]);
 
@@ -241,7 +247,7 @@ class OrderControllerTest extends TestCase
 
     public function testEineNochNichtGemeldeteLieferungIstNichtRaus(): void
     {
-        // D-1: Der Betreiber füllt das Paket noch — gezählt wird erst die Meldung.
+        // D-1: the operator is still filling the parcel — only the report counts.
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => self::ORDER]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => 1]);
 
@@ -271,10 +277,9 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Abnahme C-10: Der Link aus der Mail, zum ersten Mal geöffnet — ein Knopf
-     * vor der Bestellung, dessen POST die Adresse bestätigt. Das Öffnen selbst
-     * wird festgehalten (Zustellung), bestätigt aber nichts: ein Scanner
-     * öffnet Links auch.
+     * C-10: the link from the mail, opened for the first time — a button in
+     * front of the order whose POST confirms the address. The opening itself
+     * is recorded (delivery) but confirms nothing: a scanner opens links too.
      */
     public function testDerMailLinkZeigtErstEinenKnopfUndHaeltDasOeffnenFest(): void
     {
@@ -299,7 +304,7 @@ class OrderControllerTest extends TestCase
         self::assertSame(self::URL.'?consho_order='.$this->token, $redirect->getResponse()->headers->get('Location'));
         self::assertNotNull($this->connection->fetchOne('SELECT emailConfirmedAt FROM tl_consho_order WHERE id = ?', [self::ORDER]));
 
-        // Danach kein Knopf mehr, auch nicht über den Mail-Link.
+        // Afterwards no button any more, not even via the mail link.
         [$data] = $this->render();
         self::assertFalse($data['gate']);
         self::assertSame('WEB-00054', $data['order']['orderNumber']);
@@ -314,9 +319,9 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Abnahme C-10: Nach dem Kauf landet der Käufer mit dem Token der
-     * UMLEITUNG auf der Seite. Ein Klick dort belegt nichts über die Adresse —
-     * die Mail hat da noch niemand geöffnet.
+     * C-10: after the purchase the buyer lands on the page with the token of
+     * the REDIRECT. A click there proves nothing about the address — nobody
+     * has opened the mail at that point.
      */
     public function testEinKlickUeberDenUmleitungsTokenBestaetigtNichts(): void
     {
@@ -328,8 +333,8 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Die Mail nach dem Wechsel bekommt einen eigenen Link, und der bestätigt —
-     * auch wenn die Seite über den Umleitungs-Token offen war.
+     * The mail after the change gets a link of its own, and that one confirms —
+     * even if the page was open via the redirect token.
      */
     public function testDieMailNachDemWechselTraegtEinenBestaetigendenToken(): void
     {
@@ -361,8 +366,9 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * D-6, T4: jeder Weg ohne Einlass führt zum selben Formular „Neuen Link
-     * anfordern" — bis D-6 war es ein 404. Nichts von der Bestellung darin.
+     * D-6, T4: every path without entry leads to the same form "Neuen Link
+     * anfordern" (request a new link) — before D-6 it was a 404. Nothing of
+     * the order in it.
      *
      * @dataProvider wegeOhneEinlass
      */
@@ -505,14 +511,14 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Die Seite sagt nur, was sie belegen kann (Michael, 2026-09-26).
+     * The page only says what it can prove.
      *
      * @return iterable<string, array{AttemptState, AttemptState|null, string|null, bool}>
      */
     public static function onlineStaende(): iterable
     {
-        // Der Knopf, sobald PaymentStarter::canRetry() zustimmt — für einen
-        // offenen Versuch erst nach dem Verfall (dort geprüft, hier gemockt).
+        // The button, as soon as PaymentStarter::canRetry() agrees — for an
+        // open attempt only after expiry (checked there, mocked here).
         yield 'unterwegs, nichts belegt' => [AttemptState::Open, null, 'none', true];
         yield 'Rückkehr belegt, Meldung ausständig' => [AttemptState::Open, AttemptState::Succeeded, 'reported', false];
         yield 'fehlgeschlagen' => [AttemptState::Failed, null, 'failed', true];
@@ -545,8 +551,9 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Review C-11, Befund 4: Der neueste Versuch gehört noch zur alten Art,
-     * weil die neue nicht starten konnte. „Abgebrochen" spräche von der alten.
+     * C-11: the newest attempt still belongs to the old method because the
+     * new one could not start. "Abgebrochen" (cancelled) would speak of the
+     * old one.
      */
     public function testEinVersuchDerAltenArtSagtNichts(): void
     {
@@ -569,7 +576,7 @@ class OrderControllerTest extends TestCase
         self::assertSame('changed', OrderController::noticeOf(Request::create('/?consho_notice=changed')));
         self::assertNull(OrderController::noticeOf(Request::create('/?consho_notice=<script>')));
 
-        // LZ-1: der Hinweis eines Moduls nur, wenn seine Sprachdatei ihn bringt.
+        // LZ-1: a module's notice only if its language file brings it.
         $GLOBALS['TL_LANG']['CONSHO']['orderPage']['notice']['testReleased'] = 'Freigegeben.';
         self::assertSame('testReleased', OrderController::noticeOf(Request::create('/?consho_notice=testReleased')));
         self::assertNull(OrderController::noticeOf(Request::create('/?consho_notice=testUnknown')));
@@ -577,7 +584,7 @@ class OrderControllerTest extends TestCase
         self::assertNull(OrderController::noticeOf(Request::create('/?consho_notice=testReleased')));
     }
 
-    // ── Block Lizenz, LZ-1: was ein Modul ausgeliefert hat ─────────────────
+    // ── Block Lizenz, LZ-1: what a module has delivered ───────────────────
 
     public function testDieSeiteZeigtWasDasModulAusgeliefertHat(): void
     {
@@ -600,6 +607,32 @@ class OrderControllerTest extends TestCase
         self::assertSame(['act lic-1 release'], $this->module->calls);
     }
 
+    public function testOhneKontodienstKeinKastenUndKeineAktion(): void
+    {
+        self::assertFalse($this->render()[0]['account']);
+        self::assertInstanceOf(PageNotFoundException::class, $this->post(['consho_order_action' => 'createAccount']));
+    }
+
+    public function testKundenkontoAnlegenGehtMitDerBestellungZumDienstUndZurueck(): void
+    {
+        $account = $this->createMock(AccountFromOrder::class);
+        $account->method('offered')->willReturn(true);
+        $account->expects(self::once())->method('request')
+            ->with(self::callback(static fn (array $order): bool => (string) self::ORDER === $order['id'] && 'kundin@example.org' === $order['email']), self::anything(), self::anything())
+            ->willReturn(AccountRequestOutcome::Requested);
+        $this->account = $account;
+
+        self::assertTrue($this->render()[0]['account']);
+
+        $redirect = $this->post(['consho_order_action' => 'createAccount', 'email' => 'fremd@example.org']);
+
+        self::assertInstanceOf(RedirectResponseException::class, $redirect);
+        $location = (string) $redirect->getResponse()->headers->get('Location');
+        self::assertStringContainsString('consho_notice=accountRequested', $location);
+        self::assertStringContainsString('consho_order='.$this->token, $location);
+        self::assertSame('accountRequested', $this->render('&consho_notice=accountRequested')[0]['notice']);
+    }
+
     public function testDerDownloadDesModulsUeberDieSeite(): void
     {
         $this->withLicenceModule();
@@ -611,7 +644,7 @@ class OrderControllerTest extends TestCase
         self::assertInstanceOf(PageNotFoundException::class, $this->post(['consho_order_action' => 'download', 'entitlement' => '1', 'item' => 'note']));
     }
 
-    // ── Widerruf (D-2) ────────────────────────────────────────────────────
+    // ── Withdrawal (D-2) ──────────────────────────────────────────────────
 
     public function testDieSeiteZeigtVertragWiderrufen(): void
     {
@@ -622,7 +655,7 @@ class OrderControllerTest extends TestCase
         self::assertSame($this->token, $data['withdrawal_token']);
     }
 
-    /** E5: auch auf dem Tor, und der Klick bestätigt die Adresse. */
+    /** E5: on the gate too, and the click confirms the address. */
     public function testVertragWiderrufenSchonAufDemTor(): void
     {
         $this->tokenFromMail = true;
@@ -659,11 +692,11 @@ class OrderControllerTest extends TestCase
         self::assertCount(1, $withdrawal['received']);
         self::assertTrue($withdrawal['received'][0]['confirmed']);
 
-        // Abnahme Abo-8: „die ganze Bestellung" ist widerrufen — kein Knopf mehr.
+        // Abo-8: "die ganze Bestellung" (the whole order) is withdrawn — no button any more.
         self::assertNull($withdrawal['state']);
     }
 
-    /** Abnahme Abo-8: Auch einzeln widerrufen ist alles weg — kein Knopf mehr. */
+    /** Abo-8: withdrawn item by item, everything is gone too — no button any more. */
     public function testNachWiderrufAllerPositionenKeinKnopfMehr(): void
     {
         $this->post(['consho_order_action' => 'withdraw', 'consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'items', 'consho_withdraw_quantity' => [1 => '1']]);
@@ -673,8 +706,9 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * „Einzelne Artikel" ohne Menge ist nicht „die ganze Bestellung" — das
-     * wäre das Gegenteil der Wahl. Zurück zur Erklärung, nichts gespeichert.
+     * "Einzelne Artikel" (single articles) without a quantity is not "the
+     * whole order" — that would be the opposite of the choice. Back to the
+     * declaration, nothing stored.
      *
      * @return iterable<string, array{array<string, mixed>, string}>
      */
@@ -684,7 +718,7 @@ class OrderControllerTest extends TestCase
         yield 'ohne Namen' => [['consho_withdraw_name' => ' ', 'consho_withdraw_scope' => 'all'], 'withdrawNameMissing'];
         yield 'mehr als bestellt' => [['consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'items', 'consho_withdraw_quantity' => [1 => '5']], 'withdrawInvalid'];
 
-        // Fable-Review D-2: verschachtelt war ein 500.
+        // D-2: nested, this was a 500.
         yield 'verschachtelte Menge' => [['consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'items', 'consho_withdraw_quantity' => [1 => ['x' => '1']]], 'withdrawInvalid'];
     }
 
@@ -703,10 +737,11 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * WA, B2 (Michael, 2026-10-22): Nach dem Fenster bleibt der Knopf, mit dem
-     * Hinweis „Nach unseren Daten ist die Frist abgelaufen. Der Widerruf wird
-     * entsprechend geprüft." — und die Erklärung wird gespeichert. Bis dahin
-     * stand dort nur ein Satz mit der Adresse des Shops.
+     * WA, B2: after the window the button stays, with the notice "Nach
+     * unseren Daten ist die Frist abgelaufen. Der Widerruf wird entsprechend
+     * geprüft." (according to our data the period has expired; the withdrawal
+     * will be examined accordingly) — and the declaration is stored. Before
+     * that, only a sentence with the shop's address stood there.
      */
     public function testNachDemFensterDerKnopfMitHinweisUndDieErklaerungZaehlt(): void
     {
@@ -731,8 +766,8 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * Abo-4 (P31): Die Bestellseite einer Folgebestellung nennt Abo und
-     * Leistungszeitraum — so, wie die Rechnung sie festhält.
+     * Abo-4 (P31): the order page of a follow-up order names the subscription
+     * and the service period — as the invoice records them.
      */
     public function testEineFolgebestellungNenntAboUndZeitraum(): void
     {
@@ -754,8 +789,8 @@ class OrderControllerTest extends TestCase
     }
 
     /**
-     * LZ-1: eine Berechtigung der Bestellung mit einem Modul, das Text,
-     * Download und Knopf liefert.
+     * LZ-1: an entitlement of the order with a module that delivers text,
+     * download and button.
      */
     private function withLicenceModule(): void
     {
@@ -894,6 +929,7 @@ class OrderControllerTest extends TestCase
             $this->downloads,
             null,
             $this->durability,
+            $this->account,
         ) extends OrderController implements TestableOrderElement {
             public function respond(FragmentTemplate $template, ContentModel $model, Request $request): Response
             {

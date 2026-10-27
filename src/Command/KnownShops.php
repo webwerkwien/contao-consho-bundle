@@ -6,8 +6,7 @@ use Doctrine\DBAL\Connection;
 
 /**
  * What a command says when it is given a shop ID that does not exist: the
- * ones that do (Michael, 2026-10-12: "in den Paketen sollte verhindert werden,
- * dass Agenten Eingaben raten").
+ * ones that do, so that nobody has to guess an input.
  *
  * "There is no shop configuration 7." leaves an agent to try 5, 6, 8. The list
  * is the shortest correct answer, and it needs no tool beside this command.

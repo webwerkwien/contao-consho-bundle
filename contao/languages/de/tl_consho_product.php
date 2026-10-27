@@ -78,11 +78,12 @@ $GLOBALS['TL_LANG']['tl_consho_product']['show'] = ['Details', 'Details des Prod
 $GLOBALS['TL_LANG']['tl_consho_product']['properties'] = ['Eigenschaften', 'Was der Artikel <strong>ist</strong> — „Bio", „Kräuterbitter". Danach filtern Kunden, und daraus baut der Redakteur Kategorieseiten. Mehrere Werte derselben Gruppe wirken im Filter als ODER.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['variantOptions'] = ['Variantenachsen', 'Was <strong>diese Zeile</strong> zu einer bestimmten Variante macht — „250 ml". Nur an Varianten sinnvoll, nicht am Hauptprodukt. Ein Filter auf eine Variantenachse findet das Hauptprodukt, sobald eine sichtbare Variante passt.'];
 
-// F-4: digitale Auslieferung.
+// F-4: digital delivery.
 $GLOBALS['TL_LANG']['tl_consho_product']['digital_legend'] = 'Auslieferung und Gültigkeit';
 $GLOBALS['TL_LANG']['tl_consho_product']['digitalDelivery'] = ['Auslieferung', 'Wie der Kunde ein digitales Gut erhält. Gilt nur bei einem Produkttyp der Art „Digitales". Leer: nur die Berechtigung, ohne Datei oder Schlüssel. Eine Variante ohne eigene Angabe übernimmt die des Grundprodukts.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['voucherValue'] = ['Wert', 'Wie viel ein Gutschein dieses Artikels wert ist. Meist gleich dem Preis; leer: so viel, wie bezahlt wurde.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['voucherValidMonths'] = ['Gültigkeit (Monate)', '0: unbefristet. Eine Befristung gegenüber Verbrauchern braucht einen sachlichen Grund (OGH 7 Ob 22/12d).'];
+$GLOBALS['TL_LANG']['tl_consho_product']['voucherSinglePurpose'] = ['Einzweck-Gutschein', 'Beim Verkauf mit dem Satz der Steuerklasse im Land des Shops versteuert; einlösbar nur für Artikel derselben Steuerklasse, die dort versteuert werden. Die Einordnung verantwortet der Betreiber. Eine Änderung gilt für Gutscheine, die danach verkauft werden.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['entitlementMonths'] = ['Laufzeit (Monate)', 'Wie lange die Berechtigung gilt, ab der Freigabe. 0: dauerhaft. Was nach dem Ende aufhört — nur Updates oder die Nutzung —, legt das Produkt fest, nicht Consho.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['digitalFile'] = ['Datei', 'Die Datei für die Auslieferung „Datei". Nur aus einem geschützten Ordner — in einem öffentlichen wäre sie für jeden abrufbar, der die Adresse errät. Eine neue Fassung hier bekommen alle mit gültiger Berechtigung.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['digitalDeliveries'] = ['file' => 'Datei'];
@@ -100,12 +101,12 @@ $GLOBALS['TL_LANG']['tl_consho_product']['keysFree'] = '%d frei';
 $GLOBALS['TL_LANG']['tl_consho_product']['digitalDeliveries']['key'] = 'Schlüssel aus dem Vorrat';
 $GLOBALS['TL_LANG']['tl_consho_product']['keys'] = ['Schlüssel', 'Schlüsselvorrat von Artikel ID %s'];
 
-// Abo-1: Verkaufsart.
+// Abo-1: kind of sale.
 $GLOBALS['TL_LANG']['tl_consho_product']['saleOnce'] = ['Einmalkauf', 'Einmal bezahlen — dauerhaft oder für die Laufzeit darunter. Bei Ware immer an, gleich was hier steht.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['saleSubscription'] = ['Abo', 'Im Abo nach einer oder mehreren Aboregeln. Die Beträge stehen in den Preisen, je Preiszeile mit ihrer Aboregel.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['subscriptionRules'] = ['Aboregeln', 'In dieser Reihenfolge stehen die Modelle auf der Produktseite. Aboregeln legt man unter „Aboregeln" an.'];
 
-// Block G: Bestand.
+// Block G: stock.
 $GLOBALS['TL_LANG']['tl_consho_product']['stockTracked'] = ['Bestand führen', 'Consho zählt den Bestand jedes Artikels: Der Kaufklick bucht ab, ein Storno bucht zurück, bei Bestand 0 ist der Artikel „derzeit nicht verfügbar". Aus: unbegrenzt lieferbar.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['stockBackorder'] = ['Auch ohne Bestand verkaufen', 'Bei Bestand 0 weiter verkaufen, mit dem Hinweis „auf Bestellung, längere Lieferzeit". Der Bestand wird dann negativ.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['stockWarning'] = ['Nur noch wenige ab', 'Bis zu diesem Bestand steht beim Artikel „nur noch wenige", und das Backend warnt. Bei Schlüsseln zählen die freien Codes abzüglich der offenen Bestellungen. 0: erst, wenn nichts mehr da ist.'];
@@ -113,7 +114,7 @@ $GLOBALS['TL_LANG']['tl_consho_product']['stockQuantity'] = ['Bestand', 'Der Bes
 $GLOBALS['TL_LANG']['tl_consho_product']['stockAvailableFrom'] = ['Wieder lieferbar ab', 'Wird bei einem nicht verfügbaren Artikel angezeigt. Leer: kein Datum.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['stockInvalid'] = 'Bitte beim Bestand eine Zahl eingeben.';
 
-// Block G (G-7): Einkauf.
+// Block G (G-7): purchasing.
 $GLOBALS['TL_LANG']['tl_consho_product']['stockTarget'] = ['Sollbestand', 'Bis hierhin füllt der Einkauf auf. Nur im Backend. 0: eine Packung je Einkauf.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['packUnit'] = ['Verpackungseinheit (Einkauf)', 'Stück je Packung beim Lieferanten. Der Einkauf rechnet in ganzen Packungen. 1: Einzelstücke. Nicht die Kaufmenge des Kunden.'];
 $GLOBALS['TL_LANG']['tl_consho_product']['supplier'] = ['Lieferant', 'Beim Tippen stehen die schon verwendeten Lieferanten zur Auswahl. Groß-/Kleinschreibung und Leerzeichen werden an einen vorhandenen Namen angeglichen.'];

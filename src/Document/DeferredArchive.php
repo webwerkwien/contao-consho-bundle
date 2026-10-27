@@ -13,8 +13,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 
 /**
- * Archives a document once nothing can roll it back any more (review of
- * dev#1, finding 1).
+ * Archives a document once nothing can roll it back any more (dev#1).
  *
  * A document issued inside a caller's transaction — Contao's "Mehrere
  * bearbeiten" opens one (DC_Table::editAll), and an automatic status change

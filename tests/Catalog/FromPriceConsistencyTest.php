@@ -26,18 +26,18 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Kachel und Detailseite nennen denselben Ab-Preis (A-4b, E2).
+ * Tile and detail page state the same from-price (A-4b, E2).
  *
- * Geprüft wird gegeneinander, nicht gegen eine erwartete Zahl: Die Kachel liest
- * die Projektion der Sichtbarkeit (B-10), die der echte Projektor aus der
- * Listenpreis-Projektion gebaut hat — und die wiederum der echte Projektor aus
- * tl_consho_price;
- * die Detailseite fragt ArticlePriceResolver je Variante. Weicht eine der beiden
- * Seiten ab, schlägt der Test fehl — auch bei einer Katalogform, an die beim
- * Schreiben niemand gedacht hat, sobald sie hier als Fall steht.
+ * They are checked against each other, not against an expected number: the
+ * tile reads the visibility projection (B-10), which the real projector built
+ * from the list price projection — which in turn the real projector built
+ * from tl_consho_price;
+ * the detail page asks ArticlePriceResolver per variant. If either side
+ * deviates, the test fails — also for a catalogue shape nobody thought of
+ * when writing it, as soon as it is listed here as a case.
  *
- * Befund 6, der Anlass: Hauptprodukt 10 €, Varianten mit eigenen 15 € und 18 €.
- * Die Kachel sagte „ab 10 €", die Seite „ab 15 €".
+ * The case behind it: main product €10, variants with their own €15 and €18.
+ * The tile said "ab 10 €", the page "ab 15 €".
  */
 class FromPriceConsistencyTest extends TestCase
 {
@@ -62,7 +62,7 @@ class FromPriceConsistencyTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string|null, list<string|null>}> Preis des Hauptprodukts, eigene Preise der Varianten (null = erbt)
+     * @return iterable<string, array{string|null, list<string|null>}> price of the main product, own prices of the variants (null = inherits)
      */
     public static function catalogues(): iterable
     {
@@ -87,7 +87,7 @@ class FromPriceConsistencyTest extends TestCase
             $this->insertPrice(['pid' => 1, 'net' => $mainGross]);
         }
 
-        // Die Artikel, die die Detailseite fragt: die Varianten, ohne Varianten das Produkt selbst.
+        // The items the detail page asks for: the variants, without variants the product itself.
         $articles = [];
 
         foreach ($variantGross as $i => $gross) {

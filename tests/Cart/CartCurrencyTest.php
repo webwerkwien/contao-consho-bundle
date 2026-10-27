@@ -19,22 +19,21 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Ein Währungswechsel ist für den Warenkorb dasselbe wie ein Sprachwechsel:
- * Die Positionen bleiben stehen und werden neu gerechnet.
+ * For the cart, a currency switch is the same as a language switch:
+ * the line items stay and are recalculated.
  *
- * Entschieden von Michael am 2026-09-21, festgehalten in
- * docs/block-a-fundament.md, Abschnitt 4.0 („Positionen wandern mit"). Die
- * Software kann das nur, weil `tl_consho_cart_item` Produkt, Menge und
- * Zeitpunkt kennt und **keinen Betrag** — gerechnet wird erst beim Anzeigen.
+ * Laid down in Block A, section 4.0 (line items move along). The
+ * software can only do that because `tl_consho_cart_item` knows product,
+ * quantity and time and **no amount** — the calculation happens only on display.
  *
- * Dieser Test hält beides zusammen fest: dass die Tabelle preisfrei ist und
- * dass derselbe Warenkorb in zwei Währungen dieselben Positionen und zwei
- * verschiedene Summen ergibt. Ohne ihn baut es irgendwann jemand zu — ein
- * gespeicherter Betrag an der Position fiele in keinem anderen Test auf und
- * machte den Wechsel unmöglich, ohne dass etwas rot würde.
+ * This test pins both together: that the table holds no prices and that
+ * the same cart in two currencies yields the same line items and two
+ * different totals. Without it, someone eventually builds it in — a
+ * stored amount on the line item would show up in no other test and
+ * would make the switch impossible without anything turning red.
  *
- * Das Heimatland bleibt in beiden Läufen AT: Es hängt am Shop, nicht am
- * Startpunkt, und deshalb sind es auch beide Male 20 %.
+ * The home country stays AT in both runs: it belongs to the shop, not to
+ * the root page, and that is why it is 20 % both times.
  */
 class CartCurrencyTest extends TestCase
 {
@@ -61,9 +60,9 @@ class CartCurrencyTest extends TestCase
 
         $this->insertShop(['id' => self::SHOP, 'currency' => 'EUR', 'country' => 'AT', 'fallbackLanguage' => 'de']);
 
-        // Zwei Artikel, je ein Preis in jeder Währung. Die Pfundpreise sind
-        // bewusst keine umgerechneten Europreise — eine Währung ist im Shop
-        // eine eigene Preisliste, kein Wechselkurs.
+        // Two articles, one price each in every currency. The pound prices are
+        // deliberately not converted euro prices — in the shop a currency is
+        // a price list of its own, not an exchange rate.
         $this->insertProduct(['id' => self::STOCK, 'title' => 'Wanderstock', 'published' => 1]);
         $this->insertProductShop(['pid' => self::STOCK, 'shop' => self::SHOP]);
         $this->insertPrice(['pid' => self::STOCK, 'net' => '10.0000', 'currency' => 'EUR']);
@@ -78,23 +77,23 @@ class CartCurrencyTest extends TestCase
     public function testDieGespeicherteWarenkorbzeileTraegtKeinenBetrag(): void
     {
         /*
-         * An der rohen Tabelle geprüft, nicht durch eine Klasse, die ohnehin
-         * nur die Spalten liest, die sie kennt: Eine Betragsspalte, die
-         * irgendwann dazukommt, fiele einem solchen Leser gar nicht auf.
+         * Checked on the raw table, not through a class that reads only the
+         * columns it knows anyway: an amount column added at some point would
+         * not even catch the eye of such a reader.
          *
-         * Die Namen stehen hier ausgeschrieben, damit auch eine zusätzliche
-         * Spalte auffällt, die kein Geld ist — dann ist die Zeile beim Ändern
-         * zu lesen, und genau das ist der Zweck.
+         * The names are spelled out here so that an additional column that is
+         * not money stands out as well — then the line has to be read when it
+         * is changed, and that is exactly the point.
          */
         $columns = array_column(
             $this->connection->fetchAllAssociative('PRAGMA table_info(tl_consho_cart_item)'),
             'name',
         );
 
-        // subscriptionRule seit Abo-2 (P9): die Id des gewählten Modells, kein
-        // Betrag — der Preis dazu wird wie jeder andere bei jeder Anfrage
-        // nachgeschlagen. renews seit Abo-7b: die Id des verlängerten Abos,
-        // ebenfalls kein Betrag.
+        // subscriptionRule since Abo-2 (P9): the id of the chosen model, not an
+        // amount — its price is looked up on every request like any other.
+        // renews since Abo-7b: the id of the renewed subscription, also not an
+        // amount.
         self::assertSame(['id', 'pid', 'tstamp', 'product', 'quantity', 'addedAt', 'subscriptionRule', 'renews'], $columns);
     }
 
@@ -105,7 +104,7 @@ class CartCurrencyTest extends TestCase
         $inEuro = $this->pricer()->price($items, 'EUR', 'AT', 'AT', self::NOW);
         $inPfund = $this->pricer()->price($items, 'GBP', 'AT', 'AT', self::NOW);
 
-        // Dieselben Positionen, in derselben Reihenfolge, mit denselben Mengen.
+        // The same line items, in the same order, with the same quantities.
         self::assertSame(
             [self::STOCK, self::BACKPACK],
             array_map(static fn ($line): int => $line->articleId, $inEuro->lines),
@@ -119,9 +118,9 @@ class CartCurrencyTest extends TestCase
             array_map(static fn ($line): string => $line->quantity, $inPfund->lines),
         );
 
-        // Zwei Beträge. 2 × 10,00 + 1 × 20,00 = 40,00 netto → 48,00 brutto;
-        // 2 × 7,50 + 1 × 15,00 = 30,00 netto → 36,00 brutto. Beide Male 20 %,
-        // weil das Heimatland am Shop hängt und sich nicht mitbewegt.
+        // Two amounts. 2 × 10.00 + 1 × 20.00 = 40.00 net → 48.00 gross;
+        // 2 × 7.50 + 1 × 15.00 = 30.00 net → 36.00 gross. 20 % both times,
+        // because the home country belongs to the shop and does not move along.
         self::assertSame('EUR', $inEuro->currency);
         self::assertSame('48.00', $inEuro->gross);
 
@@ -131,9 +130,9 @@ class CartCurrencyTest extends TestCase
 
     public function testNachDemWechselLiegtNochDasselbeInDerDatenbank(): void
     {
-        // Die andere Hälfte derselben Aussage: Das Preisen ist eine reine
-        // Leseoperation. Ein Warenkorb, den das Anzeigen in einer zweiten
-        // Währung verändert, wäre kein Anzeigen mehr.
+        // The other half of the same statement: pricing is a pure read
+        // operation. A cart that is changed by displaying it in a second
+        // currency would no longer be displaying.
         $items = $this->filledCart();
         $vorher = $this->storedItems();
 

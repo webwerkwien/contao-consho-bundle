@@ -47,8 +47,8 @@ class ShippingPriceInputListenerTest extends TestCase
 
     public function testDieCallbacksHaengenNurAnDerTabelleDerVersandbetraege(): void
     {
-        // Spiegelt PriceInputListenerTest::testJederCallbackDerPreismaskeIstGenauEinmalRegistriert
-        // (Review Task 3): jede Methode mit dem Attribut muss auch dort deklariert sein.
+        // Mirrors PriceInputListenerTest::testJederCallbackDerPreismaskeIstGenauEinmalRegistriert:
+        // every method with the attribute must be declared there as well.
         $targets = [];
 
         foreach ((new \ReflectionClass(ShippingPriceInputListener::class))->getMethods() as $method) {
@@ -83,7 +83,7 @@ class ShippingPriceInputListenerTest extends TestCase
 
     public function testBruttoRechnetMitDerBezugsSteuerklasseDerVersandart(): void
     {
-        // Das Beispiel aus der Entscheidung vom 2026-09-15: 4,90 brutto bei 20 %.
+        // The worked example: 4.90 gross at 20 %.
         $values = $this->listener(taxClass: 1)->onBeforeSubmit(
             ['currency' => 'EUR', 'inputMode' => 'gross', 'inputCountry' => '', 'amount' => '4.90'],
             $this->dc(),
@@ -105,7 +105,7 @@ class ShippingPriceInputListenerTest extends TestCase
 
     public function testEinZweiterGespeicherterBetragInDerselbenWaehrungWirdAbgelehnt(): void
     {
-        // Zwei Zeilen je Währung wären ein zufälliger Versandpreis.
+        // Two rows per currency would be a random shipping price.
         try {
             $this->listener(duplicateId: 12)->onBeforeSubmit(
                 ['currency' => 'EUR', 'inputMode' => 'net', 'inputCountry' => '', 'amount' => '5'],
@@ -116,7 +116,7 @@ class ShippingPriceInputListenerTest extends TestCase
             self::assertSame('doppelt EUR', $e->getMessage());
         }
 
-        // Gesucht wird in derselben Versandart, derselben Währung, ohne die Zeile selbst.
+        // The search is in the same shipping method, the same currency, without the row itself.
         self::assertContains(
             ['SELECT id FROM tl_consho_shipping_price WHERE pid = ? AND currency = ? AND maxWeight = ? AND id != ? AND tstamp > 0', [3, 'EUR', '0.0000', 9]],
             $this->queries,
@@ -124,9 +124,9 @@ class ShippingPriceInputListenerTest extends TestCase
     }
 
     /**
-     * Abnahme Block E: Die Gewichtsstaffel hat je Währung eine Zeile JE STUFE.
-     * Die Doppelprüfung vergleicht deshalb die Gewichtsgrenze mit — eingegeben
-     * mit Komma, verglichen wie gespeichert.
+     * Block E: the weight scale has one row PER STEP per currency. The
+     * duplicate check therefore compares the weight limit as well — entered
+     * with a comma, compared as stored.
      */
     public function testBeiDerStaffelZaehltDieStufeMit(): void
     {
@@ -143,7 +143,7 @@ class ShippingPriceInputListenerTest extends TestCase
 
     public function testBeimWaehrungswechselWirdDieNeueWaehrungGeprueft(): void
     {
-        // Gespeichert ist EUR, gewählt CHF: ein Betrag in CHF wäre das Duplikat, nicht einer in EUR.
+        // EUR is stored, CHF chosen: an amount in CHF would be the duplicate, not one in EUR.
         $this->listener(markets: [['EUR', 'AT'], ['CHF', 'CH']])->onBeforeSubmit(
             ['currency' => 'CHF', 'inputMode' => 'net', 'inputCountry' => '', 'amount' => '5'],
             $this->dc(),
@@ -157,7 +157,7 @@ class ShippingPriceInputListenerTest extends TestCase
 
     public function testDieDuplikatpruefungLaeuftAuchOhneBetrag(): void
     {
-        // Etwa eine Benutzergruppe, die nur die Währung bearbeiten darf.
+        // Say, a user group that may only edit the currency.
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('doppelt EUR');
 
@@ -166,8 +166,8 @@ class ShippingPriceInputListenerTest extends TestCase
 
     public function testBeimAutomatischenAbsendenWirdNichtAufDuplikatGeprueft(): void
     {
-        // Ein automatisches Absenden speichert nicht wirklich — die Prüfung
-        // käme vor der eigentlichen Eingabe und lehnte einen Zwischenstand ab.
+        // An automatic submit does not really save — the check would come before
+        // the actual input and reject an intermediate state.
         $this->listener(duplicateId: 12, submitType: 'auto')->onBeforeSubmit(
             ['currency' => 'EUR', 'inputMode' => 'net', 'inputCountry' => '', 'amount' => '5'],
             $this->dc(),
@@ -211,7 +211,7 @@ class ShippingPriceInputListenerTest extends TestCase
                 return $duplicateId;
             }
 
-            // Eine unerwartete Abfrage soll auffallen, nicht still als Duplikat gelten.
+            // An unexpected query should stand out, not silently count as a duplicate.
             throw new \LogicException('Unerwartete Abfrage: '.$sql);
         });
 

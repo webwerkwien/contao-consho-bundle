@@ -23,8 +23,8 @@ use Webwerkwien\ContaoConshoBundle\Setup\ShopPageSetup;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block I (I1, I2): Shopseiten auf Knopfdruck — gegen tl_page, tl_article und
- * tl_content aus Contaos eigener DCA, nicht gegen eine Abschrift (Fall 31).
+ * Block I (I1, I2): shop pages at the push of a button — against tl_page,
+ * tl_article and tl_content from Contao's own DCA, not against a copy.
  */
 class ShopPageSetupTest extends TestCase
 {
@@ -86,8 +86,8 @@ class ShopPageSetupTest extends TestCase
 
     public function testEinGesetztesFeldBleibtUnberuehrt(): void
     {
-        // Zeigt das Feld auf eine Seite ohne Element, entscheidet der
-        // Betreiber, was diese Seite ist — der Assistent verlinkt sie nur.
+        // If the field points to a page without an element, the operator decides
+        // what that page is — the assistant only links it.
         $this->connection->update('tl_page', ['consho_cartPage' => 2], ['id' => 1]);
 
         self::assertNotContains('consho_cartPage', $this->pages()->missing(1, 1, []));
@@ -126,9 +126,8 @@ class ShopPageSetupTest extends TestCase
 
     public function testDieEchtePruefungIstDanachZufrieden(): void
     {
-        // Regel 25: nicht „die Zeilen stehen da", sondern „der Befund, für den
-        // sie angelegt wurden, schweigt" — gefragt wird die Quelle, die den
-        // Kauf sperrt.
+        // Not "the rows are there" but "the finding they were created for falls
+        // silent" — what is asked is the source that locks the purchase.
         foreach (['tl_consho_shop', 'tl_consho_shipping_method', 'tl_consho_payment_method'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
@@ -149,8 +148,8 @@ class ShopPageSetupTest extends TestCase
 
     public function testWiderrufUndKuendigungStellenIhreQuellenZufrieden(): void
     {
-        // Review I, S3: sonst überlebt ein falscher Elementtyp an diesen beiden
-        // Seiten die ganze Suite — und der Widerruf sperrte weiter.
+        // I: otherwise a wrong element type on these two pages survives the
+        // whole suite — and the withdrawal would stay locked.
         foreach (['tl_consho_shop', 'tl_consho_payment_method', 'tl_consho_number_range', 'tl_consho_subscription', 'tl_consho_product', 'tl_consho_product_shop'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
@@ -233,7 +232,7 @@ class ShopPageSetupTest extends TestCase
 
         foreach (['setEditUrl', 'initialize', 'create'] as $method) {
             $versions->method($method)->willReturnCallback(static function () use (&$calls, $method, $versions, $connection): mixed {
-                // Review I, L5: the second version has to see the change, or
+                // I: the second version has to see the change, or
                 // it equals the first. Recorded with the root's link at the call.
                 $calls[] = 'setEditUrl' === $method ? $method : $method.':'.((int) $connection->fetchOne('SELECT consho_cartPage FROM tl_page WHERE id = 1') > 0 ? 'linked' : 'empty');
 

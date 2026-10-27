@@ -10,9 +10,9 @@ use Symfony\Component\Uid\Uuid;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceLogo;
 
 /**
- * Michael, 2026-09-24: UUID speichern, fehlt die Grafik → Warnung bei der
- * erneuten Ausstellung und weglassen. Dazu die Prüfsumme, weil die UUID an
- * einem ausgetauschten Logo hängen bleibt.
+ * Store the UUID; if the image is missing → a warning when the invoice is
+ * issued again, and the logo is left out. Plus the checksum, because the
+ * UUID stays attached to a replaced logo.
  */
 class InvoiceLogoTest extends TestCase
 {
@@ -36,8 +36,8 @@ class InvoiceLogoTest extends TestCase
     }
 
     /**
-     * 🔴 Der Fall, für den die Prüfsumme da ist: dieselbe UUID, anderer
-     * Inhalt. Gedruckt würde ein Logo, das die Rechnung nie trug.
+     * 🔴 The case the checksum exists for: the same UUID, different content.
+     * It would print a logo the invoice never carried.
      */
     public function testEinAusgetauschtesLogoWirdWeggelassenUndGemeldet(): void
     {
@@ -48,8 +48,8 @@ class InvoiceLogoTest extends TestCase
     }
 
     /**
-     * Gelöscht: Contao wirft dann KEINE VirtualFilesystemException, sondern
-     * UnableToResolveUuidException — ein schlichtes RuntimeException.
+     * Deleted: Contao then throws NO VirtualFilesystemException but an
+     * UnableToResolveUuidException — a plain RuntimeException.
      */
     public function testEinGeloeschtesLogoWirdWeggelassenUndGemeldet(): void
     {
@@ -68,8 +68,8 @@ class InvoiceLogoTest extends TestCase
     }
 
     /**
-     * Stimmt die Prüfsumme, ist es aber kein PNG oder JPEG, wird trotzdem
-     * nichts gedruckt — dompdf bekäme sonst etwas, das es nicht darstellt.
+     * If the checksum matches but it is not a PNG or JPEG, nothing is printed
+     * either — dompdf would otherwise get something it does not render.
      */
     public function testKeinBildWirdNichtGedruckt(): void
     {
@@ -80,9 +80,9 @@ class InvoiceLogoTest extends TestCase
     }
 
     /**
-     * 🔴 Ein CMYK-JPEG ließe dompdf im PDF/A-Modus abbrechen — und damit
-     * JEDE Rechnung des Shops. Es wird weggelassen und gemeldet. Ein RGB-JPEG
-     * daneben kommt durch: Die Abwehr trifft das Farbmodell, nicht JPEG.
+     * 🔴 A CMYK JPEG would make dompdf abort in PDF/A mode — and with it
+     * EVERY invoice of the shop. It is left out and reported. An RGB JPEG next
+     * to it gets through: the defence targets the colour model, not JPEG.
      */
     public function testEinCmykLogoWirdWeggelassenEinRgbJpegNicht(): void
     {

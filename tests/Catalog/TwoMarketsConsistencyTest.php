@@ -25,17 +25,16 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * M-4 (Gesamtprüfung Plan C-1a): zwei Euro-Shops mit verschiedenem Heimatland
- * — Kachel und Detailseite müssen je Shop übereinstimmen (wie
- * FromPriceConsistencyTest), UND zwischen den Shops darf sich das Brutto
- * unterscheiden, obwohl der Nettopreis derselbe ist (C25). Ein einzelner Shop
- * kann diesen Fall nicht zeigen — deshalb eine eigene Klasse statt einer
- * weiteren Zeile in FromPriceConsistencyTest::catalogues().
+ * M-4 (C-1a): two euro shops with different home countries — tile and
+ * detail page must agree per shop (like FromPriceConsistencyTest), AND
+ * between the shops the gross may differ although the net price is the
+ * same (C25). A single shop cannot show this case — hence a class of its
+ * own instead of another row in FromPriceConsistencyTest::catalogues().
  *
- * Gegenprobe (siehe Auftrag): entfernt man in DbalProductTileRepository die
- * Bedingung `lp.country = :consho_home_country`, zählt die Kachel-Unterfrage
- * die Listenpreiszeilen BEIDER Länder zusammen — zwei unterschiedliche Brutto
- * je Variante statt eines — und meldet fälschlich "ab", der Test wird rot.
+ * Counter-check: if the condition `lp.country = :consho_home_country` is
+ * removed from DbalProductTileRepository, the tile subquery adds up the
+ * list price rows of BOTH countries — two different gross amounts per
+ * variant instead of one — and wrongly reports "ab"; the test turns red.
  */
 class TwoMarketsConsistencyTest extends TestCase
 {
@@ -116,8 +115,8 @@ class TwoMarketsConsistencyTest extends TestCase
             );
             self::assertSame($differs, $tile->isFrom, \sprintf('%s: Kachel und Detailseite sind sich uneinig, ob „ab" davorsteht.', $country));
 
-            // SQLite liefert NUMERIC uneinheitlich zurück ('12' statt
-            // '12.0000') — Vergleich als Dezimalzahl, wie im übrigen Projekt.
+            // SQLite returns NUMERIC inconsistently ('12' instead of
+            // '12.0000') — compared as a decimal number, as in the rest of the project.
             self::assertTrue(
                 BigDecimal::of($tile->price)->isEqualTo($expectedGross),
                 \sprintf('%s: erwartetes Brutto %s, tatsächlich %s.', $country, $expectedGross, $tile->price),
@@ -126,8 +125,8 @@ class TwoMarketsConsistencyTest extends TestCase
             $seenGross[] = $tile->price;
         }
 
-        // 20 % in Österreich, 19 % in Deutschland — derselbe Nettopreis, zwei
-        // verschiedene Brutto (C25).
+        // 20 % in Austria, 19 % in Germany — the same net price, two
+        // different gross amounts (C25).
         self::assertFalse(BigDecimal::of($seenGross[0])->isEqualTo($seenGross[1]));
     }
 }

@@ -187,9 +187,9 @@ class ViesVatIdValidatorTest extends TestCase
     }
 
     /**
-     * The decision, in Michael's words on 2026-09-22: "2 s verbinden, 5 s
-     * gesamt". Written next to the expectation on purpose — a bare `5.0` in an
-     * assertion says what the code does, not what anybody wanted (rule 26).
+     * The requirement: 2 s to connect, 5 s in total. Written next to the
+     * expectation on purpose — a bare `5.0` in an assertion says what the code
+     * does, not what anybody wanted.
      *
      * Without an option Symfony waits `default_socket_timeout` (60 s by
      * default) and has no overall cap at all, so leaving these off does not

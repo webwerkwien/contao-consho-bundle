@@ -11,7 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\RenewalKind;
  *
  * SubscriptionRuleListener refuses what the rule must not say (P3–P5), and a
  * rule named by a price row cannot be deleted (SubscriptionRuleDeleteVoter).
- * docs/block-abo.md.
+ * Block Abo.
  */
 $GLOBALS['TL_DCA']['tl_consho_subscription_rule'] = [
     'config' => [
@@ -65,7 +65,7 @@ $GLOBALS['TL_DCA']['tl_consho_subscription_rule'] = [
             'eval' => ['mandatory' => true, 'maxlength' => 255, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 255, 'default' => ''],
         ],
-        // Number and unit, "1 Jahr" as Michael put it (P6).
+        // Number and unit, e.g. "1 Jahr" (P6).
         'termLength' => [
             'inputType' => 'text',
             'exclude' => true,
@@ -80,7 +80,7 @@ $GLOBALS['TL_DCA']['tl_consho_subscription_rule'] = [
             'eval' => ['mandatory' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 8, 'default' => 'year'],
         ],
-        // In months; 0 is one payment for the whole term (Michael: "Interval 1 oder 0").
+        // In months; 0 is one payment for the whole term.
         'billingInterval' => [
             'inputType' => 'text',
             'exclude' => true,

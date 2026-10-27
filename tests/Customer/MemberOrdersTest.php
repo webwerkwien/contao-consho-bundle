@@ -9,9 +9,9 @@ use Webwerkwien\ContaoConshoBundle\Customer\MemberOrders;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * D-4, K3 — „Meine Bestellungen": die Bestellungen des Kontos im Shop, und
- * Gastbestellungen mit der Kontoadresse erst nach Bestätigung — Contaos
- * „Persönliche Daten" ändert die Adresse ohne jede Prüfung.
+ * D-4, K3 — "my orders": the account's orders in the shop, and guest
+ * orders with the account address only after confirmation — Contao's
+ * "personal data" changes the address without any check.
  */
 final class MemberOrdersTest extends TestCase
 {
@@ -27,10 +27,10 @@ final class MemberOrdersTest extends TestCase
         $this->connection->insert('tl_member', ['id' => 6, 'email' => 'andere@example.org']);
 
         $this->order(1, 1, 5, 'erika@example.org', 100);
-        $this->order(2, 1, 0, 'ERIKA@example.org', 300);   // Gast, ihre Adresse
-        $this->order(3, 2, 5, 'erika@example.org', 200);   // anderer Shop
-        $this->order(4, 1, 6, 'erika@example.org', 400);   // fremdes Konto mit ihrer Adresse
-        $this->order(5, 1, 0, 'fremd@example.org', 500);   // fremder Gast
+        $this->order(2, 1, 0, 'ERIKA@example.org', 300);   // guest, her address
+        $this->order(3, 2, 5, 'erika@example.org', 200);   // another shop
+        $this->order(4, 1, 6, 'erika@example.org', 400);   // someone else's account with her address
+        $this->order(5, 1, 0, 'fremd@example.org', 500);   // someone else as a guest
     }
 
     public function testOhneBestaetigungNurDieKontobestellungen(): void
@@ -69,7 +69,7 @@ final class MemberOrdersTest extends TestCase
 
     public function testDieBestaetigteAdresseMussDieDesKontosSein(): void
     {
-        // Bestätigt wurde eine Adresse, die das Konto inzwischen nicht mehr hat.
+        // An address was confirmed that the account no longer has.
         $this->orders()->markConfirmed(5, 'fremd@example.org', 999);
 
         self::assertFalse($this->orders()->guestOrdersConfirmed(5));

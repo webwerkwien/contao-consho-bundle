@@ -2,7 +2,7 @@
 
 
 /*
- * Cart rules (block H, H-4; docs/block-h-preise.md, H6, W1–W6): a discount on
+ * Cart rules (Block H, H-4; H6, W1–W6): a discount on
  * the basket — with a code the customer types in the basket, or without one,
  * applied by itself.
  *
@@ -13,7 +13,7 @@
  *   amounts of one CURRENCY: a rule stating either applies in that currency
  *   only.
  * - The base: goods lines, never subscription lines (H8), not the reduced ones
- *   unless `reduced` (Michael, 2026-10-05), and only those the product
+ *   unless `reduced`, and only those the product
  *   conditions match.
  * - One code per order; the cheapest for the customer among the code and the
  *   rules without one, no sum (C3).

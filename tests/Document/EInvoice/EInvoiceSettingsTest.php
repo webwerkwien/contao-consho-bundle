@@ -17,8 +17,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block R (R10, R12): wann eine Rechnung E-Rechnung ist, und was der Shop
- * dafür braucht.
+ * Block R (R10, R12): when an invoice is an e-invoice, and what the shop
+ * needs for it.
  */
 class EInvoiceSettingsTest extends TestCase
 {
@@ -49,13 +49,13 @@ class EInvoiceSettingsTest extends TestCase
     public function testDieAngabeAusDemselbenFormularZaehlt(): void
     {
         self::assertSame('1', $this->listener(['invoiceContactEmail' => 'rechnung@example.org'])('1', $this->dc()));
-        // Ausschalten geht immer.
+        // Switching off always works.
         self::assertSame('', $this->listener([])('', $this->dc()));
     }
 
     /**
-     * CW-5 (I2): auf der Konsole gibt es kein Formular — der Befehl, der die
-     * E-Rechnung zusammen mit der Kontaktadresse einschaltet, geht durch.
+     * CW-5 (I2): on the console there is no form — the command that switches
+     * on the e-invoice together with the contact address goes through.
      */
     public function testAufDerKonsoleZaehltDerAktiveDatensatz(): void
     {
@@ -68,8 +68,8 @@ class EInvoiceSettingsTest extends TestCase
     }
 
     /**
-     * Beim Anlegen gibt es noch nichts Gespeichertes; der aktive Datensatz
-     * zählt allein — und nur mit den Pflichtfeldern.
+     * When creating, nothing is stored yet; the active record alone counts —
+     * and only with the mandatory fields.
      */
     public function testBeimAnlegenAufDerKonsole(): void
     {
@@ -82,8 +82,8 @@ class EInvoiceSettingsTest extends TestCase
 
     public function testImFormularGewinntDasFormular(): void
     {
-        // Der aktive Datensatz der Maske kennt nur die bisher verarbeiteten
-        // Felder — das Formular ist das letzte Wort.
+        // The form's active record only knows the fields processed so far
+        // — the form has the last word.
         self::assertSame(['invoiceContactEmail'], $this->listener(['invoiceContactEmail' => ''])->missing(1, ['invoiceContactEmail' => 'alt@example.org']));
     }
 
@@ -100,8 +100,8 @@ class EInvoiceSettingsTest extends TestCase
     }
 
     /**
-     * Nur an Geschäftskunden — Nettogruppe oder geprüfte UID, beim Kauf
-     * eingefroren.
+     * Only to business customers — net group or verified VAT ID, frozen at
+     * purchase.
      */
     public function testNurDerGeschaeftskundeBekommtEineERechnung(): void
     {
@@ -115,7 +115,7 @@ class EInvoiceSettingsTest extends TestCase
     public function testDasZahlungsmittelNachArtDerZahlungsart(): void
     {
         self::assertSame('58', DbalDocumentSource::meansCode('prepayment', ['iban' => 'AT61']));
-        // Review R, F6 (BR-61): ohne Konto kein Überweisungscode.
+        // R (BR-61): no account, no credit transfer code.
         self::assertSame('ZZZ', DbalDocumentSource::meansCode('invoice', []));
         self::assertSame('58', DbalDocumentSource::meansCode('invoice', ['iban' => 'AT61']));
         self::assertSame('10', DbalDocumentSource::meansCode('cod', []));
@@ -144,8 +144,8 @@ class EInvoiceSettingsTest extends TestCase
     }
 
     /**
-     * Wie contao-ais RecordDataContainer: ein DC_Table mit dem Datensatz
-     * samt der Werte, die gespeichert werden.
+     * Like contao-ai's RecordDataContainer: a DC_Table with the record
+     * including the values being saved.
      *
      * @param array<string, string> $values
      */

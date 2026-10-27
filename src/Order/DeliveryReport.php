@@ -19,7 +19,7 @@ final class DeliveryReport
     }
 
     /**
-     * @param int|null $toArchive an invoice issued inside the caller's transaction, whose PDF the caller archives after its own commit (review Abo-4, S2)
+     * @param int|null $toArchive an invoice issued inside the caller's transaction, whose PDF the caller archives after its own commit (Abo-4)
      */
     public static function reported(bool $mailSent, int|null $toArchive = null): self
     {

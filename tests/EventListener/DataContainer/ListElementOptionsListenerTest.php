@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\ListElementOptionsListener;
 
 /**
- * Die Listen, auf die sich ein Filterelement fest beziehen kann (conshoListElement).
+ * The lists that a filter element can refer to explicitly (conshoListElement).
  */
 class ListElementOptionsListenerTest extends TestCase
 {
@@ -18,7 +18,7 @@ class ListElementOptionsListenerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Typen und Vorgabewerte wie in core-bundle 5.7 und Consho's tl_content-DCA.
+        // Types and defaults as in core-bundle 5.7 and Consho's tl_content DCA.
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, title VARCHAR(255) NOT NULL DEFAULT '')",
         );
@@ -58,7 +58,7 @@ class ListElementOptionsListenerTest extends TestCase
 
     public function testOffersAListingInALayoutSectionByItsTheme(): void
     {
-        // Gerade für sie gibt es das Feld: firstOnPage() sucht nur in Artikeln.
+        // The field exists precisely for them: firstOnPage() only searches in articles.
         $this->element(700, 1, ptable: 'tl_theme');
 
         self::assertSame([700 => 'Theme Kräuterladen › ID 700'], $this->options());
@@ -66,7 +66,7 @@ class ListElementOptionsListenerTest extends TestCase
 
     public function testLeavesOutAListingThatDoesNotFollowTheAddress(): void
     {
-        // Das Filterelement rendert für sie ohnehin nichts.
+        // The filter element renders nothing for them anyway.
         $this->element(636, 120);
         $this->element(637, 120, follows: false);
 

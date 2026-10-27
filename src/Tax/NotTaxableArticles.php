@@ -7,7 +7,7 @@ use Doctrine\DBAL\Connection;
 
 /**
  * Whether articles are sold outside the scope of VAT (block Wertgutscheine,
- * acceptance WG-7): their tax class is marked "nicht steuerbar".
+ * WG-7): their tax class is marked "nicht steuerbar".
  *
  * Asked where a price carries its tax sentence. "inkl. USt." under a
  * multi-purpose voucher says something untrue — there is no tax in it — so

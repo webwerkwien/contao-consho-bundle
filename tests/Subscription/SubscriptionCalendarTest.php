@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
 
 /**
- * Abo-3, P17/P18: Grenzen vom Start aus gerechnet, am Monatsende geklemmt,
- * zur Uhrzeit des Kaufs in der Zeitzone der Installation.
+ * Abo-3, P17/P18: boundaries counted from the start, clamped at the end of the month,
+ * at the time of day of the purchase in the installation's time zone.
  */
 class SubscriptionCalendarTest extends TestCase
 {
@@ -28,7 +28,7 @@ class SubscriptionCalendarTest extends TestCase
         yield 'Zeitumstellung MESZ → MEZ' => ['2026-10-15 23:30', 1, '2026-11-15 23:30'];
         yield 'zwölf Monate' => ['2026-02-28 08:00', 12, '2027-02-28 08:00'];
         yield 'Jahreswechsel' => ['2026-11-30 12:00', 3, '2027-02-28 12:00'];
-        // Review L1: 02:30 gibt es am 28.03.2027 nicht — eine Stunde später.
+        // 02:30 does not exist on 28.03.2027 — one hour later.
         yield 'Uhrzeit in der Umstellungslücke' => ['2027-02-28 02:30', 1, '2027-03-28 03:30'];
     }
 
@@ -44,9 +44,9 @@ class SubscriptionCalendarTest extends TestCase
     }
 
     /**
-     * Abo pausieren, P104: Pausenmonate zählen zu den Monaten, nicht zum
-     * Start — ein Start am 31. bleibt der 31., auch wenn die Pause im
-     * Februar begann.
+     * Pausing a subscription, P104: pause months count towards the months, not towards the
+     * start — a start on the 31st stays the 31st, even if the pause
+     * began in February.
      */
     public function testBoundaryAddsTheMonthsPaused(): void
     {
@@ -65,7 +65,7 @@ class SubscriptionCalendarTest extends TestCase
         $previous = date_default_timezone_get();
 
         // Built while the zone is still php.ini's, as a command's service is
-        // before the framework initialises (review Abo-3, S1).
+        // before the framework initialises (Abo-3).
         date_default_timezone_set('UTC');
         $calendar = new SubscriptionCalendar();
         date_default_timezone_set('America/New_York');

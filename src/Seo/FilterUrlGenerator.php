@@ -21,7 +21,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
  * second path passes through the landing page of 250 ml on the way. A link
  * built from "landing page plus the rest in cq" would give the same products
  * two addresses, depending on which filter came first
- * (docs/block-b-katalog-frontend.md, 4.5).
+ * (Block B, 4.5).
  *
  * ── Why the page number disappears ────────────────────────────────────────
  *

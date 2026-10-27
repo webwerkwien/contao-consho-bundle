@@ -68,7 +68,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendConfirmation'] = ['Bestätigung er
 $GLOBALS['TL_LANG']['tl_consho_order']['resendSent'] = 'Die Bestätigung der Bestellung %s ging erneut an %s.';
 $GLOBALS['TL_LANG']['tl_consho_order']['resendFailed'] = 'Die Bestätigung der Bestellung %s konnte nicht gesendet werden. Den Grund nennt das Systemlog.';
 
-// E8: Zahlungsziel verschieben
+// E8: postpone the payment due date
 $GLOBALS['TL_LANG']['tl_consho_order']['deferPayment'] = ['Zahlungsziel verschieben', 'Das Zahlungsziel der Bestellung ID %s auf einen späteren Tag legen'];
 $GLOBALS['TL_LANG']['tl_consho_order']['deferBack'] = 'Zurück';
 $GLOBALS['TL_LANG']['tl_consho_order']['deferLegend'] = 'Zahlungsziel';
@@ -83,7 +83,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['deferRefused'] = [
     'notLater' => 'Das neue Zahlungsziel muss nach dem bisherigen liegen.',
 ];
 
-// D-1: ein Status darf nicht behaupten, was Zahlungen und Lieferungen nicht hergeben.
+// D-1: a status must not claim what payments and deliveries do not bear out.
 $GLOBALS['TL_LANG']['tl_consho_order']['statusRefused'] = 'Der Status „%s" kann nicht gesetzt werden: %s.';
 $GLOBALS['TL_LANG']['tl_consho_order']['digitalAddressUnconfirmed'] = 'Die digitalen Güter dieser Bestellung gingen an %s — eine Adresse, die noch niemand bestätigt hat. Die Mail ist hier der Lieferweg: Meldet sich der Kunde, er habe nichts bekommen, zuerst die Adresse prüfen.';
 $GLOBALS['TL_LANG']['tl_consho_order']['statusUnmet'] = [
@@ -92,7 +92,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['statusUnmet'] = [
     'deliverySettled' => 'nicht als versandt gemeldet: %s',
     'nothingShipped' => 'es ist bereits Ware versandt — das ist ein Widerruf oder eine Retoure, keine Stornierung',
 ];
-// dev#1: ein Storno storniert die Rechnung mit — nur wo das ganz und nummeriert geht.
+// dev#1: a cancellation cancels the invoice along with it — only where that works in full and numbered.
 $GLOBALS['TL_LANG']['tl_consho_order']['cancelInvoiceRefused'] = [
     'corrected' => 'zur Rechnung gibt es schon eine Rechnungskorrektur. Ein Storno höbe die ganze Rechnung auf und schriebe den korrigierten Teil ein zweites Mal gut — die übrigen Positionen über „Widerrufe“ abwickeln',
     'numberRangeMissing' => 'der Shop hat keinen Nummernkreis für Stornonummern, die Rechnung bliebe stehen. Unter „Shop-Konfigurationen → Nummernkreise“ anlegen oder auf der Seite „Einrichtung“ „Fehlende Nummernkreise anlegen“',
@@ -101,9 +101,9 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendAnonymized'] = 'Die Bestätigung d
 $GLOBALS['TL_LANG']['tl_consho_order']['resendNoOrderPage'] = 'Die Bestätigung der Bestellung %s wurde nicht gesendet: Der Startpunkt des Shops hat keine Bestellseite, der Link in der Mail zeigte ins Leere.';
 
 /*
- * Die Beschriftungen der drei Signale in der Listenzeile. Sie stehen im
- * title-Attribut — die Farbe allein trägt die Bedeutung nicht, und Rot-Grün
- * ist ausgerechnet die häufigste Farbfehlsichtigkeit.
+ * The labels of the three signals in the list row. They go into the
+ * title attribute — colour alone does not carry the meaning, and red-green
+ * of all things is the most common colour vision deficiency.
  */
 $GLOBALS['TL_LANG']['tl_consho_order']['signalsColumn'] = 'Status';
 

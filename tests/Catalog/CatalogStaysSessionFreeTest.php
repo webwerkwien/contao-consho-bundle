@@ -9,13 +9,14 @@ use PHPUnit\Framework\TestCase;
  *
  * A started session makes a response private: the shared page cache no longer
  * stores it, for anybody. The filter state lives in the address since A-10 for
- * exactly this reason (docs/block-b-katalog-frontend.md, 9.2). The mistake that
+ * exactly this reason (Block B, 9.2). The mistake that
  * breaks it is putting "just the last sort order" into the session for
  * convenience — nothing fails, the shop just gets slower.
  *
  * A functional test would need a Contao kernel, which the bundle does not
  * have. So this test forbids the access itself in every file that renders or
- * serves a catalogue page; the acceptance measures the headers on c5.
+ * serves a catalogue page; the response headers themselves only show on a
+ * running installation.
  */
 class CatalogStaysSessionFreeTest extends TestCase
 {
@@ -63,7 +64,7 @@ class CatalogStaysSessionFreeTest extends TestCase
 
     public function testItActuallyReadsTheFiles(): void
     {
-        // Ein Test, der keine Datei findet, wäre immer grün.
+        // A test that finds no file would always be green.
         self::assertGreaterThan(20, \count($this->files()));
         self::assertArrayHasKey('src/Controller/ContentElement/ProductListController.php', $this->files());
     }

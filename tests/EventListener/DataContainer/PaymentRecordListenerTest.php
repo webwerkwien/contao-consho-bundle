@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\PaymentRecordList
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
 
 /**
- * Eine im Backend erfasste Zahlung hat Folgen (D-1) — bei „Mehrere
- * bearbeiten" erst, wenn Contaos Transaktion entschieden ist (Review S2).
+ * A payment recorded in the backend has consequences (D-1) — with "Edit
+ * multiple" only once Contao's transaction has been decided.
  */
 final class PaymentRecordListenerTest extends TestCase
 {
@@ -54,8 +54,8 @@ final class PaymentRecordListenerTest extends TestCase
     }
 
     /**
-     * Review 2, S-b: Nach fastcgi_finish_request() sieht niemand eine
-     * Exception — sie wird protokolliert, die nächste Bestellung läuft.
+     * After fastcgi_finish_request() nobody sees an exception — it is logged,
+     * and the next order goes ahead.
      */
     public function testEinFehlerAmEndeStopptDieUebrigenNicht(): void
     {
@@ -88,9 +88,9 @@ final class PaymentRecordListenerTest extends TestCase
     }
 
     /**
-     * Nachlese Stufe 2: Der Terminate-Listener entsteht bei jeder Anfrage und
-     * jedem Konsolenbefehl. PaymentRecorded (Belege, Mail, SecretCipher) wird
-     * erst gebaut, wenn wirklich eine Zahlung erfasst wurde.
+     * Nachlese stage 2: the terminate listener is created on every request and
+     * every console command. PaymentRecorded (documents, mail, SecretCipher) is
+     * only built when a payment really has been recorded.
      */
     public function testOhneZahlungWirdPaymentRecordedNieGebaut(): void
     {

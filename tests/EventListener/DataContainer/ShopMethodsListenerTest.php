@@ -51,8 +51,8 @@ class ShopMethodsListenerTest extends TestCase
 
     public function testAlleArtenStehenZurWahlUnveroeffentlichteSindMarkiert(): void
     {
-        // Auswählbar auch unveröffentlicht: Man richtet den Shop ein, bevor man
-        // die Art freigibt. Im Checkout zählt sie erst veröffentlicht.
+        // Selectable even when unpublished: one sets up the shop before releasing
+        // the method. In the checkout it only counts once published.
         $this->connection->insert('tl_consho_shipping_method', ['id' => 3, 'title' => 'Post', 'published' => 1, 'tstamp' => 5]);
         $this->connection->insert('tl_consho_shipping_method', ['id' => 4, 'title' => 'Abholung', 'published' => 0, 'tstamp' => 5]);
 
@@ -68,7 +68,7 @@ class ShopMethodsListenerTest extends TestCase
 
     public function testNieGespeicherteArtStehtNichtZurWahl(): void
     {
-        // Mit "Neu" geöffnet und nie gespeichert (tstamp 0): kein Titel, keine Option.
+        // Opened with "New" and never saved (tstamp 0): no title, no option.
         $this->connection->insert('tl_consho_shipping_method', ['id' => 5, 'title' => '', 'published' => 0, 'tstamp' => 0]);
 
         self::assertSame([], (new ShopMethodsListener($this->connection))->shippingMethods());

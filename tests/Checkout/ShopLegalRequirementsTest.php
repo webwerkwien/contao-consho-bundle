@@ -9,9 +9,9 @@ use Webwerkwien\ContaoConshoBundle\Checkout\ShopLegalRequirements;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * D-2, E1 — Michael, 2026-09-27: „Sperre bei AGB ist schon falsch, man muss
- * keine haben. Sonst nur sperrend, wenn man in der EU Betreiber ist." EWR
- * zählt mit („ja").
+ * D-2, E1: blocking on missing terms and conditions is wrong — a shop does
+ * not have to have any. Otherwise blocking only when the operator is in the
+ * EU. The EEA counts too.
  */
 final class ShopLegalRequirementsTest extends TestCase
 {

@@ -12,7 +12,7 @@ $GLOBALS['TL_DCA']['tl_consho_delivery_item'] = [
         'dataContainer' => Contao\DC_Table::class,
         'ptable' => 'tl_consho_delivery',
 
-        // See tl_consho_delivery (D-1 review, S1).
+        // See tl_consho_delivery (D-1).
         'notCopyable' => true,
         'doNotCopyRecords' => true,
         'sql' => ['keys' => ['id' => 'primary', 'pid' => 'index', 'orderItem' => 'index']],

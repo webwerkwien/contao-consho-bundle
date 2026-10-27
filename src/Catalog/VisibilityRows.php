@@ -10,7 +10,7 @@ use Doctrine\DBAL\ArrayParameterType;
  * The one place where "visible" (VisibilityCriteria) meets "priced" and the
  * "from" price. The projector writes these rows, verify() compares against
  * them, and the diagnosis counts them: three readers, one set of rules. See
- * docs/block-b-katalog-frontend.md, section 5.7.
+ * Block B, section 5.7.
  *
  * Both statements select the columns pid, main, variant, net, gross — in that
  * order, so the projector can put `INSERT INTO … SELECT` in front of them.
@@ -104,7 +104,7 @@ final class VisibilityRows
      * What the product costs — and it is not simply its own price.
      *
      * 🔴 With variants the prices sit on the variants, so the main product row
-     * may carry none at all. Michael, 2026-09-11: colours make no price
+     * may carry none at all. Colours, say, make no price
      * difference and the price stays on the main product; volumes do and it
      * moves to the variants. Both shapes occur in one catalogue.
      *
@@ -119,13 +119,13 @@ final class VisibilityRows
      * says "from 15 €". Any variant counts for "has variants", visible or not:
      * VisibilityCriteria already hides a product whose variants are all hidden.
      *
-     * 🔴 Two subqueries joined by COALESCE, not one with an OR. Measured on
-     * 2026-09-13 (B-9, MariaDB 10.11, 5,000 products): the OR form
+     * 🔴 Two subqueries joined by COALESCE, not one with an OR. Measured in
+     * B-9 (MariaDB 10.11, 5,000 products): the OR form
      * `sp.pid IN (variants) OR (sp.pid = p.id AND no variants)` kept the
      * optimiser off the then (pid, currency) index — (pid, currency, country)
      * since C-1a — EXPLAIN showed a full scan of
      * all 12,076 list prices per product, and sorting by price ran into the
-     * 20-second statement limit. On c5, behind the query cache, it went
+     * 20-second statement limit. Behind a query cache it goes
      * unnoticed.
      */
     private function cheapestPrice(string $column, string $variantIsVisible): string

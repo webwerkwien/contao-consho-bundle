@@ -3,8 +3,8 @@
 use Contao\DC_Table;
 
 /*
- * The basket (C9). A table WITHOUT a back end module, on purpose (decision
- * 2026-09-16): baskets are short-lived and carry personal data in
+ * The basket (C9). A table WITHOUT a back end module, on purpose:
+ * baskets are short-lived and carry personal data in
  * checkoutData; nobody needs to browse them. The file exists so that
  * contao:migrate knows the columns.
  *
@@ -14,8 +14,7 @@ use Contao\DC_Table;
  * 🔴 The column `order` is a reserved word in MySQL and SQLite, and **Doctrine
  * does not quote it for you** — not in a hand-written query, and not in
  * Connection::insert()/update()/delete() with an array either. Measured
- * against DBAL 4.4.4 on 2026-09-23; this comment claimed the opposite until
- * then, and it was wrong.
+ * against DBAL 4.4.4.
  *
  * It went unnoticed because nothing ever wrote the column: C-7 is the first
  * caller (markConverted), and it would have failed on the server with a syntax

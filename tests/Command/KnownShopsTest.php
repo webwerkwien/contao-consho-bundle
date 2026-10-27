@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Command\KnownShops;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Michael, 2026-10-12: „in den Paketen sollte verhindert werden, dass Agenten
- * Eingaben raten". Eine unbekannte Shop-ID wird mit den vorhandenen beantwortet.
+ * Nobody calling the commands should have to guess input. An unknown shop
+ * ID is answered with the existing ones.
  */
 class KnownShopsTest extends TestCase
 {

@@ -20,23 +20,23 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 /**
- * Die Landingpages stehen NICHT in der ctable von tl_page — gegen den echten
- * Contao-Code geprüft.
+ * The landing pages are NOT in the ctable of tl_page — checked against the
+ * real Contao code.
  *
- * Geprüft wird nicht, was die DCA sagt, sondern was DC_Table::deleteChildren(),
- * DC_Table::copyChildren() und DC_Table::reviseTable() aus
- * vendor/contao/core-bundle damit tun. Alle drei laufen nur über die ctable.
+ * What is checked is not what the DCA says, but what DC_Table::deleteChildren(),
+ * DC_Table::copyChildren() and DC_Table::reviseTable() from
+ * vendor/contao/core-bundle do with it. All three run only through the ctable.
  *
- * Warum die Tabelle dort nicht stehen darf: reviseTable() läuft bei jedem
- * Öffnen der Seitenstruktur und löscht jede Kindzeile, deren pid auf keine Seite
- * zeigt — ohne tstamp-Prüfung. Ein Klick auf „Neu" im Landingpage-Modul legt
- * sofort eine Zeile mit pid 0 an; die wäre weg. Das Löschen mit Papierkorb
- * übernimmt jetzt FacetPageDeleteListener (eigener Test).
+ * Why the table must not be there: reviseTable() runs every time the site
+ * structure is opened and deletes every child row whose pid points to no page
+ * — without a tstamp check. A click on "New" in the landing page module
+ * immediately creates a row with pid 0; it would be gone. Deleting with the
+ * recycle bin is now done by FacetPageDeleteListener (own test).
  *
- * Geladen werden die echten DCA-Dateien des Bundles. Vom Core-tl_page nur, was
- * die Kaskade liest (ctable, Sortiermodus 5 aus
- * vendor/contao/core-bundle/contao/dca/tl_page.php) und die beiden Paletten,
- * die contao/dca/tl_page.php erweitert.
+ * The bundle's real DCA files are loaded. Of the core tl_page only what the
+ * cascade reads (ctable, sorting mode 5 from
+ * vendor/contao/core-bundle/contao/dca/tl_page.php) and the two palettes
+ * that contao/dca/tl_page.php extends.
  */
 class FacetPageCascadeTest extends TestCase
 {
@@ -57,18 +57,18 @@ class FacetPageCascadeTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
         DcaSchema::create($this->connection, 'tl_consho_number_range');
-        // Seit C-8 Kindtabelle des Shops (Rechnungstexte); dynamicPtable, also
-        // über ptable UND pid gewählt.
+        // A child table of the shop since C-8 (invoice texts); dynamicPtable, so
+        // chosen by ptable AND pid.
         DcaSchema::create($this->connection, 'tl_consho_translation');
 
-        // Aus der DCA, also so streng wie sie — der UNIQUE-Index auf pid,alias
-        // hätte ein Kopieren auf dieselbe Seite abgelehnt, auf eine andere nicht.
+        // From the DCA, so as strict as it is — the UNIQUE index on pid,alias
+        // would have rejected a copy to the same page, but not to another one.
         DcaSchema::create($this->connection, 'tl_consho_facet_page');
 
-        // Eine Backend-Anfrage mit Sitzung: reviseTable() liest daraus die Tasche
-        // „contao_backend" und lädt über die URI neu. Sie muss vor
-        // switchToCurrentRequest() stehen — eine später aufgelegte Anfrage
-        // gilt dem DcaLoader als neue und verwirft den gesetzten DCA-Stand.
+        // A backend request with a session: reviseTable() reads the bag
+        // "contao_backend" from it and reloads via the URI. It must come before
+        // switchToCurrentRequest() — a request pushed later counts as a new one
+        // for the DcaLoader, which then discards the DCA state that was set.
         $session = new Session(new MockArraySessionStorage());
         $bag = new AttributeBag('_contao_be_attributes');
         $bag->setName('contao_backend');
@@ -84,14 +84,14 @@ class FacetPageCascadeTest extends TestCase
         $container->set('database_connection', $this->connection);
         $container->set('request_stack', $requestStack);
 
-        // Jede System-Instanz (auch DcaLoader) importiert im Konstruktor Config.
-        // Ohne Dienst fiele der Import auf Config::getInstance() und die
-        // Konfigurationsdateien zurück — für die Kaskade bedeutungslos.
+        // Every System instance (DcaLoader too) imports Config in its constructor.
+        // Without the service the import would fall back to Config::getInstance()
+        // and the configuration files — irrelevant for the cascade.
         $container->set(Config::class, (new \ReflectionClass(Config::class))->newInstanceWithoutConstructor());
         System::setContainer($container);
 
-        // Erst auf die Anfrage umschalten, dann die DCA setzen: Der erste
-        // Wechsel verwirft $GLOBALS['TL_DCA'], danach bleibt sie stehen.
+        // Switch to the request first, then set the DCA: the first switch
+        // discards $GLOBALS['TL_DCA'], after that it stays.
         DcaLoader::switchToCurrentRequest();
 
         $GLOBALS['TL_DCA'] = [];
@@ -116,8 +116,8 @@ class FacetPageCascadeTest extends TestCase
             'dcaFiles' => array_fill_keys(array_keys($GLOBALS['TL_DCA']), true),
         ]);
 
-        // Database::fieldExists() fragt MySQL mit SHOW FULL COLUMNS. copyChildren()
-        // braucht davon nur, ob es eine sorting-Spalte gibt.
+        // Database::fieldExists() asks MySQL with SHOW FULL COLUMNS. copyChildren()
+        // only needs to know from it whether there is a sorting column.
         $this->setStatic(Database::class, 'objInstance', null);
         $this->setProperty(Database::getInstance(), 'arrCache', [
             'tl_article' => [['name' => 'id', 'type' => 'int'], ['name' => 'pid', 'type' => 'int'], ['name' => 'sorting', 'type' => 'int']],
@@ -127,7 +127,7 @@ class FacetPageCascadeTest extends TestCase
 
     protected function tearDown(): void
     {
-        // reset() leert auch $GLOBALS['TL_DCA'] und die Anfrage-Zuordnung.
+        // reset() also empties $GLOBALS['TL_DCA'] and the request mapping.
         DcaLoader::reset();
         Environment::reset();
 
@@ -137,9 +137,9 @@ class FacetPageCascadeTest extends TestCase
 
     public function testDeletingChildrenOfAPageDoesNotCollectLandingPages(): void
     {
-        // Das Einsammeln samt Papierkorb macht FacetPageDeleteListener. Sammelte
-        // deleteChildren() sie zusätzlich, stünden sie zweimal im Undo-Eintrag —
-        // und das Wiederherstellen scheiterte am Primärschlüssel.
+        // Collecting them, recycle bin included, is done by FacetPageDeleteListener.
+        // If deleteChildren() collected them as well, they would be in the undo entry
+        // twice — and restoring would fail on the primary key.
         $this->facet(page: 12, alias: 'schwedenbitter-250-ml');
 
         $delete = [];
@@ -150,15 +150,15 @@ class FacetPageCascadeTest extends TestCase
 
     public function testOpeningTheSiteStructureLeavesAnUnsavedLandingPage(): void
     {
-        // Der eigentliche Fehler: „Neu" im Landingpage-Modul legt die Zeile mit
-        // pid 0 an. Öffnet jemand dazwischen die Seitenstruktur, läuft
-        // reviseTable() für tl_page.
+        // The actual bug: "New" in the landing page module creates the row with
+        // pid 0. If somebody opens the site structure in between, reviseTable()
+        // runs for tl_page.
         $this->connection->insert('tl_consho_facet_page', ['pid' => 0, 'tstamp' => 0]);
         $unsaved = (int) $this->connection->lastInsertId();
         $this->facet(page: 99, alias: 'seite-geloescht');
 
-        // Ein verwaister Artikel belegt, dass die ctable-Schleife wirklich lief:
-        // Ihn löscht reviseTable() und lädt danach neu.
+        // An orphaned article proves that the ctable loop really ran:
+        // reviseTable() deletes it and reloads afterwards.
         $this->connection->insert('tl_article', ['id' => 5, 'pid' => 99]);
 
         $dc = $this->dataContainer();
@@ -177,9 +177,9 @@ class FacetPageCascadeTest extends TestCase
 
     public function testDeletingAShopLeavesTheLandingPagesOfThePageWithTheSameId(): void
     {
-        // Der Fall aus der Aufgabe: Shop 12 und Seite 12 haben nichts miteinander
-        // zu tun. Stünde die Tabelle noch in der ctable des Shops, fände
-        // deleteChildren() sie über pid = 12.
+        // The case this guards: shop 12 and page 12 have nothing to do with each
+        // other. If the table were still in the ctable of the shop,
+        // deleteChildren() would find it via pid = 12.
         $this->connection->insert('tl_consho_shop', ['id' => 12]);
         $this->facet(page: 12, alias: 'schwedenbitter-250-ml');
 
@@ -191,8 +191,8 @@ class FacetPageCascadeTest extends TestCase
 
     public function testCopyingAPageDoesNotCopyItsLandingPages(): void
     {
-        // Die Kopie hätte dieselbe Filtervorgabe — jede kopierte Landingpage wäre
-        // eine zweite indexierte Seite mit identischem Inhalt.
+        // The copy would have the same filter preset — every copied landing page
+        // would be a second indexed page with identical content.
         $this->facet(page: 12, alias: 'schwedenbitter-250-ml');
 
         $copyChildren = new \ReflectionMethod(DC_Table::class, 'copyChildren');
@@ -206,9 +206,9 @@ class FacetPageCascadeTest extends TestCase
 
     public function testArticlesStayTheOnlyChildTableOfAPage(): void
     {
-        // DefaultOperationsListener baut den Kinder-Knopf aus ctable[0]; der muss
-        // zu den Artikeln führen. Und die Landingpages dürfen gar nicht drinstehen
-        // (reviseTable, siehe oben).
+        // DefaultOperationsListener builds the children button from ctable[0]; it
+        // must lead to the articles. And the landing pages must not be in it at all
+        // (reviseTable, see above).
         self::assertSame(['tl_article'], $GLOBALS['TL_DCA']['tl_page']['config']['ctable']);
     }
 

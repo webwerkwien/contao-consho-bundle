@@ -5,14 +5,13 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Ein gesperrtes Auswahlfeld mit `foreignKey` braucht eine leere Option.
+ * A disabled select with a `foreignKey` needs an empty option.
  *
- * Gefunden bei der Abnahme von WG-2 (2026-10-06): Ein von Hand ausgestellter
- * Gutschein gehört zu keiner Bestellung (`orderId` 0). Ohne leere Option hat
- * die Auswahl keinen passenden Eintrag, und der Browser zeigt den ERSTEN —
- * „Gekauft mit WEB-00093". Gespeichert wird das nicht (gesperrte Felder gehen
- * nicht mit), aber die Maske behauptet es. Dasselbe stand seit Block G in
- * jeder Lagerbewegung von Hand und in 18 weiteren Feldern.
+ * WG-2: a voucher issued by hand belongs to no order (`orderId` 0). Without
+ * an empty option the select has no matching entry, and the browser shows
+ * the FIRST one — „Gekauft mit" and some order number. That is not saved
+ * (disabled fields are not submitted), but the form claims it. The same
+ * stood in every manual stock movement since Block G and in 18 more fields.
  */
 class DisabledSelectShowsNothingTest extends TestCase
 {

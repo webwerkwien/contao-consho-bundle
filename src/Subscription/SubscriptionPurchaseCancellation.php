@@ -8,30 +8,28 @@ use Doctrine\DBAL\ParameterType;
 use Webwerkwien\ContaoConshoBundle\Digital\EntitlementRevocations;
 
 /**
- * A subscription whose purchase is cancelled ends with it (Abo-Nachlese, P72;
- * Michael, 2026-10-01: „ja, so umsetzen") — otherwise it billed, month after
+ * A subscription whose purchase is cancelled ends with it (Abo-Nachlese, P72) — otherwise it billed, month after
  * month, for something never bought. A purchase can only be cancelled before
  * anything was delivered (OrderStatusListener refuses it after), so there is
  * no entitlement of its own to take back.
  *
- * A renewal gives the licence back as well (Abo-7b; review S1). The purchase
+ * A renewal gives the licence back as well (Abo-7b). The purchase
  * claimed the old subscription (`renewedBy`) and, once released, moved its
  * entitlement onto the new order (DigitalRelease::takeOver()). The old
  * subscription is renewable again, the entitlement goes back to its line and
  * its paid period. It may come back resting — for the renewal's own unpaid
- * invoice, which is cancelled now (second review, S-1): the old subscription
+ * invoice, which is cancelled now: the old subscription
  * is asked again at once (SubscriptionDelinquency::reassess()), as no payment
  * follows a cancelled order.
  *
  * Called through OrderCancellation (Nachlese K6) by both writers of
  * `tl_consho_order.cancelledAt` — the status set in the back end
  * (OrderStatusListener) and an automatic status change (ContaoOrderStatusWriter,
- * used by OrderStatusAdvancer) — in the same transaction as that write
- * (second review, S-3).
+ * used by OrderStatusAdvancer) — in the same transaction as that write.
  *
  * A subscription renewed in turn ends too, but keeps its licence where it is:
  * once another subscription holds it (A → B → C, B's purchase cancelled), it
- * is left with C — an open point of the spec (second review, L-2).
+ * is left with C — an open point of the spec.
  *
  * An accepted withdrawal of the purchase takes the same way, line by line
  * (afterWithdrawal(), Abo-8, P78).
@@ -88,7 +86,7 @@ class SubscriptionPurchaseCancellation
     {
         foreach ($subscriptions as $subscription) {
             // Every subscription of the purchase ends — also one renewed in
-            // the meantime (review Abo-Nachlese, S3).
+            // the meantime (Abo-Nachlese).
             // The mandate with it, as at every end (Abo-4b, P98).
             $this->connection->update('tl_consho_subscription', ['state' => 'ended', 'endsAt' => $now, 'mandate' => '', 'mandateMethod' => 0, 'tstamp' => $now], ['id' => (int) $subscription['id']]);
 

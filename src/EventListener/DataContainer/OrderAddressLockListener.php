@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * The customer and the addresses of an order stay correctable until a
- * document carries them (Connect-2, E2 — Michael, 2026-10-10: „ja").
+ * document carries them (Connect-2, E2).
  *
  * A wrong house number is fixed before the parcel goes; afterwards the order
  * and the delivery note or invoice would tell two stories, and an invoice is
@@ -27,7 +27,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  *
  * Contao honours read-only in every form, but the onload callback below sets
  * it for act=edit only — "edit multiple" and "override all" never got it
- * (CW-6 review, K2). So the save itself refuses a frozen field too —
+ * (CW-6). So the save itself refuses a frozen field too —
  * onbeforesubmit, which every path runs, contao-ai's writer included. In
  * "edit" and "edit multiple" DC_Table hands over the changed fields only, so a
  * frozen value saved unchanged passes; "override all" saves every ticked field

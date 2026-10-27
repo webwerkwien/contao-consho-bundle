@@ -91,7 +91,7 @@ class FilterResolverTest extends TestCase
         self::assertSame([], (new FilterResolver($this->connection))->resolve(new FilterState()));
     }
 
-    // ── Vorgabe und Besucherwahl ─────────────────────────────────────────
+    // ── Default and visitor's choice ─────────────────────────────────────
 
     public function testGroupsBareOptionIdsWithoutCheckingFilterable(): void
     {

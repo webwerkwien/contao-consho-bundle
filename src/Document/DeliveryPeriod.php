@@ -3,8 +3,8 @@
 namespace Webwerkwien\ContaoConshoBundle\Document;
 
 /**
- * The expected delivery period a prepayment invoice states (C-8, Michael
- * 2026-09-24: "Lieferzeit-Spanne am Shop").
+ * The expected delivery period a prepayment invoice states (C-8), from the delivery
+ * period set at the shop.
  *
  * Counted in working days from the day of issue, Monday to Friday. Public
  * holidays are NOT taken out: which ones apply depends on the country and in

@@ -45,7 +45,7 @@ final class DbalProductSafetyRepository implements ProductSafetyRepositoryInterf
 
         /*
          * Deliberately not TranslationJoin::coalesce(): safety texts have no
-         * fallback (docs/mehrsprachigkeit.md, 4.1). A German warning on a French
+         * fallback (Block M, 4.1). A German warning on a French
          * page is not a cosmetic flaw but a breach — and it looks like a
          * maintained product.
          *

@@ -30,7 +30,7 @@ class ShippingMethodDcaTest extends TestCase
 
     public function testDieSteuerregelKenntGenauDieWerteDesEnums(): void
     {
-        // C4: anteilig ist der Standard.
+        // C4: pro rata is the default.
         $taxMode = $GLOBALS['TL_DCA']['tl_consho_shipping_method']['fields']['taxMode'];
 
         self::assertSame(array_map(static fn (ShippingTaxMode $m): string => $m->value, ShippingTaxMode::cases()), $taxMode['options']);
@@ -39,8 +39,8 @@ class ShippingMethodDcaTest extends TestCase
 
     public function testDieBezugsSteuerklasseIstImmerPflicht(): void
     {
-        // Entscheidung 2026-09-15: auch bei „anteilig" — sie rechnet eine
-        // Brutto-Eingabe des Versandbetrags in netto um.
+        // Also with "pro rata" — it converts a gross entry of the shipping
+        // amount into net.
         $taxClass = $GLOBALS['TL_DCA']['tl_consho_shipping_method']['fields']['taxClass'];
 
         self::assertTrue($taxClass['eval']['mandatory']);
@@ -49,22 +49,22 @@ class ShippingMethodDcaTest extends TestCase
 
     public function testDieJsonSpalteFuerModuleinstellungenIstAuchOhneModulfelderDa(): void
     {
-        // Spec 5.1. Contao legte sie erst mit dem ersten virtuellen Feld an —
-        // DbalShippingMethodRepository liest sie aber für jede Art.
+        // Spec 5.1. Contao only created it with the first virtual field —
+        // but DbalShippingMethodRepository reads it for every method.
         (new VirtualFieldsMappingListener())('tl_consho_shipping_method');
 
         $jsonData = $GLOBALS['TL_DCA']['tl_consho_shipping_method']['fields']['jsonData'];
 
         self::assertSame('json', $jsonData['sql']['type']);
         self::assertArrayNotHasKey('inputType', $jsonData);
-        // Ohne Modulfeld kein virtuelles Ziel — „Details" zeigte sonst eine leere Zeile.
+        // Without a module field there is no virtual target — "Details" would otherwise show an empty row.
         self::assertTrue($jsonData['eval']['doNotShow']);
     }
 
     public function testOhneTypUndPauschaleTeilenSichEinePaletteMitTitelUndBeschreibung(): void
     {
-        // Einmal gebaut: eine Änderung an einer der beiden fehlte sonst still in der anderen.
-        // Die Pauschale hat seit E-3 zusätzlich das Häkchen „Nachnahme möglich" (Z2).
+        // Built once: a change to one of the two would otherwise be silently missing from the other.
+        // Since E-3 the flat rate also has the "Cash on delivery possible" checkbox (Z2).
         $palettes = $GLOBALS['TL_DCA']['tl_consho_shipping_method']['palettes'];
 
         self::assertSame(str_replace(';{publish_legend}', ';{cod_legend},cashOnDelivery;{publish_legend}', $palettes['default']), $palettes['flat_rate']);
@@ -74,13 +74,13 @@ class ShippingMethodDcaTest extends TestCase
 
     public function testLoeschenIstDieStandardOperationDesKerns(): void
     {
-        // Nur eine namentliche Operation (ohne eigenes Array) bekommt von
-        // DefaultOperationsListener die DeleteAction-Prüfung angehängt — sonst
-        // greift MethodInUseVoter nicht und der Button wird nie ausgegraut.
+        // Only a named operation (without an array of its own) gets the
+        // DeleteAction check attached by DefaultOperationsListener — otherwise
+        // MethodInUseVoter does not take effect and the button is never greyed out.
         //
-        // Und das `!` ist kein Schmuck: Es setzt `primary`. Ohne das stünde
-        // der Knopf nur im ⋯-Menü, und eine ausgegraute Operation zeichnet
-        // das Template dort überhaupt nicht — der Hinweis wäre unsichtbar.
+        // And the `!` is not decoration: it sets `primary`. Without it the
+        // button would only stand in the ⋯ menu, and the template does not draw
+        // a greyed-out operation there at all — the hint would be invisible.
         $operations = $GLOBALS['TL_DCA']['tl_consho_shipping_method']['list']['operations'];
 
         self::assertContains('!delete', $operations);

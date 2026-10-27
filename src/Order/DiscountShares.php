@@ -56,7 +56,7 @@ final class DiscountShares
             $class = (int) ($line['taxClass'] ?? 0);
 
             /*
-             * Review H, S1: since then a reduction has one line per class AND
+             * Block H: since then a reduction has one line per class AND
              * country, and gives back only to the goods of its country. An
              * order from before has one line per class, at the delivery's
              * country, for all of the class — it still goes over all of them.

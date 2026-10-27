@@ -10,8 +10,8 @@ services:
             # Built with `new`, never injected: it holds rows a caller already
             # has (DbalGroupPriceAboveListIssueSource). As a service it would
             # be a second PriceRepositoryInterface and make the autowiring of
-            # every consumer ambiguous — which is exactly what happened on
-            # 2026-09-21, and `cache:clear` refused to build the container.
+            # every consumer ambiguous — and `cache:clear` then refuses to
+            # build the container.
             - ../src/Pricing/InMemoryPriceRepository.php
             # Back end widgets are built by Contao (BE_FFL), with the field's
             # attributes — never by the container (Block G, SuggestField).
@@ -68,7 +68,7 @@ services:
     # decrypted, with a message naming CONSHO_SECRET_KEY. Until v0.1.2 it
     # refused in its constructor — and the terminate listeners build it on
     # every request and console command, which broke Contao's post-update
-    # script on an installation without the key (2026-10-16).
+    # script on an installation without the key.
     #
     # ⚠️ base64, NOT hex2bin. Symfony ships base64, bool, not, const, csv, file,
     # float, int, json, key, url, query_string, resolve, default, string, trim,
@@ -76,8 +76,7 @@ services:
     # processor does not fail when the container is built: env variables resolve
     # LAZILY, so cache:clear passes, debug:container shows the argument, and the
     # first page that touches the service dies with "Unsupported env var prefix".
-    # Verified against EnvVarProcessor::getProvidedTypes() on 2026-09-09, after
-    # exactly that happened.
+    # Verified against EnvVarProcessor::getProvidedTypes().
     #
     # Generating one:  php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
     # Storing it:      CONSHO_SECRET_KEY=<44 base64 characters> in .env.local
@@ -103,9 +102,8 @@ services:
     # while the container is being built: not configuring an allow list is the
     # normal case, and by far the most common one.
     #
-    # ⚠️ With an empty fallback it resolves to NULL, not to an empty string —
-    # measured the hard way on c5 on 2026-09-21, where a `string` type hint on
-    # the constructor took every back end page down with a TypeError. The
+    # ⚠️ With an empty fallback it resolves to NULL, not to an empty string — a
+    # `string` type hint on the constructor takes every back end page down with a TypeError. The
     # constructor is nullable for exactly that reason; do not "tidy" it.
     Webwerkwien\ContaoConshoBundle\Cart\NoticeParamIssueSource:
         arguments:
@@ -124,7 +122,7 @@ services:
             - '@consho.rate_limit.withdrawal_form_storage'
             - '@?lock_factory'
 
-    # WA (A3, 2026-10-22): the confirmation of a declaration that matched no
+    # WA (A3): the confirmation of a declaration that matched no
     # order goes to the address the consumer typed. Twenty per shop in an hour
     # is more than any real wave of withdrawals and caps what the form can be
     # made to send; three per address in an hour, like the confirmation mail
@@ -187,6 +185,22 @@ services:
         class: Symfony\Component\RateLimiter\RateLimiterFactory
         arguments:
             - { id: consho_order_link_address, policy: fixed_window, limit: 3, interval: 1 hour }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # K1: "Kundenkonto anlegen" on the order page — the same limits as a new
+    # link: per IP against a script, per address against flooding a mailbox.
+    consho.rate_limit.account_ip:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_account_ip, policy: fixed_window, limit: 5, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    consho.rate_limit.account_address:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_account_address, policy: fixed_window, limit: 3, interval: 1 hour }
             - '@consho.rate_limit.withdrawal_form_storage'
             - '@?lock_factory'
 

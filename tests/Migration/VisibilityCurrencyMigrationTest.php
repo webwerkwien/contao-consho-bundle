@@ -14,10 +14,10 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Die bestehenden Zeilen bekommen die Währung ihres Startpunkts (C-1c, 5b).
+ * The existing rows get the currency of their start point (C-1c, 5b).
  *
- * contao:migrate trägt `currency` als '' nach, und '' ist keine Währung: Jede
- * Liste fragt nach der Währung ihres Startpunkts und fände gar nichts.
+ * contao:migrate adds `currency` as '', and '' is not a currency: every
+ * list asks for the currency of its start point and would find nothing.
  */
 class VisibilityCurrencyMigrationTest extends TestCase
 {
@@ -34,15 +34,15 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testOhneDieTabellenLaeuftSieNicht(): void
     {
-        // Erster Durchlauf von contao:migrate, vor dem Schema-Update.
+        // First pass of contao:migrate, before the schema update.
         self::assertFalse($this->migration()->shouldRun());
     }
 
     public function testOhneDieWaehrungsspalteLaeuftSieNicht(): void
     {
-        // Der erste der beiden Durchläufe: Die Spalte, die sie füllen soll,
-        // gibt es noch gar nicht. Ohne diesen Wächter scheiterte der Durchlauf
-        // an einer unbekannten Spalte, statt schlicht nichts zu tun zu haben.
+        // The first of the two passes: the column it is meant to fill does not
+        // exist yet at all. Without this guard the pass would fail on an
+        // unknown column instead of simply having nothing to do.
         $this->catalogue();
         $this->visibilityTableBefore5b();
         $this->storedRow();
@@ -52,9 +52,9 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testOhneDieWaehrungsspalteAmStartpunktLaeuftSieNicht(): void
     {
-        // Der Neubau-Weg liest die Währung an den Startpunkten. Fehlt die
-        // Spalte, darf shouldRun() nicht ja sagen — derselbe Wächter wie in
-        // RootCurrencyMigration.
+        // The rebuild path reads the currency on the start points. If the
+        // column is missing, shouldRun() must not say yes — the same guard as
+        // in RootCurrencyMigration.
         $this->createCatalogSchema($this->connection);
         $this->rootPageTableBeforeC1c();
         $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
@@ -79,8 +79,8 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testEinZweiterDurchlaufAendertNichts(): void
     {
-        // Das Kriterium ist ein Datenzustand, kein „ist gelaufen"-Marker:
-        // Nach dem Füllen gibt es keine Zeile ohne Währung mehr.
+        // The criterion is a data state, not a "has run" marker:
+        // after filling there is no row without a currency any more.
         $this->catalogue();
         $this->storedRow();
         $this->migration()->run();
@@ -91,9 +91,9 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testZweiWaehrungenInEinerSpracheWerdenNeuProjiziertStattGeraten(): void
     {
-        // Der DACH-Fall. Welche der beiden Währungen die gespeicherte Zeile
-        // meint, weiß niemand — also wird gerechnet statt geraten. Produkt 1
-        // ist nur in Euro bepreist und steht danach nur unter EUR.
+        // The DACH case. Nobody knows which of the two currencies the stored
+        // row means — so it is computed instead of guessed. Product 1 is only
+        // priced in euros and afterwards only stands under EUR.
         $this->catalogue();
         $this->insertRootPage(2, 'de', 1, 'CHF');
         $this->pricedProduct(1);
@@ -111,11 +111,11 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testEineEindeutigeSpracheNebenEinerMehrdeutigenWirdNichtUmsonstGefuellt(): void
     {
-        // Beide Wege treffen sich in einem Lauf: Französisch ist eindeutig
-        // (nur Euro), Deutsch mehrdeutig (Euro und Franken). Würde die
-        // Schleife den eindeutigen Fall unterwegs füllen, schriebe der Neubau
-        // danach ohnehin jede Zeile neu — verlorene Arbeit, und die Meldung
-        // spräche von einer Aufteilung, die es nicht gab.
+        // Both paths meet in one run: French is unambiguous (euro only),
+        // German ambiguous (euro and franc). If the loop filled the
+        // unambiguous case along the way, the rebuild would rewrite every row
+        // afterwards anyway — wasted work, and the message would speak of a
+        // split that did not happen.
         $this->catalogue();
         $this->insertRootPage(2, 'fr', 1);
         $this->insertRootPage(3, 'de', 1, 'CHF');
@@ -126,15 +126,15 @@ class VisibilityCurrencyMigrationTest extends TestCase
         $result = $this->migration()->run();
 
         self::assertStringStartsWith('Rebuilt the visibility projection', (string) $result->getMessage());
-        // Produkt 1 ist unübersetzt und nur in Euro bepreist: eine Zeile.
+        // Product 1 is untranslated and only priced in euros: one row.
         self::assertSame([['language' => 'de', 'currency' => 'EUR', 'pid' => 1]], $this->rows());
         self::assertFalse($this->migration()->shouldRun());
     }
 
     public function testZeilenOhneStartpunktWerdenNichtGeratenSondernAbgeraeumt(): void
     {
-        // Shop 9 gibt es nicht mehr; seine Zeilen haben keine Währung, aus der
-        // sich etwas ableiten ließe. Ein Neubau räumt sie weg.
+        // Shop 9 no longer exists; its rows have no currency from which
+        // anything could be derived. A rebuild clears them away.
         $this->catalogue();
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'variant' => 0, 'shop' => 9, 'language' => 'de', 'currency' => '', 'net' => '10.0000', 'gross' => '12.0000']);
 
@@ -147,9 +147,9 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testNebenSchonGeschriebenenZeilenWirdNeuGebautStattAktualisiert(): void
     {
-        // Steht das Ziel schon in der Tabelle, hat ein neuerer Projektorlauf
-        // geschrieben und die Zeile ohne Währung ist ein Überbleibsel. Ein
-        // UPDATE liefe in den eindeutigen Schlüssel, statt das zu sagen.
+        // If the target is already in the table, a newer projector run has
+        // written it and the row without a currency is a leftover. An UPDATE
+        // would run into the unique key instead of saying so.
         $this->catalogue();
         $this->pricedProduct(1);
         $this->projector()->rebuild(self::NOW);
@@ -167,10 +167,10 @@ class VisibilityCurrencyMigrationTest extends TestCase
 
     public function testEinStartpunktOhneWaehrungHaeltSieNichtEwigFaellig(): void
     {
-        // Hier trägt die Zeile zu Recht '': Ihr Ziel tut es auch, denn der
-        // Projektor überspringt einen Startpunkt ohne Sprache, nicht einen
-        // ohne Währung. Wäre „Zeile ohne Währung" allein das Kriterium, bliebe
-        // contao:migrate für immer fällig.
+        // Here the row rightly carries '': its target does too, because the
+        // projector skips a start point without a language, not one without a
+        // currency. If "row without currency" alone were the criterion,
+        // contao:migrate would stay due for ever.
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
         $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => '', 'fallbackLanguage' => 'de', 'country' => 'AT']);
@@ -208,7 +208,7 @@ class VisibilityCurrencyMigrationTest extends TestCase
     }
 
     /**
-     * Eine Zeile, wie contao:migrate sie vorfindet: ohne Währung.
+     * A row as contao:migrate finds it: without a currency.
      */
     private function storedRow(): void
     {
@@ -223,7 +223,7 @@ class VisibilityCurrencyMigrationTest extends TestCase
     }
 
     /**
-     * Die Projektionstabelle, wie sie vor Aufgabe 5b aussah — ohne `currency`.
+     * The projection table as it looked before task 5b — without `currency`.
      */
     private function visibilityTableBefore5b(): void
     {
@@ -245,7 +245,7 @@ class VisibilityCurrencyMigrationTest extends TestCase
     }
 
     /**
-     * tl_page, wie es vor C-1c aussah — ohne consho_currency.
+     * tl_page as it looked before C-1c — without consho_currency.
      */
     private function rootPageTableBeforeC1c(): void
     {

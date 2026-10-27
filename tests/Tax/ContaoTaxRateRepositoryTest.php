@@ -19,20 +19,20 @@ class ContaoTaxRateRepositoryTest extends TestCase
 
     protected function setUp(): void
     {
-        // Contao speichert ein `rgxp date` als Tagesbeginn in der Standard-Zeitzone.
+        // Contao stores an `rgxp date` as the start of the day in the default time zone.
         $this->previousTimezone = date_default_timezone_get();
         date_default_timezone_set(self::TIMEZONE);
 
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Aus der DCA, nicht abgeschrieben (Fall 57) — validFrom/validTo NULL-fähig wie dort.
+        // From the DCA, not copied — validFrom/validTo nullable as there.
         DcaSchema::create($this->connection, 'tl_consho_tax_rate');
         DcaSchema::create($this->connection, 'tl_consho_tax_class');
     }
 
     /**
-     * WG3: Eine Klasse „nicht steuerbar" hat in keinem Land einen Satz und
-     * braucht keinen — 0, ohne dass ein Satz angelegt ist.
+     * WG3: A "not taxable" class has a rate in no country and needs none —
+     * 0, without a rate being created.
      */
     public function testEineNichtSteuerbareKlasseHatUeberallNull(): void
     {
@@ -46,9 +46,9 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * WG3: Die Klasse „nicht steuerbar" hat keine Sätze und braucht keine.
-     * Zählte sie zu den Klassen des Shops, engte sie seine Lieferländer auf
-     * keines ein — jede Bestellung wäre an der Kasse gescheitert.
+     * WG3: The "not taxable" class has no rates and needs none. If it counted
+     * among the shop's classes, it would narrow the shop's delivery countries
+     * down to none — every order would have failed at checkout.
      */
     public function testDieNichtSteuerbareKlasseZaehltNichtZuDenKlassenDesShops(): void
     {
@@ -67,7 +67,7 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * Gemerkt wird je Anfrage — reset() liest neu.
+     * Remembered per request — reset() reads anew.
      */
     public function testDerMerkerGiltBisZumReset(): void
     {
@@ -83,9 +83,9 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * Zwei Sätze mit demselben Beginn lehnt die Maske ab; über Undo oder
-     * eine wiederhergestellte Version entstehen sie trotzdem. Dann gilt der
-     * zuletzt angelegte, nicht der Zufall der Datenbank.
+     * The form rejects two rates with the same start; through undo or a
+     * restored version they come about anyway. Then the one created last
+     * applies, not the chance of the database.
      */
     public function testBeiGleichemBeginnGiltDerZuletztAngelegte(): void
     {
@@ -99,8 +99,8 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * Eine ungespeicherte Kopie (tstamp 0) ist kein Satz — weder für den Satz
-     * noch für die Länder der Klasse.
+     * An unsaved copy (tstamp 0) is not a rate — neither for the rate nor for
+     * the countries of the class.
      */
     public function testEinEntwurfIstKeinSatz(): void
     {
@@ -122,8 +122,8 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * „Gültig bis" ist ein Datum und schließt den ganzen Tag ein — so, wie es im
-     * Gesetzestext steht. Beispiel: die deutsche Senkung 1.7.–31.12.2020.
+     * "Valid until" is a date and includes the whole day — as it is written in
+     * the legal text. Example: the German reduction 1.7.–31.12.2020.
      *
      * @return iterable<string, array{string, string|null}>
      */
@@ -147,8 +147,8 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * An den Tagen der Zeitumstellung hat der Tag 23 bzw. 25 Stunden. Eine
-     * Rechnung mit „+ 86400 Sekunden" läge dort eine Stunde daneben.
+     * On the days of the clock change the day has 23 or 25 hours. A
+     * calculation with "+ 86400 seconds" would be off by an hour there.
      *
      * @return iterable<string, array{string, string, bool}>
      */
@@ -185,8 +185,8 @@ class ContaoTaxRateRepositoryTest extends TestCase
 
     public function testReportsTheClassesWhoseRateBeginsOrEndsInTheWindow(): void
     {
-        // Ende der deutschen Senkung: 16 % gilt bis einschließlich 31.12.2020 —
-        // die Grenze liegt am 01.01.2021 um 00:00, nicht am 31.12. um 00:00.
+        // End of the German reduction: 16 % applies up to and including
+        // 31.12.2020 — the limit lies at 01.01.2021 00:00, not at 31.12. 00:00.
         $this->rate('16.0000', '2020-07-01', '2020-12-31', class: 1);
         $this->rate('19.0000', '2021-01-01', null, class: 2);
         $this->rate('7.0000', null, null, class: 3);
@@ -200,7 +200,7 @@ class ContaoTaxRateRepositoryTest extends TestCase
 
     public function testABoundaryExactlyAtTheMarkerWasAlreadyApplied(): void
     {
-        // (after, until]: Was genau am Marker lag, hat der letzte Lauf schon gesehen.
+        // (after, until]: what lay exactly at the marker, the last run has already seen.
         $this->rate('19.0000', '2021-01-01', null);
 
         self::assertSame([], $this->repository()->findClassesWithBoundaryIn($this->at('2021-01-01 00:00:00'), $this->at('2021-01-01 00:01:00')));
@@ -208,8 +208,9 @@ class ContaoTaxRateRepositoryTest extends TestCase
 
     public function testTheEndOfTheLastDayHonoursTheClockChange(): void
     {
-        // Der 25.10.2026 hat 25 Stunden. „validTo + 86400" läge um 23:00 — eine
-        // Stunde, in der der Satz noch gilt, das Brutto aber schon umgestellt wäre.
+        // 25.10.2026 has 25 hours. "validTo + 86400" would lie at 23:00 — an
+        // hour in which the rate still applies but the gross would already be
+        // switched over.
         $this->rate('20.0000', null, '2026-10-25');
 
         self::assertSame([], $this->repository()->findClassesWithBoundaryIn($this->at('2026-10-25 22:00:00'), $this->at('2026-10-25 23:59:59')));
@@ -222,7 +223,7 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * Legt einen Satz so an, wie das Backend ihn speichert: Datum als Tagesbeginn.
+     * Creates a rate the way the backend stores it: the date as the start of the day.
      */
     private function rate(string $rate, string|null $validFrom, string|null $validTo, int $class = 1, int $tstamp = 1): void
     {
@@ -242,7 +243,7 @@ class ContaoTaxRateRepositoryTest extends TestCase
     }
 
     /**
-     * SQLite liefert NUMERIC als Zahl ohne Nachkommastellen zurück, MySQL als DECIMAL-String.
+     * SQLite returns NUMERIC as a number without decimal places, MySQL as a DECIMAL string.
      */
     private function normalised(string|null $rate): string|null
     {

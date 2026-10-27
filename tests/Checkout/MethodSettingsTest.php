@@ -9,7 +9,7 @@ class MethodSettingsTest extends TestCase
 {
     public function testDieAuswahlBehaeltIhreReihenfolge(): void
     {
-        // checkboxWizard speichert die IDs als Zeichenketten in der gezogenen Reihenfolge.
+        // checkboxWizard stores the IDs as strings in the order they were dragged into.
         self::assertSame([5, 3, 8], MethodSettings::selectedIds(serialize(['5', '3', '8'])));
     }
 
@@ -30,8 +30,8 @@ class MethodSettingsTest extends TestCase
 
     public function testEineJsonListeGiltNichtAlsEinstellungen(): void
     {
-        // '["a","b"]' dekodiert zu einem gültigen PHP-Array, aber ohne
-        // Feldnamen — keine kaputte Config, nur nicht diese hier.
+        // '["a","b"]' decodes to a valid PHP array, but without
+        // field names — not a broken config, just not this one.
         self::assertSame([], MethodSettings::decode('["a","b"]'));
     }
 }

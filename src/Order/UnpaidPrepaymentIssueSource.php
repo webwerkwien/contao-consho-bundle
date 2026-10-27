@@ -13,8 +13,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
 
 /**
- * Prepayment orders still unpaid after two weeks (spec G, E15; Michael,
- * 2026-10-08: "E-Punkte passen").
+ * Prepayment orders still unpaid after two weeks (spec G, E15).
  *
  * An unpaid prepayment order holds its stock — and its keys — until the
  * operator cancels it; Consho cancels nothing by itself. Prepayment has no

@@ -1,65 +1,65 @@
 # Consho
 
-E-Commerce für Contao. Mehrere Shops in einer Installation, für EU-Recht gebaut.
+E-commerce for Contao. Several shops in one installation, built for EU law.
 
-> **Version 0.x.** Consho ist vollständig benutzbar, aber noch vor 1.0: Schnittstellen und Datenmodell können sich
-> zwischen Minor-Versionen ändern. Vor jedem Update den [CHANGELOG](CHANGELOG.md) lesen.
+> **Version 0.x.** Consho is fully usable, but not yet at 1.0: interfaces and the data model may change between
+> minor versions. Read the [CHANGELOG](CHANGELOG.md) before every update.
 
-## Was Consho kann
+## What Consho does
 
-Der Kern ist frei (MIT) und betreibt einen vollständigen Shop:
+The core is free (MIT) and runs a complete shop:
 
-| Bereich | |
+| Area | |
 |---|---|
-| **Katalog** | Produkte mit Varianten, Eigenschaften und Zusatzfeldern; Liste, Filter, Landingpages, Detailseite, Sitemap, JSON-LD; Grundpreis, Herstellerangaben, GARAN-Label |
-| **Warenkorb und Checkout** | Gastbestellung, Kundengruppen, Netto für Geschäftskunden, Reverse Charge mit VIES-Prüfung; Button-Lösung, AGB-Zustimmung, Widerrufsbelehrung |
-| **Versand und Zahlung** | Versandarten mit Gewichtsstaffel, Ländern und Sperrgut; Vorkasse, „Auf Rechnung", Nachnahme; Andockstellen für Zahlungsmodule und Paketdienste |
-| **Nach dem Kauf** | Rechnung als PDF und HTML (mit Giro-Code), Stornorechnung und Rechnungskorrektur, Lieferschein je Paket (mit eigenem Nummernkreis), E-Rechnung ZUGFeRD EN 16931 an Geschäftskunden; Mails; Bestellseite über Token; Widerrufsfunktion (§ 356a BGB, § 13a FAGG); Kundenkonto |
-| **Digitale Güter und Abos** | Dateien und Lizenzschlüssel, Laufzeiten, Abos mit Aboregeln, Folgebestellungen, Kündigungsschaltfläche, Pausen |
-| **Preise** | Aktionen mit Streichpreis nach § 9a PrAG / § 11 PAngV, Rabattregeln, Rabattcodes, Wertgutscheine |
-| **Lager** | Bestand, Verfügbarkeitsanzeige, Benachrichtigung bei Wiederverfügbarkeit, Einkaufslisten |
-| **Steuer** | Steuerklassen und -sätze je Land, Steuer im Bestimmungsland mit Schwellen-Zähler und Quartalsexport (EU-OSS) |
-| **DSGVO** | Auskunft als ZIP, Löschantrag, Anonymisieren nach Ablauf der Aufbewahrungsfrist |
-| **Betrieb** | Dashboard mit offenen Aufgaben und Befunden, Einrichtungsseite, `consho:check` |
+| **Catalogue** | Products with variants, properties and custom fields; list, filter, landing pages, detail page, sitemap, JSON-LD; unit price, manufacturer details, GARAN label |
+| **Basket and checkout** | Guest orders, customer groups, net prices for business customers, reverse charge with VIES check; order button ("Button-Lösung"), consent to the terms and conditions, withdrawal information |
+| **Shipping and payment** | Shipping methods with weight tiers, countries and bulky goods; prepayment, on account, cash on delivery; extension points for payment modules and parcel services |
+| **After the purchase** | Invoice as PDF and HTML (with Giro-Code), cancellation invoice and invoice correction, delivery note per parcel (with its own number range), e-invoice ZUGFeRD EN 16931 for business customers; mails; order page via token; withdrawal function (§ 356a BGB, § 13a FAGG); customer account |
+| **Digital goods and subscriptions** | Files and licence keys, terms, subscriptions with subscription rules, follow-up orders, cancellation button, pauses |
+| **Prices** | Promotions with strike-through price under § 9a PrAG / § 11 PAngV, discount rules, discount codes, gift vouchers |
+| **Stock** | Stock levels, availability display, back-in-stock notification, purchase lists |
+| **Tax** | Tax classes and rates per country, tax in the country of destination with threshold counter and quarterly export (EU OSS) |
+| **GDPR** | Data access request as ZIP, erasure request, anonymisation once the retention period has expired |
+| **Operations** | Dashboard with open tasks and findings, setup page, `consho:check` |
 
-Consho setzt keine Rechtstexte. Der Kern bringt mit, was technisch nötig ist — Felder, Prüfungen, das Einfrieren beim
-Kauf —, den Inhalt verantwortet der Betreiber.
+Consho does not supply legal texts. The core provides what is technically required — fields, checks, freezing at
+the time of purchase — while the operator is responsible for the content.
 
-**Kostenpflichtige Erweiterungen** sind in Vorbereitung, als erste **Consho Connect** (Produktfeeds, KI-lesbarer
-Katalog, Schreibbefehle für [contao-ai](https://github.com/webwerkwien/contao-ai-core-bundle)). Was einmal im freien
-Kern war, bleibt darin.
+**Paid extensions** are in preparation, the first being **Consho Connect** (product feeds, AI-readable
+catalogue, write commands for [contao-ai](https://github.com/webwerkwien/contao-ai-core-bundle)). Whatever was once
+in the free core stays there.
 
-## Grundsätze
+## Principles
 
 | | |
 |---|---|
-| **Contao zuerst** | Bilder, Dateien, DCA, Versionierung, Voter, Mitglieder, Mehrsprachigkeit, Routing und Cache kommen aus Contao, nicht nachgebaut |
-| **Contao 6** | Nichts, was Contao 6 widerspricht: nur Twig, kein Input-Encoding, kein `$GLOBALS['TL_CONFIG']` |
-| **Barrierefreiheit** | WCAG 2.1 AA als Ziel für alle Frontend-Teile |
+| **Contao first** | Images, files, DCA, versioning, voters, members, multilingual content, routing and cache come from Contao, not rebuilt |
+| **Contao 6** | Nothing that conflicts with Contao 6: Twig only, no input encoding, no `$GLOBALS['TL_CONFIG']` |
+| **Accessibility** | WCAG 2.1 AA as the target for all front-end parts |
 
-## Anforderungen
+## Requirements
 
-- PHP 8.4 mit `gd`, `sodium` und `zip`
+- PHP 8.4 with `gd`, `sodium` and `zip`
 - Contao 5.7
 
 ## Installation
 
-Im Contao Manager nach `webwerkwien/contao-consho-bundle` suchen, oder:
+Search for `webwerkwien/contao-consho-bundle` in the Contao Manager, or:
 
 ```bash
 composer require webwerkwien/contao-consho-bundle
 ```
 
-Danach die Datenbank aktualisieren (`contao:migrate`) und im Backend unter **Consho → Dashboard → Einrichtung**
-beginnen.
+Then update the database (`contao:migrate`) and start in the back end under **Consho → Dashboard → Einrichtung**
+(Setup).
 
-## Entwicklung
+## Development
 
 ```bash
 composer install
 composer ci        # PHPStan + PHPUnit
 ```
 
-## Lizenz
+## Licence
 
-MIT — siehe [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

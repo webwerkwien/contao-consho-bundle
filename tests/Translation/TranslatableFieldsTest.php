@@ -9,9 +9,9 @@ class TranslatableFieldsTest extends TestCase
 {
     public function testProductHasAllEightFields(): void
     {
-        // metaDescription seit 2026-09-14, neben dem Kurztext, auf den sie
-        // zurückfällt. Die Reihenfolge ist die der Übersetzungsbereiche.
-        // customFieldValues seit ZW-3: die Texte der Zusatzfelder als JSON.
+        // metaDescription next to the short text it falls back to. The order
+        // is that of the translation sections.
+        // customFieldValues since ZW-3: the texts of the custom fields as JSON.
         self::assertSame(
             ['title', 'alias', 'teaser', 'metaDescription', 'description', 'safetyWarnings', 'safetyInformation', 'customFieldValues'],
             TranslatableFields::of('tl_consho_product'),

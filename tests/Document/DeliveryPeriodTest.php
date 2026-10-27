@@ -26,8 +26,8 @@ class DeliveryPeriodTest extends TestCase
     }
 
     /**
-     * Donnerstag, 24.09.2026: 2 Werktage → Montag, 5 → Donnerstag darauf.
-     * Das Wochenende zählt nicht.
+     * Thursday, 24.09.2026: 2 working days → Monday, 5 → the Thursday after.
+     * The weekend does not count.
      */
     public function testWerktageUeberspringenDasWochenende(): void
     {
@@ -35,9 +35,9 @@ class DeliveryPeriodTest extends TestCase
     }
 
     /**
-     * Die Zeitzone der Installation entscheidet über den Tag: 23:30 Uhr in
-     * Wien ist in UTC noch derselbe Abend, um 00:30 Uhr schon der nächste Tag
-     * — gezählt wird ab dem Wiener Tag.
+     * The time zone of the installation decides the day: 23:30 in Vienna is
+     * still the same evening in UTC, at 00:30 it is already the next day
+     * — counting starts from the Viennese day.
      */
     public function testGezaehltWirdAbDemTagDerInstallation(): void
     {

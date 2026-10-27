@@ -25,9 +25,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Notification\SpyTransport;
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * D-6, T4: „Neuen Link anfordern". Nummer UND Adresse, Link nur an die
- * Adresse der Bestellung, dieselbe Antwort für Treffer und Fehlgriff, Sperre
- * je IP und je Adresse.
+ * D-6, T4: "Request a new link". Number AND address, the link only to the
+ * order's address, the same answer for a hit and a miss, a limit per IP and
+ * per address.
  */
 final class OrderLinkRequestTest extends TestCase
 {
@@ -127,8 +127,8 @@ final class OrderLinkRequestTest extends TestCase
     }
 
     /**
-     * Fable-Review D-6, K2: Auch wenn die IP schon gesperrt ist, zählt die
-     * Adresse mit — sonst läse ein Angreifer aus dem Limit, wann er zählt.
+     * D-6: even when the IP is already blocked, the address is counted too —
+     * otherwise an attacker could read from the limit when his attempts count.
      */
     public function testDieAdresseZaehltAuchBeiGesperrterIp(): void
     {

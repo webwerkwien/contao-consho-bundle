@@ -46,7 +46,7 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\OrderPageWithdrawal;
 final class NoticeParamIssueSource implements ConfigurationIssueSource
 {
     /**
-     * Every parameter the shop reads from the address (review of C-10). The
+     * Every parameter the shop reads from the address (C-10). The
      * subscriber strips them all alike, and each one fails silently in its
      * own place: the refusal at the buy button, the checkout step (the
      * checkout never leaves step one), the purchase outcome, and the token of
@@ -63,7 +63,7 @@ final class NoticeParamIssueSource implements ConfigurationIssueSource
         'consho_ordered',
         OrderController::TOKEN_PARAM,
 
-        // C-11 (review, finding 2): the test provider's page and its signed
+        // C-11: the test provider's page and its signed
         // return. Stripped, the page is a 404 and every return reads as
         // "nothing received yet". Listed although a real shop never uses
         // them: the recommendation "consho_.*" covers them either way, and a
@@ -102,8 +102,8 @@ final class NoticeParamIssueSource implements ConfigurationIssueSource
      * A `string` type hint here took the whole back end down with a TypeError
      * on the very first request after the deploy — this service is built for
      * the system messages in the header menu, so every page died, not just the
-     * start page. Found on c5 on 2026-09-21; no test saw it, because tests
-     * construct the class directly and never build the container.
+     * start page. No test saw it, because tests construct the class directly
+     * and never build the container.
      */
     /**
      * @param iterable<object>                 $handlers payment modules may name their providers' return
@@ -123,7 +123,7 @@ final class NoticeParamIssueSource implements ConfigurationIssueSource
          * and array_filter, and NOTHING else.
          *
          * ⚠️ Trimming here would be the friendlier reading and the wrong one
-         * (found in the C-3c review). Contao does not trim, so the everyday
+         * (C-3c). Contao does not trim, so the everyday
          * spelling "page, consho_notice" becomes the pattern "^(?: consho_
          * notice)$" — with the space inside — which does not match, and the
          * parameter IS stripped. Reporting nothing there would leave the

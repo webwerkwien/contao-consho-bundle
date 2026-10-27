@@ -7,8 +7,8 @@ namespace Webwerkwien\ContaoConshoBundle\Checkout;
  *
  * The law wants a label that names the obligation to pay unmistakably, and it
  * is not a formality: without one no contract comes about at all. So the
- * choices are an enum in code, not free text in a column — Michael, 2026-09-22:
- * "feste Auswahl am Shop".
+ * choices are an enum in code, not free text in a column: a fixed
+ * choice at the shop.
  *
  * Each case is a translation key, so the wording follows the language of the
  * page, not the language the operator happened to configure in.
@@ -29,11 +29,10 @@ enum BuyButtonLabel: string
 
     /*
      * 🔴 There WAS a third case, "Kaufen", and the comment beside it cited
-     * "BGH VIII ZR 244/16" as having accepted it. The review of 2026-09-22
-     * looked the judgment up: it is about a stand at a trade fair and § 312b
-     * BGB, and has nothing to do with the button solution. **I invented the
-     * citation** — the same mistake as the Twig function of 2026-09-21, but in
-     * a legal comment, where a fabricated source is worse: an operator picking
+     * "BGH VIII ZR 244/16" as having accepted it. The judgment is about a
+     * stand at a trade fair and § 312b BGB, and has nothing to do with the
+     * button solution. **The citation was invented** — and in a legal comment a
+     * fabricated source is worse than anywhere else: an operator picking
      * from a vetted list would have ended up with a button that concludes no
      * contract at all.
      *

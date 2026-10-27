@@ -85,8 +85,7 @@ final class OrderPlacer implements OrderPlacerInterface
         private readonly DocumentArchiverInterface $archiver,
         private readonly ShopLegalRequirements $requirements,
         // Required, not nullable (Abo-3): an optional one would be missing in
-        // silence, and every subscription bought would be one nobody records
-        // (Prüfungsnotiz, Regel 25 and Fall 42).
+        // silence, and every subscription bought would be one nobody records.
         private readonly SubscriptionRecorderInterface $subscriptions,
         // Block G (G4): required for the same reason.
         private readonly StockAllocation $stock,
@@ -117,12 +116,12 @@ final class OrderPlacer implements OrderPlacerInterface
         int $now,
     ): PlacedOrder {
         /*
-         * READ COMMITTED for the purchase (Block G, review B2): a purchase that
+         * READ COMMITTED for the purchase (Block G): a purchase that
          * waited for the lock on a key pool's stock row must count the codes
          * the one before it took. Under MySQL's default REPEATABLE READ its
          * plain reads would still see the snapshot from before the wait; the
          * locking reads that would see past it deadlock with every concurrent
-         * purchase (second review). Locking reads elsewhere in the click
+         * purchase. Locking reads elsewhere in the click
          * (basket, number range, stock) behave the same under both.
          *
          * Only where no transaction is open: the level cannot change inside one.
@@ -244,7 +243,7 @@ final class OrderPlacer implements OrderPlacerInterface
              * Two tokens for one page (C-10). The redirect after this click
              * and the link in the confirmation used to share one, so a click
              * on the order page right after buying "confirmed" an address
-             * whose mail nobody had opened — found at the acceptance. Only
+             * whose mail nobody had opened. Only
              * the mail's token proves the mailbox.
              */
             $viewToken = $this->tokens->issue($orderId, TokenPurpose::ViewOrder);

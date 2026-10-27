@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Mail\StartPointDomainIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abnahme Abo-4: Der Link in der Mail aus dem Befehl zeigte auf localhost —
- * der Startpunkt hat keine Domain, und auf der Kommandozeile gibt es keinen
- * Request, aus dem der Host käme.
+ * Abo-4: The link in the mail from the command pointed to localhost —
+ * the start point has no domain, and on the command line there is no
+ * request the host could come from.
  */
 final class StartPointDomainIssueSourceTest extends TestCase
 {
@@ -27,7 +27,7 @@ final class StartPointDomainIssueSourceTest extends TestCase
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
     }
 
-    public function testDerFallAusDerAbnahmeAbo4(): void
+    public function testDerFallAusAbo4(): void
     {
         $this->root(1, 'Test-Startpunkt', '');
         $this->root(1, 'Test-Startpunkt FR', '');

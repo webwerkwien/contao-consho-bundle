@@ -13,9 +13,8 @@
  * notDeletable. Editing would be a way around the frozen values. Handling a
  * cancellation or a change comes with Abo-6/Abo-7 as actions of their own.
  *
- * `subscriptionNumber` is derived from the first order (P19 = B, Michael
- * 2026-09-29): the order number and the line's place among the order's
- * subscription lines, "WEB-00083-1". A contract number, neither an order nor
+ * `subscriptionNumber` is derived from the first order (P19): the order number and the line's place among the order's
+ * subscription lines, "SHOP-00083-1". A contract number, neither an order nor
  * an invoice number — hence no number range of its own.
  */
 $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
@@ -126,7 +125,7 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'default' => 0],
         ],
         /*
-         * `reference` on the stored values below (acceptance 2026-09-29): the
+         * `reference` on the stored values below: the
          * details showed "year", "indefinite", "content". Contao's value
          * formatter reads the reference without options, so the fields stay
          * text inputs and nothing offers a choice.
@@ -337,7 +336,7 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy'],
         ],
-        // doNotShow (review Abo-4b, H1): "Details" never gets the value; the
+        // doNotShow (Abo-4b): "Details" never gets the value; the
         // listener adds "vorhanden"/"keines" as a row of its own.
         'mandate' => [
             'eval' => ['doNotShow' => true],

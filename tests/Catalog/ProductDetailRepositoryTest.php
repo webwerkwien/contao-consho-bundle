@@ -12,12 +12,12 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductDetailRow;
 use Webwerkwien\ContaoConshoBundle\Catalog\PropertyView;
 
 /**
- * Gegen eine echte Datenbank — das Repository ist eine SQL-Abfrage, und eine
- * Zusicherung über den Abfragetext bewiese nichts über ihr Ergebnis.
+ * Against a real database — the repository is an SQL query, and an
+ * assertion about the query text would prove nothing about its result.
  *
- * Das Repository liest Zeilen, es entscheidet nichts: keine Sichtbarkeit (das
- * haben Produktseite und VariantRepository schon getan), keine Vererbung (das
- * ist ProductDetailAssembler), keine Sicherheitstexte (Task 8).
+ * The repository reads rows, it decides nothing: no visibility (product
+ * page and VariantRepository have already done that), no inheritance (that
+ * is ProductDetailAssembler), no safety texts (ProductSafetyResolver).
  */
 class ProductDetailRepositoryTest extends TestCase
 {
@@ -31,13 +31,13 @@ class ProductDetailRepositoryTest extends TestCase
         $this->createCatalogSchema($this->connection);
     }
 
-    // ── Standardsprache ──────────────────────────────────────────────────
+    // ── Default language ─────────────────────────────────────────────────
 
     public function testInTheDefaultLanguageNoJoinIsBuilt(): void
     {
-        // 🔴 Ohne Übersetzungstabelle. Entstünde ein Join, bräche die Abfrage mit
-        // „no such table" ab — ein einsprachiger Shop bekommt die Abfrage ohne
-        // Übersetzung, für Produkt, Typ und Eigenschaften.
+        // 🔴 Without a translation table. If a join were created, the query would
+        // abort with "no such table" — a single-language shop gets the query without
+        // translation, for product, type and properties.
         $this->connection->executeStatement('DROP TABLE tl_consho_translation');
         $this->insertProductType(['id' => 3, 'title' => 'Bitter']);
         $this->insertProduct(['id' => 1, 'title' => 'Schwedenbitter', 'productType' => 3]);
@@ -53,7 +53,7 @@ class ProductDetailRepositoryTest extends TestCase
         }
     }
 
-    // ── Texte in der Sprache der Seite ───────────────────────────────────
+    // ── Texts in the language of the page ────────────────────────────────
 
     public function testTitleTeaserAndDescriptionAreTranslated(): void
     {
@@ -78,8 +78,8 @@ class ProductDetailRepositoryTest extends TestCase
 
     public function testAnEmptyTranslatedTeaserFallsBackToTheMainRow(): void
     {
-        // Eine Übersetzungszeile mit leerem Feld ist keine Übersetzung — ohne
-        // NULLIF nähme COALESCE die leere Zeichenkette.
+        // A translation row with an empty field is no translation — without
+        // NULLIF, COALESCE would take the empty string.
         $this->insertProduct(['id' => 1, 'title' => 'Schwedenbitter', 'teaser' => 'Ein Bitter.', 'description' => '<p>Kräuter.</p>']);
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'title' => 'Amer suédois', 'teaser' => '']);
 
@@ -87,7 +87,7 @@ class ProductDetailRepositoryTest extends TestCase
 
         self::assertNotNull($row);
         self::assertSame('Ein Bitter.', $row->teaser);
-        // description ist in der Übersetzung NULL — ebenfalls Rückfall.
+        // description is NULL in the translation — also a fallback.
         self::assertSame('<p>Kräuter.</p>', $row->description);
     }
 
@@ -99,14 +99,14 @@ class ProductDetailRepositoryTest extends TestCase
 
         self::assertNotNull($row);
         self::assertSame('Schwedenbitter', $row->title);
-        // teaser, metaDescription und description sind in der DB NULL — die
-        // Zeile trägt nie null.
+        // teaser, metaDescription and description are NULL in the DB — the
+        // row never carries null.
         self::assertSame('', $row->teaser);
         self::assertSame('', $row->metaDescription);
         self::assertSame('', $row->description);
     }
 
-    // ── Meta-Beschreibung: ein Text, fällt zurück wie der Kurztext ───────
+    // ── Meta description: one text, falls back like the teaser ───────────
 
     public function testTheMetaDescriptionIsReadInTheLanguageOfThePage(): void
     {
@@ -125,7 +125,7 @@ class ProductDetailRepositoryTest extends TestCase
 
     public function testAnUntranslatedMetaDescriptionFallsBackToTheDefaultLanguage(): void
     {
-        // Wie beim Kurztext: Die Übersetzungszeile gibt es, das Feld ist leer.
+        // As with the teaser: the translation row exists, the field is empty.
         $this->insertProduct(['id' => 1, 'title' => 'Schwedenbitter', 'teaser' => 'Ein Bitter.', 'metaDescription' => 'Schwedenbitter nach Originalrezept']);
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'title' => 'Amer suédois', 'teaser' => 'Un amer.', 'metaDescription' => '']);
 
@@ -138,9 +138,9 @@ class ProductDetailRepositoryTest extends TestCase
 
     public function testSafetyTextsAreNotReadHere(): void
     {
-        // GPSR hat eine andere Regel als die Texte — Rückfall verboten
-        // (Mehrsprachigkeit 4) — und einen eigenen Ort: ProductSafetyResolver,
-        // Task 8. Stünde das Feld hier, läse es irgendwann jemand mit coalesce().
+        // GPSR has a different rule from the texts — fallback forbidden
+        // (multilingualism 4) — and a place of its own: ProductSafetyResolver.
+        // If the field were here, someone would eventually read it with coalesce().
         $this->insertProduct(['id' => 1, 'title' => 'Schwedenbitter', 'safetyWarnings' => '<p>Enthält Alkohol.</p>']);
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'title' => 'Amer suédois']);
 
@@ -151,7 +151,7 @@ class ProductDetailRepositoryTest extends TestCase
         self::assertFalse(property_exists(ProductDetail::class, 'safetyInformation'));
     }
 
-    // ── Die übrigen Felder ───────────────────────────────────────────────
+    // ── The remaining fields ─────────────────────────────────────────────
 
     public function testTheRowCarriesEveryFieldThePageNeeds(): void
     {
@@ -184,7 +184,7 @@ class ProductDetailRepositoryTest extends TestCase
         self::assertSame('SB-250', $row->sku);
         self::assertSame('4006381333931', $row->gtin);
         self::assertSame('SB250', $row->mpn);
-        // Reihenfolge wie gespeichert — das erste Bild ist eine Aussage über den Artikel.
+        // Order as stored — the first image is a statement about the item.
         self::assertSame($uuids, $row->images);
         self::assertSame('ml', $row->unit);
         self::assertTrue(BigDecimal::of($row->purchaseUnit)->isEqualTo('250'));
@@ -198,8 +198,8 @@ class ProductDetailRepositoryTest extends TestCase
 
     public function testUnsetColumnsCarryTheirDatabaseDefaults(): void
     {
-        // Nur der Titel geschrieben: alles andere ist das, was die DB selbst
-        // hineinlegt — gerade minPurchase/purchaseSteps mit 1, nicht 0.
+        // Only the title written: everything else is what the DB puts in
+        // itself — notably minPurchase/purchaseSteps with 1, not 0.
         $this->insertProduct(['id' => 1, 'title' => 'Schwedenbitter']);
 
         $row = $this->repository()->row(1);
@@ -231,7 +231,7 @@ class ProductDetailRepositoryTest extends TestCase
         self::assertNull($this->repository()->row(99, 'fr', 'en'));
     }
 
-    // ── Produkttyp ───────────────────────────────────────────────────────
+    // ── Product type ─────────────────────────────────────────────────────
 
     public function testTheProductTypeTitleIsTranslatedAndItsPartialComesAlong(): void
     {
@@ -243,14 +243,14 @@ class ProductDetailRepositoryTest extends TestCase
 
         self::assertNotNull($row);
         self::assertSame('Couleur', $row->productTypeTitle);
-        // Die Kennung ist sprachneutral — sie läuft nie durch coalesce().
+        // The identifier is language-neutral — it never runs through coalesce().
         self::assertSame('consho_product_type/farbe', $row->detailPartial);
     }
 
     public function testATranslationOfTheProductWithTheTypesIdDoesNotLabelTheType(): void
     {
-        // Produkt 3 und Typ 3 teilen die ID. Ohne ptable im Join trüge der Typ
-        // den übersetzten Titel des Produkts.
+        // Product 3 and type 3 share the ID. Without ptable in the join the type
+        // would carry the product's translated title.
         $this->insertProductType(['id' => 3, 'title' => 'Farbe']);
         $this->insertProduct(['id' => 3, 'title' => 'Leinöl', 'productType' => 3]);
         $this->insertTranslation(['pid' => 3, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'title' => 'Huile de lin']);
@@ -262,12 +262,12 @@ class ProductDetailRepositoryTest extends TestCase
         self::assertSame('Farbe', $row->productTypeTitle);
     }
 
-    // ── Eigenschaften ────────────────────────────────────────────────────
+    // ── Properties ───────────────────────────────────────────────────────
 
     public function testPropertiesOfAGroupThatIsNotFilterableAreShown(): void
     {
-        // Anders als der Filter: Die Detailseite zeigt, was der Artikel IST,
-        // auch aus Gruppen, nach denen niemand filtern soll.
+        // Unlike the filter: the detail page shows what the item IS,
+        // also from groups nobody is supposed to filter by.
         $this->property(group: 5, groupTitle: 'Sorte', option: 51, optionTitle: 'Kräuterbitter', product: 1, filterable: false);
         $this->insertTranslation(['pid' => 5, 'ptable' => 'tl_consho_property_group', 'language' => 'fr', 'title' => 'Variété']);
         $this->insertTranslation(['pid' => 51, 'ptable' => 'tl_consho_property_option', 'language' => 'fr', 'title' => 'Amer aux herbes']);
@@ -304,15 +304,15 @@ class ProductDetailRepositoryTest extends TestCase
 
         $properties = $this->repository()->properties(1);
 
-        // Gelb ist nicht zugeordnet; sorting kollidiert bei Rot/Grün — dann id.
+        // Gelb is not assigned; sorting collides for Rot/Grün — then id.
         self::assertCount(1, $properties);
         self::assertSame(['Rot', 'Grün', 'Blau'], $properties[0]->values);
     }
 
     public function testGroupsComeByTheirLabelInThePagesLanguage(): void
     {
-        // Gruppen haben kein sorting — wie im Filter entscheidet die Beschriftung,
-        // die der Besucher liest, dann id.
+        // Groups have no sorting — as in the filter, the label the visitor
+        // reads decides, then id.
         $this->property(group: 5, groupTitle: 'Volumen', option: 51, optionTitle: '250 ml', product: 1);
         $this->property(group: 6, groupTitle: 'Farbe', option: 61, optionTitle: 'Rot', product: 1);
         $this->property(group: 7, groupTitle: 'Größe', option: 71, optionTitle: 'M', product: 1);
@@ -324,8 +324,8 @@ class ProductDetailRepositoryTest extends TestCase
 
     public function testOnlyTheProductsOwnPropertiesAreRead(): void
     {
-        // tl_consho_product_property, nicht tl_consho_product_option: die Achse
-        // einer Variante ist keine Eigenschaft des Produkts.
+        // tl_consho_product_property, not tl_consho_product_option: the axis
+        // of a variant is not a property of the product.
         $this->property(group: 5, groupTitle: 'Sorte', option: 51, optionTitle: 'Kräuterbitter', product: 1);
         $this->insertPropertyOption(['id' => 52, 'pid' => 5, 'title' => 'Magenbitter']);
         $this->insertProductProperty(['pid' => 2, 'optionId' => 52]);
@@ -343,7 +343,7 @@ class ProductDetailRepositoryTest extends TestCase
         self::assertSame([], $this->repository()->properties(1, 'fr', 'en'));
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     private function repository(): ProductDetailRepository
     {

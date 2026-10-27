@@ -25,7 +25,7 @@ class ShippingMethodTypesTest extends TestCase
 
     public function testEinUnbekannterTypWirftStattNullZuLiefern(): void
     {
-        // Ein deinstalliertes Modul hinterlässt Arten mit seinem Schlüssel.
+        // An uninstalled module leaves types with its key behind.
         $this->expectException(UnknownMethodType::class);
 
         $this->types()->get('dhl');
@@ -33,7 +33,7 @@ class ShippingMethodTypesTest extends TestCase
 
     public function testRegisterUndSchnittstelleNennenDenselbenTag(): void
     {
-        // Zwei Zeichenketten, eine Bedeutung: weicht eine ab, ist das Register leer.
+        // Two strings, one meaning: if one deviates, the registry is empty.
         $tag = (new \ReflectionClass(ShippingMethodTypeInterface::class))->getAttributes(AutoconfigureTag::class)[0]->getArguments()[0];
         $parameter = (new \ReflectionMethod(ShippingMethodTypes::class, '__construct'))->getParameters()[0];
         $locator = $parameter->getAttributes(AutowireLocator::class)[0]->getArguments();

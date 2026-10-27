@@ -67,9 +67,9 @@ class CancellationTermTest extends TestCase
     }
 
     /**
-     * Fable-Review Variante A, S1: Eine Altregel „jederzeit kündbar" ohne
-     * monatliche Zahlung endet am Laufzeitende (SubscriptionLifecycle) — die
-     * späte Kündigung darf kein Ende danach versprechen.
+     * An old rule "cancellable at any time" without monthly payment ends at
+     * the end of the term (SubscriptionLifecycle) — the late cancellation
+     * must not promise an end after that.
      */
     public function testEineAltregelOhneMonatlicheZahlungEndetAmLaufzeitende(): void
     {
@@ -120,8 +120,8 @@ class CancellationTermTest extends TestCase
     }
 
     /**
-     * Das Formular fragt einen Tag (00:00). „Zum 15.01." bei einem Ende am
-     * 15.01. um 10:00 ist das Ende selbst — kein früherer Wunsch.
+     * The form asks for a day (00:00). "As of 15.01." for an end on 15.01.
+     * at 10:00 is the end itself — not an earlier wish.
      */
     public function testDerWunschtagDesFruehestmoeglichenEndesIstDiesesEnde(): void
     {
@@ -132,7 +132,7 @@ class CancellationTermTest extends TestCase
         self::assertSame(self::at('2027-01-15 10:00'), $date->effectiveAt);
         self::assertFalse($date->earliestApplied);
 
-        // Gegenprobe: der Vortag ist früher und wird gesagt.
+        // Counter-check: the day before is earlier and is stated.
         self::assertTrue(self::term()->ordinary($row, self::at('2026-06-01 10:00'), self::at('2027-01-14 00:00'))->earliestApplied);
     }
 

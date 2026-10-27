@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Order\StatusColour;
 
 /**
  * The three symbols of a withdrawal (D-3, F12) — the order list's three
- * turned round. Michael, 2026-09-27: „die icons machen sinn statt Versand
- * Rückversand, statt zahlung Rückzahlung und gesamt".
+ * turned round: return shipment instead of shipment, refund instead
+ * of payment, and the whole.
  *
  *  - state (undo):  received/accepted orange, OVERDUE red, rejected grey,
  *                   refunded green
@@ -104,7 +104,7 @@ class WithdrawalSignals
         $returned = BigDecimal::of((string) (($sums['returned'] ?? null) ?: '0'));
 
         // Undecided, nothing is accepted yet — "not required" would say more
-        // than is known (abnahme D-3).
+        // than is known (D-3).
         if ('received' === ($withdrawal['state'] ?? 'received')) {
             return [StatusColour::Open, 'pending'];
         }

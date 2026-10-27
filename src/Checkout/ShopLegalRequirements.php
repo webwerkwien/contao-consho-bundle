@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\EeaStates;
 /**
  * Which legal texts a shop MUST have before it may sell (D-2, decision E1).
  *
- * Michael, 2026-09-27: "Sperre bei AGB ist schon falsch, man muss keine
- * haben. Sonst nur sperrend, wenn man in der EU Betreiber ist."
+ * Terms are never required; the other texts block only where the
+ * operator is established in the EU.
  *
  *  - Terms: only where the shop asks the buyer to agree to them
  *    (`termsRequired`). A tick box for nothing is the one case a missing text

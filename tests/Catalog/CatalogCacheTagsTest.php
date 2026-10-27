@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\CatalogCacheTags;
 
 /**
- * Produkt 7 mit Variante 8, Preis 20 am Produkt, Preis 21 an der Variante.
+ * Product 7 with variant 8, price 20 on the product, price 21 on the variant.
  */
 class CatalogCacheTagsTest extends TestCase
 {
@@ -35,7 +35,7 @@ class CatalogCacheTagsTest extends TestCase
 
     public function testAVariantInvalidatesThePageOfItsMainProduct(): void
     {
-        // Der Kern hängt nur contao.db.tl_consho_product.8 an — die Detailseite trägt die 7.
+        // The core only attaches contao.db.tl_consho_product.8 — the detail page carries the 7.
         self::assertSame([CatalogCacheTags::LISTINGS, 'contao.db.tl_consho_product.7'], $this->tags()->forProduct(8));
     }
 
@@ -49,7 +49,7 @@ class CatalogCacheTagsTest extends TestCase
     {
         self::assertSame([CatalogCacheTags::LISTINGS, 'contao.db.tl_consho_product.7'], $this->tags()->forPrice(20));
 
-        // Der Kern hängt über ptable den Tag der VARIANTE an, nicht den des Hauptprodukts.
+        // Via ptable the core attaches the tag of the VARIANT, not that of the main product.
         self::assertSame([CatalogCacheTags::LISTINGS, 'contao.db.tl_consho_product.7'], $this->tags()->forPrice(21));
     }
 

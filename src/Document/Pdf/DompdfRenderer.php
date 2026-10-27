@@ -98,8 +98,7 @@ final class DompdfRenderer implements PdfRendererInterface
      * vendor/. dompdf reads it once, when Dompdf is constructed
      * (FontMetrics::loadFontFamilies()).
      *
-     * 🔴 Written ONCE and atomically, not per rendering (Fable review
-     * 2026-09-24). The first version called setFontFamily() ten times per
+     * 🔴 Written ONCE and atomically, not per rendering. The first version called setFontFamily() ten times per
      * PDF, and each call rewrites the file with a plain file_put_contents.
      * Two invoices rendered at the same moment — two purchases, both archiving
      * — and one process could read a half-written file, get `null` as its

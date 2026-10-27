@@ -6,7 +6,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
 
 /**
  * When a listing that follows the address answers 404
- * (docs/block-b-katalog-frontend.md, 10; B-4 decision 9).
+ * (Block B, 10; B-4 decision 9).
  *
  * | invalid address                                               | 404 |
  * | page number below 1 or past the last page                     | 404 |

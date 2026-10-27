@@ -9,9 +9,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentAttemptRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 
 /**
- * Versuche und Zahlungen im Speicher, mit denselben Regeln wie die Tabelle:
- * eine Zahlung je Versuch (eindeutiger Schlüssel), eine Rückkehr setzt
- * Abbruch oder Fehler nur auf offene Versuche. lock() zählt mit.
+ * Attempts and payments in memory, with the same rules as the table:
+ * one payment per attempt (unique key), a return sets cancelled or failed
+ * only on open attempts. lock() counts along.
  */
 final class InMemoryPaymentAttempts implements PaymentAttemptRepositoryInterface
 {

@@ -8,7 +8,7 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
  * The view token is PLAINTEXT and exists here and nowhere else again — it goes
  * into the redirect and is never readable from the database.
  *
- * 🔴 **No payment attempt travels with it** (F5, 2026-09-23). It used to carry
+ * 🔴 **No payment attempt travels with it** (F5). It used to carry
  * the attempt's id and its plaintext token, and neither was ever read: the
  * attempt is opened where a payment begins, by start() (C-10/C-11), and that
  * caller holds the token while it builds the return and notify URLs.

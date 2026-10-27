@@ -32,8 +32,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
  * A buyer cancels in the browser and the provider books anyway; an attempt
  * the customer switched away from (C-10) is paid after all. The state of the
  * attempt does not decide whether money that ARRIVED is recorded — only
- * `succeeded` does, because then it is recorded already (Michael,
- * 2026-09-26).
+ * `succeeded` does, because then it is recorded already.
  *
  * ── Twice, at the same moment ────────────────────────────────────────────
  *
@@ -126,7 +125,7 @@ class NotificationProcessor
 
             if (NotificationOutcome::Paid === $result->outcome) {
                 /*
-                 * A charge only while its attempt is live (review Abo-4b, S2).
+                 * A charge only while its attempt is live (Abo-4b).
                  * Money for a charge the order has since fallen back from
                  * ("on account" after 7 days, P96) is booked all the same (Z3),
                  * but the customer has the invoice and its mail already —

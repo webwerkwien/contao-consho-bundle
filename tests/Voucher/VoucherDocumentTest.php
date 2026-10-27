@@ -16,9 +16,9 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherDocument;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherLedger;
 
 /**
- * WG4, WG14: Der Gutschein, wie der Käufer ihn liest — in der Mail, auf der
- * Bestellseite und als PDF. Gerendert mit der echten Vorlage und den echten
- * Sprachdateien: ein fehlender Schlüssel stünde roh im Gutschein.
+ * WG4, WG14: The voucher as the buyer reads it — in the mail, on the
+ * order page and as a PDF. Rendered with the real template and the real
+ * language files: a missing key would appear raw on the voucher.
  */
 class VoucherDocumentTest extends TestCase
 {
@@ -72,9 +72,9 @@ class VoucherDocumentTest extends TestCase
     }
 
     /**
-     * Contao speichert Eingaben kodiert („Kräuter &amp; Co"); das PDF ist
-     * Twig und kodiert selbst — sonst stünde „&amp;" auf dem Gutschein
-     * (Spec C, offene Punkte: kodierte Betreibertexte außerhalb der Rechnung).
+     * Contao stores input encoded ("Kräuter &amp; Co"); the PDF is Twig
+     * and encodes by itself — otherwise "&amp;" would appear on the voucher
+     * (Spec C, open points: encoded operator texts outside the invoice).
      */
     public function testAusstellerWirdDekodiert(): void
     {
@@ -87,8 +87,8 @@ class VoucherDocumentTest extends TestCase
     }
 
     /**
-     * Die Bestellseite zeigt die gekauften Gutscheine der Bestellung — nicht
-     * die, mit denen sie bezahlt wurde, und keine von Hand ausgestellten.
+     * The order page shows the vouchers bought with the order — not the ones
+     * it was paid with, and none issued by hand.
      */
     public function testDieBestellungZeigtIhreGekauftenGutscheine(): void
     {
@@ -141,7 +141,7 @@ class VoucherDocumentTest extends TestCase
     }
 
     /**
-     * Abnahme WG-7: im englischen Shop hieß der Anhang „Gutschein-…".
+     * WG-7: in the English shop the attachment was named "Gutschein-…".
      */
     public function testDerDateinameFolgtDerSprache(): void
     {

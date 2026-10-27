@@ -247,8 +247,8 @@ class CustomFieldsListener
             return (string) ($lang['customFieldBoolean'][$value] ?? $value);
         }
 
-        // As the date field above shows it, not as stored (c5 acceptance,
-        // 2026-10-14: "2024-03-01" next to "01.03.2024").
+        // As the date field above shows it, not as stored (not
+        // "2024-03-01" next to "01.03.2024").
         if (CustomField::DATE === $field->type && false !== ($date = \DateTimeImmutable::createFromFormat('!Y-m-d', $value))) {
             return $date->format((string) ($GLOBALS['TL_CONFIG']['dateFormat'] ?? 'Y-m-d'));
         }

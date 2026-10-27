@@ -123,7 +123,7 @@ class SubscriptionCharger
             $order = $this->orders->lockOrder($orderId);
 
             // Nothing to charge for an order already being paid another way:
-            // a payment recorded by the operator (review Abo-4b, S1 — the
+            // a payment recorded by the operator (Abo-4b — the
             // grand total would overpay it), a cancelled order, any attempt.
             if (null === $order
                 || '' !== (string) ($order['paymentSettledAt'] ?? '')
@@ -229,7 +229,7 @@ class SubscriptionCharger
                 return;
             }
 
-            // See NotificationProcessor (review S2): only a live attempt is a charge.
+            // See NotificationProcessor: only a live attempt is a charge.
             $charged = AttemptState::Open === $locked->state || AttemptState::Pending === $locked->state;
             $this->attempts->recordPayment($locked, $result->amount, $result->reference, $methodTitle, $now);
             $this->attempts->setState($locked->id, AttemptState::Succeeded, $now, $result->reference);

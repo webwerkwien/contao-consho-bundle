@@ -155,8 +155,8 @@ class ProductQueryTest extends TestCase
 
     public function testZweiAchsenMuessenAnDerselbenVarianteHaengen(): void
     {
-        // Shirt 1: rot nur in M — passt. Shirt 2: rot nur in L, M nur in
-        // blau — passte bis F2, obwohl es kein rotes M gibt.
+        // Shirt 1: red only in M — matches. Shirt 2: red only in L, M only in
+        // blue — matched until F2, although there is no red M.
         $this->product(1, priced: false);
         $this->variant(10, of: 1, options: [self::RED, self::SIZE_M]);
         $this->product(2, priced: false);
@@ -182,14 +182,14 @@ class ProductQueryTest extends TestCase
         $this->variant(20, of: 2, options: [self::RED, self::SIZE_L]);
         $this->variant(21, of: 2, options: [self::BLUE, self::SIZE_M]);
 
-        // Unter „rot" führt M zu Shirt 1, L zu Shirt 2 — je eins, wie der Klick.
+        // Under "rot" (red) M leads to shirt 1, L to shirt 2 — one each, like the click.
         $counts = $this->counts([1 => [self::RED]], null);
         self::assertSame(1, $counts[self::SIZE_M] ?? 0);
         self::assertSame(1, $counts[self::SIZE_L] ?? 0);
         self::assertCount(1, $this->find([1 => [self::RED], 3 => [self::SIZE_M]]));
     }
 
-    // ── Nur verfügbare (block Verfügbarkeit, V2–V6) ──────────────────────
+    // ── Only available (block Verfügbarkeit, V2–V6) ──────────────────────
 
     public function testNurVerfuegbareLaesstAusverkaufteWeg(): void
     {
@@ -217,7 +217,7 @@ class ProductQueryTest extends TestCase
 
     public function testMitAchseMussDieGewaehlteVarianteSelbstVerfuegbarSein(): void
     {
-        // V6: M ist ausverkauft, L nicht — „M + nur verfügbare" findet nichts.
+        // V6: M is sold out, L is not — "M + nur verfügbare" finds nothing.
         $this->product(1, priced: false);
         $this->variant(10, of: 1, options: [self::SIZE_M]);
         $this->variant(11, of: 1, options: [self::SIZE_L]);
@@ -233,8 +233,8 @@ class ProductQueryTest extends TestCase
 
     public function testEineMarkeAmHauptproduktMitVariantenZaehltNicht(): void
     {
-        // Darf es nicht geben (SoldOutMarks) — und wenn doch, entscheiden
-        // die Varianten.
+        // Must not exist (SoldOutMarks) — and if it does, the variants
+        // decide.
         $this->product(1, priced: false);
         $this->variant(10, of: 1);
         $this->soldOut(1);
@@ -253,10 +253,10 @@ class ProductQueryTest extends TestCase
     }
 
     /**
-     * Die Nachzählung für das 404-Urteil der Produktliste (offener Punkt
-     * Verfügbarkeit): „Nur verfügbare" macht eine Adresse nie zur Fehlerseite.
-     * Gegen die echte Abfrage, über die Methode des Controllers — keine
-     * Abschrift ihrer Bedingung.
+     * The recount for the 404 verdict of the product list (open point of the
+     * availability block): "Nur verfügbare" never turns an address into an error
+     * page. Against the real query, through the controller's method — no
+     * copy of its condition.
      */
     public function testDasUrteilZaehltOhneNurVerfuegbareNach(): void
     {
@@ -266,16 +266,16 @@ class ProductQueryTest extends TestCase
         $query = $this->query();
         $red = [1 => [self::RED]];
 
-        // Rot ist ausverkauft: leer mit dem Filter, aber die Adresse gibt es.
+        // Red is sold out: empty with the filter, but the address exists.
         self::assertSame(1, ProductListController::verdictMatches($query, 0, true, $red, [], false, self::SHOP, $red, 'de', 'EUR'));
-        // Review Verfügbarkeit, 1: eine kuratierte Liste, deren einziger Pin ausverkauft ist.
+        // A curated list whose only pin is sold out.
         self::assertSame(1, ProductListController::verdictMatches($query, 0, true, [], [1], true, self::SHOP, [], 'de', 'EUR'));
         self::assertSame(0, ProductListController::verdictMatches($query, 0, true, [], [], true, self::SHOP, [], 'de', 'EUR'), 'kuratiert ohne Pin: wirklich leer');
-        // Ohne „Nur verfügbare" oder mit Treffern: nicht nachgezählt.
+        // Without "Nur verfügbare" or with hits: not recounted.
         self::assertSame(0, ProductListController::verdictMatches($query, 0, false, $red, [], false, self::SHOP, $red, 'de', 'EUR'));
         self::assertSame(5, ProductListController::verdictMatches($query, 5, true, $red, [], false, self::SHOP, $red, 'de', 'EUR'));
         self::assertSame(0, ProductListController::verdictMatches($query, 0, true, null, [1], false, self::SHOP, $red, 'de', 'EUR'), 'ohne Regel wird nichts gefragt');
-        // Gibt es Rot gar nicht, bleibt es leer — dann urteilt ListingVerdict.
+        // If red does not exist at all, it stays empty — then ListingVerdict judges.
         self::assertSame(0, ProductListController::verdictMatches($query, 0, true, [2 => [self::ML250]], [], false, self::SHOP, [2 => [self::ML250]], 'de', 'EUR'));
     }
 
@@ -292,7 +292,7 @@ class ProductQueryTest extends TestCase
 
     public function testAnsEndeGiltFuerDieGefilterteVariante(): void
     {
-        // Unter „M" ist Shirt 1 nicht verfügbar, obwohl seine L-Variante es ist.
+        // Under "M" shirt 1 is not available, although its L variant is.
         $this->product(1, priced: false, title: 'A');
         $this->variant(10, of: 1, options: [self::SIZE_M]);
         $this->variant(11, of: 1, options: [self::SIZE_L]);
@@ -316,8 +316,8 @@ class ProductQueryTest extends TestCase
     public function testAProductWhoseVariantsCarryThePriceDoesAppear(): void
     {
         /*
-         * 🔴 The plan wanted an INNER JOIN of the price projection onto the
-         * main product. With variants the prices sit on the variants — block A
+         * 🔴 An INNER JOIN of the price projection onto the main product looks
+         * obvious. With variants the prices sit on the variants — block A
          * says a price belongs to "product/variant" — so that would have hidden
          * every variant-based article in the shop.
          */
@@ -346,10 +346,10 @@ class ProductQueryTest extends TestCase
     public function testTheMainProductsOwnRowDoesNotCarryItsVariants(): void
     {
         /*
-         * Vererbung ist Sache des Projektors: Eine Variante ohne eigenen Preis
-         * bekommt dort eine Zeile mit dem Preis des Hauptprodukts. Die Abfrage
-         * liest bei Produkten mit Varianten deshalb nur deren Zeilen — hat
-         * keine sichtbare Variante eine, gibt es nichts zu kaufen (A-4b, E2).
+         * Inheritance is the projector's business: a variant without its own price
+         * gets a row there with the main product's price. For products with
+         * variants the query therefore reads only their rows — if
+         * no visible variant has one, there is nothing to buy (A-4b, E2).
          */
         $this->product(1);
         $this->variant(10, of: 1, options: [self::SIZE_M], priced: false);
@@ -382,7 +382,7 @@ class ProductQueryTest extends TestCase
         self::assertSame([1], $this->find([]));
     }
 
-    // ── Die Zahlen an den Filtern ────────────────────────────────────────
+    // ── The counts on the filters ────────────────────────────────────────
 
     public function testCountsEveryOptionOfTheMatchingProducts(): void
     {
@@ -473,7 +473,7 @@ class ProductQueryTest extends TestCase
         self::assertArrayNotHasKey(self::SIZE_M, $this->counts([], null));
     }
 
-    // ── Sortierung und Blaetterung ───────────────────────────────────────
+    // ── Sorting and paging ───────────────────────────────────────────────
 
     public function testSortsByTitleByDefault(): void
     {
@@ -525,8 +525,8 @@ class ProductQueryTest extends TestCase
 
     public function testOnceAProductHasVariantsItsOwnPriceDoesNotSetTheSortOrder(): void
     {
-        // Befund 6 aus A-4b: Hauptprodukt 10 €, Varianten mit eigenen 15 € und 18 €.
-        // Vorher sortierte das Produkt mit 10 € — die Detailseite sagt „ab 15 €".
+        // A-4b: main product €10, variants with their own €15 and €18.
+        // Previously the product sorted at €10 — the detail page says "ab 15 €".
         $this->product(1, title: 'Einzeln', gross: '12.0000');
 
         $this->product(2, title: 'Varianten', gross: '10.0000');
@@ -606,13 +606,13 @@ class ProductQueryTest extends TestCase
         return $this->query()->find(self::SHOP, [], 'de', 'EUR', 'de', $sort, $showsNet, $offset, $limit);
     }
 
-    // ── Mehrsprachigkeit ─────────────────────────────────────────────────
+    // ── Multilingualism ──────────────────────────────────────────────────
 
     public function testSortingUsesTheTranslatedTitle(): void
     {
-        // Gegenläufig: auf Deutsch A vor B, auf Englisch B vor A. Ohne
-        // gegenläufige Reihenfolge misst der Test nichts — beide Sortierungen
-        // lieferten dasselbe Ergebnis, und ein vergessener COALESCE fiele nicht auf.
+        // Opposite: in German A before B, in English B before A. Without an
+        // opposite order the test measures nothing — both sort orders
+        // would return the same result, and a forgotten COALESCE would go unnoticed.
         $this->product(1, title: 'Apfel');
         $this->product(2, title: 'Birne');
         $this->translate(1, 'en', alias: 'a', title: 'Zebra');
@@ -624,8 +624,8 @@ class ProductQueryTest extends TestCase
 
     public function testAProductWithoutATranslationKeepsItsOwnTitleForSorting(): void
     {
-        // Der Rückfall gilt auch in der Sortierung, sonst rutschte ein
-        // unübersetztes Produkt ans Ende oder an den Anfang.
+        // The fallback also applies in sorting, otherwise an
+        // untranslated product would slip to the end or to the beginning.
         $this->product(1, title: 'Apfel');
         $this->product(2, title: 'Birne');
         $this->translate(1, 'en', alias: 'a');
@@ -636,11 +636,11 @@ class ProductQueryTest extends TestCase
 
     public function testAProductTranslatedIntoSeveralLanguagesIsCountedOnce(): void
     {
-        // Nicht: der Join würde sonst vervielfachen. Das kann er nicht — die
-        // ON-Klausel bindet genau eine Sprache, und zwei Zeilen derselben Sprache
-        // verbietet der Unique-Index. Was dieser Test zeigt, ist schlichter und
-        // trotzdem wert, festgenagelt zu sein: Zusätzliche Sprachen ändern die
-        // Zahl nicht.
+        // Not: the join would otherwise multiply. It cannot — the
+        // ON clause binds exactly one language, and the unique index forbids two
+        // rows of the same language. What this test shows is simpler and
+        // still worth nailing down: additional languages do not change the
+        // count.
         $this->product(1, title: 'Apfel');
         $this->translate(1, 'en', alias: 'a', title: 'Apple');
         $this->translate(1, 'fr', alias: 'p', title: 'Pomme');
@@ -650,9 +650,9 @@ class ProductQueryTest extends TestCase
 
     public function testTwoTranslationsOfTheSameLanguageAreImpossible(): void
     {
-        // Der eigentliche Schutz gegen vervielfachte Zeilen. Steht er nicht im
-        // Testschema, prüft die Testsuite eine lockerere Datenbank als die echte —
-        // und eine Gefahr, die es gar nicht gibt.
+        // The actual protection against multiplied rows. If it is not in the
+        // test schema, the test suite checks a looser database than the real one —
+        // and a danger that does not even exist.
         $this->product(1, title: 'Apfel');
         $this->translate(1, 'en', alias: 'a', title: 'Apple');
 
@@ -670,20 +670,20 @@ class ProductQueryTest extends TestCase
 
     public function testTheMonolingualCaseIsUnchanged(): void
     {
-        // Der Prüfstein der ganzen Mehrsprachigkeit: in der Standardsprache muss
-        // exakt herauskommen, was vorher herauskam.
+        // The touchstone of the whole multilingualism: in the default language
+        // exactly what came out before must come out.
         $this->product(1, title: 'Apfel');
 
         self::assertSame([1], $this->query()->find(self::SHOP, [], 'de', 'EUR', 'de'));
         self::assertSame(1, $this->query()->count(self::SHOP, [], 'de', 'EUR'));
     }
 
-    // ── Anheftungen (B-7) ────────────────────────────────────────────────
+    // ── Pins (B-7) ───────────────────────────────────────────────────────
 
     public function testAnExcludedProductIsLeftOutOfFindAndCount(): void
     {
-        // Regel 1: Die angehefteten stehen oben — die Regel danach ohne sie,
-        // sonst stünden sie doppelt. In Blätterung zählt count() dasselbe.
+        // Rule 1: the pinned ones are on top — the rule after them without them,
+        // otherwise they would appear twice. With paging, count() counts the same.
         $this->product(1);
         $this->product(2);
         $this->product(3);
@@ -711,7 +711,7 @@ class ProductQueryTest extends TestCase
 
     public function testVisibleAmongDropsEverythingTheListingWouldNotShow(): void
     {
-        // Regel 3: Die Anheftung schlägt die Filtervorgabe, nicht die Sichtbarkeit.
+        // Rule 3: the pin beats the filter default, not visibility.
         $this->product(1);
         $this->product(2, published: false);
         $this->product(3, shop: 2);
@@ -724,8 +724,8 @@ class ProductQueryTest extends TestCase
 
     public function testVisibleAmongAppliesOnlyTheFilterItIsGiven(): void
     {
-        // Der Aufrufer gibt den Filter des KUNDEN, nicht die Vorgabe des
-        // Redakteurs: blau passt nicht zu „rot" und fällt heraus.
+        // The caller passes the CUSTOMER's filter, not the editor's
+        // default: blue does not match "rot" and drops out.
         $this->product(1, properties: [self::RED]);
         $this->product(2, properties: [self::BLUE]);
 
@@ -738,14 +738,14 @@ class ProductQueryTest extends TestCase
         self::assertSame([], $this->query()->visibleAmong([], self::SHOP, [], 'de', 'EUR'));
     }
 
-    // ── Varianten in einer Sprache (B-8) ─────────────────────────────────
+    // ── Variants in one language (B-8) ───────────────────────────────────
 
     public function testAVariantHiddenInTheLanguageDoesNotCountForItsOption(): void
     {
         /*
-         * Variante 2 trägt einen eigenen, nicht übersetzten Warnhinweis und ist
-         * auf fr unsichtbar (VisibilityCriteria, Regel 3). Die Facettenzahl
-         * zählte sie trotzdem — der Link führte auf null Treffer.
+         * Variant 2 carries its own untranslated warning and is
+         * invisible on fr (VisibilityCriteria, rule 3). The facet count
+         * still counted it — the link led to zero hits.
          */
         $this->product(1, priced: false);
         $this->translate(1, 'fr', alias: 'produit-1');
@@ -764,10 +764,10 @@ class ProductQueryTest extends TestCase
     public function testAFilterOnAVariantAxisIgnoresAVariantHiddenInTheLanguage(): void
     {
         /*
-         * B-10: Eine Gruppe liest Variantenzeilen desselben Shops UND derselben
-         * Sprache. Variante 2 („M") ist auf fr unsichtbar (eigener, nicht
-         * übersetzter Warnhinweis) — ihre Zeile in de darf das Hauptprodukt in
-         * fr nicht zum Treffer machen.
+         * B-10: a group reads variant rows of the same shop AND the same
+         * language. Variant 2 ("M") is invisible on fr (own untranslated
+         * warning) — its row in de must not make the main product a hit in
+         * fr.
          */
         $this->product(1, priced: false);
         $this->translate(1, 'fr', alias: 'produit-1');
@@ -794,14 +794,14 @@ class ProductQueryTest extends TestCase
         self::assertSame([4, 1], $this->query()->find(self::SHOP, [], 'fr', 'EUR', 'de', ProductSort::PRICE_ASC));
     }
 
-    // ── Zwei Währungen in einer Sprache ──────────────────────────────────
+    // ── Two currencies in one language ───────────────────────────────────
 
     public function testZweiWaehrungenInEinerSpracheLiefernJedesProduktEinmal(): void
     {
-        // Der DACH-Fall: example.de in Euro, example.ch in Franken, beide auf
-        // Deutsch. Seit C-1c Aufgabe 5b stehen dafür zwei Zeilen je Produkt in
-        // der Projektion. Fragte die Liste nur nach Shop und Sprache, bekäme
-        // sie beide — jedes Produkt doppelt.
+        // The DACH case: example.de in euros, example.ch in francs, both in
+        // German. Since C-1c, task 5b, there are two rows per product for this in
+        // the projection. If the list only asked for shop and language, it would
+        // get both — every product twice.
         $this->insertRootPage(4, 'de', self::SHOP, 'CHF');
         $this->product(1);
         $this->price(1, '15.0000', 'CHF');
@@ -813,8 +813,8 @@ class ProductQueryTest extends TestCase
 
     public function testEinProduktOhneFrankenpreisFehltNurAufDerFrankenseite(): void
     {
-        // Die Gegenprobe: Ohne die Währung im Schlüssel zeigten beide Seiten
-        // dasselbe — entweder beide Produkte oder keins.
+        // The counter-check: without the currency in the key both pages would show
+        // the same — either both products or none.
         $this->insertRootPage(4, 'de', self::SHOP, 'CHF');
         $this->product(1);
         $this->product(2);
@@ -913,11 +913,11 @@ class ProductQueryTest extends TestCase
     }
 
     /**
-     * Betrag vor Währung — wie in den Schwesterdateien
-     * DbalProductTileRepositoryTest::price() und
-     * VisibilityProjectorTest::listPrice(). Die Reihenfolge war hier
-     * vertauscht, und zwei Testhilfen gleichen Namens im selben Ordner mit
-     * getauschten Parametern sind eine Stolperstelle ohne Gegenwert.
+     * Amount before currency — as in the sister files
+     * DbalProductTileRepositoryTest::price() and
+     * VisibilityProjectorTest::listPrice(). The order was swapped
+     * here, and two test helpers of the same name in the same folder with
+     * swapped parameters are a stumbling block with no benefit.
      */
     private function price(int $productId, string $gross = '12.0000', string $currency = 'EUR'): void
     {

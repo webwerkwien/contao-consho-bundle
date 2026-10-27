@@ -14,7 +14,7 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockReason;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block G, G2: Jede Änderung ist eine atomare Buchung mit einer Bewegung.
+ * Block G, G2: Every change is an atomic booking with one movement.
  */
 class StockBookingTest extends TestCase
 {
@@ -46,8 +46,8 @@ class StockBookingTest extends TestCase
     }
 
     /**
-     * Der Kern von G3: gebucht wird auf den Stand in der Datenbank, nicht auf
-     * eine Zahl, die vorher gelesen wurde.
+     * The core of G3: the booking is made on the state in the database, not on
+     * a number that was read beforehand.
      */
     public function testRechnetAufDenAktuellenStand(): void
     {
@@ -59,9 +59,9 @@ class StockBookingTest extends TestCase
     }
 
     /**
-     * Produktseite und Listen liegen im Seiten-Cache, ein Kauf ist kein
-     * Speichern im Backend. Entwertet wird, wenn sich der sichtbare Zustand
-     * ändert — nicht bei jedem Verkauf.
+     * Product page and lists are in the page cache, a purchase is not a save
+     * in the back end. Invalidation happens when the visible state changes —
+     * not on every sale.
      */
     public function testDerCacheWirdBeimWechselDesZustandsEntwertet(): void
     {
@@ -94,8 +94,8 @@ class StockBookingTest extends TestCase
     }
 
     /**
-     * Block Verfügbarkeit, V1: Beim Wechsel des Zustands wird die Marke
-     * nachgeführt — auch der Wareneingang einer Einkaufsliste geht hier durch.
+     * Block availability, V1: When the state changes, the mark is updated —
+     * the goods receipt of a purchase list goes through here too.
      */
     public function testDieMarkeFolgtDemZustand(): void
     {

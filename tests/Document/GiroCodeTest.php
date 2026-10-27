@@ -9,9 +9,9 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Document\GiroCode;
 
 /**
- * Michael, 2026-09-24: Giro-QR-Code auf der Rechnung, zuschaltbar. Die
- * Regeln stehen in EPC069-12 v3.1, Abschnitt 2 — die Tests prüfen sie einzeln
- * und scannen das Bild zurück, statt nur zu prüfen, dass ein PNG entsteht.
+ * Giro QR code on the invoice, optional. The rules are in EPC069-12 v3.1,
+ * section 2 — the tests check them one by one and scan the image back,
+ * instead of only checking that a PNG comes out.
  */
 class GiroCodeTest extends TestCase
 {
@@ -26,8 +26,8 @@ class GiroCodeTest extends TestCase
     }
 
     /**
-     * „The last populated element is not followed by any character or
-     * element separator." Kein Zeilenumbruch am Ende.
+     * "The last populated element is not followed by any character or
+     * element separator." No line break at the end.
      */
     public function testNachDemLetztenElementStehtNichts(): void
     {
@@ -42,8 +42,8 @@ class GiroCodeTest extends TestCase
     }
 
     /**
-     * Eine falsche BIC würde die Bank zum Leiten benutzen — sie fällt weg,
-     * der Code bleibt. Gegenprobe: eine elfstellige bleibt drin.
+     * A wrong BIC would be used by the bank for routing — it is dropped, the
+     * code stays. Control case: an eleven-character one stays in.
      */
     public function testEineUngueltigeBicFaelltWegEineElfstelligeBleibt(): void
     {
@@ -67,7 +67,7 @@ class GiroCodeTest extends TestCase
         yield 'Kontoinhaber mit 71 Zeichen' => [['accountHolder' => str_repeat('ä', 71)] + self::DETAILS, '13.90', 'EUR', 'RE-00013'];
         yield 'Zeilenumbruch im Namen' => [['accountHolder' => "Wanderstock\nGmbH"] + self::DETAILS, '13.90', 'EUR', 'RE-00013'];
         yield 'keine Rechnungsnummer' => [self::DETAILS, '13.90', 'EUR', ''];
-        // Fable-Review: Unicode-Steuerzeichen und Zeilentrenner, nicht nur ASCII.
+        // Unicode control characters and line separators, not only ASCII.
         yield 'NEL (U+0085) im Namen' => [['accountHolder' => "Wanderstock\u{0085}GmbH"] + self::DETAILS, '13.90', 'EUR', 'RE-00013'];
         yield 'Zeilentrenner (U+2028) im Namen' => [['accountHolder' => "Wanderstock\u{2028}GmbH"] + self::DETAILS, '13.90', 'EUR', 'RE-00013'];
         yield 'Absatztrenner (U+2029) in der Referenz' => [self::DETAILS, '13.90', 'EUR', "RE-\u{2029}00013"];
@@ -75,22 +75,22 @@ class GiroCodeTest extends TestCase
     }
 
     /**
-     * 🔴 Fable-Review: Der Aufruf steht NACH der Nummernvergabe. Ein
-     * Nicht-Text aus einer fremden Quelle darf dort keinen TypeError werfen —
-     * er verbrennte eine Rechnungsnummer. Er zählt als fehlend.
+     * 🔴 The call comes AFTER the number is assigned. A non-string from a
+     * foreign source must not throw a TypeError there — it would burn an
+     * invoice number. It counts as missing.
      */
     public function testNichtTextInDenBankdatenZaehltAlsFehlendUndWirftNicht(): void
     {
         self::assertNull(GiroCode::payload(['accountHolder' => 5] + self::DETAILS, '13.90', 'EUR', 'RE-00013'));
         self::assertNull(GiroCode::payload(['iban' => null] + self::DETAILS, '13.90', 'EUR', 'RE-00013'));
         self::assertNull(GiroCode::payload(['accountHolder' => ['Wanderstock']] + self::DETAILS, '13.90', 'EUR', 'RE-00013'));
-        // Die freiwillige BIC als Zahl fällt weg, der Code bleibt.
+        // The optional BIC as a number is dropped, the code stays.
         self::assertStringContainsString("SCT\n\nWanderstock", (string) GiroCode::payload(['bic' => 12345678] + self::DETAILS, '13.90', 'EUR', 'RE-00013'));
     }
 
     /**
-     * dataUri() schluckt nichts mehr: Was sich nicht zeichnen lässt, wirft —
-     * InvoiceView entscheidet und protokolliert.
+     * dataUri() no longer swallows anything: what cannot be drawn throws —
+     * InvoiceView decides and logs.
      */
     public function testEinUnzeichenbarerInhaltWirft(): void
     {
@@ -109,8 +109,8 @@ class GiroCodeTest extends TestCase
     }
 
     /**
-     * Gegenprobe zu den Grenzen: genau 70 Zeichen (Umlaute zählen als
-     * Zeichen, nicht als Bytes), 0,01 € und der Höchstbetrag gehen durch.
+     * Control case for the limits: exactly 70 characters (umlauts count as
+     * characters, not as bytes), € 0.01 and the maximum amount get through.
      */
     public function testDieGrenzwerteSelbstSindErlaubt(): void
     {
@@ -120,9 +120,9 @@ class GiroCodeTest extends TestCase
     }
 
     /**
-     * 🔴 Der eigentliche Beweis: Das Bild wird wieder eingescannt, und
-     * heraus kommt Byte für Byte der Inhalt — mit Umlaut, also UTF-8 wie in
-     * Zeile drei angesagt —, bei Fehlerkorrektur M und höchstens Version 13.
+     * 🔴 The actual proof: the image is scanned back in, and out comes the
+     * content byte for byte — with an umlaut, so UTF-8 as announced in line
+     * three —, at error correction M and at most version 13.
      */
     public function testDasBildLiefertBeimScannenGenauDenInhalt(): void
     {
@@ -138,14 +138,14 @@ class GiroCodeTest extends TestCase
         self::assertSame('M', (string) $result->eccLevel);
         self::assertLessThanOrEqual(13, $result->version->getVersionNumber());
 
-        // PNG-Farbtyp 2 = RGB ohne Alphakanal: nichts, was PDF/A beanstanden könnte.
+        // PNG colour type 2 = RGB without alpha channel: nothing PDF/A could object to.
         self::assertSame(2, \ord($png[25]));
     }
 
     /**
-     * Längster zulässiger Inhalt: 70 Umlaute (140 Bytes) und 140 Zeichen
-     * Verwendungszweck ergeben mehr als 331 Bytes — kein Code. Die Grenze
-     * gilt den Bytes, nicht den Zeichen.
+     * Longest permitted content: 70 umlauts (140 bytes) and 140 characters of
+     * remittance information make more than 331 bytes — no code. The limit
+     * applies to the bytes, not to the characters.
      */
     public function testMehrAls331BytesErgebenKeinenCode(): void
     {

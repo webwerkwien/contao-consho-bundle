@@ -23,7 +23,7 @@ final class SetupButtonListenerTest extends TestCase
 
     public function testOhneRechtAufsDashboardAusgeblendet(): void
     {
-        // Review I, L10: sonst endet der Klick bei „Zugriff verweigert".
+        // I: otherwise the click ends at "Access denied".
         $operation = $this->operation();
         (new SetupButtonListener($this->router(), $this->security(false)))($operation);
 

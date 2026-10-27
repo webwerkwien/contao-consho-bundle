@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
- * Can a customer get in? Three warnings (Nachlese KA5, KA6, E2), all from the
- * acceptance of Abo-8, where each of them turned a customer away without a
+ * Can a customer get in? Three warnings (Nachlese KA5, KA6, E2), each of which
+ * once turned a customer away without a
  * single line in the log.
  *
  * - **No registration path** — a shop that sells subscriptions, which need an
@@ -31,8 +31,9 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * - **A customer page that locks customers out** — a page with "Meine
  *   Bestellungen" or "Meine Abos" that is protected, its own or inherited from a
  *   parent, without admitting the shop's customer group and every net price
- *   group. Contao knows no "all members", only groups (rollout, "Kundenkonten
- *   für Abos"), and a net customer is not in the customer group by necessity.
+ *   group. Contao knows no "all members", only groups (rollout, "Customer
+ *   accounts for subscriptions"), and a net customer is not in the customer
+ *   group by necessity.
  *
  * - **No login page** — a start point with such a protected page but no
  *   published 401 page below it. A visitor who is logged out gets Contao's
@@ -79,7 +80,7 @@ final class CustomerAccessIssueSource implements ConfigurationIssueSource
      */
     private function registration(array $shops): array
     {
-        // `reg_allowLogin` first (acceptance Nachlese, 2026-10-09): without it
+        // `reg_allowLogin` first (Nachlese): without it
         // Contao creates the member with `login = 0` — opened, in the group,
         // and still unable to sign in, so no subscription can be bought.
         $modules = $this->connection->fetchAllAssociative(
@@ -237,8 +238,8 @@ final class CustomerAccessIssueSource implements ConfigurationIssueSource
      */
     private function rootsWithLoginPage(array $roots): array
     {
-        // In its window too, as findFirstPublishedByTypeAndPid() asks (review
-        // Nachlese, K2) — the full minute, the way Contao compares start/stop.
+        // In its window too, as findFirstPublishedByTypeAndPid() asks
+        // (Nachlese) — the full minute, the way Contao compares start/stop.
         $now = intdiv(time(), 60) * 60;
 
         return array_map('intval', $this->connection->fetchFirstColumn(

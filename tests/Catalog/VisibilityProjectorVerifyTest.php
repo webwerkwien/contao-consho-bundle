@@ -12,8 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityRows;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * verify() meldet, wo die Projektion der Sichtbarkeit vom Katalog abweicht —
- * und schreibt nie (B-10, 5.7). Shop 1 in EUR, Startpunkte de und fr.
+ * verify() reports where the visibility projection deviates from the
+ * catalogue — and never writes (B-10, 5.7). Shop 1 in EUR, start points
+ * de and fr.
  */
 class VisibilityProjectorVerifyTest extends TestCase
 {
@@ -32,7 +33,7 @@ class VisibilityProjectorVerifyTest extends TestCase
         $this->insertRootPage(1, 'de', 1);
         $this->insertRootPage(2, 'fr', 1);
 
-        // Produkt 1 sichtbar, bepreist, übersetzt; Produkt 2 unveröffentlicht.
+        // Product 1 visible, priced, translated; product 2 unpublished.
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1]);
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000']);
@@ -63,7 +64,7 @@ class VisibilityProjectorVerifyTest extends TestCase
 
     public function testASurplusRowIsReported(): void
     {
-        // Das unveröffentlichte Produkt steht am Backend vorbei in der Tabelle.
+        // The unpublished product is in the table, written past the backend.
         $this->insertVisibility(['pid' => 2, 'main' => 2, 'variant' => 0, 'shop' => 1, 'language' => 'de', 'net' => '10.0000', 'gross' => '12.0000']);
 
         $deviations = $this->projector()->verify(self::NOW);
@@ -97,14 +98,14 @@ class VisibilityProjectorVerifyTest extends TestCase
 
     public function testRowsInACurrencyWithoutARootPageAreReported(): void
     {
-        // Die Gegenprobe zur Sprache: Eine Zeile in einer Währung, die kein
-        // Startpunkt dieses Shops führt, liest keine Liste — ein rebuild
-        // räumte sie weg, also ist die Tabelle nicht, was sie sein soll. Ohne
-        // die Währung im Abgleich zählte sie als Zeile des EUR-Ziels und
-        // fiele nirgends auf.
-        // Der Betrag weicht bewusst ab: Läse der Abgleich des EUR-Ziels die
-        // Frankenzeile mit, meldete er sie obendrein als falschen Ab-Preis —
-        // eine zweite Abweichung, die es nicht gibt.
+        // The counter-check to the language: a row in a currency that no
+        // start point of this shop uses is read by no list — a rebuild
+        // would clear it away, so the table is not what it should be. Without
+        // the currency in the comparison it would count as a row of the EUR
+        // target and not show anywhere.
+        // The amount differs on purpose: if the comparison of the EUR target read
+        // the franc row along with it, it would also report it as a wrong
+        // from-price — a second deviation that does not exist.
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'variant' => 0, 'shop' => 1, 'language' => 'de', 'currency' => 'CHF', 'net' => '12.5000', 'gross' => '15.0000']);
 
         $deviations = $this->projector()->verify(self::NOW);

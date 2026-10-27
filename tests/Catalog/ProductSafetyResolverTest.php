@@ -145,7 +145,7 @@ class ProductSafetyResolverTest extends TestCase
         self::assertSame('', $info->manufacturerEmail);
     }
 
-    // ── Sprache der Seite (Plan B-5, Task 8) ─────────────────────────────
+    // ── Language of the page (B-5) ───────────────────────────────────────
 
     public function testInTheFallbackLanguageTheMainRowsAreRead(): void
     {
@@ -234,9 +234,9 @@ class ProductSafetyResolverTest extends TestCase
 
     public function testAVariantWithOwnWarningsButNoTranslationShowsNothingRatherThanTheMainProducts(): void
     {
-        // 🔴 Frage 3: Der französische Hinweis des Hauptprodukts wäre für diese
-        // Variante falsch. Leer — und VisibilityCriteria::variant() blendet die
-        // Variante in dieser Sprache ohnehin aus.
+        // 🔴 The main product's French warning would be wrong for this
+        // variant. Empty — and VisibilityCriteria::variant() hides the
+        // variant in this language anyway.
         $info = $this->resolve(
             products: [],
             manufacturers: [],
@@ -254,10 +254,10 @@ class ProductSafetyResolverTest extends TestCase
 
     public function testWhetherAVariantHasOwnTextsIsDecidedInTheDefaultLanguage(): void
     {
-        // Dieselbe Frage wie die Sichtbarkeit: Die trägt eine Variante ohne
-        // eigenen deutschen Hinweis als „erbt" — also zeigt die Seite den des
-        // Hauptprodukts, auch wenn an der Variante ein verwaister
-        // französischer Text steht.
+        // The same question as visibility: it treats a variant without its
+        // own German warning as "inherits" — so the page shows the main
+        // product's, even if an orphaned French text sits on the
+        // variant.
         $info = $this->resolve(
             products: [],
             manufacturers: [],
@@ -294,7 +294,7 @@ class ProductSafetyResolverTest extends TestCase
     /**
      * @param array<int, array<string, mixed>> $products
      * @param array<int, array<string, mixed>> $manufacturers
-     * @param array<int, array<string, mixed>> $translatedProducts      Zeilen, wie das Repository sie in einer Nicht-Standardsprache liefert
+     * @param array<int, array<string, mixed>> $translatedProducts      rows as the repository returns them in a non-default language
      * @param array<int, array<string, mixed>> $translatedManufacturers
      */
     private function resolve(
@@ -306,8 +306,8 @@ class ProductSafetyResolverTest extends TestCase
         array $translatedProducts = [],
         array $translatedManufacturers = [],
     ): object {
-        // Der Mock antwortet je nach übergebener Sprache — reicht der Resolver
-        // sie nicht durch, bekommt er die Zeilen der Standardsprache.
+        // The mock answers according to the language passed — if the resolver
+        // does not pass it on, it gets the rows of the default language.
         $translated = static fn (string $language, string $fallback): bool => '' !== $language && $language !== $fallback;
 
         $repository = $this->createMock(ProductSafetyRepositoryInterface::class);
@@ -328,9 +328,9 @@ class ProductSafetyResolverTest extends TestCase
     }
 
     /**
-     * Eine Produktzeile in einer Nicht-Standardsprache: Texte nur aus der
-     * Übersetzung (null = fehlt), dazu die Angabe, ob die Standardsprache
-     * eigene Texte trägt.
+     * A product row in a non-default language: texts only from the
+     * translation (null = missing), plus whether the default language
+     * carries texts of its own.
      *
      * @return array<string, mixed>
      */

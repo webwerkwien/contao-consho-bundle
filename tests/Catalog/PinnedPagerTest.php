@@ -7,10 +7,10 @@ use Webwerkwien\ContaoConshoBundle\Catalog\PinnedPager;
 use Webwerkwien\ContaoConshoBundle\Catalog\PinnedSlice;
 
 /**
- * Die Seitenaufteilung „erst Anheftungen, dann die Regel" (B-7, E1).
+ * The page split "pins first, then the rule" (B-7, E1).
  *
- * `$rest` ist die Zahl der Regel OHNE die angehefteten Produkte — ein Versatz
- * in die Regel zählt deshalb nie ein angeheftetes Produkt mit.
+ * `$rest` is the count of the rule WITHOUT the pinned products — an offset
+ * into the rule therefore never counts a pinned product.
  */
 class PinnedPagerTest extends TestCase
 {
@@ -21,13 +21,13 @@ class PinnedPagerTest extends TestCase
 
     public function testPinsTakePlacesOnPageOne(): void
     {
-        // 12 je Seite, 3 Anheftungen, 20 weitere: Seite 1 = 3 + 9.
+        // 12 per page, 3 pins, 20 more: page 1 = 3 + 9.
         self::assertEquals(new PinnedSlice([1, 2, 3], 0, 9, 2, 23, 23, 1), PinnedPager::slice([1, 2, 3], 20, 12, 1, false));
     }
 
     public function testPageTwoContinuesTheRuleWhereItStopped(): void
     {
-        // Seite 1 hatte 9 aus der Regel — Seite 2 beginnt bei der zehnten.
+        // Page 1 had 9 from the rule — page 2 starts at the tenth.
         self::assertEquals(new PinnedSlice([], 9, 12, 2, 23, 23, 2), PinnedPager::slice([1, 2, 3], 20, 12, 2, false));
     }
 
@@ -41,7 +41,7 @@ class PinnedPagerTest extends TestCase
 
     public function testExtraPutsAllPinsOnTopOfPageOne(): void
     {
-        // Seite 1 = 3 + 12; Blätterung rechnet nur mit der Regel.
+        // Page 1 = 3 + 12; paging only counts the rule.
         self::assertEquals(new PinnedSlice([1, 2, 3], 0, 12, 2, 23, 20, 1), PinnedPager::slice([1, 2, 3], 20, 12, 1, true));
     }
 
@@ -65,7 +65,7 @@ class PinnedPagerTest extends TestCase
 
     public function testWithoutPinsTheListingPagesAsBefore(): void
     {
-        // Die Regel aus B-3: Versatz (Seite − 1) × je Seite.
+        // The rule from B-3: offset (page − 1) × per page.
         foreach ([false, true] as $extra) {
             self::assertEquals(new PinnedSlice([], 24, 12, 3, 25, 25, 3), PinnedPager::slice([], 25, 12, 3, $extra));
         }
@@ -73,15 +73,15 @@ class PinnedPagerTest extends TestCase
 
     public function testAnEmptyListingHasNoPagesAsBefore(): void
     {
-        // ListingVerdict liest 0 Seiten als eine — so hielt es B-3.
+        // ListingVerdict reads 0 pages as one — that is how B-3 kept it.
         self::assertSame(0, PinnedPager::slice([], 0, 12, 1, false)->pages);
         self::assertSame(0, PinnedPager::slice([], 0, 12, 1, true)->pages);
     }
 
     public function testAPagePastTheEndIsClampedForAListingThatDoesNotFollowTheAddress(): void
     {
-        // Eine adressfolgende Liste hat vorher 404 geantwortet (ListingVerdict
-        // bekommt die angefragte Seite, nicht diese).
+        // An address-following list answered 404 before (ListingVerdict
+        // gets the requested page, not this one).
         self::assertSame(2, PinnedPager::slice([1], 20, 12, 9, false)->page);
     }
 }

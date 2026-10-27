@@ -6,60 +6,61 @@ use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Ein SQLite-Testschema, das der echten Datenbank gleicht — nicht nur
- * „mindestens so streng". Am 2026-09-13 hat genau die Abweichung zweimal einen
- * echten Fehler verdeckt: `DbalProductTileRepositoryTest` legte
- * `safetyWarnings`/`safetyInformation` als `TEXT NOT NULL DEFAULT ""` an,
- * während die DB `longtext NULL DEFAULT NULL` hat — das fehlende COALESCE in
- * VisibilityCriteria fiel deshalb nicht auf. Ebenso hätte ein `INTEGER` für
- * `start`/`stop` (tatsächlich `varchar(10) DEFAULT ''`) einen Vergleich gegen
- * eine leere Zeichenkette verdeckt.
+ * An SQLite test schema that matches the real database — not just
+ * "at least as strict". Exactly that deviation hid a real bug twice:
+ * `DbalProductTileRepositoryTest` created
+ * `safetyWarnings`/`safetyInformation` as `TEXT NOT NULL DEFAULT ""`,
+ * while the DB has `longtext NULL DEFAULT NULL` — so the missing COALESCE in
+ * VisibilityCriteria went unnoticed. Likewise an `INTEGER` for
+ * `start`/`stop` (actually `varchar(10) DEFAULT ''`) would have hidden a
+ * comparison against an empty string.
  *
- * Bis 2026-10-07 waren die Spalten von Hand abgeschrieben (`SHOW COLUMNS` auf
- * dem Testserver am 2026-09-13). Seither baut DcaSchema jede Consho-Tabelle aus
- * ihrer DCA (`contao/dca/tl_consho_*.php`) — eine neue Spalte kommt so ohne
- * Nachtrag hier an (Prüfungsnotiz, Fall 31/57/62). Die SQLite-Typwahl steht in
- * DcaSchema::column(): `NUMERIC` für `decimal`, weil SQLite TEXT
- * lexikographisch vergleicht („10" stünde vor „8.33").
+ * The columns used to be copied by hand from `SHOW COLUMNS`. Now DcaSchema
+ * builds every Consho table from its DCA (`contao/dca/tl_consho_*.php`) — a
+ * new column thus arrives here without a follow-up edit, and the tests use
+ * the production column names; a hand-written schema goes stale with the
+ * next column. The SQLite type choice is in DcaSchema::column(): `NUMERIC`
+ * for `decimal`, because SQLite compares TEXT lexicographically ("10" would
+ * come before "8.33").
  *
- * Von Hand bleibt nur `tl_member_group` — Contaos Tabelle, für die es keine
- * DCA im Bundle gibt.
+ * Only `tl_member_group` stays hand-written — Contao's table, for which the
+ * bundle has no DCA.
  *
- * Die Einfüger schreiben **nur** die per `$overrides` gesetzten Spalten.
- * Ungeschriebene Spalten tragen dadurch wirklich `NULL` (wo die Spalte das
- * zulässt) bzw. den in `CREATE TABLE` hinterlegten Vorgabewert — nicht einen
- * von PHP aus mitgeschickten Nullwert, der das verdecken würde.
+ * The inserters write **only** the columns set via `$overrides`.
+ * Unwritten columns therefore really carry `NULL` (where the column
+ * allows it) or the default stored in `CREATE TABLE` — not a null value sent
+ * along from PHP that would hide this.
  */
 trait CatalogSchema
 {
     private Connection $catalogConnection;
 
     /**
-     * Legt alle Katalog-Tabellen an, die Task 3 (Plan B-5) benennt. Vor jedem
-     * Aufruf eines Einfügers muss diese Methode gelaufen sein.
+     * Creates all catalogue tables (B-5). This method must have run before
+     * any inserter is called.
      */
     protected function createCatalogSchema(Connection $c): void
     {
         $this->catalogConnection = $c;
 
         // ── tl_consho_product ───────────────────────────────────────────────
-        // Produkte UND Varianten (pid != 0). Stand DB: alias/sku tragen nur
-        // einen einfachen Index — die Eindeutigkeit von `alias` ist Contaos
-        // `eval.unique`, kein Datenbank-Constraint (siehe tl_consho_product.php).
+        // Products AND variants (pid != 0). As in the DB: alias/sku only carry
+        // a simple index — the uniqueness of `alias` is Contao's
+        // `eval.unique`, not a database constraint (see tl_consho_product.php).
         DcaSchema::create($c, 'tl_consho_product');
 
-        // Block G: the stock, from its DCA (Fall 31) — every test with a
-        // catalogue can then keep stock for an article.
+        // Block G: the stock, from its DCA, with the production column names —
+        // every test with a catalogue can then keep stock for an article.
         DcaSchema::create($c, 'tl_consho_stock');
         DcaSchema::create($c, 'tl_consho_stock_movement');
 
         // ── tl_consho_product_option ────────────────────────────────────────
-        // Variantenachse: welche Option MACHT diese Zeile zur Variante.
+        // Variant axis: which option MAKES this row the variant.
         DcaSchema::create($c, 'tl_consho_product_option');
 
         // ── tl_consho_product_property ──────────────────────────────────────
-        // Filterbare Eigenschaften des HAUPTPRODUKTS — bewusst eine zweite
-        // Tabelle statt einer Rollenspalte, siehe DCA-Kommentar dort.
+        // Filterable properties of the MAIN PRODUCT — deliberately a second
+        // table instead of a role column, see the DCA comment there.
         DcaSchema::create($c, 'tl_consho_product_property');
 
         // ── tl_consho_property_group / _option, product_type, manufacturer ──
@@ -69,14 +70,14 @@ trait CatalogSchema
         DcaSchema::create($c, 'tl_consho_manufacturer');
 
         // ── tl_consho_translation ───────────────────────────────────────────
-        // `alias` NULL-bar ohne Vorgabewert (so die DCA): zwei Gruppen/Optionen
-        // ohne Alias dürfen nebeneinander bestehen, weil SQLite — wie MySQL —
-        // NULL in einem UNIQUE-Index nie mit einem anderen NULL kollidieren lässt.
+        // `alias` nullable without a default (as in the DCA): two groups/options
+        // without an alias may exist side by side, because SQLite — like MySQL —
+        // never lets NULL collide with another NULL in a UNIQUE index.
         DcaSchema::create($c, 'tl_consho_translation');
 
         // ── tl_consho_price ─────────────────────────────────────────────────
-        // Die eigentliche Preistabelle (Herkunft `List`/`Scale`/`CustomerGroup`
-        // in PriceCalculator), nicht die Projektion darunter.
+        // The actual price table (origin `List`/`Scale`/`CustomerGroup`
+        // in PriceCalculator), not the projection below it.
         DcaSchema::create($c, 'tl_consho_price');
 
         // ── tl_consho_product_shop, tl_consho_shop ──────────────────────────
@@ -98,40 +99,40 @@ trait CatalogSchema
         );
 
         // ── tl_consho_product_list_price ────────────────────────────────────
-        // Projektion, nicht die Preistabelle selbst — siehe DCA-Kommentar dort.
-        // Aus der DCA seit Block H (H-2): die handgeschriebene Fassung kannte
-        // die Spalten des Streichpreises nicht (Prüfungsnotiz, Fall 31).
+        // Projection, not the price table itself — see the DCA comment there.
+        // From the DCA since Block H (H-2): the hand-written version did not know
+        // the columns of the strike-through price.
         DcaSchema::create($c, 'tl_consho_product_list_price');
 
         // ── tl_consho_product_visibility ────────────────────────────────────
-        // Projektion der Sichtbarkeit (B-10) — nach contao/dca/
-        // tl_consho_product_visibility.php; net/gross NULL-bar, weil
-        // Variantenzeilen keinen Ab-Preis tragen. `currency` seit C-1c
-        // Aufgabe 5b im eindeutigen Schlüssel: Zwei Startpunkte desselben
-        // Shops in derselben Sprache und zwei Währungen sind zwei Zeilen. Ein
-        // Testschema, das hier großzügiger wäre als die Tabelle, verbärge
-        // genau den Fall, um den es geht.
+        // Visibility projection (B-10) — after contao/dca/
+        // tl_consho_product_visibility.php; net/gross nullable, because
+        // variant rows carry no from-price. `currency` part of the unique key
+        // since C-1c, task 5b: two start points of the same
+        // shop in the same language and two currencies are two rows. A
+        // test schema more lenient here than the table would hide
+        // exactly the case this is about.
         DcaSchema::create($c, 'tl_consho_product_visibility');
 
         // ── tl_consho_projection_state ──────────────────────────────────────
         DcaSchema::create($c, 'tl_consho_projection_state');
 
         // ── tl_consho_sold_out ──────────────────────────────────────────────
-        // Block Verfügbarkeit: „Nur verfügbare" und „Nicht Verfügbares ans
-        // Ende" lesen sie in jeder Liste mit diesem Filter.
+        // Block Verfügbarkeit (availability): "Nur verfügbare" and "Nicht
+        // Verfügbares ans Ende" read it in every list with this filter.
         DcaSchema::create($c, 'tl_consho_sold_out');
     }
 
     /**
-     * Die Startpunkte, aus denen ShopLanguages die Sprachen eines Shops liest
-     * — und seit C-1c auch DbalMarketRepository die Währung. Eigene Methode,
-     * nicht Teil von createCatalogSchema(): mehrere Tests legen tl_page schon
-     * selbst an.
+     * The start points from which ShopLanguages reads the languages of a shop
+     * — and since C-1c DbalMarketRepository the currency too. A method of its
+     * own, not part of createCatalogSchema(): several tests create tl_page
+     * themselves.
      *
-     * `consho_currency` nach contao/dca/tl_page.php: string(3) NOT NULL
-     * DEFAULT '' — also **leer** als Spaltenvorgabe, nicht 'EUR'. Ein
-     * Startpunkt, der am Feld vorbei geschrieben wird, darf nicht stillschweigend
-     * zum Euro-Startpunkt werden; genau diesen Fall soll die Spalte zeigen.
+     * `consho_currency` after contao/dca/tl_page.php: string(3) NOT NULL
+     * DEFAULT '' — so **empty** as the column default, not 'EUR'. A
+     * start point written past the field must not silently become
+     * a euro start point; this column is meant to show exactly that case.
      */
     protected function createRootPageTable(Connection $c): void
     {
@@ -154,10 +155,10 @@ trait CatalogSchema
     }
 
     /**
-     * Die Bequemlichkeit 'EUR' steht hier und nicht in der Spaltenvorgabe —
-     * dieselbe Aufteilung wie bei {@see insertPrice()}: im Testcode, wo sie
-     * gelesen wird, verdeckt sie nichts; in der Tabellendefinition verdeckte
-     * sie den leeren Startpunkt. Wer den Fall braucht, übergibt ''.
+     * The convenience 'EUR' is here and not in the column default —
+     * the same split as for {@see insertPrice()}: in the test code, where it
+     * is read, it hides nothing; in the table definition it would hide
+     * the empty start point. Whoever needs the case passes ''.
      */
     protected function insertRootPage(int $id, string $language, int $shopId, string $currency = 'EUR'): void
     {
@@ -165,11 +166,11 @@ trait CatalogSchema
     }
 
     /**
-     * Die Bequemlichkeit 'EUR' steht hier und nicht in der Spaltenvorgabe —
-     * dieselbe Aufteilung wie bei {@see insertPrice()} und
-     * {@see insertRootPage()}: Im Testcode verdeckt sie nichts, in der
-     * Tabellendefinition verdeckte sie eine Zeile, die am Projektor vorbei
-     * ohne Währung geschrieben wurde. Wer den Fall braucht, übergibt ''.
+     * The convenience 'EUR' is here and not in the column default —
+     * the same split as for {@see insertPrice()} and
+     * {@see insertRootPage()}: in the test code it hides nothing, in the
+     * table definition it would hide a row written past the projector
+     * without a currency. Whoever needs the case passes ''.
      *
      * @param array<string, mixed> $overrides
      */
@@ -202,8 +203,8 @@ trait CatalogSchema
         // A saved row. tstamp 0 is a price mask that was opened and never
         // saved, and every price reader skips it (DbalPriceRepository).
         //
-        // The currency is defaulted HERE and no longer by the column: since
-        // 2026-09-21 tl_consho_price.currency has an empty default, so that a
+        // The currency is defaulted HERE and no longer by the column:
+        // tl_consho_price.currency has an empty default, so that a
         // row written past the mask cannot silently become a euro price. A
         // test fixture may well be convenient — but the convenience belongs in
         // the test code, where it is read, not in the table definition, where
@@ -268,8 +269,8 @@ trait CatalogSchema
     }
 
     /**
-     * Ordnet dem HAUPTPRODUKT eine filterbare Eigenschaft zu (Achtung: keine
-     * Variantenachse — dafür {@see insertProductOption()}).
+     * Assigns a filterable property to the MAIN PRODUCT (note: not a
+     * variant axis — use {@see insertProductOption()} for that).
      *
      * @param array<string, mixed> $overrides
      */
@@ -279,7 +280,7 @@ trait CatalogSchema
     }
 
     /**
-     * Macht eine Zeile über die gesetzte Option zu einer bestimmten Variante.
+     * Makes a row a specific variant via the option set.
      *
      * @param array<string, mixed> $overrides
      */

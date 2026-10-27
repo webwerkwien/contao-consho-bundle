@@ -6,7 +6,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tax;
  * No tax rate is configured for this class, country and date.
  *
  * This is deliberately fatal. Falling back to zero would produce invoices that
- * are wrong and look right — see docs/block-a-fundament.md, section 7.
+ * are wrong and look right — see Block A, section 7.
  */
 final class TaxRateNotFound extends \RuntimeException
 {

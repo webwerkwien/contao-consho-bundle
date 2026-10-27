@@ -124,7 +124,7 @@ final class RedirectRecorder
          * The recorded paths must be exactly the ones this root page actually
          * served — and a root page serves in one language only. Asking for
          * anything else here would record addresses that existed on a
-         * DIFFERENT startpoint, not on this one (M-3, Aufgabe 4).
+         * DIFFERENT startpoint, not on this one (M-3, task 4).
          */
         $language = (string) ($root['language'] ?? '');
         $productValues = $this->repository->urlValuesForShop($shopId, $language, $this->languages->fallbackOf($shopId));
@@ -462,7 +462,7 @@ final class RedirectRecorder
      * Without an alias the product has no address. The second check is a guard:
      * it held a pattern of just {sku} with an empty sku, which rendered only the
      * bare product page — a redirect from there would catch the page itself.
-     * Since {alias} is required (2026-10-22), a stored pattern without it falls
+     * Since {alias} is required, a stored pattern without it falls
      * back to the default, so the guard should never fire.
      *
      * @param array<string, string> $values

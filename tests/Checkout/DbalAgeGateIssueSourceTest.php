@@ -56,15 +56,15 @@ class DbalAgeGateIssueSourceTest extends TestCase
 
     public function testEinePruefendeVersandartRaeumtDenBefundWeg(): void
     {
-        // Block E bringt solche Arten mit; hier steht eine dafür.
+        // Block E brings such methods along; one stands in for them here.
         $this->product(minimumAge: 18);
 
         self::assertSame([], $this->issues(checks: 18));
     }
 
     /**
-     * 6, 12 und 14 sind laut C19 ein Hinweis und sperren nie — dazu gibt es
-     * keinen Befund. Sonst meldete jeder Spielzeugladen etwas.
+     * 6, 12 and 14 are a notice according to C19 and never block — there is
+     * no issue for them. Otherwise every toy shop would report something.
      */
     public function testEinHinweisalterErzeugtKeinenBefund(): void
     {
@@ -88,10 +88,10 @@ class DbalAgeGateIssueSourceTest extends TestCase
     }
 
     /**
-     * Die Schwelle im SQL und die Schwelle in AgeGate müssen dieselbe sein.
-     * Sie stehen an zwei Stellen — eine Konstante in einem SQL-Literal und
-     * eine Wächterzeile —, also hält dieser Test sie zusammen: 15 geht durch,
-     * 16 wird abgewiesen, und beide Seiten sagen dasselbe.
+     * The threshold in the SQL and the threshold in AgeGate must be the same.
+     * They live in two places — a constant in an SQL literal and a guard
+     * line —, so this test holds them together: 15 passes, 16 is refused, and
+     * both sides say the same.
      */
     public function testDieSchwelleImBefundIstDieSchwelleImCheckout(): void
     {
@@ -111,11 +111,10 @@ class DbalAgeGateIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Im Review vom 2026-09-22 gefunden. Vorher genügte irgendein
-     * `ageCheck !== 0`: Eine Versandart, die ab 16 prüft, hätte den Befund
-     * für 18er-Artikel abgeschaltet — und der Checkout hätte sie danach
-     * trotzdem mit AgeNotVerifiable abgewiesen. Genau der stille Zustand, den
-     * der Befund melden soll.
+     * 🔴 Before, any `ageCheck !== 0` was enough: a shipping method that
+     * checks from 16 would have switched the issue off for 18+ items — and the
+     * checkout would still have refused it afterwards with AgeNotVerifiable.
+     * Exactly the silent state the issue is meant to report.
      */
     public function testEineNurBisSechzehnPruefendeVersandartDecktAchtzehnNichtAb(): void
     {
@@ -133,7 +132,7 @@ class DbalAgeGateIssueSourceTest extends TestCase
 
     public function testDerBefundTraegtDenShop(): void
     {
-        // Seit 11.2 sperrt ein Befund den Shop, zu dem er gehört.
+        // Since 11.2 an issue blocks the shop it belongs to.
         $this->product(minimumAge: 18);
 
         self::assertSame(1, $this->issues()[0]->shopId);

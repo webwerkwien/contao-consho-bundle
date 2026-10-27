@@ -5,17 +5,17 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * 🔴 Gefunden von Michael am 2026-09-25: „Info" an einem Rechtstext der
- * Bestellung war ein 500er — `Unknown column 'signals'`.
+ * 🔴 "Info" on a legal text of the order was a 500 —
+ * `Unknown column 'signals'`.
  *
- * Für `pid` eines Kinddatensatzes ohne eigenen `foreignKey` nimmt Contao das
- * ERSTE Listenfeld der Elterntabelle als Anzeigewert und fragt es per SQL ab
- * (ValueFormatter::format(), Contao 5.7). Bei tl_consho_order ist das
- * `signals` — eine Anzeigespalte der Liste ohne Datenbankspalte. Damit brach
- * „Info" in allen sieben Kindtabellen der Bestellung.
+ * For the `pid` of a child record without its own `foreignKey`, Contao takes
+ * the FIRST list field of the parent table as the display value and queries
+ * it via SQL (ValueFormatter::format(), Contao 5.7). For tl_consho_order that
+ * is `signals` — a display column of the list without a database column. So
+ * "Info" broke in all seven child tables of the order.
  *
- * Die Regel, allgemein: Ist das erste Listenfeld der Elterntabelle keine
- * Spalte, braucht `pid` der Kindtabelle einen ausdrücklichen `foreignKey`.
+ * The rule, in general: if the first list field of the parent table is not
+ * a column, the `pid` of the child table needs an explicit `foreignKey`.
  */
 class ParentLabelIsAColumnTest extends TestCase
 {

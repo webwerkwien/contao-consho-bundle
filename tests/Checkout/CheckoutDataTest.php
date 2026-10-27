@@ -11,7 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutData;
 
 class CheckoutDataTest extends TestCase
 {
-    /** F-3: der Zeitpunkt der Zustimmung übersteht die Speicherung. */
+    /** F-3: the moment of consent survives being stored. */
     public function testDieZustimmungUeberstehtDieSpeicherung(): void
     {
         $data = (new CheckoutData())->withDigitalConsentAt(1_757_000_000);
@@ -46,8 +46,8 @@ class CheckoutDataTest extends TestCase
     /**
      * ⚠️ The one property this class really has to have. A visitor with
      * something in the basket must never meet a 500 because a column holds
-     * JSON from an older shape, a half-finished write, or a hand edit — and on
-     * c5 a column HAS been hand-edited more than once.
+     * JSON from an older shape, a half-finished write, or a hand edit — and
+     * columns DO get hand-edited.
      *
      * Empty is the same state as "not filled in yet", so the checkout asks
      * again, which is the right answer for unreadable input anyway.

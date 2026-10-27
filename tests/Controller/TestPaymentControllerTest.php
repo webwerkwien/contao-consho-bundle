@@ -72,8 +72,8 @@ class TestPaymentControllerTest extends TestCase
     }
 
     /**
-     * Abo-4b, P100: Eine Bestellung mit Abo-Zeilen bekommt mit der Zahlung ein
-     * Mandat — eine ohne nicht.
+     * Abo-4b, P100: an order with subscription lines gets a mandate with the
+     * payment — one without does not.
      */
     public function testMitAboZeilenKommtEinMandatMit(): void
     {

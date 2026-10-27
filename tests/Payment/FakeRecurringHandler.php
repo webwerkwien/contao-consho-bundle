@@ -15,9 +15,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentStart;
 use Webwerkwien\ContaoConshoBundle\Payment\RecurringPaymentHandlerInterface;
 
 /**
- * Ein Zahlungsmodul, das Folgezahlungen kann (Abo-4b) — für die Tests, die
- * nicht den Test-Anbieter mit seiner Unterschrift meinen. Merkt sich, was es
- * gefragt wurde, und antwortet, was der Test ihm vorgibt.
+ * A payment module that can do recurring payments (Abo-4b) — for the tests
+ * that do not mean the test provider with its signature. Remembers what it
+ * was asked and answers what the test tells it to.
  */
 final class FakeRecurringHandler implements RecurringPaymentHandlerInterface
 {

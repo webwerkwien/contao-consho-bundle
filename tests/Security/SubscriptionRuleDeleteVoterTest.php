@@ -16,8 +16,8 @@ use Webwerkwien\ContaoConshoBundle\Security\SubscriptionRuleDeleteVoter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Regel 5 hat einen Preis, Regel 6 nur eine nie gespeicherte Preiszeile,
- * Regel 7 steht nur in der Auswahl eines Produkts.
+ * Rule 5 has a price, rule 6 only a price row that was never saved,
+ * rule 7 only appears in the selection of a product.
  */
 class SubscriptionRuleDeleteVoterTest extends TestCase
 {
@@ -36,19 +36,19 @@ class SubscriptionRuleDeleteVoterTest extends TestCase
 
     public function testEineRegelMitPreisIstNichtLoeschbar(): void
     {
-        // Eine Preiszeile ohne Regel wäre ein Preis ohne Vertrag.
+        // A price row without a rule would be a price without a contract.
         self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new DeleteAction('tl_consho_subscription_rule', ['id' => '5'])));
     }
 
     public function testEineNieGespeichertePreiszeileHaeltNichtFest(): void
     {
-        // tstamp 0: die Preismaske wurde geöffnet, aber nie gespeichert.
+        // tstamp 0: the price mask was opened but never saved.
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote(new DeleteAction('tl_consho_subscription_rule', ['id' => '6'])));
     }
 
     public function testDieAuswahlAmProduktHaeltNichtFest(): void
     {
-        // Eine gelöschte Regel fällt beim Lesen aus der Auswahl (SaleModes).
+        // A deleted rule drops out of the selection on read (SaleModes).
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote(new DeleteAction('tl_consho_subscription_rule', ['id' => '7'])));
     }
 

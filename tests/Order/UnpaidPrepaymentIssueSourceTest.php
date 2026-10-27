@@ -14,8 +14,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * E15 (Michael, 2026-10-08): unbezahlte Vorkasse bindet Bestand. Kein
- * automatisches Storno, sondern nach 14 Tagen ein Hinweis.
+ * E15: unpaid prepayment ties up stock. No automatic cancellation, but a
+ * notice after 14 days.
  */
 class UnpaidPrepaymentIssueSourceTest extends TestCase
 {

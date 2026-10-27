@@ -25,8 +25,8 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testAnteiligWirdNachWarenwertAufgeteilt(): void
     {
-        // 75,00 Bücher (Klasse 1) und 25,00 Wein (Klasse 2): der Versand von
-        // 8,00 folgt dem Warenwert, also 6,00 zu 2,00.
+        // 75.00 books (class 1) and 25.00 wine (class 2): the shipping of
+        // 8.00 follows the value of the goods, so 6.00 to 2.00.
         $shares = (new ShippingTaxSplitter())->split('8.0000', ShippingTaxMode::Proportional, 9, [
             $this->line('75.0000', taxClass: 1),
             $this->line('25.0000', taxClass: 2),
@@ -39,9 +39,9 @@ class ShippingTaxSplitterTest extends TestCase
     }
 
     /**
-     * WG8: Ein Gutschein ist keine Ware — der Versand folgt ihm nicht, sonst
-     * fiele ein Teil seiner Steuer auf „nicht steuerbar". Nur Gutscheine:
-     * die Klasse der Versandart, wie ohne Waren.
+     * WG8: a gift card is not goods — shipping does not follow it, otherwise
+     * part of its tax would fall to "not taxable". Gift cards only: the class
+     * of the shipping method, as without goods.
      */
     public function testEinGutscheinTraegtKeinenAnteil(): void
     {
@@ -55,9 +55,9 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testMehrereZeilenDerselbenKlasseZaehlenZusammen(): void
     {
-        // 30 + 20 in Klasse 1 wiegen so viel wie die 50 in Klasse 2, sonst
-        // ginge die Aufteilung 3:5 statt 1:1 aus. Bei Gleichstand steht die
-        // kleinere Klasse vorn (siehe unten).
+        // 30 + 20 in class 1 weigh as much as the 50 in class 2, otherwise
+        // the split would come out 3:5 instead of 1:1. On a tie the
+        // smaller class comes first (see below).
         $shares = (new ShippingTaxSplitter())->split('10.0000', ShippingTaxMode::Proportional, 9, [
             $this->line('30.0000', taxClass: 1),
             $this->line('20.0000', taxClass: 1),
@@ -72,8 +72,8 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testDreiZeilenZweiKlassenWerdenNichtStueckweiseGewichtet(): void
     {
-        // Die Gegenprobe zum Test darüber: würde nach ZEILEN statt nach WERT
-        // gewichtet, stünde hier 2:1 statt 3:1.
+        // The control case for the test above: if weighted by LINES instead of
+        // by VALUE, this would read 2:1 instead of 3:1.
         $shares = (new ShippingTaxSplitter())->split('8.0000', ShippingTaxMode::Proportional, 9, [
             $this->line('30.0000', taxClass: 1),
             $this->line('45.0000', taxClass: 1),
@@ -87,9 +87,9 @@ class ShippingTaxSplitterTest extends TestCase
     }
 
     /**
-     * 🔴 Der Punkt, an dem eine Rechnung sonst nicht aufgeht: Drittel lassen
-     * sich nicht auf vier Stellen aufteilen. Die Summe der Zeilen muss
-     * trotzdem genau der Betrag sein, der dem Besucher genannt wurde.
+     * 🔴 The point where an invoice would otherwise not add up: thirds cannot
+     * be split onto four decimal places. The sum of the lines must still be
+     * exactly the amount the visitor was told.
      */
     public function testDieAufteilungSummiertSichExaktAufDenVersandbetrag(): void
     {
@@ -111,10 +111,9 @@ class ShippingTaxSplitterTest extends TestCase
     }
 
     /**
-     * Bei Gleichstand entscheidet die kleinere Steuerklasse, nicht die
-     * Reihenfolge im Warenkorb — sonst bekämen zwei gleiche Warenkörbe je nach
-     * Einlegereihenfolge Rechnungen, die sich um einen Hundertstelcent
-     * unterscheiden.
+     * On a tie the smaller tax class decides, not the order in the basket —
+     * otherwise two identical baskets would get invoices differing by a
+     * hundredth of a cent depending on the order things were put in.
      */
     public function testBeiGleichemWarenwertEntscheidetNichtDieReihenfolge(): void
     {
@@ -138,7 +137,7 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testOhneVersandkostenEntstehtKeineZeile(): void
     {
-        // Kein Betrag, keine Steuer, keine Zeile auf der Rechnung.
+        // No amount, no tax, no line on the invoice.
         self::assertSame([], (new ShippingTaxSplitter())->split('0.0000', ShippingTaxMode::Proportional, 9, [
             $this->line('10.0000', taxClass: 1),
         ]));
@@ -146,8 +145,8 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testOhneBepreisteWareFaelltDerVersandAufSeineEigeneKlasse(): void
     {
-        // Es gibt nichts, dem er folgen könnte. Die eigene Klasse ist keine
-        // erfundene — sie ist in beiden Modi Pflicht.
+        // There is nothing it could follow. Its own class is not an
+        // invented one — it is required in both modes.
         $shares = (new ShippingTaxSplitter())->split('5.0000', ShippingTaxMode::Proportional, 9, []);
 
         self::assertEquals([new ShippingShare(9, '5.0000')], $shares);
@@ -155,7 +154,7 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testBeiKostenloserWareFaelltDerVersandAufSeineEigeneKlasse(): void
     {
-        // Gewichten nach Wert geht nicht, wenn der Wert null ist.
+        // Weighting by value does not work when the value is zero.
         $shares = (new ShippingTaxSplitter())->split('5.0000', ShippingTaxMode::Proportional, 9, [
             $this->line('0.0000', taxClass: 1),
             $this->line('0.0000', taxClass: 2),
@@ -165,9 +164,9 @@ class ShippingTaxSplitterTest extends TestCase
     }
 
     /**
-     * Auf zwei Stellen geteilt geht 4,95 zu gleichen Teilen nicht auf — die
-     * Summe muss trotzdem genau 4,95 sein, sonst widerspricht die Rechnung
-     * dem Angebot.
+     * Split onto two decimal places, 4.95 does not divide into equal parts —
+     * the sum must still be exactly 4.95, otherwise the invoice contradicts
+     * the offer.
      */
     public function testAufWaehrungsstellenGeteiltBleibtDieSummeGenau(): void
     {
@@ -177,16 +176,16 @@ class ShippingTaxSplitterTest extends TestCase
         ], digits: 2);
 
         /*
-         * 2,475 rundet zweimal auf 2,48, zusammen 4,96 — der Rest ist also
-         * NEGATIV und wird abgezogen, nicht aufgeschlagen. Er geht an
-         * dieselbe Stelle wie ein positiver: an den ersten Anteil, hier die
-         * kleinere Klasse. Der Cent landet damit beim niedrigeren Satz, was
-         * eine Entscheidung ist und keine Zufälligkeit — sie steht hier, damit
-         * niemand sie später für einen Rundungsfehler hält.
+         * 2.475 rounds twice to 2.48, together 4.96 — so the remainder is
+         * NEGATIVE and is subtracted, not added. It goes to the same place
+         * as a positive one: to the first share, here the smaller class. The
+         * cent thus lands at the lower rate, which is a decision and not a
+         * coincidence — it stands here so that nobody later takes it for a
+         * rounding error.
          *
-         * Der erste Anteil trägt VIER Stellen, weil der Rest exakt landen
-         * muss; die Summen runden ihn danach, wie sie es mit jeder Warenzeile
-         * tun.
+         * The first share carries FOUR decimal places, because the remainder
+         * has to land exactly; the totals round it afterwards, as they do
+         * with every goods line.
          */
         self::assertEquals(
             [new ShippingShare(1, '2.4700'), new ShippingShare(2, '2.48')],
@@ -203,16 +202,14 @@ class ShippingTaxSplitterTest extends TestCase
     }
 
     /**
-     * 🔴 Im ZWEITEN Review vom 2026-09-22 gefunden, und es war meine eigene
-     * Korrektur, die ihn erzeugte.
+     * 🔴 This case was introduced by an earlier fix of the rounding.
      *
-     * Ein Versandpreis, den der Betreiber als **4,95 brutto** eintippt, liegt
-     * als 4,1250 netto in der Spalte (PriceEntry, 5.1). Die erste Fassung der
-     * Korrektur rundete den BETRAG auf Währungsstellen — 4,13 — und zeigte
-     * dem Kunden 4,96. Derselbe falsche Cent wie vorher, nur von der anderen
-     * Seite.
+     * A shipping price the operator types in as **4.95 gross** is stored as
+     * 4.1250 net in the column (PriceEntry, 5.1). The first version of the fix
+     * rounded the AMOUNT to currency places — 4.13 — and showed the customer
+     * 4.96. The same wrong cent as before, just from the other side.
      *
-     * Der Betrag behält also vier Stellen; gerundet werden die ANTEILE.
+     * So the amount keeps four decimal places; the SHARES are rounded.
      */
     public function testEinBruttoEingegebenerVersandpreisBleibtBrutto(): void
     {
@@ -222,7 +219,7 @@ class ShippingTaxSplitterTest extends TestCase
 
         self::assertEquals([new ShippingShare(1, '4.1250')], $shares);
 
-        // 4,1250 × 1,20 = 4,9500 — genau der eingetippte Bruttopreis.
+        // 4.1250 × 1.20 = 4.9500 — exactly the gross price typed in.
         self::assertSame(
             '4.9500',
             (string) BigDecimal::of($shares[0]->net)->multipliedBy('1.20')->toScale(4, RoundingMode::HalfUp),
@@ -231,8 +228,8 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testAuchAnteiligBleibtDerBruttopreisErhalten(): void
     {
-        // 4,1250 zu gleichen Teilen: 2,06 + 2,06 = 4,12, Rest 0,0050 auf den
-        // ersten. Brutto 2,478 + 2,472 = 4,95.
+        // 4.1250 in equal parts: 2.06 + 2.06 = 4.12, remainder 0.0050 on the
+        // first. Gross 2.478 + 2.472 = 4.95.
         $shares = (new ShippingTaxSplitter())->split('4.1250', ShippingTaxMode::Proportional, 9, [
             $this->line('50.0000', taxClass: 1),
             $this->line('50.0000', taxClass: 2),
@@ -248,9 +245,9 @@ class ShippingTaxSplitterTest extends TestCase
     }
 
     /**
-     * Review H, S1 (zweites Review, P-1): ein Nachlass je Klasse UND Land,
-     * jeder Anteil mit seinem Land — auch der, auf den der Rest fällt. Bei
-     * gleichem Wert entscheidet der Schlüssel, nicht die Reihenfolge im Korb.
+     * H: one discount per class AND country, each share with its country —
+     * also the one the remainder falls on. With equal value the key decides,
+     * not the order in the basket.
      */
     public function testEinNachlassTeiltNachKlasseUndLand(): void
     {
@@ -268,7 +265,7 @@ class ShippingTaxSplitterTest extends TestCase
 
     public function testOhneLandBleibtEsJeKlasse(): void
     {
-        // Versand und Gebühren folgen der Lieferung: eine Zeile je Klasse, ohne Land.
+        // Shipping and fees follow the delivery: one line per class, without a country.
         $shares = (new ShippingTaxSplitter())->split('1.0000', ShippingTaxMode::Proportional, 9, [
             $this->line('33.3300', taxClass: 1, country: 'DE'),
             $this->line('33.3300', taxClass: 1, country: 'AT'),

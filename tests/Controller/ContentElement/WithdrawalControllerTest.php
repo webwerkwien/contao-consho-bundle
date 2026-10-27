@@ -30,8 +30,8 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Das Element „Vertrag widerrufen" (D-2, W1, W2, E4, E6). Echte Dienste auf
- * SQLite, nur die Mail ist ein Doppel.
+ * The element "Vertrag widerrufen" (withdraw from contract; D-2, W1, W2,
+ * E4, E6). Real services on SQLite, only the mail is a double.
  */
 final class WithdrawalControllerTest extends TestCase
 {
@@ -59,7 +59,7 @@ final class WithdrawalControllerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy: a hand-written schema goes stale with the next column.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -88,7 +88,7 @@ final class WithdrawalControllerTest extends TestCase
         $redirect = $this->post(['consho_withdrawal_orderNumber' => ' WEB-00073 ', 'consho_withdrawal_email' => 'kundin@example.org', 'consho_withdrawal_name' => 'Erika Muster', 'consho_withdrawal_part' => 'nur der Stock']);
 
         self::assertInstanceOf(RedirectResponseException::class, $redirect);
-        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'), 'ohne Nummer (Review WA, S1)');
+        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'), 'ohne Nummer (WA)');
 
         $row = $this->connection->fetchAssociative('SELECT source, scope, part, email FROM tl_consho_withdrawal');
 
@@ -97,11 +97,10 @@ final class WithdrawalControllerTest extends TestCase
     }
 
     /**
-     * WA, A1 (Michael, 2026-10-22): Passen Nummer und Adresse nicht — die
-     * Nummer gibt es nicht, die Adresse passt nicht, die Bestellung gehört zu
-     * einem anderen Shop —, wird der Widerruf trotzdem gespeichert, ohne
-     * Bestellung, und an die eingegebene Adresse bestätigt. Bis dahin: „nicht
-     * gefunden", nichts gespeichert (W2).
+     * WA, A1: if number and address do not match — the number does not exist,
+     * the address does not match, the order belongs to another shop — the
+     * withdrawal is stored anyway, without an order, and confirmed to the
+     * address entered. Before that: "not found", nothing stored (W2).
      *
      * @return iterable<string, array{string, string}>
      */
@@ -132,7 +131,7 @@ final class WithdrawalControllerTest extends TestCase
         self::assertSame([[self::SHOP, $email, 'de']], $this->unassigned);
     }
 
-    /** E4: 5 Versuche je IP in 15 Minuten — gezählt wird jeder, auch die gespeicherten. */
+    /** E4: 5 attempts per IP in 15 minutes — every one counts, the stored ones too. */
     public function testDerSechsteVersuchWirdAbgewiesen(): void
     {
         for ($i = 0; $i < 5; ++$i) {
@@ -150,7 +149,7 @@ final class WithdrawalControllerTest extends TestCase
         self::assertSame('missing', $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => '', 'consho_withdrawal_name' => 'E'])['error']);
     }
 
-    /** An die eingegebene Adresse geht jetzt die Bestätigung — sie muss eine sein. */
+    /** The confirmation now goes to the address entered — it has to be one. */
     public function testUngueltigeAdresse(): void
     {
         $data = $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'keine-adresse', 'consho_withdrawal_name' => 'E']);
@@ -160,14 +159,14 @@ final class WithdrawalControllerTest extends TestCase
     }
 
     /**
-     * Review WA, S4: was nicht in die Spalte passt, darf auf MySQL nicht als
-     * 500 enden — ein langer Name wird gekürzt. Die Adresse braucht das nicht:
-     * FILTER_VALIDATE_EMAIL nimmt höchstens 254 Zeichen.
+     * WA: what does not fit into the column must not end as a 500 on MySQL —
+     * a long name is shortened. The address does not need that:
+     * FILTER_VALIDATE_EMAIL accepts at most 254 characters.
      */
     public function testLangerNameWirdGekuerzt(): void
     {
-        // Gültig gebaut (Labels höchstens 63 Zeichen), damit nur die Länge
-        // entscheidet (zweites Review WA): 254 geht durch, 255 nicht.
+        // Built valid (labels at most 63 characters) so that only the length
+        // decides (WA): 254 passes, 255 does not.
         $address = static fn (int $last): string => str_repeat('a', 64).'@'.implode('.', [str_repeat('b', 63), str_repeat('c', 63), str_repeat('d', $last)]).'.at';
         self::assertSame(254, \strlen($address(58)));
         self::assertNotFalse(filter_var($address(58), \FILTER_VALIDATE_EMAIL));
@@ -179,8 +178,8 @@ final class WithdrawalControllerTest extends TestCase
     }
 
     /**
-     * WA, B1: Nach dem Fenster wird gespeichert und markiert, nicht mehr
-     * abgelehnt — die Antwort an den Kunden ist dieselbe wie im Fenster.
+     * WA, B1: after the window the withdrawal is stored and marked, no longer
+     * rejected — the answer to the customer is the same as within the window.
      */
     public function testNachFensterendeGespeichertWieImFenster(): void
     {
@@ -196,11 +195,10 @@ final class WithdrawalControllerTest extends TestCase
     }
 
     /**
-     * Review WA, S1 (Michael, 2026-10-22: „wie empfohlen"): Lehnt die Bestellung
-     * ab — hier Frist 0 —, antwortet das Formular nicht mehr „nicht mehr
-     * möglich": das verriet einem Fremden, dass es die Bestellung gibt. Es
-     * speichert nicht zugeordnet, wie ohne Treffer; der Betreiber ordnet zu
-     * und lehnt mit Begründung ab.
+     * WA: if the order rejects — here deadline 0 — the form no longer answers
+     * "nicht mehr möglich" (no longer possible): that told a stranger that the
+     * order exists. It stores unassigned, as without a match; the operator
+     * assigns and rejects with a reason.
      */
     public function testLehntDieBestellungAbGleicheAntwortWieOhneTreffer(): void
     {
@@ -216,10 +214,10 @@ final class WithdrawalControllerTest extends TestCase
     }
 
     /**
-     * Zweites Review WA, B1: Nur der Weg ohne Bestellung hat eine
-     * Mail-Grenze. Hieße es dann „nicht bestätigt", verrieten ein paar
-     * Versuche, welche Paare treffen — also dieselbe Antwort, ob die Mail
-     * hinausging oder nicht (gestanden wird das im Log und im Backend).
+     * WA: only the path without an order has a mail limit. If it then said
+     * "not confirmed", a few attempts would reveal which pairs match — so the
+     * same answer whether the mail went out or not (it is admitted in the log
+     * and in the back end).
      */
     public function testOhneMailDieselbeAntwortWieMitMail(): void
     {

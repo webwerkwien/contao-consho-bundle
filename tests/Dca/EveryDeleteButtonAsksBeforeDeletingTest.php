@@ -23,9 +23,9 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CopyOperationPerm
  * `getElementById` returns null and reading `.textContent` throws. An inline
  * handler that throws returns undefined, which does not cancel the click —
  * **the record was deleted on the first click, without being asked.**
- * Measured on c5 on 2026-09-23 with a throwaway tax class: the operation
+ * Measured on a real installation with a throwaway tax class: the operation
  * rendered as a plain `<a href="…act=delete&id=3&rt=…">`, and a GET on that
- * URL alone deleted the row (tl_undo 299).
+ * URL alone deleted the row (it landed in tl_undo).
  *
  * Naming the operation instead hands it to DefaultOperationsListener, which
  * brings three things an array cannot have, because an array is copied
@@ -46,8 +46,7 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CopyOperationPerm
  * have the same missing permission callback. They are NOT checked here
  * because Contao's `edit` and `toggle` also carry `primary` and
  * `showInHeader`, which would move icons between the row and the ⋯ menu in
- * every list — a change that needs its own acceptance, not a silent one. See
- * the findings in docs/block-c-warenkorb-checkout.md.
+ * every list — a change that needs its own decision, not a silent one.
  *
  * `copy` is checked below, but only where Contao's default means the same
  * thing; the reason is in that test.
@@ -100,22 +99,22 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * 🔴 **Und die Gegenrichtung: kein Knopf ist kein Verbot.**
+     * 🔴 **And the other direction: no button is no prohibition.**
      *
-     * Der Test oben allein ließ eine DCA durchgehen, die `delete` ganz
-     * weglässt — `is_array(null)` ist falsch, also grün. Genau so standen
-     * `tl_consho_number_range` und `tl_consho_order_item` da: kein
-     * Löschen-Knopf in der Liste und trotzdem löschbar, denn
-     * `DC_Table::delete()` und `deleteAll()` fragen **nur** `notDeletable`,
-     * und „Mehrere bearbeiten" baut seine Aktionen aus der Konfiguration
-     * statt aus der Operationsliste.
+     * The test above on its own let through a DCA that leaves out `delete`
+     * entirely — `is_array(null)` is false, so green. That is exactly how
+     * `tl_consho_number_range` and `tl_consho_order_item` stood: no delete
+     * button in the list and still deletable, because
+     * `DC_Table::delete()` and `deleteAll()` ask **only** `notDeletable`,
+     * and "Edit multiple" builds its actions from the configuration rather
+     * than from the operations list.
      *
-     * Am 2026-09-23 auf c5 gemessen: Die Mehrfachbearbeitung der
-     * Nummernkreise bot `edit | delete | copy | copyMultiple | cut |
-     * override` an — der Rechnungszähler war löschbar.
+     * Measured on a real installation: the multiple edit of the number ranges
+     * offered `edit | delete | copy | copyMultiple | cut | override` — the
+     * invoice counter was deletable.
      *
-     * Also: Wer den Knopf weglässt, meint `notDeletable`. Wer es nicht
-     * meint, listet die Operation.
+     * So: whoever leaves out the button means `notDeletable`. Whoever does not
+     * mean it lists the operation.
      *
      * @dataProvider dcaFiles
      */
@@ -128,8 +127,8 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
         foreach ($dca as $table => $definition) {
             $operations = $definition['list']['operations'] ?? null;
 
-            // Keine eigene Operationsliste heißt: Contao baut die Standards,
-            // und `delete` ist dabei. Nichts zu prüfen.
+            // No operations list of its own means Contao builds the defaults,
+            // and `delete` is among them. Nothing to check.
             if (!\is_array($operations)) {
                 continue;
             }
@@ -155,33 +154,32 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * `copy` — aber nur dort, wo Contaos Standard dasselbe meint.
+     * `copy` — but only where Contao's default means the same thing.
      *
-     * Contao baut die Kopieren-Operation in **zwei** Fassungen, und welche es
-     * wird, hängt an der Tabelle (`DefaultOperationsListener::getDefaults()`,
-     * gemessen an 5.7.13):
+     * Contao builds the copy operation in **two** versions, and which one it
+     * becomes depends on the table (`DefaultOperationsListener::getDefaults()`,
+     * measured against 5.7.13):
      *
-     * | Tabelle | href |
+     * | Table | href |
      * |---|---|
-     * | ohne `ptable`, kein Baum | `act=copy` |
-     * | mit `ptable` oder Baum | `act=paste&mode=copy` |
+     * | without `ptable`, no tree | `act=copy` |
+     * | with `ptable` or tree | `act=paste&mode=copy` |
      *
-     * Nur im ersten Fall ist das von Hand geschriebene
-     * `['href' => 'act=copy', 'icon' => 'copy.svg']` **dieselbe Tat** wie der
-     * Standard — es fehlen ihm bloß `method: POST` und der
-     * `button_callback`, der die CreateAction-Prüfung beim Zeichnen der Zeile
-     * stellt statt erst nach dem Klick.
+     * Only in the first case is the hand-written
+     * `['href' => 'act=copy', 'icon' => 'copy.svg']` **the same act** as the
+     * default — it merely lacks `method: POST` and the `button_callback` that
+     * runs the CreateAction check while the row is drawn rather than only after
+     * the click.
      *
-     * Im zweiten Fall wäre das Umstellen kein stiller Gewinn, sondern ein
-     * anderes Verhalten: aus „sofort duplizieren" würde „in die
-     * Zwischenablage legen und ein Ziel anklicken". Die fünf Kindtabellen
-     * bleiben deshalb ausgeschrieben — und werden **stattdessen** darauf
-     * geprüft, dass sie sich die zwei Dinge selbst holen, die am Standard
-     * hängen: `method: POST` und die Rechteprüfung aus
+     * In the second case switching would not be a silent gain but different
+     * behaviour: "duplicate right away" would become "put it on the clipboard
+     * and click a target". The five child tables therefore stay written out —
+     * and are checked **instead** for fetching the two things that come with
+     * the default themselves: `method: POST` and the permission check from
      * CopyOperationPermissionListener.
      *
-     * ⚠️ Ohne diesen zweiten Teil wäre der Test die stille Sorte: Eine
-     * Kindtabelle mit ptable würde ihn bestehen, indem er sie überspringt.
+     * ⚠️ Without this second part the test would be the silent kind: a child
+     * table with ptable would pass it by being skipped.
      *
      * @dataProvider dcaFiles
      */
@@ -198,8 +196,8 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
                 continue;
             }
 
-            // Genau die Bedingung aus getDefaults(); der Listener fragt
-            // MODE_TREE, nicht MODE_TREE_EXTENDED.
+            // Exactly the condition from getDefaults(); the listener asks for
+            // MODE_TREE, not MODE_TREE_EXTENDED.
             $hasPtable = !empty($definition['config']['ptable'] ?? null);
             $isTreeMode = DataContainer::MODE_TREE === ($definition['list']['sorting']['mode'] ?? null);
 
@@ -249,13 +247,13 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * Und die Gegenrichtung zur Liste im Listener.
+     * And the other direction to the list in the listener.
      *
-     * Der Test oben prüft, dass jede ausgeschriebene Kopieren-Operation in
-     * `TABLES` steht. Er sagt nichts über den umgekehrten Fall: einen
-     * Eintrag, zu dem es keine ausgeschriebene Operation (mehr) gibt. Der
-     * hinge dann leer in der Luft — ein `AsCallback` auf eine Operation, die
-     * Contao selbst baut, greift nicht, und niemand würde es bemerken.
+     * The test above checks that every written-out copy operation is in
+     * `TABLES`. It says nothing about the reverse case: an entry for which
+     * there is no written-out operation (any more). It would then hang in the
+     * air — an `AsCallback` on an operation that Contao builds itself does not
+     * take effect, and nobody would notice.
      */
     public function testJedeTabelleImListenerSchreibtIhreKopierenOperationAuch(): void
     {
@@ -284,17 +282,16 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * `edit` und `toggle` sind Contaos eigene — und was daran hängt, ist
-     * mehr als eine Rechteprüfung.
+     * `edit` and `toggle` are Contao's own — and what comes with them is more
+     * than a permission check.
      *
-     * Beide bringen `primary` mit, und **ein einziges `primary` kippt die
-     * ganze Liste**: `DataContainerOperationsBuilder` setzt daraufhin
-     * `has_primary`, und das Template zeichnet jede Operation **ohne** das
-     * Kennzeichen nicht mehr in die Zeile, sondern hinter das ⋯-Menü.
+     * Both bring `primary`, and **a single `primary` tips the whole list**:
+     * `DataContainerOperationsBuilder` then sets `has_primary`, and the template
+     * no longer draws any operation **without** the marker in the row but behind
+     * the ⋯ menu.
      *
-     * Deshalb steht unten der zweite Teil: Unsere eigenen Sprünge in die
-     * Kindtabelle müssen `primary` tragen, sonst verschwinden sie aus der
-     * Zeile, ohne dass irgendetwas scheitert.
+     * Hence the second part below: our own jumps into the child table must
+     * carry `primary`, or they disappear from the row without anything failing.
      *
      * @dataProvider dcaFiles
      */
@@ -322,18 +319,17 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * 🔴 **Die Falle beim Benennen von `toggle`.**
+     * 🔴 **The trap when naming `toggle`.**
      *
-     * `DefaultOperationsListener::getToggleField()` sucht das Feld selbst —
-     * und gibt `null` zurück, wenn **keines** oder **mehr als eines**
-     * `toggle` (oder `reverseToggle`) trägt. Ohne Feld gibt es keinen
-     * Standard namens `toggle`, und ein Name, zu dem es keinen Standard
-     * gibt, fällt in Contaos Merge stillschweigend heraus:
+     * `DefaultOperationsListener::getToggleField()` looks for the field itself —
+     * and returns `null` if **none** or **more than one** carries `toggle` (or
+     * `reverseToggle`). Without a field there is no default called `toggle`, and
+     * a name for which there is no default silently drops out in Contao's merge:
      * `if (!is_array($v)) { continue; }`.
      *
-     * ⚠️ **Der Knopf wäre dann einfach weg** — kein Fehler, keine Meldung.
-     * Ein zweites Umschaltfeld in einer dieser drei Masken würde genau das
-     * auslösen, und zwar erst im Backend sichtbar.
+     * ⚠️ **The button would then simply be gone** — no error, no message.
+     * A second toggle field in one of these three forms would trigger exactly
+     * that, and it would only become visible in the backend.
      *
      * @dataProvider dcaFiles
      */
@@ -374,16 +370,16 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * Unsere eigenen Sprünge in eine Kindtabelle bleiben in der Zeile.
+     * Our own jumps into a child table stay in the row.
      *
-     * Seit `edit` benannt ist, trägt jede Liste `has_primary` — und ohne das
-     * Kennzeichen rutscht eine Operation hinter das ⋯-Menü. Bei
-     * `tl_consho_order` wären das **fünf** Navigationswege auf einmal; übrig
-     * bliebe der Stift.
+     * Since `edit` is named, every list carries `has_primary` — and without the
+     * marker an operation slips behind the ⋯ menu. For `tl_consho_order` that
+     * would be **five** navigation paths at once; the pencil would be all that
+     * was left.
      *
-     * Im Kern ist der Sprung zu den Kindern ebenfalls `primary`
-     * (`children` in `getDefaults()`), das hier ist also keine Sonderlocke,
-     * sondern dieselbe Regel für eine selbstgebaute Operation.
+     * In the core, the jump to the children is `primary` as well (`children` in
+     * `getDefaults()`), so this is no special case but the same rule for a
+     * self-built operation.
      *
      * @dataProvider dcaFiles
      */
@@ -414,30 +410,28 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * 🔴 **Jede Operation bleibt in der Zeile — `primary` an allen.**
+     * 🔴 **Every operation stays in the row — `primary` on all of them.**
      *
-     * Michaels Entscheidung am 2026-09-23, und sie hat einen messbaren
-     * Grund: `DataContainerOperation::disable()` nimmt den `href` weg und
-     * tauscht das Symbol. Das Template zeichnet so etwas **nur in der
-     * Zeile**:
+     * A requirement, and it has a measurable reason:
+     * `DataContainerOperation::disable()` removes the `href` and swaps the icon.
+     * The template draws such a thing **only in the row**:
      *
      *     {% elseif icon and not menu %}
      *
-     * Im ⋯-Menü fällt eine gesperrte Operation **ersatzlos weg**. Auf c5 mit
-     * einem eingeschränkten Benutzer gesehen: In der Produktliste fehlten
-     * Kopieren und Versionen vollständig, statt grau dazustehen.
+     * In the ⋯ menu a disabled operation **drops out without replacement**. Seen
+     * on a real installation with a restricted user: in the product list, copy
+     * and versions were missing entirely instead of standing there greyed out.
      *
-     * > 🎯 **Ein fehlender Knopf sagt „gibt es nicht", ein grauer sagt
-     * > „darfst du nicht".** Das ist der Unterschied, und er geht im Menü
-     * > verloren.
+     * > 🎯 **A missing button says "does not exist", a grey one says "you may
+     * > not".** That is the difference, and it gets lost in the menu.
      *
-     * Deshalb trägt jede Operation `primary`: benannte über das
-     * Ausrufezeichen (`'!copy'`), ausgeschriebene über `'primary' => true`.
-     * `edit` und `toggle` bringen es aus Contaos Standard schon mit.
+     * Hence every operation carries `primary`: named ones through the
+     * exclamation mark (`'!copy'`), written-out ones through `'primary' => true`.
+     * `edit` and `toggle` already bring it from Contao's default.
      *
-     * ⚠️ Was das **nicht** heilt: `toggle` wird für ein Feld ohne
-     * Bearbeitungsrecht von `handleToggle()` gar nicht erst erzeugt — das
-     * entscheidet Contao vor jeder Stellung und tut es im Kern überall.
+     * ⚠️ What this does **not** cure: `toggle` is not even created by
+     * `handleToggle()` for a field without edit permission — Contao decides that
+     * before any placement and does so everywhere in the core.
      *
      * @dataProvider dcaFiles
      */
@@ -449,7 +443,7 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
 
         foreach (self::operationsOf($dca) as $table => $operations) {
             foreach ($operations as $key => $operation) {
-                // Trenner sind keine Operation.
+                // Separators are not an operation.
                 if ('-' === $operation) {
                     continue;
                 }
@@ -474,9 +468,9 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
                 }
 
                 /*
-                 * Nur die beiden Standards, die `primary` selbst mitbringen,
-                 * dürfen ohne Ausrufezeichen dastehen. Alles andere wäre ein
-                 * Knopf, der bei fehlendem Recht spurlos verschwindet.
+                 * Only the two defaults that bring `primary` themselves may stand
+                 * without an exclamation mark. Anything else would be a button
+                 * that vanishes without a trace when the permission is missing.
                  */
                 self::assertContains(
                     $operation,
@@ -494,24 +488,24 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * 🔴 **Wo ein Voter den Löschen-Knopf ausgrauen kann, muss er in der
-     * Zeile stehen.**
+     * 🔴 **Where a voter can grey out the delete button, it must stand in the
+     * row.**
      *
-     * `DataContainerOperation::disable()` nimmt den `href` weg und tauscht
-     * das Symbol gegen `delete--disabled.svg`. Das Template zeichnet eine
-     * Operation ohne `href` als **blankes Symbol — aber nur in der Zeile**:
+     * `DataContainerOperation::disable()` removes the `href` and swaps the icon
+     * for `delete--disabled.svg`. The template draws an operation without `href`
+     * as a **bare icon — but only in the row**:
      *
      *     {% elseif icon and not menu %}
      *
-     * Im ⋯-Menü fällt sie ersatzlos weg. Seit `edit` benannt ist, trägt
-     * jede Liste `has_primary`, und `delete` steht ohne `!` nur noch im
-     * Menü. Am 2026-09-23 auf c5 gemessen: In der Versandarten-Liste war
-     * **kein `act=delete` und kein `--disabled`-Symbol mehr im HTML** — die
-     * Zusicherung aus C-2 („der Löschen-Knopf ist ausgegraut") war still
-     * verschwunden.
+     * In the ⋯ menu it drops out without replacement. Since `edit` is named,
+     * every list carries `has_primary`, and `delete` without `!` only stands in
+     * the menu. Measured on a real installation: in the shipping method list
+     * there was **no `act=delete` and no `--disabled` icon left in the HTML** —
+     * the promise from C-2 ("the delete button is greyed out") had silently
+     * disappeared.
      *
-     * Der Schutz selbst blieb die ganze Zeit intakt; unsichtbar wurde nur
-     * sein Hinweis. Genau die Sorte Verlust, die keine Meldung erzeugt.
+     * The protection itself stayed intact the whole time; only its hint became
+     * invisible. Exactly the kind of loss that produces no message.
      *
      * @dataProvider dcaFiles
      */
@@ -543,8 +537,8 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * Aus den Votern gelesen, nicht abgeschrieben — sonst wäre die Liste
-     * beim nächsten Voter still unvollständig.
+     * Read from the voters, not copied — otherwise the list would silently be
+     * incomplete with the next voter.
      *
      * @return list<string>
      */
@@ -561,8 +555,8 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
 
             $reflection = new \ReflectionClass($class);
 
-            // Ein Voter, der DeleteAction gar nicht beantwortet, kann den
-            // Knopf auch nicht ausgrauen.
+            // A voter that does not answer DeleteAction at all cannot grey out
+            // the button either.
             if (!$reflection->hasMethod('supportsType')) {
                 continue;
             }
@@ -570,11 +564,11 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
             $voter = $reflection->newInstanceWithoutConstructor();
 
             /*
-             * Ein Voter, der dem Löschen gewidmet ist — nicht einer, der es
-             * bloß mit entgegennimmt. ProductPinPlacementVoter beantwortet
-             * alle vier Typen und lässt Lesen und Löschen ausdrücklich
-             * durch; er kann den Knopf also gar nicht ausgrauen, und seine
-             * Tabelle (tl_content) gehört ohnehin dem Kern.
+             * A voter dedicated to deleting — not one that merely takes it
+             * along. ProductPinPlacementVoter answers all four types and
+             * explicitly lets reading and deleting through; so it cannot
+             * grey out the button at all, and its table (tl_content)
+             * belongs to the core anyway.
              */
             if (!$voter->supportsType(DeleteAction::class) || $voter->supportsType(UpdateAction::class)) {
                 continue;
@@ -589,22 +583,21 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
     }
 
     /**
-     * 🔴 **Wer versioniert, zeigt den Weg zu den Versionen auch.**
+     * 🔴 **Whoever keeps versions also shows the way to them.**
      *
-     * `versions` ist seit 5.7 eine Standardoperation — aber Contao stellt
-     * die Standards nur **voran**, wenn keine deklarierte Operation ein Name
-     * ist. Unsere Listen schreiben seit jeher alles aus, also fiel sie in
-     * **zwanzig** Masken weg, ohne dass es auffiel.
+     * `versions` has been a default operation since 5.7 — but Contao only
+     * **prepends** the defaults when no declared operation is a name. Our lists
+     * have always written everything out, so it dropped out in **twenty** forms
+     * without anybody noticing.
      *
-     * Am 2026-09-23 belegt: Shop 1 hatte 17 Versionen und die Liste kein
-     * `diff`-Symbol. Kein Datenverlust — das Versions-Auswahlfeld steht im
-     * Bearbeiten-Formular —, aber der Weg aus der Liste fehlte.
+     * Shown on a real installation: a shop had 17 versions and the list no
+     * `diff` icon. No data loss — the version select sits in the edit form —
+     * but the way from the list was missing.
      *
-     * ⚠️ Der Knopf trägt **kein** `primary`, steht also im ⋯-Menü, und
-     * `diffCallback()` schaltet ihn für Datensätze mit weniger als zwei
-     * Versionen ab. Eine abgeschaltete Operation zeichnet das Template im
-     * Menü gar nicht — der Eintrag erscheint also nur dort, wo es wirklich
-     * etwas zu vergleichen gibt.
+     * ⚠️ The button carries **no** `primary`, so it stands in the ⋯ menu, and
+     * `diffCallback()` disables it for records with fewer than two versions.
+     * The template does not draw a disabled operation in the menu at all — so
+     * the entry only appears where there really is something to compare.
      *
      * @dataProvider dcaFiles
      */
@@ -617,10 +610,10 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
         foreach ($dca as $table => $definition) {
             $operations = $definition['list']['operations'] ?? null;
 
-            // Keine eigene Liste heißt: Contao baut die Standards, `versions`
-            // ist dabei. Und ohne Bearbeiten gibt es den Standard gar nicht
-            // ($canEdit in getDefaults()) — ein Name ohne Standard fiele
-            // still heraus, wie bei `toggle`.
+            // No list of its own means Contao builds the defaults, `versions`
+            // is among them. And without editing the default does not exist at
+            // all ($canEdit in getDefaults()) — a name without a default would
+            // silently drop out, as with `toggle`.
             if (
                 !\is_array($operations)
                 || !($definition['config']['enableVersioning'] ?? false)
@@ -631,8 +624,8 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
 
             self::assertContains(
                 'versions',
-                // Das Ausrufezeichen setzt `primary`; geprüft wird hier, DASS
-                // die Operation dasteht, nicht wo sie steht.
+                // The exclamation mark sets `primary`; what is checked here is THAT
+                // the operation is there, not where it stands.
                 array_map(static fn ($v) => \is_string($v) ? ltrim($v, '!') : $v, $operations),
                 \sprintf(
                     '%s has enableVersioning but does not list the versions operation. Contao only '

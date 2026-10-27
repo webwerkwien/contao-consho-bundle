@@ -27,8 +27,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * consho:price:rebuild baut danach auch die Projektion der Sichtbarkeit (B-10):
- * „bepreist" und Ab-Preis kommen aus den Listenpreisen.
+ * consho:price:rebuild then also builds the visibility projection (B-10):
+ * "priced" and the from-price come from the list prices.
  */
 class PriceRebuildCommandTest extends TestCase
 {
@@ -44,7 +44,7 @@ class PriceRebuildCommandTest extends TestCase
         $this->insertRootPage(1, 'de', 1);
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1]);
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);
-        // Die Zeile, die der Preis-Neubau schreibt — sein Schreiber ist hier ein Mock.
+        // The row the price rebuild writes — its writer is a mock here.
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000']);
 
         $cache = new ArrayAdapter();

@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\WeightBracketList
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * E-4, V2: „Bis Gewicht" nur an den Preiszeilen einer Gewichtsstaffel — an
- * einer Pauschale wäre es ein Feld, das nichts bewirkt.
+ * E-4, V2: "Up to weight" only on the price rows of a weight scale — on a
+ * flat rate it would be a field that does nothing.
  */
 class WeightBracketListenerTest extends TestCase
 {
@@ -26,8 +26,8 @@ class WeightBracketListenerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shipping_price');
         $this->connection->insert('tl_consho_shipping_method', ['id' => 1, 'type' => 'weight_rate']);
         $this->connection->insert('tl_consho_shipping_method', ['id' => 2, 'type' => 'flat_rate']);
-        // Absichtlich über Kreuz: Die Zeile 1 gehört zur Pauschale 2, die Zeile 2
-        // zur Staffel 1 — so fällt auf, wenn Zeilen- und Methoden-ID verwechselt werden.
+        // Deliberately crossed: row 1 belongs to flat rate 2, row 2 to scale 1 —
+        // so it shows if row and method IDs are mixed up.
         $this->connection->insert('tl_consho_shipping_price', ['id' => 1, 'pid' => 2]);
         $this->connection->insert('tl_consho_shipping_price', ['id' => 2, 'pid' => 1]);
 
@@ -69,8 +69,8 @@ class WeightBracketListenerTest extends TestCase
     }
 
     /**
-     * Fable-Review E, K2: MariaDB liefert decimal(…,4) als „2.0000" — die
-     * Liste zeigt „bis 2 kg: 4,9", nicht die Nullen (Fall 30).
+     * E: MariaDB returns decimal(…,4) as "2.0000" — the list shows
+     * „bis 2 kg: 4,9", not the zeros.
      */
     public function testDieZeileWirdFormatiert(): void
     {

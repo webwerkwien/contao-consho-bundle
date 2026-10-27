@@ -30,13 +30,13 @@ class MethodTypeOptionsListenerTest extends TestCase
 
     public function testEinTypOhneSprachtextZeigtSeinenSchluessel(): void
     {
-        // Ein Modul ohne deutsche Sprachdatei soll wählbar bleiben.
+        // A module without a German language file is to remain selectable.
         self::assertSame(['flat_rate' => 'flat_rate'], $this->listener()->shippingTypes());
     }
 
     public function testDieTypenSindNachIhremNamenSortiertNichtNachDemSchluessel(): void
     {
-        // Nach Schlüssel käme „Zustellung" (a_type) vor „Abholung" (flat_rate).
+        // Sorted by key, "Zustellung" (a_type) would come before "Abholung" (flat_rate).
         $GLOBALS['TL_LANG']['tl_consho_shipping_method']['types'] = ['a_type' => 'Zustellung', 'flat_rate' => 'Abholung'];
 
         $delivery = new class implements ShippingMethodTypeInterface {

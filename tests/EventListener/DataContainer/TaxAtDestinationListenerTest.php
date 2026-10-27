@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block R (O3, R1): der Schalter gehört dem Unternehmen — gleiche UID,
- * gleicher Wert, und die Maske sagt, wo er noch gesetzt wurde.
+ * Block R (O3, R1): the switch belongs to the company — same VAT ID, same
+ * value, and the form says where else it was set.
  */
 class TaxAtDestinationListenerTest extends TestCase
 {

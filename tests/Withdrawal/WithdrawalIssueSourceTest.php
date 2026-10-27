@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * D-3: offene Widerrufe auf der Startseite (F11) und fehlende Nummernkreise
- * für Erstattungen (F9).
+ * D-3: open withdrawals on the start page (F11) and missing number ranges
+ * for refunds (F9).
  */
 final class WithdrawalIssueSourceTest extends TestCase
 {
@@ -59,8 +59,8 @@ final class WithdrawalIssueSourceTest extends TestCase
     }
 
     /**
-     * WA, A5: Widerrufe ohne Bestellung — ein eigener Befund je Shop, über
-     * den sie hereinkamen; im Befund „Offene Widerrufe" stehen sie nicht.
+     * WA, A5: Withdrawals without an order — an issue of its own per shop they
+     * came in through; they do not appear in the "open withdrawals" issue.
      */
     public function testNichtZugeordneteWiderrufeEinEigenerBefund(): void
     {
@@ -75,20 +75,20 @@ final class WithdrawalIssueSourceTest extends TestCase
         self::assertSame(1, $issues[0]->shopId);
         self::assertTrue($issues[0]->finding->isWarning());
 
-        // Zugeordnet ist es ein gewöhnlicher offener Widerruf.
+        // Once assigned it is an ordinary open withdrawal.
         $this->connection->update('tl_consho_withdrawal', ['pid' => 7], ['number' => 'W-00001']);
 
         self::assertSame([ConfigurationFinding::WithdrawalsOpen, ConfigurationFinding::WithdrawalsUnassigned], array_map(static fn (ConfigurationIssue $i): ConfigurationFinding => $i->finding, $this->issues()));
 
-        // Review WA, S2: ohne Bestellung abgewiesen ist erledigt.
+        // WA: rejected without an order means done.
         $this->connection->update('tl_consho_withdrawal', ['state' => 'rejected'], ['number' => 'W-00002']);
 
         self::assertSame([ConfigurationFinding::WithdrawalsOpen], array_map(static fn (ConfigurationIssue $i): ConfigurationFinding => $i->finding, $this->issues()));
     }
 
     /**
-     * Review WA, K5: Ein gelöschter Shop nimmt seine Widerrufe nicht mit — die
-     * Erstattung ist weiter geschuldet. Allgemeiner Befund, mit der alten ID.
+     * WA: A deleted shop does not take its withdrawals with it — the refund is
+     * still owed. A general issue, with the old ID.
      */
     public function testWiderrufeEinesGeloeschtenShops(): void
     {
@@ -111,13 +111,13 @@ final class WithdrawalIssueSourceTest extends TestCase
         self::assertCount(1, $issues);
         self::assertSame(ConfigurationFinding::RefundRangeMissing, $issues[0]->finding);
         self::assertSame('creditNote', $issues[0]->context['types']);
-        // Block I: der Knopf der Einrichtung liest die Typen aus diesem Befund.
+        // Block I: the setup's button reads the types from this issue.
         self::assertSame(['creditNote'], NumberRangeSetup::missing($issues[0]->shopId, $issues));
     }
 
     /**
-     * Fable-Review D-3, S1: Auf der Startseite ist nur default.php geladen —
-     * der Befund muss den Namen daraus nehmen, nicht den Schlüssel zeigen.
+     * D-3: On the start page only default.php is loaded — the issue must take
+     * the name from there, not show the key.
      */
     public function testDerBefundNenntDenKreisBeimNamen(): void
     {
@@ -133,8 +133,7 @@ final class WithdrawalIssueSourceTest extends TestCase
     }
 
     /**
-     * Keine Rechnungen, kein Beleg zu korrigieren; keine Widerrufsfrist,
-     * keine Erstattung.
+     * No invoices, no document to correct; no withdrawal period, no refund.
      *
      * @return iterable<string, array{string, int}>
      */

@@ -14,12 +14,12 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  *   owed "unter Verwendung der harmonisierten Kennzeichnung" before the
  *   purchase (§ 4 Abs. 1 Z 12a, § 8 Abs. 1 FAGG).
  * - **Label without a valid duration**: 0, 1 or 2 years — Consho does not
- *   show a label for anything but "mehr als zwei Jahre" (review GARAN, 7:
+ *   show a label for anything but "mehr als zwei Jahre" (GARAN:
  *   a label with 2 years fell through both checks before).
- * - **Label not public** (acceptance on c5): the shop leaves it out rather
+ * - **Label not public**: the shop leaves it out rather
  *   than print a broken image.
- * - **Label too large** (review GARAN, 5): it travels in every confirmation.
- * - **A value at a variant** (review GARAN, 2): DurabilityGuarantees reads the
+ * - **Label too large** (GARAN): it travels in every confirmation.
+ * - **A value at a variant** (GARAN): DurabilityGuarantees reads the
  *   main product only, so it does nothing — a main product hung below
  *   another keeps its values.
  * - **A nested label that never shows** (GA8): no full label with a valid
@@ -71,7 +71,7 @@ final class DurabilityGuaranteeIssueSource implements ConfigurationIssueSource
 
             // GA8: shown only with a full label to open, from a public folder.
             // Named only where nothing about the full label says it already
-            // (review GA8, 4): without label and duration — no other finding
+            // (GA8): without label and duration — no other finding
             // speaks then — or beside a full label that shows, from a folder
             // that is not public. A missing label, a missing duration and a
             // label not public each have their own finding, which covers it.

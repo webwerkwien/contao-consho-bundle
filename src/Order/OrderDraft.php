@@ -53,8 +53,7 @@ final class OrderDraft
         /**
          * The shop's own VAT ID (tl_consho_shop.vatId). Without it there is no
          * reverse charge: the invoice over a tax-free intra-community supply
-         * has to state it (Art. 11 Abs. 2 UStG 1994 Anhang Binnenmarkt; C-12,
-         * Michael 2026-09-26: "1a nur mit eigener UID").
+         * has to state it (Art. 11 Abs. 2 UStG 1994 Anhang Binnenmarkt; C-12).
          */
         public readonly string $shopVatId = '',
         /**

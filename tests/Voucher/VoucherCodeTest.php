@@ -19,7 +19,7 @@ class VoucherCodeTest extends TestCase
     }
 
     /**
-     * Michael, 2026-10-06: „ja, Großbuchstaben umwandeln".
+     * Lower-case input is converted to upper case.
      */
     public function testDieEingabeWirdInGrossbuchstabenUmgewandelt(): void
     {

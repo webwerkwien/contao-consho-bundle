@@ -57,9 +57,9 @@ class RootCurrencyMigrationTest extends TestCase
 
         $migration->run();
 
-        // Ohne diese Zusicherung liefe die Migration bei jedem
-        // contao:migrate erneut und überschriebe eine inzwischen von Hand
-        // erweiterte Währungsliste.
+        // Without this assertion the migration would run again on every
+        // contao:migrate and overwrite a currency list that has meanwhile
+        // been extended by hand.
         self::assertFalse($this->migration()->shouldRun());
     }
 
@@ -77,10 +77,10 @@ class RootCurrencyMigrationTest extends TestCase
     {
         $this->insertShop(1, 'Kräuterhaus', 'EUR');
 
-        // Kein Startpunkt: consho_shop steht zwar in der Spalte, aber die
-        // Maske zeigt das Feld nur an Startpunkten. Ein Wert hier wäre ein
-        // Rest aus einem umgestellten Seitentyp — die Migration darf ihn
-        // nicht zum Verkaufssignal machen.
+        // Not a start point: consho_shop is in the column, but the form only
+        // shows the field on start points. A value here would be a leftover
+        // from a changed page type — the migration must not turn it into a
+        // sales signal.
         $this->connection->insert('tl_page', ['id' => 20, 'type' => 'regular', 'consho_shop' => 1, 'consho_currency' => '']);
 
         $this->migration()->run();
@@ -90,14 +90,14 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testEinStartpunktOhneShopDatensatzBleibtLeer(): void
     {
-        // Der Shop wurde gelöscht, der Verweis zeigt ins Leere. Hier wird
-        // nichts geraten — eine falsche Währung, die still weiterlebt, wäre
-        // schlimmer als eine leere.
+        // The shop was deleted, the reference points to nothing. Nothing is
+        // guessed here — a wrong currency that lives on silently would be
+        // worse than an empty one.
         //
-        // ⚠️ Diese Seite meldet auch RootWithoutCurrency nicht: Ohne Shop gibt
-        // es niemanden, der eine Währung annehmen oder ablehnen könnte, und
-        // die Meldung nennte einen Shop, den es nicht gibt. Sie fällt unter
-        // „Startpunkt ohne Shop-Konfiguration" (Block A, Abschnitt 7).
+        // ⚠️ This page does not report RootWithoutCurrency either: without a
+        // shop there is nobody who could accept or reject a currency, and the
+        // message would name a shop that does not exist. It falls under
+        // "start point without a shop configuration" (Block A, section 7).
         $this->insertRoot(10, 99);
 
         $this->migration()->run();
@@ -108,8 +108,8 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testEinShopMitZweiWaehrungenLaesstSeinenStartpunktWaehlen(): void
     {
-        // Es gibt nichts zu erben: Welche der beiden hier gilt, kann nur der
-        // Betreiber sagen. RootWithoutCurrency meldet die Lücke.
+        // There is nothing to inherit: which of the two applies here only the
+        // operator can say. RootWithoutCurrency reports the gap.
         $this->insertShop(1, 'Kräuterhaus', 'EUR');
         $this->connection->update('tl_consho_shop', ['currencies' => serialize(['CHF', 'EUR'])], ['id' => 1]);
         $this->insertRoot(10, 1);
@@ -122,9 +122,9 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testEineBereitsGepflegteWaehrungsListeBleibtStehen(): void
     {
-        // Ein Shop, der zwischen Task 1 und dieser Migration angelegt wurde:
-        // currencies ist gewählt, die alte Einzelspalte leer. Die Migration
-        // darf die Wahl nicht durch die leere Altspalte ersetzen.
+        // A shop created between task 1 and this migration: currencies is
+        // selected, the old single column empty. The migration must not
+        // replace the selection with the empty old column.
         $this->insertShop(1, 'Kräuterhaus', '');
         $this->connection->update('tl_consho_shop', ['currencies' => serialize(['CHF', 'EUR'])], ['id' => 1]);
 
@@ -140,10 +140,10 @@ class RootCurrencyMigrationTest extends TestCase
 
         $currencies = new ShopCurrencies($this->connection);
 
-        // Irgendetwas hat den Dienst in diesem Request schon befragt — dann
-        // hält er die Liste von VOR der Migration, und die ist leer. Ohne das
-        // reset() in run() bekäme resolve() genau diese leere Liste zu sehen
-        // und der Startpunkt bliebe ohne Währung.
+        // Something has already asked the service in this request — then it
+        // holds the list from BEFORE the migration, and that is empty. Without
+        // the reset() in run(), resolve() would see exactly this empty list
+        // and the start point would stay without a currency.
         $currencies->of(1);
 
         (new RootCurrencyMigration($this->connection, $currencies))->run();
@@ -153,18 +153,18 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testEinShopOhneWaehrungBekommtKeineLeereListe(): void
     {
-        // Weder raten noch eine leere Zeichenkette als Währung eintragen:
-        // serialize(['']) sähe aus wie eine Wahl und wäre keine.
+        // Neither guess nor enter an empty string as the currency:
+        // serialize(['']) would look like a selection and would not be one.
         $this->insertShop(1, 'Kräuterhaus', '');
         $this->insertRoot(10, 1);
 
         $this->migration()->run();
 
-        // Die rohe Spalte, nicht der Dienst: ShopCurrencies filtert eine
-        // ungültige Währung ohnehin weg, und dadurch bliebe serialize([''])
-        // in der Datenbank unbemerkt liegen. Gegenprobe bestätigt: ohne
-        // `currency <> ''` in der Abfrage überlebt die Mutation den Test über
-        // den Dienst, diesen hier nicht.
+        // The raw column, not the service: ShopCurrencies filters out an
+        // invalid currency anyway, and so serialize(['']) would stay in the
+        // database unnoticed. Counter-check: without `currency <> ''` in the
+        // query, the mutation survives the test through the service, but not
+        // this one.
         self::assertNull($this->connection->fetchOne('SELECT currencies FROM tl_consho_shop WHERE id = 1') ?: null);
         self::assertSame([], (new ShopCurrencies($this->connection))->of(1));
         self::assertSame('', $this->currencyOfRoot(10));
@@ -172,15 +172,14 @@ class RootCurrencyMigrationTest extends TestCase
     }
 
     /**
-     * Was run() nicht auflösen kann, darf shouldRun() nicht als Arbeit melden.
+     * What run() cannot resolve, shouldRun() must not report as work.
      *
-     * contao:migrate führt eine Migration so lange aus, bis sie sich für fertig
-     * erklärt, und bricht nach 19 Runden mit Exit 1 ab — während sie jedes Mal
-     * Erfolg meldet („0 root page(s)"). Der Abbruch zeigt dann auf Contao statt
-     * auf die Ursache. Genau das tat diese Migration in drei Zuständen, die ihr
-     * eigener Klassenkommentar als gewollt beschreibt; gefunden im
-     * Abschlussreview vom 2026-09-21, nachdem der Terminierungstest nur den
-     * gesunden Fall geprüft hatte.
+     * contao:migrate runs a migration until it declares itself done, and
+     * aborts after 19 rounds with exit 1 — while it reports success every time
+     * ("0 root page(s)"). The abort then points at Contao instead of at the
+     * cause. This migration did exactly that in three states that its own
+     * class comment describes as intended; the termination test had only
+     * checked the healthy case.
      */
     private function assertNichtsMehrZuTun(): void
     {
@@ -189,9 +188,9 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testEineBereitsGesetzteWaehrungWirdNichtUeberschrieben(): void
     {
-        // Ein Startpunkt, an dem schon jemand von Hand gewählt hat — auch
-        // wenn die Wahl nicht zur Altspalte des Shops passt. Die Migration
-        // holt Werte nach, sie korrigiert nicht.
+        // A start point on which someone has already selected by hand — even
+        // if the selection does not match the shop's old column. The migration
+        // fills in values, it does not correct them.
         $this->insertShop(1, 'Kräuterhaus', 'EUR');
         $this->connection->insert('tl_page', ['id' => 10, 'type' => 'root', 'consho_shop' => 1, 'consho_currency' => 'CHF']);
 
@@ -202,9 +201,9 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testNachDemEntfernenDerAltspalteLaeuftSieNichtMehr(): void
     {
-        // Task 10 löscht tl_consho_shop.currency nach der Abnahme. Ab dann
-        // hat diese Migration keine Quelle mehr — sie muss schweigen, nicht
-        // scheitern.
+        // Task 10 drops tl_consho_shop.currency later on. From then on this
+        // migration has no source any more — it must stay silent, not
+        // fail.
         $this->connection->executeStatement('DROP TABLE tl_consho_shop');
         $this->connection->executeStatement("CREATE TABLE tl_consho_shop (id INTEGER PRIMARY KEY, title TEXT NOT NULL DEFAULT '', currencies BLOB)");
 
@@ -213,9 +212,9 @@ class RootCurrencyMigrationTest extends TestCase
 
     public function testOhneDieNeueSpalteLaeuftDieMigrationNicht(): void
     {
-        // contao:migrate läuft in zwei Durchgängen, der Schemaabgleich
-        // dazwischen. Im ersten gibt es die Spalte noch nicht — ohne diese
-        // Prüfung scheitert der Durchgang an einer unbekannten Spalte.
+        // contao:migrate runs in two passes, with the schema update in
+        // between. In the first one the column does not exist yet — without
+        // this check the pass fails on an unknown column.
         $this->connection->executeStatement('DROP TABLE tl_page');
         $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0)");
 

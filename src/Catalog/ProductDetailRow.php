@@ -7,7 +7,7 @@ namespace Webwerkwien\ContaoConshoBundle\Catalog;
  * yet combined.
  *
  * Deliberately without the safety texts: they follow a different language rule
- * (no fallback, docs/mehrsprachigkeit.md, 4) and are read by
+ * (no fallback, Block M, 4) and are read by
  * ProductSafetyResolver. A field that is here gets read with coalesce() one day.
  *
  * Decimal columns stay the strings the database returns; nothing here is a

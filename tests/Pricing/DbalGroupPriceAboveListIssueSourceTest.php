@@ -11,12 +11,11 @@ use Webwerkwien\ContaoConshoBundle\Pricing\DbalGroupPriceAboveListIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Eine Kundengruppe, die mehr zahlt als alle anderen (C-4).
+ * A customer group that pays more than everyone else (C-4).
  *
- * Erlaubt — „Ich denke ja, aber vielleicht sollte es einen Hinweis geben"
- * (Michael, 2026-09-21). Geprüft wird deshalb nicht, ob es vorkommen darf,
- * sondern ob der Hinweis die Fälle trifft, in denen ein Mitglied wirklich
- * mehr zahlt.
+ * Allowed — but worth a notice. What is checked is therefore not whether it
+ * may happen, but whether the notice hits the cases in which a member really
+ * pays more.
  */
 class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 {
@@ -52,7 +51,7 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 
     public function testEinAbopreisDerGruppeIstKeinTeurererListenpreis(): void
     {
-        // Abo-1 (A2): 12 € im Monatsabo neben 10 € Einmalkauf ist kein Vergleich.
+        // Abo-1 (A2): €12 in a monthly subscription next to a €10 one-off purchase is no comparison.
         $this->price('10.0000');
         $this->connection->insert('tl_consho_price', ['pid' => 1, 'tstamp' => 1, 'currency' => 'EUR', 'net' => '12.0000', 'customerGroup' => 3, 'subscriptionRule' => 5]);
 
@@ -61,7 +60,7 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 
     public function testEinTeurererGruppenpreisAufDerselbenSchwelleWirdGemeldet(): void
     {
-        // Der Fall, den Michael auf c5 gesehen hat: Liste 7,42 — Gruppe 8,00.
+        // The real-world case: list 7.42 — group 8.00.
         $this->price('7.4167');
         $this->price('8.0000', group: 3);
 
@@ -76,11 +75,11 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
     public function testAuchWennDerGruppenpreisErstOberhalbEinerStaffelTeurerWird(): void
     {
         /*
-         * ⚠️ Der Fall, den ein einfacher Zeilenvergleich verfehlte: Die
-         * Gruppenzeile (9,00 ab 1) ist günstiger als der Listenpreis (10,00 ab
-         * 1) — erst ab 100 Stück, wo alle anderen 7,00 zahlen, wird sie
-         * teurer. Verglichen wird deshalb an JEDER Schwelle, und zwar mit dem
-         * echten Rechner.
+         * ⚠️ The case a simple row comparison missed: the
+         * group row (9.00 from 1) is cheaper than the list price (10.00 from
+         * 1) — only from 100 pieces, where everyone else pays 7.00, does it become
+         * more expensive. The comparison is therefore made at EVERY threshold, and with the
+         * real calculator.
          */
         $this->price('10.0000');
         $this->price('7.0000', minQuantity: '100.0000');
@@ -94,9 +93,9 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 
     public function testEineEigeneStaffelDerGruppeHaeltDenHinweisFern(): void
     {
-        // Dieselben Zeilen wie oben, plus eine Gruppenstaffel ab 100, die
-        // unter dem öffentlichen Preis bleibt. Dann zahlt das Mitglied
-        // nirgends mehr — und ein Hinweis wäre falsch.
+        // The same rows as above, plus a group scale from 100 that
+        // stays below the public price. Then the member pays more
+        // nowhere — and a notice would be wrong.
         $this->price('10.0000');
         $this->price('7.0000', minQuantity: '100.0000');
         $this->price('9.0000', group: 3);
@@ -115,7 +114,7 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 
     public function testEineNieGespeichertePreiszeileZaehltNicht(): void
     {
-        // tstamp 0 — dieselbe Regel wie in DbalPriceRepository::findCandidates().
+        // tstamp 0 — the same rule as in DbalPriceRepository::findCandidates().
         $this->price('7.0000');
         $this->connection->insert('tl_consho_price', [
             'pid' => 1,
@@ -131,8 +130,8 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 
     public function testEineAndereWaehrungMischtSichNichtEin(): void
     {
-        // 9 CHF sind nicht mehr als 10 EUR, und der Vergleich findet auch gar
-        // nicht statt: Preise verschiedener Währungen begegnen einander nie.
+        // CHF 9 is not more than EUR 10, and the comparison does not even take
+        // place: prices in different currencies never meet.
         $this->price('10.0000');
         $this->price('9.0000', group: 3, currency: 'CHF');
 
@@ -141,8 +140,8 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
 
     public function testOhneOeffentlichenPreisGibtEsNichtsZuVergleichen(): void
     {
-        // Nur ein Gruppenpreis: Es gibt keinen Betrag, teurer ALS den der
-        // Gruppenpreis sein könnte.
+        // Only a group price: there is no amount the group price
+        // could be more expensive THAN.
         $this->price('9.0000', group: 3);
 
         self::assertSame([], $this->issues());
@@ -158,28 +157,28 @@ class DbalGroupPriceAboveListIssueSourceTest extends TestCase
         foreach ([1, 2, 3, 4] as $product) {
             $this->price('7.0000', product: $product);
             $this->price('9.0000', product: $product, group: 3);
-            // Eine zweite Schwelle, die es ebenfalls treffen würde — sie darf
-            // den Zähler nicht ein zweites Mal erhöhen.
+            // A second threshold that would hit as well — it must not
+            // increase the counter a second time.
             $this->price('9.5000', product: $product, group: 3, minQuantity: '10.0000');
         }
 
-        // Dasselbe Produkt, zweite Gruppe: zählt eigens.
+        // The same product, a second group: counts separately.
         $this->price('9.0000', group: 4);
 
         $issues = $this->issues();
 
         self::assertCount(1, $issues);
         self::assertSame('5', $issues[0]->context['count']);
-        // Drei Beispiele, dann Auslassungszeichen.
+        // Three examples, then an ellipsis.
         self::assertStringEndsWith(' …', $issues[0]->context['examples']);
         self::assertSame(3, substr_count($issues[0]->context['examples'], ' / '));
     }
 
     public function testDerBefundIstEinHinweisUndSperrtNichts(): void
     {
-        // Michael hat entschieden, dass ein teurerer Gruppenpreis erlaubt ist.
-        // Eine Warnung sperrte den Checkout eines Shops, der genau das tut,
-        // was eingestellt wurde.
+        // A more expensive group price is allowed.
+        // A warning would block the checkout of a shop that does exactly
+        // what was configured.
         self::assertFalse(ConfigurationFinding::GroupPriceAboveList->isWarning());
     }
 

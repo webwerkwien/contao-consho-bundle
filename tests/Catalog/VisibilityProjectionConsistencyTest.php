@@ -13,19 +13,19 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityRows;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Der Gleichheitstest der Projektion (B-10, 5.7, „Prüfung").
+ * The equality test of the projection (B-10, 5.7, "Prüfung").
  *
- * Nach einem Neubau muss die Tabelle je Shop und Sprache genau das halten,
- * was die Sichtbarkeitsregeln in Echtzeit ergeben — Ab-Preis eingeschlossen.
+ * After a rebuild the table must hold, per shop and language, exactly
+ * what the visibility rules yield in real time — from-price included.
  *
- * 🔴 Das Soll kommt NICHT aus VisibilityRows. Ein Vergleich mit derselben
- * Klasse, die die Tabelle befüllt, wäre immer gleich — auch wenn ihr eine
- * Bedingung fehlt. Hier rechnet der Test selbst: sichtbar laut
- * VisibilityCriteria, bepreist und Ab-Preis in PHP aus den Listenpreisen, nach
- * der Regel aus Block A (A-4b, E2) — mit Varianten zählen nur deren sichtbare
- * Preise, ohne Varianten der eigene.
+ * 🔴 The expected value does NOT come from VisibilityRows. A comparison with
+ * the same class that fills the table would always be equal — even if it
+ * lacks a condition. Here the test computes itself: visible according to
+ * VisibilityCriteria, priced and from-price in PHP from the list prices, by
+ * the rule from Block A (A-4b, E2) — with variants only their visible
+ * prices count, without variants the product's own.
  *
- * Katalog: Shop 1 (Startpunkte de, fr), Shop 2 (de), beide EUR, Standardsprache de.
+ * Catalogue: shop 1 (start points de, fr), shop 2 (de), both EUR, default language de.
  */
 class VisibilityProjectionConsistencyTest extends TestCase
 {
@@ -90,8 +90,8 @@ class VisibilityProjectionConsistencyTest extends TestCase
 
     public function testTheCatalogueCoversTheCasesItClaims(): void
     {
-        // Sonst prüft der Gleichheitstest einen Katalog, in dem die schwierigen
-        // Fälle stillschweigend fehlen: je Ziel ein anderer Ab-Preis für 10.
+        // Otherwise the equality test checks a catalogue in which the difficult
+        // cases are silently missing: a different from-price for 10 per target.
         self::assertSame('8.0000', $this->expectedMains(1, 'de')[10] ?? null, 'de: Variante 12 mit eigenem Warnhinweis zählt');
         self::assertSame('10.0000', $this->expectedMains(1, 'fr')[10] ?? null, 'fr: Variante 12 ohne übersetzten Warnhinweis zählt nicht');
         self::assertSame('6.0000', $this->expectedMains(2, 'de')[10] ?? null, 'Shop 2: Variante 14 nur dort');
@@ -101,7 +101,7 @@ class VisibilityProjectionConsistencyTest extends TestCase
     }
 
     /**
-     * Das Soll, unabhängig von VisibilityRows gerechnet.
+     * The expected value, computed independently of VisibilityRows.
      *
      * @return array<int, string> main product id => from price (gross)
      */
@@ -141,17 +141,17 @@ class VisibilityProjectionConsistencyTest extends TestCase
 
     private function catalogue(): void
     {
-        // 1: sichtbar in beiden Shops, übersetzt.
+        // 1: visible in both shops, translated.
         $this->main(1, shops: [1, 2], price: '12.0000', translated: true);
-        // 2: ohne Preis. 3: unveröffentlicht. 4: Start in der Zukunft. 5: nur Shop 2.
+        // 2: without a price. 3: unpublished. 4: start in the future. 5: shop 2 only.
         $this->main(2, shops: [1]);
         $this->main(3, shops: [1], price: '12.0000', published: false);
         $this->main(4, shops: [1], price: '12.0000', start: (string) (self::NOW + 3600));
         $this->main(5, shops: [2], price: '7.0000');
-        // Preis in fremder Währung hilft nicht.
+        // A price in a foreign currency does not help.
         $this->insertListPrice(['pid' => 2, 'currency' => 'CHF', 'country' => 'AT', 'net' => '3.0000', 'gross' => '3.0000']);
 
-        // 10: Varianten mit verschiedenen Preisen und Sichtbarkeiten.
+        // 10: variants with different prices and visibilities.
         $this->main(10, shops: [1, 2], translated: true);
         $this->variant(11, 10, price: '10.0000');
         $this->variant(12, 10, price: '8.0000', safetyWarnings: 'Achtung, heiß');
@@ -159,19 +159,19 @@ class VisibilityProjectionConsistencyTest extends TestCase
         $this->variant(14, 10, price: '6.0000');
         $this->insertProductShop(['pid' => 14, 'shop' => 2]);
 
-        // 20: eigener Preis, aber Varianten — nur deren Preis zählt.
+        // 20: own price, but variants — only their price counts.
         $this->main(20, shops: [1], price: '5.0000', translated: true);
         $this->variant(21, 20, price: '15.0000');
 
-        // 30: eigener Preis, Varianten ohne Preis — nicht bepreist.
+        // 30: own price, variants without a price — not priced.
         $this->main(30, shops: [1], price: '9.0000', translated: true);
         $this->variant(31, 30);
         $this->variant(32, 30);
 
-        // 40: ohne Übersetzung.
+        // 40: without a translation.
         $this->main(40, shops: [1], price: '4.0000');
 
-        // 50: alle Varianten unveröffentlicht.
+        // 50: all variants unpublished.
         $this->main(50, shops: [1], translated: true);
         $this->variant(51, 50, price: '3.0000', published: false);
     }

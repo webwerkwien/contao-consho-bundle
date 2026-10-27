@@ -16,7 +16,7 @@ use Doctrine\DBAL\Connection;
  * An alias is a value the editor owns and that does not move when the title is
  * corrected. Shopware puts `{{ product.translated.name }}` in its URL template,
  * and a renamed article changes its address; Contao uses aliases for news and
- * events for exactly this reason. See docs/block-b-katalog-frontend.md,
+ * events for exactly this reason. See Block B,
  * section 4.2.
  */
 final class AliasFactory

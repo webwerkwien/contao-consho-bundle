@@ -15,15 +15,15 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
  * integers — whether "two variants, none active" is excluded cannot be
  * answered by asserting that a query string contains the word EXISTS. SQLite
  * answers the same as MySQL here; index use and ONLY_FULL_GROUP_BY are
- * engine questions and belong in the acceptance step on the test server.
+ * engine questions and need a real MySQL/MariaDB installation.
  */
 class VisibilityCriteriaTest extends TestCase
 {
-    // Zehnstellig wie ein echter Zeitstempel: start und stop sind in der
-    // echten DB varchar(10), der Vergleich läuft dort als Zeichenkette. Eine
-    // kleine Zahl wie 1_000_000 würde bei "-1" auf sechs Stellen fallen und
-    // SQLites lexikographischen Vergleich (TEXT-Affinität der Spalte) falsch
-    // ausfallen lassen — siehe VisibilityCriteria::published().
+    // Ten digits like a real timestamp: start and stop are varchar(10) in the
+    // real DB, the comparison runs there as a string. A
+    // small number like 1_000_000 would drop to six digits at "-1" and make
+    // SQLite's lexicographic comparison (TEXT affinity of the column) come
+    // out wrong — see VisibilityCriteria::published().
     private const NOW = 1_700_000_000;
 
     private Connection $connection;
@@ -265,8 +265,8 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testAProductWithoutSafetyWarningsIsUnaffected(): void
     {
-        // Die Mehrheit der Produkte. Die Regel darf nicht pauschal greifen —
-        // sonst wäre in jeder zweiten Sprache der halbe Katalog weg.
+        // The majority of products. The rule must not apply across the board —
+        // otherwise half the catalogue would be gone in every second language.
         $this->product(1);
         $this->inShop(1, 1);
         $this->translate(1, 'en', alias: 'herbal-bitters');
@@ -276,11 +276,11 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testAProductWhoseSafetyFieldsWereNeverTouchedIsUnaffected(): void
     {
-        // Die Spalten sind `longtext NULL` ohne Vorgabewert — ein nie
-        // gespeichertes Feld steht als NULL in der Datenbank, nicht als ''.
-        // Auf dem Testserver am 2026-09-13 bei ALLEN Produkten so vorgefunden.
-        // `NULL = ''` ist in SQL nie wahr: Ohne Absicherung wäre jedes solche
-        // Produkt in jeder Übersetzungssprache unsichtbar.
+        // The columns are `longtext NULL` without a default — a field never
+        // saved is NULL in the database, not ''.
+        // On a real installation ALL products looked like this.
+        // `NULL = ''` is never true in SQL: without a safeguard every such
+        // product would be invisible in every translation language.
         $this->product(1, safetyWarnings: null, safetyInformation: null);
         $this->inShop(1, 1);
         $this->translate(1, 'en', alias: 'herbal-bitters', safetyWarnings: null, safetyInformation: null);
@@ -290,7 +290,7 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testAnUntouchedTranslatedSafetyFieldDoesNotCountAsTranslated(): void
     {
-        // Die Gegenrichtung: NULL in der Übersetzung ist leer, nicht „vorhanden".
+        // The other direction: NULL in the translation is empty, not "present".
         $this->product(1, safetyWarnings: 'Enthält Alkohol');
         $this->inShop(1, 1);
         $this->translate(1, 'en', alias: 'herbal-bitters', safetyWarnings: null);
@@ -307,14 +307,14 @@ class VisibilityCriteriaTest extends TestCase
         self::assertSame([], $this->visibleMainProducts(language: 'en', fallback: 'de'));
     }
 
-    // ── Varianten mit eigenen Sicherheitstexten (Michael, 2026-09-13) ────
+    // ── Variants with their own safety texts ────
 
     public function testAVariantWithoutOwnSafetyTextsNeedsNoTranslationRow(): void
     {
-        // Der Normalfall: Die Variante erbt Texte und Warnhinweise vom
-        // Hauptprodukt. Hinge ihre Sichtbarkeit an einer eigenen
-        // Übersetzungszeile, verschwände jedes Variantenprodukt in jeder
-        // Fremdsprache.
+        // The normal case: the variant inherits texts and warnings from the
+        // main product. If its visibility depended on a translation row of its
+        // own, every variant product would disappear in every foreign
+        // language.
         $this->product(1);
         $this->inShop(1, 1);
         $this->product(2, pid: 1, safetyWarnings: null, safetyInformation: null);
@@ -325,8 +325,8 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testAVariantWithOwnWarningsIsInvisibleWithoutTheirTranslation(): void
     {
-        // Frage 3: Auf der fr-Seite gäbe es sonst nur „deutsch zeigen" (Verstoß),
-        // „die des Hauptprodukts zeigen" (falsch) oder „nichts zeigen" (Verstoß).
+        // Otherwise the fr page would only have "show German" (violation),
+        // "show the main product's" (wrong) or "show nothing" (violation).
         $this->product(1);
         $this->inShop(1, 1);
         $this->product(2, pid: 1, safetyWarnings: 'Enthält 40 % Alkohol');
@@ -348,8 +348,8 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testAVariantWithTranslatedOwnWarningsIsVisible(): void
     {
-        // Ohne Alias: Varianten haben keine eigene Adresse, ihre
-        // Übersetzungszeile trägt nur die Sicherheitstexte.
+        // Without an alias: variants have no address of their own, their
+        // translation row only carries the safety texts.
         $this->product(1);
         $this->inShop(1, 1);
         $this->product(2, pid: 1, safetyWarnings: 'Enthält 40 % Alkohol');
@@ -370,8 +370,8 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testTheMainProductsTranslationDoesNotCoverTheVariantsOwnWarnings(): void
     {
-        // Die Zeile des Hauptprodukts trägt einen französischen Warnhinweis —
-        // aber den des Hauptprodukts, nicht den eigenen der Variante.
+        // The main product's row carries a French warning —
+        // but the main product's, not the variant's own.
         $this->product(1, safetyWarnings: 'Enthält Alkohol');
         $this->inShop(1, 1);
         $this->translate(1, 'fr', alias: 'bitter-suedois', safetyWarnings: 'Contient de l\'alcool');
@@ -382,9 +382,9 @@ class VisibilityCriteriaTest extends TestCase
 
     public function testAMainProductWhoseOnlyVariantIsHiddenByLanguageIsHiddenToo(): void
     {
-        // Regel 3 in derselben Sprache: Ist in fr keine Variante sichtbar, gibt
-        // es dort nichts zu kaufen. Sonst stünde die Produktseite ohne jede
-        // wählbare Variante da, während die Liste das Produkt schon verwirft.
+        // Rule 3 in the same language: if no variant is visible in fr, there is
+        // nothing to buy there. Otherwise the product page would have no
+        // selectable variant at all, while the list already discards the product.
         $this->product(1);
         $this->inShop(1, 1);
         $this->translate(1, 'fr', alias: 'bitter-suedois');
@@ -413,8 +413,8 @@ class VisibilityCriteriaTest extends TestCase
             'id' => $id,
             'pid' => $pid,
             'published' => $published ? 1 : 0,
-            // 0 bleibt der Testparameter für "nicht gesetzt", die Spalte
-            // speichert dafür aber '' — genau wie die echte DB.
+            // 0 stays the test parameter for "not set", but the column
+            // stores '' for it — just like the real DB.
             'start' => $start > 0 ? (string) $start : '',
             'stop' => $stop > 0 ? (string) $stop : '',
             'safetyWarnings' => $safetyWarnings,

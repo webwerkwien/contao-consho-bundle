@@ -23,13 +23,13 @@ class ShopCurrenciesListenerTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Nur der selbst gesetzte Ast, nicht der ganze Sprachbaum.
+        // Only the branch set by ourselves, not the whole language tree.
         unset($GLOBALS['TL_LANG']['CONSHO'], $GLOBALS['TL_LANGUAGE']);
     }
 
     /**
-     * Die ganze Liste, nicht die verkauften — dieses Feld bestimmt, was möglich
-     * ist, die Preismaske folgt daraus.
+     * The whole list, not the ones sold — this field determines what is
+     * possible, the price form follows from it.
      */
     public function testDieOptionenUmfassenDieVollstaendigeIsoListe(): void
     {
@@ -38,15 +38,15 @@ class ShopCurrenciesListenerTest extends TestCase
         self::assertCount(\count(Currencies::getCurrencyCodes()), $options);
         self::assertArrayHasKey('EUR', $options);
 
-        // Der eigentliche Prüfstein: eine Währung, die kein Shop führt. EUR,
-        // CHF und USD stünden auch in der gefilterten Liste der Preismaske und
-        // unterschieden deshalb nichts.
+        // The actual touchstone: a currency that no shop carries. EUR, CHF and
+        // USD would also be in the filtered list of the price form and therefore
+        // would not distinguish anything.
         self::assertArrayHasKey('MNT', $options);
     }
 
     /**
-     * Der Code steht in der Beschriftung, weil `chosen` die Beschriftung
-     * durchsucht — getippt wird „USD", nicht „US-Dollar".
+     * The code is in the label because `chosen` searches the label — what is
+     * typed is "USD", not "US-Dollar".
      */
     public function testDieBeschriftungNenntNamenUndCode(): void
     {
@@ -61,14 +61,13 @@ class ShopCurrenciesListenerTest extends TestCase
     }
 
     /**
-     * Eine Sprache, die wie eine Sprache aussieht, fällt bei Symfony auf die
-     * übergeordnete zurück — `kl-ingon` landet bei Kalaallisut. Eine, die das
-     * nicht tut, lässt den Intl-Leser werfen (gemessen am 2026-09-21: „12345"
-     * und Pfadangaben). Die Maske darf daran nicht zerbrechen.
+     * A language that looks like a language falls back to its parent in
+     * Symfony — `kl-ingon` ends up at Kalaallisut. One that does not makes the
+     * Intl reader throw (measured: "12345" and path strings). The form must
+     * not break on that.
      *
-     * Geprüft an CHF, nicht an EUR: „Euro" heißt auf Deutsch wie auf Englisch
-     * gleich und könnte den Rückfall von jedem beliebigen Ausgang nicht
-     * unterscheiden.
+     * Checked on CHF, not on EUR: "Euro" is the same in German and English and
+     * could not tell the fallback apart from any other exit.
      */
     public function testEineUnlesbareBackendSpracheFaelltAufEnglischZurueck(): void
     {
@@ -78,13 +77,13 @@ class ShopCurrenciesListenerTest extends TestCase
     }
 
     /**
-     * Contao liefert einen Sprach-TAG mit Bindestrich
-     * (`LocaleUtil::formatAsLanguageTag()`), Symfonys Datenverzeichnis heißt
-     * mit Unterstrich. Ohne die Umschreibung im Listener verfehlt `de-CH` die
-     * Datei `de_CH` und fällt über `Locale::getFallback()` auf `de` zurück —
-     * bei 291 von 294 Codes derselbe Text, bei dreien nicht.
+     * Contao delivers a language TAG with a hyphen
+     * (`LocaleUtil::formatAsLanguageTag()`), Symfony's data directory is named
+     * with an underscore. Without the rewrite in the listener `de-CH` misses
+     * the file `de_CH` and falls back to `de` via `Locale::getFallback()` — the
+     * same text for 291 of 294 codes, not for three.
      *
-     * BYN ist einer davon: Schweizer Hochdeutsch kennt kein ß.
+     * BYN is one of them: Swiss Standard German has no ß.
      */
     public function testEinRegionalerSprachTagErreichtDieRegionalenNamen(): void
     {
@@ -103,7 +102,7 @@ class ShopCurrenciesListenerTest extends TestCase
     }
 
     /**
-     * Der Auftrag des Callbacks: keine leere Auswahl.
+     * The callback's job: no empty selection.
      */
     public function testEineLeereAuswahlWirdAbgelehnt(): void
     {
@@ -120,9 +119,8 @@ class ShopCurrenciesListenerTest extends TestCase
     }
 
     /**
-     * Das, was `mandatory` nicht abdeckt: Contao bietet einen gespeicherten Wert
-     * außerhalb der Optionen als „(unbekannt)" wieder an und nimmt ihn beim
-     * Speichern zurück.
+     * What `mandatory` does not cover: Contao offers a stored value outside the
+     * options again as "(unknown)" and takes it back on save.
      */
     public function testEinUnbekannterCodeWirdAbgelehnt(): void
     {

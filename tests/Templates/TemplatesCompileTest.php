@@ -12,45 +12,45 @@ use Twig\TwigFilter;
 use Twig\TwigFunction;
 
 /**
- * Jede eigene Vorlage lässt sich übersetzen, und jeder Name darin existiert.
+ * Every template of our own compiles, and every name in it exists.
  *
- * 🔴 **Am 2026-09-22 im Review gefunden.** `consho_checkout.html.twig` rief
- * dreimal `contao_csrf_token_input()` auf — eine Funktion, die es in Contao
- * 5.7 **nicht gibt**. Ich hatte sie erfunden; das eigene Warenkorb-Template
- * daneben macht es richtig mit `{{ contao.request_token }}`. Twig bricht beim
- * Übersetzen mit „Unknown function" ab, also hätte **jede** Checkout-Seite
- * einen 500er geliefert.
+ * 🔴 `consho_checkout.html.twig` once called `contao_csrf_token_input()`
+ * three times — a function that **does not exist** in Contao 5.7. It was
+ * invented; the shop's own cart template next to it does it right with
+ * `{{ contao.request_token }}`. Twig aborts compiling with "Unknown
+ * function", so **every** checkout page would have returned a 500.
  *
- * ⚠️ **Warum 2309 Tests daran vorbeigingen.** Vorlagen wurden bis dahin auf
- * zwei Arten geprüft, und beide sehen so etwas nicht:
+ * ⚠️ **Why 2309 tests missed it.** Until then templates were checked in two
+ * ways, and neither sees such a thing:
  *
- *   - als TEXT, mit regulären Ausdrücken auf die Quelle (Regel 22: „Quelltext
- *     als Text zu prüfen misst den Quelltext, nicht das Ergebnis");
- *   - über einen ArrayLoader mit einem ABGESCHRIEBENEN Ausschnitt, etwa der
- *     Kürzungskette in ProductDetailPurchaseTest — und eine Abschrift enthält
- *     den Fehler des Originals nicht (Regel 24).
+ *   - as TEXT, with regular expressions on the source (checking source code
+ *     as text measures the source code, not the result);
+ *   - via an ArrayLoader with a COPIED excerpt, such as the truncation chain
+ *     in ProductDetailPurchaseTest — and a copy does not contain the error of
+ *     the original (the test must go through the real place, not rebuild it).
  *
- * Dazu kam, dass der Controller-Test die Vorlage nie anfasst: FragmentTemplate
- * bekommt dort eine Antwortfabrik, die nichts rendert, und geprüft wird
- * `getData()`.
+ * On top of that, the controller test never touches the template:
+ * FragmentTemplate gets a response factory there that renders nothing, and
+ * what is checked is `getData()`.
  *
- * ── Was dieser Test kann und was nicht ────────────────────────────────────
+ * ── What this test can do and what it cannot ──────────────────────────────
  *
- * Er ÜBERSETZT, er rendert nicht. Das findet Syntaxfehler und jeden
- * unbekannten Funktions-, Filter- oder Test-Namen — genau die Klasse Fehler,
- * die sonst erst der erste Seitenaufruf findet. Es findet NICHT, ob eine
- * Variable existiert, ob das Markup sinnvoll ist oder ob die Ausgabe stimmt.
+ * It COMPILES, it does not render. That finds syntax errors and every
+ * unknown function, filter or test name — exactly the class of errors that
+ * otherwise only the first page request finds. It does NOT find whether a
+ * variable exists, whether the markup makes sense or whether the output is
+ * right.
  *
- * ⚠️ Die Namen unten sind die Aussage dieses Tests, nicht sein Zubehör: Sie
- * sind das, was Contao und die Twig-Bridge wirklich mitbringen. Wer hier einen
- * Namen ergänzt, **behauptet, dass es ihn gibt** — und muss das an Contaos
- * Quelltext belegen können, so wie `contao.request_token` an
- * ContaoExtension::getGlobals() belegt ist.
+ * ⚠️ The names below are the statement of this test, not its accessories:
+ * they are what Contao and the Twig bridge really provide. Whoever adds a
+ * name here **claims that it exists** — and must be able to prove it from
+ * Contao's source code, the way `contao.request_token` is proven by
+ * ContaoExtension::getGlobals().
  */
 class TemplatesCompileTest extends TestCase
 {
     /**
-     * Funktionen aus Contao und der Symfony-Twig-Bridge, mit ihrer Herkunft.
+     * Functions from Contao and the Symfony Twig bridge, with their origin.
      */
     private const FUNCTIONS = [
         // Contao\CoreBundle\Twig\Extension\ContaoExtension::getFunctions()
@@ -61,20 +61,19 @@ class TemplatesCompileTest extends TestCase
         // Symfony\Bridge\Twig\Extension\RoutingExtension
         'path',
         /*
-         * ⚠️ `trans` steht hier NICHT. Die Twig-Bridge bietet die Funktion `t`
-         * und den FILTER `trans` — eine Funktion `trans` gibt es nicht
-         * (TranslationExtension::getFunctions/getFilters). Sie hier zu
-         * registrieren, wie es die erste Fassung tat, machte genau die Lücke
-         * auf, vor der der Kommentar oben warnt: `{{ trans('x') }}` wäre grün
-         * gewesen und live ein 500er. Im zweiten Review vom 2026-09-22
-         * gefunden.
+         * ⚠️ `trans` is NOT listed here. The Twig bridge offers the function `t`
+         * and the FILTER `trans` — there is no function `trans`
+         * (TranslationExtension::getFunctions/getFilters). Registering it here,
+         * as the first version did, opened exactly the gap the comment above
+         * warns about: `{{ trans('x') }}` would have been green and a 500 on a
+         * live site.
          */
         't',
     ];
 
     /**
-     * Filter derselben Herkunft. Twigs eigene (default, join, raw, trim,
-     * number_format, nl2br) sind ohnehin da.
+     * Filters of the same origin. Twig's own (default, join, raw, trim,
+     * number_format, nl2br) are there anyway.
      */
     private const FILTERS = [
         'trans',
@@ -92,17 +91,17 @@ class TemplatesCompileTest extends TestCase
 
         try {
             /*
-             * tokenize + parse, nicht render: Das ist die Stelle, an der Twig
-             * unbekannte Namen meldet, und sie braucht weder Daten noch die
-             * Elternvorlage aus @Contao.
+             * tokenize + parse, not render: that is where Twig reports unknown
+             * names, and it needs neither data nor the parent template from
+             * @Contao.
              */
             $nodes = $twig->parse($twig->tokenize(new Source($this->withoutExtends($source), $name)));
         } catch (SyntaxError $error) {
             self::fail(\sprintf('%s: %s (Zeile %d)', $name, $error->getRawMessage(), $error->getTemplateLine()));
         }
 
-        // Nicht assertTrue(true): ein Baum mit Knoten ist der Beleg, dass
-        // wirklich etwas übersetzt wurde und nicht eine leere Datei durchlief.
+        // Not assertTrue(true): a tree with nodes is the proof that something
+        // was really compiled and not that an empty file went through.
         self::assertGreaterThan(0, iterator_count($nodes->getIterator()), $name);
     }
 
@@ -127,15 +126,15 @@ class TemplatesCompileTest extends TestCase
 
     public function testDerTestFindetUeberhauptVorlagen(): void
     {
-        // Ein Test, der nichts findet, wäre immer grün.
+        // A test that finds nothing would always be green.
         self::assertGreaterThan(5, iterator_count(self::templates()));
     }
 
     /**
-     * `{% extends "@Contao/…" %}` und `{{ parent() }}` brauchen die
-     * Elternvorlage, die hier nicht vorliegt. Beide werden entfernt, weil sie
-     * nichts mit der Frage zu tun haben: Ein unbekannter Funktionsname im
-     * Rumpf fällt trotzdem auf.
+     * `{% extends "@Contao/…" %}` and `{{ parent() }}` need the parent
+     * template, which is not available here. Both are removed because they
+     * have nothing to do with the question: an unknown function name in the
+     * body still stands out.
      */
     private function withoutExtends(string $source): string
     {

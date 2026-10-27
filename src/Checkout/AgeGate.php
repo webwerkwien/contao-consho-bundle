@@ -21,7 +21,7 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingCapabilities;
  *    answers for it; Consho verifies nothing itself.
  * 2. The chosen shipping method checks at hand-over, from that level up.
  *
- * **Either one opens the order** (Michael, 2026-09-22: "Einer genügt"). That
+ * **Either one opens the order**. That
  * is how the trade works — an identified customer OR a checked hand-over, not
  * both. Requiring both would mean a verified member could no longer choose the
  * cheap shipping method, for a reason visible only in the shop configuration.
@@ -79,12 +79,11 @@ final class AgeGate
         }
 
         /*
-         * ⚠️ Das Geburtsdatum kommt ZUERST, ersetzt die zwei Wege aber NICHT.
-         * Vor dem Review vom 2026-09-22 stand hier `return null` — damit hätte
-         * eine Versandart, die ab 16 prüft und ein Geburtsdatum verlangt, eine
-         * Lieferung ab 18 durchgelassen, sobald jemand ein passendes Datum
-         * eintippt. Eine Selbstauskunft ist keiner der beiden Wege aus C19;
-         * sie kann einen Weg nur ergänzen, nie ersetzen.
+         * ⚠️ The date of birth comes FIRST, but it does NOT replace the two ways.
+         * This used to be `return null` — a shipping method that checks from 16 and
+         * asks for a date of birth would then have let a delivery from 18 through as
+         * soon as somebody typed a fitting date. A self-declaration is neither of the
+         * two ways of C19; it can only add to a way, never replace it.
          */
         if ([] !== array_intersect($customerGroups, $ageVerifiedGroups)) {
             return null;

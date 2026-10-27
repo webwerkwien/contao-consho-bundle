@@ -12,8 +12,7 @@ namespace Webwerkwien\ContaoConshoBundle\Voucher;
  * guesses one.
  *
  * Stored bare, shown in groups of four. What a customer types is brought into
- * the stored shape first (Michael, 2026-10-06: „ja, Großbuchstaben
- * umwandeln"): upper case, without spaces and dashes. That costs nothing —
+ * the stored shape first: upper case, without spaces and dashes. That costs nothing —
  * the alphabet has no lower case to tell apart. Discount codes of block H keep
  * W6, case and all; this is for vouchers only.
  */

@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Stock\StockState;
 
 /**
- * Block G, G7: die eine Regel für den Zustand, und was ein Produkt mit offener
- * Variantenwahl behaupten darf.
+ * Block G, G7: the one rule for the state, and what a product with an open
+ * variant choice may claim.
  */
 class StockStateTest extends TestCase
 {

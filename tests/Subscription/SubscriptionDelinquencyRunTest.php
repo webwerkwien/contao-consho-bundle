@@ -19,8 +19,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-5 (P35, P37): WEN der Lauf fragt, und welche Mail danach hinausgeht.
- * Das Urteil selbst prüft SubscriptionDelinquencyTest.
+ * Abo-5 (P35, P37): WHOM the run asks, and which mail goes out afterwards.
+ * The verdict itself is checked by SubscriptionDelinquencyTest.
  */
 final class SubscriptionDelinquencyRunTest extends TestCase
 {
@@ -51,18 +51,18 @@ final class SubscriptionDelinquencyRunTest extends TestCase
 
         $past = self::NOW - 86_400;
 
-        // 1: läuft, Folgebestellung über dem Ziel, nie beglichen → gefragt.
+        // 1: running, follow-up order past its term, never settled → asked.
         $this->subscription(1, 'active', 10);
         $this->order(10, 0);
         $this->order(11, 1, ['paymentDueAt' => $past, 'createdAt' => 5]);
-        // 2: ruht → immer gefragt (eine Stornierung meldet sich nicht).
+        // 2: suspended → always asked (a cancellation does not announce itself).
         $this->subscription(2, 'suspended', 20);
         $this->order(20, 0);
-        // 3: bezahlt, 4: storniert, 5: Ziel noch nicht erreicht → nicht gefragt.
+        // 3: paid, 4: cancelled, 5: term not yet reached → not asked.
         $this->subscription(3, 'active', 30);
         $this->order(30, 0, ['paymentDueAt' => $past, 'paymentSettledAt' => $past]);
         $this->connection->insert('tl_consho_payment', ['pid' => 30, 'amount' => '12.0000']);
-        // 8: beglichen und danach erstattet (Review L2) → wieder gefragt.
+        // 8: settled and refunded afterwards → asked again.
         $this->subscription(8, 'active', 80);
         $this->order(80, 0, ['paymentDueAt' => $past, 'paymentSettledAt' => $past]);
         $this->connection->insert('tl_consho_payment', ['pid' => 80, 'amount' => '12.0000']);
@@ -71,13 +71,13 @@ final class SubscriptionDelinquencyRunTest extends TestCase
         $this->order(40, 0, ['paymentDueAt' => $past, 'cancelledAt' => $past]);
         $this->subscription(5, 'active', 50);
         $this->order(50, 0, ['paymentDueAt' => self::NOW + 60]);
-        // 6: der Kauf selbst ist überfällig (P34) → gefragt.
+        // 6: the purchase itself is overdue (P34) → asked.
         $this->subscription(6, 'active', 60);
         $this->order(60, 0, ['paymentDueAt' => $past]);
-        // 7: beendet, nichts ruht → nie, auch überfällig nicht.
+        // 7: ended, nothing suspended → never, not even when overdue.
         $this->subscription(7, 'ended', 70);
         $this->order(70, 0, ['paymentDueAt' => $past]);
-        // 9: beendet mit ruhender Berechtigung → gefragt (P64).
+        // 9: ended with a suspended entitlement → asked (P64).
         DcaSchema::create($this->connection, 'tl_consho_entitlement');
         $this->subscription(9, 'ended', 90);
         $this->order(90, 0);
@@ -93,10 +93,10 @@ final class SubscriptionDelinquencyRunTest extends TestCase
     }
 
     /**
-     * Abo-7b: 12 verlängert das beendete 7, dessen Kauf 70 überfällig ist —
-     * gefragt, weil die Lizenz jetzt an 12 hängt. Die Abos ohne Vorgänger
-     * (3, 4, 5) bleiben ungefragt, obwohl überfällige Bestellungen ohne Abo
-     * (subscription = 0) herumliegen: der Vorgänger 0 trifft keine.
+     * Abo-7b: 12 renews the ended 7, whose purchase 70 is overdue —
+     * asked, because the licence now hangs on 12. The subscriptions without a predecessor
+     * (3, 4, 5) stay unasked, although overdue orders without a subscription
+     * (subscription = 0) are lying around: predecessor 0 matches none.
      */
     public function testEineVerlaengerungWirdWegenDesVorgaengersGefragt(): void
     {
@@ -160,8 +160,8 @@ final class SubscriptionDelinquencyRunTest extends TestCase
     }
 
     /**
-     * Nachlese E5a: Derselbe Lauf fragt die Einmalkäufe — im Cron alle, nach
-     * einer Zahlung diese Bestellung; ein Fehler dort hält die Abos nicht auf.
+     * Nachlese E5a: the same run asks the one-off purchases — in the cron all of them, after
+     * a payment this order; an error there does not hold up the subscriptions.
      */
     public function testAuchDieEinmalkaeufe(): void
     {
@@ -178,9 +178,9 @@ final class SubscriptionDelinquencyRunTest extends TestCase
     }
 
     /**
-     * Nachlese E5 (Michael, 2026-10-09: „E5 Infomail umsetzen"): Ruht ein
-     * Einmalkauf oder lebt er wieder auf, erfährt es der Kunde — nicht aber,
-     * wenn ein Storno das Ruhen aufhob.
+     * Nachlese E5: if a
+     * one-off purchase is suspended or revives, the customer learns about it — but not
+     * when a cancellation lifted the suspension.
      */
     public function testEinmalkaeufeBekommenIhreMail(): void
     {

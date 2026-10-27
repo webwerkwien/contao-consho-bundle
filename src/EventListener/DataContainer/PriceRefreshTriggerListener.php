@@ -64,7 +64,7 @@ class PriceRefreshTriggerListener
      * 🔴 The product comes from the row, NOT from $data. Versions::restore()
      * removes id, pid, ptable and sorting from $data before it calls this
      * callback (Contao 5.7, Versions.php, "Do not overwrite ID, PID…"). Reading
-     * $data['pid'] reported nothing — seen on the test server on 2026-09-13, after a
+     * $data['pid'] reported nothing — after a
      * unit test had passed with a $data the core never hands over.
      *
      * @param array<string, mixed> $data

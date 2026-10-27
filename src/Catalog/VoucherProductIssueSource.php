@@ -16,7 +16,9 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * mistake with money attached:
  *
  *  - a voucher in a taxed class is sold with tax, and taxed again on what it
- *    buys (WG2: only multi-purpose vouchers in the core) — a warning;
+ *    buys — a warning, unless it is sold as single-purpose (EZ-1);
+ *  - a single-purpose voucher in the "nicht steuerbar" class is sold without
+ *    tax and so issued as a multi-purpose one (OrderFactory) — a warning;
  *  - an ordinary product in the "nicht steuerbar" class is sold without tax
  *    — a warning;
  *  - a voucher without a value is issued at what was paid for it — a note.
@@ -36,6 +38,7 @@ final class VoucherProductIssueSource implements ConfigurationIssueSource
     {
         $rows = $this->connection->fetchAllAssociative(
             "SELECT a.title, a.voucherValue,
+                    CASE WHEN a.pid > 0 THEN p.voucherSinglePurpose ELSE a.voucherSinglePurpose END AS singlePurpose,
                     COALESCE(tm.kind, ta.kind, 'physical') AS kind,
                     COALESCE(c.notTaxable, 0) AS notTaxable
                FROM tl_consho_product a
@@ -53,10 +56,15 @@ final class VoucherProductIssueSource implements ConfigurationIssueSource
         foreach ($rows as $row) {
             $voucher = ProductKind::Voucher === ProductKind::stored((string) $row['kind']);
             $notTaxable = (bool) $row['notTaxable'];
+            $singlePurpose = $voucher && (bool) $row['singlePurpose'];
             $context = ['product' => (string) $row['title']];
 
-            if ($voucher && !$notTaxable) {
+            if ($voucher && !$notTaxable && !$singlePurpose) {
                 $issues[] = new ConfigurationIssue(ConfigurationFinding::VoucherTaxed, $context);
+            }
+
+            if ($singlePurpose && $notTaxable) {
+                $issues[] = new ConfigurationIssue(ConfigurationFinding::SinglePurposeVoucherNotTaxed, $context);
             }
 
             if (!$voucher && $notTaxable) {

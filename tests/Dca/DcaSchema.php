@@ -9,7 +9,7 @@ use Doctrine\DBAL\Connection;
  *
  * A hand-written copy is how the test schema of the order came to call a
  * column `orderId` that production calls `order` — no test could ever meet
- * the real name (Fall 31). Read from contao/dca/<table>.php, a column the DCA
+ * the real name. Read from contao/dca/<table>.php, a column the DCA
  * renames is renamed here too, and a column the code writes that the DCA
  * lacks fails the test.
  *
@@ -179,7 +179,7 @@ final class DcaSchema
         }
 
         // NOT NULL without a default: an insert that leaves it out fails here
-        // as it does on MariaDB in strict mode (review Abo-3, L2).
+        // as it does on MariaDB in strict mode (Abo-3).
         if (!\array_key_exists('default', $sql)) {
             return $type.' NOT NULL';
         }

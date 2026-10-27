@@ -44,7 +44,7 @@ final class WithdrawalWindowReader
         /*
          * A subscription's follow-up order opens no withdrawal period (Abo-4,
          * A12): the contract was concluded with the purchase, and its window
-         * is the purchase's. Found in the review of Abo-4: the follow-up has
+         * is the purchase's. Before Abo-4 the follow-up had
          * no entitlement row of its own (P27), so the check below never fired,
          * and the reported delivery opened a fresh 14 days on the order page.
          */
@@ -55,9 +55,8 @@ final class WithdrawalWindowReader
         /*
          * Digital content released with the consumer's consent, for a
          * business customer or after the period (F-4): nothing is left to
-         * withdraw from (§ 18 Abs. 1 Z 11 FAGG, § 356 Abs. 6 BGB). Found at
-         * the acceptance of F on c5 (2026-09-29): WEB-00081, an e-book with
-         * consent, delivered, still offered "Vertrag widerrufen" for the
+         * withdraw from (§ 18 Abs. 1 Z 11 FAGG, § 356 Abs. 6 BGB). Before F an
+         * e-book with consent, delivered, still offered "Vertrag widerrufen" for the
          * whole order. When every goods line is used up by releases and
          * earlier withdrawals, the function is off; a mixed order keeps its
          * window for the parcel.
@@ -98,7 +97,7 @@ final class WithdrawalWindowReader
      * later of the two ends counts, since the function serves the whole order.
      * The release of digital content in the same order counts as a shipment
      * there, too, although it used that content up: a later end, never an
-     * earlier one (review Abo-8, L3; WithdrawalWindow: a day too late costs
+     * earlier one (Abo-8; WithdrawalWindow: a day too late costs
      * nothing).
      *
      * @param array<string, mixed> $shop

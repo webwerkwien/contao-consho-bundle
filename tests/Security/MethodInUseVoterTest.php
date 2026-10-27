@@ -18,7 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Security\ShippingMethodDeleteVoter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Bestellung 1: Versandart 3, Zahlungsart 7.
+ * Order 1: shipping method 3, payment method 7.
  */
 class MethodInUseVoterTest extends TestCase
 {
@@ -34,7 +34,7 @@ class MethodInUseVoterTest extends TestCase
 
     public function testEineVersandartAusEinerBestellungIstNichtLoeschbar(): void
     {
-        // Recherche, Folgerung 5: Die Bestellung verweist auf sie.
+        // The order refers to it.
         self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new ShippingMethodDeleteVoter(new CatalogReferences($this->connection)), new DeleteAction('tl_consho_shipping_method', ['id' => '3'])));
     }
 
@@ -45,14 +45,14 @@ class MethodInUseVoterTest extends TestCase
 
     public function testJedeArtPrueftIhreEigeneSpalte(): void
     {
-        // Zahlungsart 3 kommt in keiner Bestellung vor — nur Versandart 3.
+        // Payment method 3 appears in no order — only shipping method 3 does.
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote(new PaymentMethodDeleteVoter(new CatalogReferences($this->connection)), new DeleteAction('tl_consho_payment_method', ['id' => '3'])));
         self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new PaymentMethodDeleteVoter(new CatalogReferences($this->connection)), new DeleteAction('tl_consho_payment_method', ['id' => '7'])));
     }
 
     public function testBearbeitenUndLesenBleibenErlaubt(): void
     {
-        // Eine alte Art wird unveröffentlicht, nicht gelöscht.
+        // An old method is unpublished, not deleted.
         $voter = new ShippingMethodDeleteVoter(new CatalogReferences($this->connection));
 
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($voter, new UpdateAction('tl_consho_shipping_method', ['id' => '3'], ['published' => false])));
@@ -68,8 +68,8 @@ class MethodInUseVoterTest extends TestCase
 
     public function testUnterstuetztNurDeleteAction(): void
     {
-        // CacheableVoterInterface: nur DeleteAction löst hasAccess() aus, damit der
-        // Voter für Create/Read/Update gar nicht erst befragt wird.
+        // CacheableVoterInterface: only DeleteAction triggers hasAccess(), so the
+        // voter is not even asked for create/read/update.
         $voter = new ShippingMethodDeleteVoter(new CatalogReferences($this->connection));
 
         self::assertTrue($voter->supportsType(DeleteAction::class));
@@ -78,13 +78,13 @@ class MethodInUseVoterTest extends TestCase
 
     public function testDieMemoisierungGiltBisZumReset(): void
     {
-        // Versandart 4 ist zu Beginn ungenutzt.
+        // Shipping method 4 is unused at first.
         $voter = new ShippingMethodDeleteVoter(new CatalogReferences($this->connection));
         $action = new DeleteAction('tl_consho_shipping_method', ['id' => '4']);
 
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($voter, $action));
 
-        // Erst danach kommt eine Bestellung dazu — die gemerkte Antwort bleibt stehen.
+        // Only afterwards is an order added — the remembered answer stays.
         // Numbered: orderNumber is unique in the DCA, as every real order has one.
         $this->connection->insert('tl_consho_order', ['id' => 2, 'orderNumber' => 'WEB-2', 'shippingMethod' => 4, 'paymentMethod' => 0]);
 

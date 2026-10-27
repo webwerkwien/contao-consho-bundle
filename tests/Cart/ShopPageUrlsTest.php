@@ -12,12 +12,12 @@ use Webwerkwien\ContaoConshoBundle\Cart\ShopPageUrls;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 
 /**
- * Die eine Stelle, die die Seitenfelder am Startpunkt liest.
+ * The one place that reads the page fields on the root page.
  *
- * Geprüft werden vor allem die Wege, auf denen es **keine** Adresse gibt: Die
- * Route „in den Warenkorb" und der Mini-Warenkorb fallen darauf zurück, und ein
- * Ausnahmefehler statt eines `null` nähme die Seite mit, auf die der Besucher
- * gerade schaut.
+ * Checked above all are the paths on which there is **no** address: the
+ * "add to cart" route and the mini cart fall back on it, and an
+ * exception instead of a `null` would take down the page the visitor
+ * is looking at.
  */
 class ShopPageUrlsTest extends TestCase
 {
@@ -37,8 +37,8 @@ class ShopPageUrlsTest extends TestCase
 
     public function testOhneEingestellteSeiteGibtEsKeineAdresse(): void
     {
-        // Und die Datenbank wird gar nicht erst gefragt: Eine Installation ohne
-        // Warenkorbseite darf nicht bei jedem Aufruf danach suchen.
+        // And the database is not even asked: an installation without a
+        // cart page must not search for it on every request.
         $framework = $this->createMock(ContaoFramework::class);
         $framework->expects(self::never())->method('getAdapter');
 
@@ -56,9 +56,9 @@ class ShopPageUrlsTest extends TestCase
 
     public function testEineSeiteOhneRouteGibtKeineAdresse(): void
     {
-        // ContentUrlGenerator wirft für eine Seite ohne Route — eine
-        // unveröffentlichte Warenkorbseite, eine Seite in einem Baum ohne
-        // Startpunkt. Das darf die aufrufende Seite nicht mitnehmen.
+        // ContentUrlGenerator throws for a page without a route — an
+        // unpublished cart page, a page in a tree without a
+        // root page. That must not take the calling page down with it.
         $urls = $this->createMock(ContentUrlGenerator::class);
         $urls->method('generate')->willThrowException(new RouteNotFoundException());
 
@@ -98,8 +98,8 @@ class ShopPageUrlsTest extends TestCase
 
     public function testDieCheckoutSeiteWirdAusDemselbenStartpunktGelesen(): void
     {
-        // Dieselbe Regel, ein anderes Feld — der Grund, warum die Klasse nicht
-        // mehr CartPageUrl heisst.
+        // The same rule, another field — the reason why the class is no
+        // longer called CartPageUrl.
         $urls = $this->createMock(ContentUrlGenerator::class);
         $urls->method('generate')->willReturn('https://example.com/kasse.html');
 
@@ -111,9 +111,9 @@ class ShopPageUrlsTest extends TestCase
 
     public function testOhneCheckoutSeiteKommtNullUndKeinFehler(): void
     {
-        // ⚠️ rootOf() antwortet seit C-1c `null` für einen Startpunkt, der
-        // nach sich selbst fragt — deshalb geht auch dieser Test über eine
-        // Unterseite. Genau die Annahme hatte am 2026-09-20 den 400er erzeugt.
+        // ⚠️ Since C-1c rootOf() answers `null` for a root page that
+        // asks about itself — which is why this test, too, goes through a
+        // subpage. Exactly that assumption had once produced the HTTP 400.
         $urls = $this->createMock(ContentUrlGenerator::class);
         $urls->expects(self::never())->method('generate');
 

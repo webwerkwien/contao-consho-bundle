@@ -3,8 +3,7 @@
   WithdrawalBackendController; every form posts back to the same address with
   Contao's request token and one `consho_action` (the button's value).
 
-  Three parts (Michael, 2026-09-27: „muss optisch und ggf. strukturell
-  überarbeitet werden"):
+  Three parts:
     1. the head — the list's three symbols, number, order (linked), state
     2. "Erklärung und Fristen" — what the customer declared, the dates
     3. "Nächster Schritt" — only what is due now
@@ -14,7 +13,7 @@
 
   ⚠️ Long hints carry `tl_help` only, never `tl_tip`: Contao gives `.tl_tip`
   a height of 15px, nowrap and an ellipsis — the legal hints were cut off
-  after one line (seen on c5, 2026-09-27).
+  after one line.
 #}
 {% set l = lang %}
 <div id="tl_buttons">

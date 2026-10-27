@@ -19,7 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
  * prepayment invoice issued at the purchase stayed standing — an invoice for a
  * sale that never happened, with nothing in the books to say so.
  *
- * ── What it refuses (decision Michael, 2026-10-21) ────────────────────────
+ * ── What it refuses ──────────────────────────────────────────────────────
  *
  * A cancellation reverses the WHOLE invoice. Where an invoice correction
  * already credited part of it (a partial withdrawal before shipping), a full
@@ -35,7 +35,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
  * misconfiguration in its own right, which the findings already report
  * (OrderStatusIssueSource, AutomaticStatusCancels).
  *
- * An order cancelled already is not refused (review of dev#1, finding 3):
+ * An order cancelled already is not refused:
  * OrderCancellation does nothing a second time, so there is nothing a
  * refusal would protect — it would only block re-saving the status of an
  * order cancelled before dev#1.

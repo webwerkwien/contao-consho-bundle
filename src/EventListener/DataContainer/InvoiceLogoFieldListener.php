@@ -7,7 +7,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Only file types that are both suitable for the invoice AND allowed by this
- * installation can be chosen as the invoice logo (Michael, 2026-09-24).
+ * installation can be chosen as the invoice logo.
  *
  * Suitable: what the DCA lists — PNG and JPEG, which the PDF engine renders
  * as the file manager shows them. Allowed: `contao.image.valid_extensions`,

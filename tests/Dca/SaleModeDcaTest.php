@@ -5,7 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Abo-1 (A4, P1): Verkaufsart am Produkt, Aboregel an der Preiszeile.
+ * Abo-1 (A4, P1): sale mode on the product, subscription rule on the price row.
  */
 class SaleModeDcaTest extends TestCase
 {
@@ -22,7 +22,7 @@ class SaleModeDcaTest extends TestCase
 
     public function testEinmalkaufIstDieVorgabeUndErsetztDieMigration(): void
     {
-        // P1: contao:migrate füllt die neue Spalte aller Produkte mit der Vorgabe.
+        // P1: contao:migrate fills the new column of all products with the default.
         $fields = $GLOBALS['TL_DCA']['tl_consho_product']['fields'];
 
         self::assertSame(['type' => 'boolean', 'default' => true], $fields['saleOnce']['sql']);
@@ -37,8 +37,8 @@ class SaleModeDcaTest extends TestCase
         self::assertSame(['saleOnce', 'saleSubscription'], $dca['palettes']['__selector__']);
         self::assertSame(['saleOnce' => 'entitlementMonths', 'saleSubscription' => 'subscriptionRules'], $dca['subpalettes']);
         self::assertTrue($dca['fields']['subscriptionRules']['eval']['multiple']);
-        // Die Reihenfolge ist die der Produktseite: nur der checkboxWizard
-        // speichert sie so, wie sie gezogen wurde (Abnahme Abo-1).
+        // The order is that of the product page: only the checkboxWizard
+        // saves it the way it was dragged (Abo-1).
         self::assertSame('checkboxWizard', $dca['fields']['subscriptionRules']['inputType']);
         self::assertTrue($dca['fields']['subscriptionRules']['eval']['mandatory']);
     }
@@ -46,11 +46,10 @@ class SaleModeDcaTest extends TestCase
     public function testKeineNeueLegende(): void
     {
         /*
-         * Der Kommentar an der Palette nennt sieben Legenden als Grenze der
-         * Reiterleiste. Seit F-4 (`digital_legend`) sind es acht — gemessen
-         * am 2026-09-29, als offener Punkt in docs/block-abo.md. Abo-1 fügt
-         * keine hinzu; dieser Test hält den Stand fest, damit die nächste
-         * nicht unbemerkt kommt.
+         * The comment on the palette names seven legends as the limit of
+         * the tab bar. Since F-4 (`digital_legend`) there are eight — an
+         * open point in Block Abo. Abo-1 adds none; this test records the
+         * state so that the next one does not arrive unnoticed.
          */
         self::assertSame(8, substr_count($GLOBALS['TL_DCA']['tl_consho_product']['palettes']['default'], '{'));
     }
@@ -60,11 +59,11 @@ class SaleModeDcaTest extends TestCase
         $dca = $GLOBALS['TL_DCA']['tl_consho_price'];
 
         self::assertStringStartsWith('{price_legend},subscriptionRule,', $dca['palettes']['default']);
-        // Die Elternansicht gruppiert nach dem ersten Feld.
+        // The parent view groups by the first field.
         self::assertSame('currency', $dca['list']['sorting']['fields'][0]);
         self::assertSame(0, $dca['fields']['subscriptionRule']['sql']['default']);
-        // [0 => Einmalkauf, 1 => …] ist eine Liste — ohne isAssociative nähme
-        // Contao die Beschriftungen als Werte (Abnahme Abo-1).
+        // [0 => one-off purchase, 1 => …] is a list — without isAssociative
+        // Contao would take the labels as values (Abo-1).
         self::assertTrue($dca['fields']['subscriptionRule']['eval']['isAssociative']);
     }
 }

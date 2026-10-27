@@ -30,7 +30,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPauseRefused;
  * a gym grants a longer pause for an illness —, and withdraw an announced
  * pause (P107). The customer gets "Pause bestätigt" either way (P110).
  *
- * Checked as access to the module "Abos" (review B2): the table is
+ * Checked as access to the module "Abos": the table is
  * notEditable (P20), and Contao's DcaPermissionVoter denies EVERY update of
  * it — the admin's too. The mask stays read-only; this page is the action.
  */
@@ -52,8 +52,8 @@ final class SubscriptionPauseBackendController
 
     public function __invoke(DataContainer $dc): string
     {
-        // The id is a subscription's only in its own table (second review,
-        // H-10): `table=tl_consho_subscription_pause&key=…&id=5` is pause 5.
+        // The id is a subscription's only in its own table (H-10):
+        // `table=tl_consho_subscription_pause&key=…&id=5` is pause 5.
         $id = 'tl_consho_subscription' === $dc->table ? (int) $dc->id : 0;
         $row = $id > 0 ? $this->connection->fetchAssociative('SELECT * FROM tl_consho_subscription WHERE id = ?', [$id]) : false;
 

@@ -10,8 +10,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
 
 /**
- * "Zahlungsziel verschieben" (spec Abo, Stundung; E8, Michael, 2026-10-08:
- * "E-Punkte passen").
+ * "Zahlungsziel verschieben" (spec Abo, Stundung; E8).
  *
  * The operator agreed a later date with the customer. Until now the only way
  * to lift the rest of a subscription was a payment, and recording one that
@@ -20,7 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
  * and the dashboard all read.
  *
  * For every unpaid, not cancelled order with a term, not only a
- * subscription's follow-up (Michael: "Rest geht in Ordnung"). Only LATER: an
+ * subscription's follow-up. Only LATER: an
  * earlier date would make an order overdue after the fact. The invoice keeps
  * the term it was issued with — it is a document; the agreement is the
  * operator's with the customer, so no mail goes out. The system log keeps

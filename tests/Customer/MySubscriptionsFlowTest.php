@@ -28,8 +28,8 @@ use Webwerkwien\ContaoConshoBundle\Token\DbalTokenRepository;
 use Webwerkwien\ContaoConshoBundle\Token\TokenGenerator;
 
 /**
- * „Meine Abos" (Abo-7, P60): nur die eigenen Abos, und jeder Schritt fragt
- * das nach — eine Id aus der Adresse genügt nie.
+ * "My subscriptions" (Abo-7, P60): only one's own subscriptions, and every
+ * step checks that again — an id from the URL is never enough.
  */
 final class MySubscriptionsFlowTest extends TestCase
 {
@@ -68,7 +68,7 @@ final class MySubscriptionsFlowTest extends TestCase
             'renewal' => 'indefinite', 'termLength' => 1, 'termUnit' => 'year', 'noticeDays' => 30,
             'startedAt' => self::NOW - 100 * self::DAY, 'minimumEndsAt' => self::NOW + 265 * self::DAY, 'nextBillingAt' => self::NOW + 20 * self::DAY];
 
-        // 1 läuft, 2 gekündigt, 3 beendet, 4 eines anderen Kunden, 5 anderer Shop.
+        // 1 running, 2 cancelled, 3 ended, 4 another customer's, 5 another shop.
         $this->subscription(1, $base);
         $this->subscription(2, ['endsAt' => self::NOW + 10 * self::DAY, 'startedAt' => self::NOW - 200 * self::DAY] + $base);
         $this->subscription(3, ['state' => 'ended', 'endsAt' => self::NOW - self::DAY, 'startedAt' => self::NOW - 300 * self::DAY] + $base);
@@ -79,8 +79,8 @@ final class MySubscriptionsFlowTest extends TestCase
     }
 
     /**
-     * Abo pausieren (P101): der Link nur, wo eine Pause wählbar ist; die
-     * Seite nennt Beginn und die Längen mit ihrem Ende.
+     * Pause a subscription (P101): the link only where a pause can be chosen;
+     * the page names the start and the lengths with their end.
      */
     public function testPausierenNurWoEsGehtUndMitDenLaengen(): void
     {
@@ -100,7 +100,7 @@ final class MySubscriptionsFlowTest extends TestCase
     }
 
     /**
-     * P101, P110: bestätigt → angekündigt, Mail, Hinweis; P107: zurücknehmen.
+     * P101, P110: confirmed → announced, mail, notice; P107: take back.
      */
     public function testPauseBestaetigenUndZuruecknehmen(): void
     {
@@ -174,7 +174,7 @@ final class MySubscriptionsFlowTest extends TestCase
         self::assertSame(self::HERE.'?consho_cancel_subscription=1', $running['cancelUrl']);
         self::assertSame(self::HERE.'?consho_open_subscription=1', $running['orderUrl']);
 
-        // Das Ende liegt vor der nächsten Abrechnung: keine mehr.
+        // The end is before the next billing: no more.
         self::assertSame('', $ending['nextBilling']);
         self::assertNotSame('', $ending['endsAt']);
 
@@ -218,17 +218,17 @@ final class MySubscriptionsFlowTest extends TestCase
         self::assertSame(1, $view['subscription']);
         self::assertSame('WEB-00001-1 — E-Book Kräuterkunde', $view['contract']);
 
-        // Review Abo-7, S1: das frühestmögliche Ende vor „jetzt kündigen" —
-        // Frist gewahrt, also das Ende der Mindestlaufzeit.
+        // Abo-7: the earliest possible end before "cancel now" —
+        // notice period kept, so the end of the minimum term.
         self::assertSame(CancellationForm::moment(self::NOW + 265 * self::DAY, 'de'), $view['earliest']);
 
-        // Schon gekündigt: keins mehr.
+        // Already cancelled: none any more.
         self::assertSame('', $this->view(Request::create(self::HERE.'?consho_cancel_subscription=2'))['earliest']);
     }
 
     /**
-     * Michael, 2026-09-30: der Name aus dem Konto steht vorausgefüllt da,
-     * änderbar — ein Fehler behält, was getippt wurde.
+     * The name from the account is pre-filled, editable — an error keeps what
+     * was typed.
      */
     public function testDerNameAusDemKontoIstVorausgefuellt(): void
     {
@@ -249,8 +249,8 @@ final class MySubscriptionsFlowTest extends TestCase
     }
 
     /**
-     * Zweites Review, S-1: nach Ablauf sagt die Seite das, statt still die
-     * Liste zu zeigen.
+     * After expiry the page says so, instead of silently showing the
+     * list.
      */
     public function testNachAblaufEinHinweis(): void
     {
@@ -298,8 +298,8 @@ final class MySubscriptionsFlowTest extends TestCase
 
     public function testLizenzVerlaengernNurWoEsSieGibt(): void
     {
-        // Abo-7b (P66, P67): das Doppel sagt, 2 (gekündigt) und 3 (beendet)
-        // seien verlängerbar, angeboten wird nur 2 — für 3 fehlt der Preis.
+        // Abo-7b (P66, P67): the double says 2 (cancelled) and 3 (ended) can
+        // be renewed, only 2 is offered — 3 lacks the price.
         $this->context = $this->renewalContext();
 
         $lines = $this->view(Request::create(self::HERE))['subscriptions'];
@@ -310,7 +310,7 @@ final class MySubscriptionsFlowTest extends TestCase
 
     public function testOhneZusammenhangKeinLink(): void
     {
-        // Keine Währung oder keine Warenkorbseite: der Controller reicht null.
+        // No currency or no cart page: the controller passes null.
         self::assertSame([null, null, null], array_column($this->view(Request::create(self::HERE))['subscriptions'], 'renew'));
     }
 
@@ -360,7 +360,7 @@ final class MySubscriptionsFlowTest extends TestCase
 
     public function testEineVerlaengerungBeginntErst(): void
     {
-        // Review L6: beginnt am Ende des alten Abos — „läuft" wäre zu früh.
+        // Begins at the end of the old subscription — "running" would be too early.
         $this->connection->update('tl_consho_subscription', ['startedAt' => self::NOW + 10 * self::DAY], ['id' => 1]);
 
         $line = $this->view(Request::create(self::HERE))['subscriptions'][0];
@@ -368,7 +368,7 @@ final class MySubscriptionsFlowTest extends TestCase
         self::assertSame('upcoming', $line['state']);
         self::assertSame(CancellationForm::day(self::NOW + 10 * self::DAY, 'de'), $line['startsAt']);
 
-        // Zweites Review, L-4: ruht sie schon, sagt sie das.
+        // If it is already paused, it says so.
         $this->connection->update('tl_consho_subscription', ['state' => 'suspended'], ['id' => 1]);
         self::assertSame('suspended', $this->view(Request::create(self::HERE))['subscriptions'][0]['state']);
     }

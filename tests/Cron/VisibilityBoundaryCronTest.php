@@ -16,9 +16,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Start und Ende eines Zeitfensters in der Projektion der Sichtbarkeit (B-10).
- * Shop 1 in EUR, Startpunkt de. Mit echtem Projektor gegen SQLite — der Cron
- * tut nichts anderes, als ihn im richtigen Moment aufzurufen.
+ * Start and end of a time window in the visibility projection (B-10).
+ * Shop 1 in EUR, start point de. With a real projector against SQLite — the
+ * cron does nothing but call it at the right moment.
  */
 class VisibilityBoundaryCronTest extends TestCase
 {
@@ -107,8 +107,8 @@ class VisibilityBoundaryCronTest extends TestCase
 
     public function testAProductThatStartsButStaysInvisibleIsNotDueEveryMinute(): void
     {
-        // Ohne Shop: Es entsteht nie eine Zeile. Mit dem Trick des Preis-Crons
-        // („Zeile älter als die Grenze") wäre es jede Minute wieder fällig.
+        // Without a shop: a row is never created. With the price cron's trick
+        // ("row older than the boundary") it would be due again every minute.
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1, 'start' => (string) (self::NOW - 30)]);
         $this->state->set(ProjectionState::VISIBILITY_BOUNDARIES, self::NOW - 60);
 
@@ -174,7 +174,7 @@ class VisibilityBoundaryCronTest extends TestCase
     }
 
     /**
-     * Ein Hauptprodukt in Shop 1 mit Listenpreis.
+     * A main product in shop 1 with a list price.
      */
     private function product(int $id, int|null $start = null, int|null $stop = null): void
     {

@@ -19,9 +19,9 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationWriter;
 
 /**
- * ZW-3 (Z1; Michael, 2026-10-14: „ja, alles wie empfohlen"): Texte der
- * Zusatzfelder je Sprache — nur Textfelder, nur Sprachen des Produkts, und
- * nie als rohes JSON am Prüfweg vorbei.
+ * ZW-3 (Z1): texts of the
+ * custom fields per language — only text fields, only languages of the
+ * product, and never as raw JSON past the validation path.
  */
 class CustomFieldTranslationsTest extends TestCase
 {
@@ -78,10 +78,10 @@ class CustomFieldTranslationsTest extends TestCase
     }
 
     /**
-     * Review ZW-K, Fund 1: Nur „Rebsorte" übersetzt, kein französischer Titel.
-     * Der Text allein verlangt keinen Alias — ohne ihn bleibt das Produkt in
-     * fr unsichtbar, das ist alles. Vorher warf das zweite Speichern
-     * „weder Alias noch Bezeichnung", am Übersetzungsabschnitt.
+     * Only "Rebsorte" translated, no French title. The text alone does not
+     * require an alias — without one the product stays invisible in fr, that
+     * is all. Before, the second save threw "neither alias nor name", at the
+     * translation section.
      */
     public function testNurZusatzfeldTextVerlangtKeinenAlias(): void
     {
@@ -93,7 +93,7 @@ class CustomFieldTranslationsTest extends TestCase
         self::assertSame(['rebsorte' => 'Riesling', 'lage' => 'Wachau'], $this->translations()->read(10, 'fr'));
         self::assertNull($this->connection->fetchOne("SELECT alias FROM tl_consho_translation WHERE pid = 10 AND language = 'fr'"));
 
-        // Ein anderes Feld ohne Titel bleibt abgelehnt.
+        // Another field without a title stays rejected.
         $this->expectException(\RuntimeException::class);
         $this->writer()->checkAlias('tl_consho_product', 10, 'fr', '', ['teaser' => 'Un vin']);
     }
@@ -126,8 +126,8 @@ class CustomFieldTranslationsTest extends TestCase
     }
 
     /**
-     * Über den allgemeinen Weg (consho:translation:set) nie als rohes JSON —
-     * dort prüfte niemand Feld und Typ.
+     * Never as raw JSON through the general path (consho:translation:set) —
+     * nobody checked field and type there.
      */
     public function testNieAlsRohesJson(): void
     {

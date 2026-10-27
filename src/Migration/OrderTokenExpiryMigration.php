@@ -18,7 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
  * most redirect tokens are therefore expired at once, and the daily
  * OrderTokenCleanupCron removes them.
  *
- * ⚠️ `confirmsEmail = 0` is not always a redirect (Fable review D-6, S1).
+ * ⚠️ `confirmsEmail = 0` is not always a redirect (D-6).
  * Before C-10 the mail and the redirect SHARED one token, flagged 0 — the
  * database cannot tell them apart any more. Those old mail links get the
  * redirect's day and die with the migration. Accepted: there was no shop in

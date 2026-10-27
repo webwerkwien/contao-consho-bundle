@@ -36,7 +36,7 @@ enum TokenPurpose: string
      * period starts only when the goods arrive and stretches to 12 months and
      * 14 days where the trader did not inform properly, so a link with the
      * period as its lifetime would often die before the period began. Two
-     * things changed that (Michael, 2026-09-28: "wie empfohlen"):
+     * things changed that:
      *
      *  - The withdrawal no longer hangs on the link. Since D-2 the element
      *    "Vertrag widerrufen" takes order number and address — the way a

@@ -14,14 +14,14 @@ use Webwerkwien\ContaoConshoBundle\Shipping\FlatRateShipping;
 use Webwerkwien\ContaoConshoBundle\Shipping\ShippingMethodTypes;
 
 /**
- * Baut einen echten Symfony-Container (nicht von Hand wie ShippingMethodTypesTest
- * und PaymentHandlersTest) und prüft, dass #[AutoconfigureTag] auf den
- * Schnittstellen zusammen mit #[AutowireLocator(..., defaultIndexMethod: 'getType')]
- * auf den Registern tatsächlich zusammenspielen. Die von Hand gebauten Tests
- * würden ein fehlendes defaultIndexMethod nicht bemerken.
+ * Builds a real Symfony container (not by hand like ShippingMethodTypesTest
+ * and PaymentHandlersTest) and checks that #[AutoconfigureTag] on the
+ * interfaces together with #[AutowireLocator(..., defaultIndexMethod: 'getType')]
+ * on the registries really work together. The hand-built tests would not
+ * notice a missing defaultIndexMethod.
  *
- * Die Prototyp-Definition hier bildet `_defaults` aus config/services.yaml
- * nach (autowire, autoconfigure) und muss dem folgen, wenn sich das dort ändert.
+ * The prototype definition here mirrors `_defaults` from config/services.yaml
+ * (autowire, autoconfigure) and has to follow it when that changes.
  */
 class MethodRegistriesContainerTest extends TestCase
 {
@@ -35,7 +35,7 @@ class MethodRegistriesContainerTest extends TestCase
         $paymentHandlers = $container->get(PaymentHandlers::class);
 
         self::assertSame(['flat_rate', 'weight_rate'], $shippingTypes->keys());
-        // Der Test-Anbieter ist registriert, aber ohne Umgebungsvariable nicht zu sehen.
+        // The test provider is registered, but not visible without the environment variable.
         self::assertSame(['cod', 'invoice', 'prepayment'], $paymentHandlers->keys());
         self::assertFalse($paymentHandlers->has('test'));
         self::assertInstanceOf(FlatRateShipping::class, $shippingTypes->get('flat_rate'));
@@ -52,13 +52,13 @@ class MethodRegistriesContainerTest extends TestCase
         $prototype = new Definition();
         $prototype->setAutowired(true)->setAutoconfigured(true)->setPublic(false);
 
-        // Nur die drei Ordner, die die Register betreffen (Auftrag, nicht der
-        // ganze Bundle-Scan). Wertobjekte und Enums darunter (z. B.
-        // PaymentContext mit Pflicht-Skalarparametern, AttemptState als Enum)
-        // werden hier mitregistriert, sprengen die Kompilierung aber nicht:
-        // sie bleiben ungenutzt und Symfonys RemoveUnusedDefinitionsPass
-        // entfernt sie, bevor irgendetwas sie instanziieren müsste. Geprüft,
-        // indem dieselbe Registrierung ohne Exclude-Liste anstandslos lief.
+        // Only the three folders the registries concern (the task, not the
+        // whole bundle scan). Value objects and enums below them (e.g.
+        // PaymentContext with required scalar parameters, AttemptState as an
+        // enum) are registered here too, but do not break compilation: they
+        // stay unused and Symfony's RemoveUnusedDefinitionsPass removes them
+        // before anything would have to instantiate them. Checked by running
+        // the same registration without the exclude list, which went through.
         $loader->registerClasses(
             $prototype,
             'Webwerkwien\\ContaoConshoBundle\\Shipping\\',
@@ -75,9 +75,9 @@ class MethodRegistriesContainerTest extends TestCase
             $srcDir.'/Checkout/*',
         );
 
-        // Der Router der Anwendung (TestPaymentHandler, C-11). Synthetisch: Er
-        // wird hier nie gebraucht, weil der Test-Anbieter ohne
-        // CONSHO_TEST_PAYMENT gar nicht erst herausgegeben wird.
+        // The application's router (TestPaymentHandler, C-11). Synthetic: it
+        // is never needed here, because the test provider is not handed out
+        // at all without CONSHO_TEST_PAYMENT.
         $container->register(UrlGeneratorInterface::class)->setSynthetic(true);
 
         $container->getDefinition(ShippingMethodTypes::class)->setPublic(true);

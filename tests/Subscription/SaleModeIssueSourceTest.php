@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRules;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-1: Befunde zur Verkaufsart. Typ 1 digital, Typ 2 körperlich;
- * Regel 5 Monatsabo (unbefristet), 6 Jahresabo B2B (gleiche Laufzeit).
+ * Abo-1: findings on the sale mode. Type 1 digital, type 2 physical;
+ * rule 5 monthly subscription (open-ended), 6 yearly subscription B2B (same term).
  */
 class SaleModeIssueSourceTest extends TestCase
 {
@@ -70,7 +70,7 @@ class SaleModeIssueSourceTest extends TestCase
 
     public function testKoerperlicheUndUnveroeffentlichteProdukteZaehlenNicht(): void
     {
-        // Körperlich: eigener Befund ProductPriceMissing. Unveröffentlicht: wird nicht verkauft.
+        // Physical: a finding of its own, ProductPriceMissing. Unpublished: not sold.
         $this->product(1, 'Wanderstock', rules: ['5'], type: 2);
         $this->product(2, 'Entwurf', rules: ['5'], published: false);
 
@@ -81,17 +81,17 @@ class SaleModeIssueSourceTest extends TestCase
     {
         $this->product(1, 'Theme');
         $this->price(1, 0);
-        // Die Variante hat keine eigenen Preise und steht nicht in der Liste.
+        // The variant has no prices of its own and is not in the list.
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 1, 'title' => 'Theme dunkel', 'productType' => 1]);
 
         self::assertSame([], $this->issues());
     }
 
     /**
-     * Variante A (2026-10-08): Eine Regel „volle Mindestlaufzeit" ohne
-     * Kundengruppen steht allen offen — kein Befund „Verbraucher
-     * ausgeschlossen" mehr, und das Produkt steht in den Listen (A3). Ob sie
-     * offen bleiben soll, fragt SameTermOpenIssueSource.
+     * Variant A: a "full minimum term" rule without
+     * customer groups is open to everyone — no more "consumers
+     * excluded" finding, and the product appears in the lists (A3). Whether it
+     * should stay open is asked by SameTermOpenIssueSource.
      */
     public function testGleicheLaufzeitOhneGruppenIstOffen(): void
     {
@@ -111,7 +111,7 @@ class SaleModeIssueSourceTest extends TestCase
         self::assertSame([], $this->issues());
     }
 
-    /** Abo-2b, P91: nur Regeln für Kundengruppen — das Produkt steht in keiner Liste. */
+    /** Abo-2b, P91: only rules for customer groups — the product appears in no list. */
     public function testNurRegelnFuerGruppenFehlenInDerListe(): void
     {
         $this->connection->insert('tl_consho_subscription_rule', ['id' => 7, 'title' => 'Mitglieder', 'renewal' => 'indefinite', $this->connection->quoteIdentifier('groups') => serialize(['3'])]);
@@ -129,9 +129,9 @@ class SaleModeIssueSourceTest extends TestCase
     }
 
     /**
-     * Fable-Review Abo-2b, S4 zählte „Gleiche Laufzeit" für alle als nicht
-     * offen. Seit Variante A (A3) entscheiden nur die Gruppen: offen, also
-     * steht das Produkt in den Listen.
+     * Abo-2b counted "same term" for everyone as not
+     * open. Since variant A (A3) only the groups decide: open, so
+     * the product appears in the lists.
      */
     public function testGleicheLaufzeitFuerAlleZaehltJetztAlsOffen(): void
     {

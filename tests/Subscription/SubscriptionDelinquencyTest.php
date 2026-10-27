@@ -15,8 +15,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-5 (A6, P33–P36): Verzug — ruhend und wieder aktiv, immer aus den
- * Bestellungen berechnet.
+ * Abo-5 (A6, P33–P36): delinquency — suspended and active again, always calculated from the
+ * orders.
  */
 final class SubscriptionDelinquencyTest extends TestCase
 {
@@ -35,10 +35,10 @@ final class SubscriptionDelinquencyTest extends TestCase
             DcaSchema::create($this->connection, $table);
         }
 
-        // Kauf WEB-00090 (bezahlt), Folgebestellung WEB-00091 „Auf Rechnung", Ziel 14.03.
+        // Purchase WEB-00090 (paid), follow-up order WEB-00091 "on invoice", term 14.03.
         $this->connection->insert('tl_consho_order', ['id' => 90, 'orderNumber' => 'WEB-00090', 'grandTotal' => '12.0000']);
         $this->connection->insert('tl_consho_order', ['id' => 91, 'orderNumber' => 'WEB-00091', 'subscription' => 1, 'grandTotal' => '12.0000', 'paymentDueAt' => $this->at('2026-03-14 23:59:59')]);
-        // Gegenprobe: eine überfällige Bestellung eines anderen Abos.
+        // Counter-check: an overdue order of another subscription.
         $this->connection->insert('tl_consho_order', ['id' => 95, 'orderNumber' => 'WEB-00095', 'subscription' => 2, 'grandTotal' => '12.0000', 'paymentDueAt' => $this->at('2026-01-01 23:59:59')]);
         $this->outstanding = [90 => '0', 91 => '12.0000', 95 => '12.0000'];
 
@@ -50,9 +50,9 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Abo-7b (P69): Abo 3 verlängert Abo 1 und hält dessen Lizenz. Die offene
-     * Folgebestellung 91 des alten Vertrags lässt sie auch hier ruhen —
-     * „Lizenz verlängern" ist kein Weg an einer offenen Rechnung vorbei.
+     * Abo-7b (P69): subscription 3 renews subscription 1 and holds its licence. The open
+     * follow-up order 91 of the old contract lets it be suspended here too —
+     * "renew licence" is no way around an open invoice.
      */
     public function testEineOffeneRechnungDesVorgaengersLaesstDieVerlaengerungRuhen(): void
     {
@@ -70,9 +70,9 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Review S3: Ist die Lizenz übergegangen, schweigt das alte Abo — sonst
-     * kämen zwei Mails für eine Rechnung. Solange sie noch bei ihm liegt
-     * (Verlängerung nicht freigegeben), ruht es wie bisher.
+     * Once the licence has passed over, the old subscription stays silent — otherwise
+     * two mails would come for one invoice. As long as it still lies with it
+     * (renewal not released), it is suspended as before.
      */
     public function testDasVerlaengerteAboSchweigtNurOhneEigeneLizenz(): void
     {
@@ -89,8 +89,8 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Zweites Review, S-2: Vor der Freigabe hält das alte Abo die Lizenz und
-     * antwortet — die Verlängerung schweigt, sonst kämen zwei Mails.
+     * Before the release the old subscription holds the licence and
+     * answers — the renewal stays silent, otherwise two mails would come.
      */
     public function testVorDerFreigabeSchweigtDieVerlaengerung(): void
     {
@@ -106,8 +106,8 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Zweites Review, L-1: Ruhte das alte Abo, als die Lizenz überging, bleibt
-     * es nicht für immer „ruht" — ohne Mail zurück auf aktiv.
+     * If the old subscription was suspended when the licence passed over, it does
+     * not stay "suspended" forever — back to active without a mail.
      */
     public function testEinVerlaengertesAboOhneLizenzRuhtNichtWeiter(): void
     {
@@ -120,7 +120,7 @@ final class SubscriptionDelinquencyTest extends TestCase
 
     public function testOhneVerlaengerungZaehltDieRechnungEinesAnderenAbosNicht(): void
     {
-        // Gegenprobe zum Test davor: dasselbe Abo 3, aber kein Nachfolger von 1.
+        // Counter-check to the test before: the same subscription 3, but no successor of 1.
         $this->connection->insert('tl_consho_order', ['id' => 96, 'orderNumber' => 'WEB-00096', 'grandTotal' => '12.0000']);
         $this->connection->insert('tl_consho_subscription', ['id' => 3, 'subscriptionNumber' => 'WEB-00096-1', 'firstOrder' => 96, 'graceDays' => 14, 'state' => 'active']);
         $this->outstanding[96] = '0';
@@ -140,15 +140,15 @@ final class SubscriptionDelinquencyTest extends TestCase
 
     public function testInDerNachfristRuhtNichts(): void
     {
-        // Ziel 14.03. + 14 Tage = 28.03. 23:59:59.
+        // Term 14.03. + 14 days = 28.03. 23:59:59.
         self::assertNull($this->delinquency()->reassess(1, $this->at('2026-03-28 23:00')));
         self::assertSame('active', $this->state(1));
         self::assertNull($this->suspendedAt(30));
     }
 
     /**
-     * Review Abo-5, L1: die Sekunde des Ablaufs. `>=` gegen `>` mutiert blieb
-     * vorher grün.
+     * Abo-5: the second of expiry. Mutating `>=` into `>` used to
+     * stay green.
      */
     public function testDieGrenzeDerNachfrist(): void
     {
@@ -170,7 +170,7 @@ final class SubscriptionDelinquencyTest extends TestCase
         self::assertSame('suspended', $this->state(1));
         self::assertSame($now, $this->suspendedAt(30));
 
-        // Nur dieses Abo.
+        // Only this subscription.
         self::assertSame('active', $this->state(2));
         self::assertNull($this->suspendedAt(31));
     }
@@ -214,8 +214,8 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * P34: Auch der Kauf selbst — wer die erste Rechnung nie zahlt, bekäme
-     * sonst die ganze Mindestlaufzeit geschenkt.
+     * P34: the purchase itself too — whoever never pays the first invoice would
+     * otherwise get the whole minimum term for free.
      */
     public function testAuchDieErsteBestellungLoestVerzugAus(): void
     {
@@ -233,8 +233,8 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Eine Berechtigung, die erst freigegeben wird, während das Abo schon
-     * ruht (Schlüsselvorrat spät aufgefüllt), ruht beim nächsten Lauf mit.
+     * An entitlement that is released only while the subscription is already
+     * suspended (key stock topped up late) is suspended along with it on the next run.
      */
     public function testEineSpaetFreigegebeneBerechtigungRuhtMit(): void
     {
@@ -256,8 +256,8 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * P64 (Review Abo-6, L4): Endet ein ruhendes Abo, bleibt die Berechtigung
-     * ruhend stehen — die Zahlung gibt sie trotzdem frei, ohne Mail.
+     * P64 (Abo-6): if a suspended subscription ends, the entitlement stays
+     * suspended — the payment still releases it, without a mail.
      */
     public function testEinBeendetesAboMitRuhenderBerechtigungWirdNachDerZahlungFrei(): void
     {
@@ -276,8 +276,8 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Abo-7, P56: Gekündigt heißt `endsAt`, der Zustand bleibt — bis zum Ende
-     * wird der Verzug weiter beurteilt, und die Zahlung weckt es wieder.
+     * Abo-7, P56: cancelled means `endsAt`, the state stays — until the end
+     * delinquency keeps being assessed, and the payment wakes it again.
      */
     public function testEinGekuendigtesAboWirdBisZumEndeWeiterBeurteilt(): void
     {
@@ -292,15 +292,15 @@ final class SubscriptionDelinquencyTest extends TestCase
     }
 
     /**
-     * Die Nachfrist in Kalendertagen: über die Umstellung auf Sommerzeit
-     * (29.03.2026) hat ein Tag 23 Stunden.
+     * The grace period in calendar days: across the switch to summer time
+     * (29.03.2026) a day has 23 hours.
      */
     public function testDieNachfristZaehltKalendertage(): void
     {
         $this->connection->update('tl_consho_subscription', ['graceDays' => 1], ['id' => 1]);
         $this->connection->update('tl_consho_order', ['paymentDueAt' => $this->at('2026-03-28 23:59:59')], ['id' => 91]);
 
-        // 28.03. 23:59:59 + 1 Tag = 29.03. 23:59:59 Wiener Zeit — 23 Stunden später.
+        // 28.03. 23:59:59 + 1 day = 29.03. 23:59:59 Vienna time — 23 hours later.
         self::assertNull($this->delinquency()->reassess(1, $this->at('2026-03-29 23:30')));
         self::assertTrue($this->delinquency()->reassess(1, $this->at('2026-03-30 00:00:30'))?->suspended);
     }

@@ -27,8 +27,7 @@ use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
  * follow at once. "Mehrere bearbeiten" (editAll, overrideAll) wraps every
  * record in ONE transaction and rolls it back if any of them fails
  * validation. Run inside it, the mail would be out while paymentSettledAt
- * was rolled back — and the next save would send it again (Fable review of
- * D-1, S2). There the orders are noted and handled at kernel.terminate, when
+ * was rolled back — and the next save would send it again (D-1). There the orders are noted and handled at kernel.terminate, when
  * the transaction is decided either way; PaymentRecorded then reads only
  * what was really stored.
  *
@@ -81,7 +80,7 @@ class PaymentRecordListener
      *
      * Each order on its own: after fastcgi_finish_request() the editor has
      * the page already, and an exception here would only reach PHP's error
-     * log and skip the orders after it (second Fable review of D-1, S-b).
+     * log and skip the orders after it (D-1).
      */
     #[AsEventListener(KernelEvents::TERMINATE)]
     #[AsEventListener(ConsoleEvents::TERMINATE)]

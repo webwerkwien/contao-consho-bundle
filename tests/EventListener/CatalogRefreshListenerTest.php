@@ -30,9 +30,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Am Ende des Requests: Listenpreise, dann Sichtbarkeit, dann Shops (B-10).
- * Mit beiden echten Projektoren gegen SQLite — die Reihenfolge ist nur an
- * echten Tabellen zu sehen. Shop 1 in EUR, Startpunkt de.
+ * At the end of the request: list prices, then visibility, then shops (B-10).
+ * With both real projectors against SQLite — the order can only be seen on
+ * real tables. Shop 1 in EUR, root page de.
  */
 class CatalogRefreshListenerTest extends TestCase
 {
@@ -51,8 +51,8 @@ class CatalogRefreshListenerTest extends TestCase
         $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1);
 
-        // Produkt 1, sichtbar; sein Preis steht nur in der Preistabelle, noch
-        // nicht in der Listenpreis-Projektion.
+        // Product 1, visible; its price is only in the price table, not yet in
+        // the list price projection.
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1]);
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000']);
@@ -62,8 +62,8 @@ class CatalogRefreshListenerTest extends TestCase
 
     public function testTheListPricesComeFirstThenTheVisibility(): void
     {
-        // Andersherum fände die Sichtbarkeit noch keinen Listenpreis — das
-        // Produkt fehlte in jeder Liste, bis zur nächsten Änderung.
+        // The other way round, the visibility would not find a list price yet —
+        // the product would be missing from every list until the next change.
         $this->queue->add(1);
 
         $this->listener()();
@@ -92,7 +92,7 @@ class CatalogRefreshListenerTest extends TestCase
         $this->queue->add(1);
         $this->listener()();
 
-        // Noch einmal gespeichert, nichts geändert (etwa nur der Titel).
+        // Saved once more, nothing changed (say, only the title).
         $this->queue->add(1);
 
         $tags = $this->createMock(CacheTagManager::class);
@@ -116,7 +116,7 @@ class CatalogRefreshListenerTest extends TestCase
         $this->queue->add(1);
         $this->listener()();
 
-        // Eine Root-Seite fr kommt dazu, das Produkt ist übersetzt.
+        // A root page fr is added, the product is translated.
         $this->insertRootPage(2, 'fr', 1);
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'title' => 'Produit', 'alias' => 'produit']);
         $this->queue->requestShopSync();
@@ -128,8 +128,8 @@ class CatalogRefreshListenerTest extends TestCase
 
     public function testChangingTheHomeCountryRecalculatesEveryGross(): void
     {
-        // C25: Heimatland von AT auf DE — beim Speichern des Shops, ohne dass ein
-        // Produkt oder Preis angefasst wurde.
+        // C25: home country from AT to DE — when saving the shop, without any
+        // product or price being touched.
         $this->queue->add(1);
         $this->listener()();
 
@@ -146,10 +146,10 @@ class CatalogRefreshListenerTest extends TestCase
 
     public function testAProductAloneDoesNotTriggerTheMarketsComparison(): void
     {
-        // M-2: nur ein Produkt gemeldet, kein Shop-Sync — der Fingerabdruck der
-        // Märkte darf dabei nicht angelegt werden, sonst liefe der teure
-        // Markt-Abgleich bei jedem Produktspeichern statt nur bei einem
-        // Shop-/Seiten-Sync.
+        // M-2: only one product reported, no shop sync — the markets'
+        // fingerprint must not be created then, or the expensive market
+        // reconciliation would run on every product save instead of only on a
+        // shop/page sync.
         $this->queue->add(1);
         $this->listener()();
 
@@ -157,9 +157,9 @@ class CatalogRefreshListenerTest extends TestCase
     }
 
     /**
-     * Block Verfügbarkeit, V1: Gespeichert wird das Hauptprodukt, markiert
-     * werden seine Varianten — der Schalter „Bestand führen" sitzt am
-     * Hauptprodukt und entscheidet über sie.
+     * Block Verfügbarkeit, V1: the main product is saved, its variants are
+     * marked — the "Manage stock" switch sits on the main product and decides
+     * for them.
      */
     public function testEinGespeichertesProduktMarkiertSeineAusverkauftenVarianten(): void
     {
@@ -179,8 +179,8 @@ class CatalogRefreshListenerTest extends TestCase
     }
 
     /**
-     * Review Verfügbarkeit, 3: Gelöscht wird das Hauptprodukt, die Varianten
-     * gehen als Kinddatensätze mit — gemeldet wird nur das Hauptprodukt.
+     * Block Verfügbarkeit: the main product is deleted, the variants go along
+     * as child records — only the main product is reported.
      */
     public function testDasLoeschenEinesHauptproduktsRaeumtDieMarkenSeinerVariantenAuf(): void
     {

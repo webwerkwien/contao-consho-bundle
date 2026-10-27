@@ -71,9 +71,9 @@ class AddressNormalizerTest extends TestCase
 
     public function testLowercasesTheEmailAddress(): void
     {
-        $address = new Address(email: '  Michael@Example.Net ', country: 'AT');
+        $address = new Address(email: '  Eva@Example.Net ', country: 'AT');
 
-        self::assertSame('michael@example.net', $this->normalizer->normalize($address)->email);
+        self::assertSame('eva@example.net', $this->normalizer->normalize($address)->email);
     }
 
     public function testNormalisesThePhoneNumberUsingTheCountry(): void

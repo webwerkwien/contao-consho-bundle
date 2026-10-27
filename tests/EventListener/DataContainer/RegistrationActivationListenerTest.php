@@ -9,8 +9,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\RegistrationActivationListener;
 
 /**
- * Nachlese KA2: „Konten sofort freischalten" und „Kontoaktivierung" schließen
- * sich aus.
+ * Nachlese KA2: "Activate accounts immediately" and "Account activation"
+ * exclude each other.
  */
 final class RegistrationActivationListenerTest extends TestCase
 {

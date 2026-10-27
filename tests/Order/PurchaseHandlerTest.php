@@ -25,17 +25,16 @@ use Webwerkwien\ContaoConshoBundle\Voucher\AppliedVoucher;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherStatus;
 
 /**
- * Die Übersetzung vom gerechneten Checkout in eine Bestellung.
+ * The translation of the computed checkout into an order.
  *
- * ⚠️ **Warum es diesen Test gibt:** `PurchaseHandler` war bis zum 2026-09-23
- * die einzige neue Klasse aus C-7 ohne eigenen Test — im Controller-Test
- * gemockt, im Placer-Test nicht berührt. Gefunden im Fable-Review (F11).
- * Ein Vertauschen von Sprache und Rückfallsprache oder `$page->id` statt
- * `rootId` wäre grün durchgelaufen und hätte die Rechtstexte vom falschen
- * Startpunkt geholt.
+ * ⚠️ **Why this test exists:** `PurchaseHandler` was the only new class
+ * from C-7 without a test of its own — mocked in the controller test, not
+ * touched in the placer test. Swapping language and fallback language, or
+ * `$page->id` instead of `rootId`, would have passed green and fetched the
+ * legal texts from the wrong root page.
  *
- * Der Placer ist hier ein Double, das den Entwurf und die Zeilen mitschreibt:
- * geprüft wird die ÜBERSETZUNG, nicht das Schreiben.
+ * The placer here is a double that records the draft and the lines:
+ * the TRANSLATION is checked, not the writing.
  */
 class PurchaseHandlerTest extends TestCase
 {
@@ -48,10 +47,10 @@ class PurchaseHandlerTest extends TestCase
 
     public function testDerEntwurfTraegtDieSummeAufDieDerKundeGeklicktHat(): void
     {
-        // 🔴 Der Gürtel zur Prüfsumme. Ohne dieses Feld schreibt OrderFactory
-        // jede Summe, die sie selbst errechnet — und genau daran ist C-7 im
-        // Review gescheitert (F1). Das Feld ist optional, also muss ein Test
-        // festhalten, dass der Kaufklick es füllt.
+        // 🔴 The belt next to the checksum's braces. Without this field OrderFactory
+        // writes any total it computes itself — and exactly there C-7 once
+        // failed. The field is optional, so a test has to record that the
+        // purchase click fills it.
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(), 1_757_000_000);
 
         self::assertNotNull($this->draft);
@@ -59,9 +58,9 @@ class PurchaseHandlerTest extends TestCase
     }
 
     /**
-     * E-6, V6: Die Telefonnummer für den Paketdienst kommt nur an die
-     * Bestellung, wenn die gewählte Versandart sie braucht —
-     * Datensparsamkeit, kein Feld „für alle Fälle".
+     * E-6, V6: the phone number for the parcel service only goes onto the
+     * order when the chosen shipping method needs it — data minimisation, no
+     * field "just in case".
      */
     public function testDasTelefonNurWennDerPaketdienstEsBraucht(): void
     {
@@ -76,9 +75,8 @@ class PurchaseHandlerTest extends TestCase
     }
 
     /**
-     * F-3: Die Zustimmung kommt nur an die Bestellung, wo nach ihr gefragt
-     * wurde — digitale Positionen und ein Verbraucher. Ein Geschäftskunde
-     * wird als solcher eingefroren.
+     * F-3: the consent only goes onto the order where it was asked for —
+     * digital items and a consumer. A business customer is frozen as such.
      */
     public function testZustimmungNurWoGefragt(): void
     {
@@ -112,27 +110,27 @@ class PurchaseHandlerTest extends TestCase
         self::assertSame('de', $this->draft->language);
         self::assertSame('en', $this->draft->fallbackLanguage);
 
-        // Der Startpunkt, nicht die Seite: an ihm hängen die Rechtstexte.
+        // The root page, not the page: the legal texts hang on it.
         self::assertSame(1, $this->draft->shopId);
         self::assertSame('AT', $this->draft->shopCountry);
 
-        // Und die Zahlungsart kommt in der Sprache der Bestellung: ihr
-        // `instructions` ist der Zahlungshinweis, den der Kunde liest.
+        // And the payment method comes in the order's language: its
+        // `instructions` are the payment note the customer reads.
         self::assertNotNull($this->method);
         self::assertSame(6, $this->method->id);
         self::assertSame('prepayment', $this->method->type);
 
-        // C-9: eingefroren am Entwurf, damit die Bestätigung ihn auch ohne
-        // Rechnung hat (Michael, 2026-09-25).
+        // C-9: frozen on the draft, so that the confirmation has it even without
+        // an invoice.
         self::assertSame('<p>Binnen 7 Tagen.</p>', $this->draft->paymentInstructions);
     }
 
     public function testJederVersandanteilWirdEineEigeneZeile(): void
     {
-        // Anteilige Versandsteuer teilt EINE Versandart auf zwei Steuersätze
-        // auf (ShippingTaxSplitter, C-5). Eine Rechnung muss beide Teile mit
-        // ihrem Satz zeigen, also werden es zwei Zeilen — mit demselben Titel
-        // und derselben Herkunft.
+        // Proportional shipping tax splits ONE shipping method over two tax
+        // rates (ShippingTaxSplitter, C-5). An invoice has to show both parts at
+        // their rate, so they become two lines — with the same title
+        // and the same origin.
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(shippingShares: [
             new ShippingShare(1, '2.3967'),
             new ShippingShare(2, '1.7700'),
@@ -154,8 +152,8 @@ class PurchaseHandlerTest extends TestCase
 
     public function testDasModellDerZeileGehtMitInDieBestellung(): void
     {
-        // Abo-2 (P13): Ohne die Regel schlüge OrderFactory den Einmalkauf-Preis
-        // nach, und die Summe widerspräche der Kasse.
+        // Abo-2 (P13): without the rule OrderFactory would look up the one-off
+        // price, and the total would contradict the checkout.
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(subscriptionRule: 5), 1_757_000_000);
 
         $ware = array_values(array_filter($this->lines, static fn (OrderLineDraft $l): bool => OrderLineType::Product === $l->type));
@@ -165,8 +163,8 @@ class PurchaseHandlerTest extends TestCase
 
     public function testDieVerlaengerungGehtMitInDieBestellung(): void
     {
-        // Abo-7b (Review L7): ohne `renews` entstünde ein neues Abo mit neuer
-        // Berechtigung statt der Verlängerung.
+        // Abo-7b: without `renews` a new subscription with a new
+        // entitlement would be created instead of the renewal.
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(subscriptionRule: 5, renews: 31), 1_757_000_000);
 
         $ware = array_values(array_filter($this->lines, static fn (OrderLineDraft $l): bool => OrderLineType::Product === $l->type));
@@ -176,9 +174,9 @@ class PurchaseHandlerTest extends TestCase
 
     public function testEinNachlassBehaeltSeinVorzeichen(): void
     {
-        // Das Vorzeichen kommt aus dem Checkout. Es hier noch einmal zu
-        // drehen machte aus dem Nachlass einen Aufschlag — und die Summe
-        // stimmte trotzdem.
+        // The sign comes from the checkout. Flipping it here once more
+        // would turn the discount into a surcharge — and the total would
+        // still be right.
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(
             paymentShares: [new ShippingShare(1, '-0.1000')],
             adjustment: PaymentAdjustmentOrigin::Discount,
@@ -192,9 +190,9 @@ class PurchaseHandlerTest extends TestCase
 
     public function testEineGebuehrWirdAlsGebuehrUebersetzt(): void
     {
-        // Übersetzt, nicht abgelehnt: Die Entscheidung, dass eine Gebühr nicht
-        // versteuert werden kann, fällt in OrderFactory. Dieser Handler
-        // übersetzt, er urteilt nicht.
+        // Translated, not refused: the decision that a fee cannot be
+        // taxed is made in OrderFactory. This handler
+        // translates, it does not judge.
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(
             paymentShares: [new ShippingShare(1, '3.0000')],
             adjustment: PaymentAdjustmentOrigin::Fee,
@@ -206,8 +204,8 @@ class PurchaseHandlerTest extends TestCase
     }
 
     /**
-     * E1: voll gedeckt ist die Zahlungsart „Gutschein", kein Datensatz — und
-     * die Gutscheine gehen mit dem, was die Seite zeigte, in den Entwurf.
+     * E1: fully covered, the payment method is "gift card", not a record — and
+     * the gift cards go into the draft with what the page showed.
      */
     public function testVollGedecktZahltMitGutschein(): void
     {
@@ -221,13 +219,13 @@ class PurchaseHandlerTest extends TestCase
         self::assertSame('Gutschein', $this->method->title);
         self::assertSame(0, $this->draft?->paymentMethod);
         self::assertSame('', $this->draft->paymentInstructions);
-        // Nur, wer zahlt.
+        // Only those that pay.
         self::assertSame([['id' => 3, 'code' => 'AAAABBBBCCCCDDDD', 'amount' => '13.90']], $this->draft->vouchers);
     }
 
     /**
-     * Zahlungsart 0 ohne Deckung ist ein gebasteltes Formular — dieselbe
-     * Antwort wie für jede verschwundene Zahlungsart.
+     * Payment method 0 without coverage is a crafted form — the same answer
+     * as for any payment method that has disappeared.
      */
     public function testGutscheinZahlungOhneDeckungWirdAbgelehnt(): void
     {
@@ -247,8 +245,8 @@ class PurchaseHandlerTest extends TestCase
 
     public function testEineZahlungsartDieDerShopNichtMehrFuehrtWirdAbgelehnt(): void
     {
-        // Der Shop führt Art 6, der Zustand nennt Art 99 — zwischen Anzeige
-        // und Klick unveröffentlicht oder gelöscht.
+        // The shop carries method 6, the state names method 99 — unpublished
+        // or deleted between display and click.
         $this->expectException(PaymentMethodGoneAtPurchase::class);
 
         $this->handler()->place(12, 5, 1, 'AT', 'de', 'en', 0, [], $this->state(
@@ -313,12 +311,12 @@ class PurchaseHandlerTest extends TestCase
     }
 
     /**
-     * Der Placer ist ein Double, das mitschreibt, was der Handler ihm gibt.
+     * The placer is a double that records what the handler gives it.
      *
-     * `OrderPlacer` ist final; die Naht ist `OrderPlacerInterface` — dieselbe
-     * Konvention wie bei `CartConversionInterface`, `OrderFactoryInterface`
-     * und `DocumentIssuerInterface`, und aus demselben Grund: Der Handler
-     * braucht genau eine Methode, nicht eine Transaktion.
+     * `OrderPlacer` is final; the seam is `OrderPlacerInterface` — the same
+     * convention as for `CartConversionInterface`, `OrderFactoryInterface`
+     * and `DocumentIssuerInterface`, and for the same reason: the handler
+     * needs exactly one method, not a transaction.
      */
     private function handler(): PurchaseHandler
     {

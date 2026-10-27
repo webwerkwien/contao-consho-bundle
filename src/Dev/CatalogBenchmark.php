@@ -37,7 +37,7 @@ use Webwerkwien\ContaoConshoBundle\Cron\VisibilityBoundaryCron;
  *
  * ── Safe on a shared server ───────────────────────────────────────────────
  *
- * Measured on the test server on 2026-09-13: without the query cache a single
+ * Measured on a shared server: without the query cache a single
  * listing query ran for more than 30 seconds at 5,000 products, and the run
  * held the shared MariaDB for ten minutes before it was stopped — printing
  * nothing, because the results came at the end. So:
@@ -216,7 +216,7 @@ final class CatalogBenchmark
     }
 
     /**
-     * 🔴 Measured on the test server on 2026-09-13: MariaDB's query cache was ON
+     * 🔴 Measured on a shared server: MariaDB's query cache was ON
      * (256 MB). The first benchmark run reported 0.2–0.8 ms for queries whose
      * EXPLAIN showed full scans — every run after the warm-up was a cache hit
      * on identical SQL. Switched off for this session only; other websites on

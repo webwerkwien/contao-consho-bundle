@@ -29,7 +29,7 @@ class CatalogAddressesTest extends TestCase
         /*
          * Like the real one: a STRING is a path, only a Uuid finds a file by
          * its UUID. The first double took any string and let "files/<uuid>"
-         * through to the test server.
+         * through, which a real installation does not.
          */
         $files->method('generatePublicUri')->willReturnCallback(static fn (Uuid|string $location): Uri|null => !$location instanceof Uuid ? null : match ($location->toRfc4122()) {
             // What SymlinkedLocalFilesProvider gives without a request: "/files/…".

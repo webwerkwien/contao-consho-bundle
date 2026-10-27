@@ -114,6 +114,14 @@ final class ShopPageUrls
     }
 
     /**
+     * The page with Contao's "Lost password" module (K1).
+     */
+    public function passwordOfRoot(PageModel $root): string|null
+    {
+        return $this->urlOf($root, 'consho_passwordPage');
+    }
+
+    /**
      * Any page by id, routed the same way and failing the same way.
      *
      * The legal texts need this one: their page is not a field on the root

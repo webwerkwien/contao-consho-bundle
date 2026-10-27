@@ -43,10 +43,9 @@ class DbalPaymentMethodRepositoryTest extends TestCase
     }
 
     /**
-     * C-9: Der Hinweis wird beim Kauf an der Bestellung eingefroren (Michael,
-     * 2026-09-25: „den Hinweis beim Kauf an der Bestellung einfrieren → OK")
-     * — also muss er hier schon in der Sprache der Bestellung ankommen. Die
-     * Parameter `$language` und `$fallback` gab es, benutzt wurden sie nicht.
+     * C-9: the note is frozen on the order at purchase — so it must already
+     * arrive here in the order's language. The parameters `$language` and
+     * `$fallback` existed, but were not used.
      */
     public function testDerZahlungshinweisKommtInDerSpracheDerBestellung(): void
     {
@@ -60,16 +59,15 @@ class DbalPaymentMethodRepositoryTest extends TestCase
         $en = $this->repository()->forShop(1, 'en', 'de');
 
         self::assertSame('<p>Within 7 days.</p>', $en[0]->config['instructions']);
-        // Leer übersetzt: der Haupttext, wie überall (TranslationJoin::coalesce).
+        // Translated as empty: the main text, as everywhere (TranslationJoin::coalesce).
         self::assertSame('<p>Binnen 14 Tagen.</p>', $en[1]->config['instructions']);
         self::assertSame('<p>Binnen 7 Tagen.</p>', $this->repository()->forShop(1, 'de', 'de')[0]->config['instructions']);
     }
 
     public function testEineNieGespeicherteArtWirdUebersprungenAuchWennVeroeffentlicht(): void
     {
-        // Nachtrag zum Review von Task 4: act=toggle überspringt die
-        // Pflichtprüfungen der Maske. Eine nie gespeicherte Zeile hat also
-        // type '', kann aber trotzdem 'published' sein.
+        // act=toggle skips the form's required checks. A row that was never
+        // saved therefore has type '', but can still be 'published'.
         $this->method(2, 'Ohne Typ', type: '');
         $this->method(3, 'Vorkasse', type: 'prepayment');
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'paymentMethods' => serialize(['2', '3'])]);
@@ -78,9 +76,9 @@ class DbalPaymentMethodRepositoryTest extends TestCase
     }
 
     /**
-     * C-11: Eine Benachrichtigung braucht das Geheimnis ihrer Art, auch wenn
-     * die Art inzwischen verborgen oder abgewählt ist — angekommenes Geld wird
-     * trotzdem gebucht.
+     * C-11: a notification needs the secret of its method, even when the method
+     * has since been hidden or deselected — money that has arrived is booked
+     * all the same.
      */
     public function testNachIdAuchUnveroeffentlichtUndOhneShop(): void
     {

@@ -20,8 +20,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
  * back end asks for findings several times per request (B, section 10). The
  * folder check touches the file system once per ARCHIVING shop, which is a
  * handful of stat calls, not a walk over the archive; whether the archived
- * PDFs are intact is `consho:document:verify`'s job, not the start page's
- * (decided 2026-09-24).
+ * PDFs are intact is `consho:document:verify`'s job, not the start page's.
  */
 final class DbalInvoiceIssueSource implements ConfigurationIssueSource
 {

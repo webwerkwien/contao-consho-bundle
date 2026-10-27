@@ -44,7 +44,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_legal'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],
@@ -73,9 +73,9 @@ $GLOBALS['TL_DCA']['tl_consho_order_legal'] = [
          * core, on every installation, for every later migration too. The
          * absence of a rich text editor is expressed by not naming one.
          *
-         * Measured on c5 on 2026-09-23: the schema changes had already been
-         * applied when the run died, so the failure looked like something the
-         * server did rather than something this file said.
+         * The schema changes are already applied when the run dies, so the
+         * failure looks like something the server did rather than something
+         * this file said.
          */
         'text' => [
             'inputType' => 'textarea',

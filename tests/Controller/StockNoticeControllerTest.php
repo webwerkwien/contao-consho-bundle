@@ -28,11 +28,11 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Block G, G-6 (G12, G15): die Route der drei Knöpfe — eintragen, abmelden,
- * bestätigen. Das Mitglied kommt aus der Sitzung, nie aus dem Formular;
- * Herkunft wie beim Warenkorb geprüft.
+ * Block G, G-6 (G12, G15): the route of the three buttons — sign up, sign
+ * off, confirm. The member comes from the session, never from the form;
+ * origin checked as for the cart.
  *
- * Wanderstock (1) mit den Varianten 2 und 3; Variante 3 ist ausverkauft.
+ * Hiking pole (1) with variants 2 and 3; variant 3 is sold out.
  */
 class StockNoticeControllerTest extends TestCase
 {

@@ -33,14 +33,14 @@ class PaymentMethodDcaTest extends TestCase
 
     public function testDieBankverbindungLandetInJsonDataNichtInEigenenSpalten(): void
     {
-        // In der Praxis trägt DataContainerCallbackListener (#[AsHook('loadDataContainer',
-        // priority: -16)]) den save_callback aus IbanListener bereits ein, bevor
-        // VirtualFieldsMappingListener (priority: -4096) läuft. Das wird hier nachgestellt,
-        // weil dieser Test die DCA-Datei isoliert lädt, ohne die Hooks zu durchlaufen.
+        // In practice DataContainerCallbackListener (#[AsHook('loadDataContainer',
+        // priority: -16)]) already registers the save_callback from IbanListener before
+        // VirtualFieldsMappingListener (priority: -4096) runs. That is reproduced here
+        // because this test loads the DCA file in isolation, without running the hooks.
         $GLOBALS['TL_DCA']['tl_consho_payment_method']['fields']['iban']['save_callback'] = [[IbanListener::class, '__invoke']];
 
-        // C3: Moduleinstellungen als virtuelle Felder — nach einer Deinstallation
-        // blieben eigene Spalten stehen (Isotope, Merconis).
+        // C3: module settings as virtual fields — after an uninstall, own
+        // columns stayed behind (Isotope, Merconis).
         (new VirtualFieldsMappingListener())('tl_consho_payment_method');
 
         $fields = $GLOBALS['TL_DCA']['tl_consho_payment_method']['fields'];
@@ -54,9 +54,9 @@ class PaymentMethodDcaTest extends TestCase
     }
 
     /**
-     * Der Giro-Code trägt höchstens 70 Zeichen Empfängername und darf ihn
-     * nicht kürzen (EPC069-12 v3.1, 2.2) — also lehnt die Maske Längeres ab.
-     * Der Schalter sitzt im Abschnitt Bankverbindung, nicht an der Vorkasse.
+     * The Giro code carries at most 70 characters of beneficiary name and must
+     * not shorten it (EPC069-12 v3.1, 2.2) — so the form rejects anything longer.
+     * The switch sits in the bank details section, not on prepayment.
      */
     public function testDerKontoinhaberPasstInDenGiroCodeUndDerSchalterSitztBeiDerBank(): void
     {
@@ -70,14 +70,14 @@ class PaymentMethodDcaTest extends TestCase
 
     public function testDieIbanNenntIhreSpalteSelbst(): void
     {
-        // Sie bekommt per #[AsCallback] einen save_callback — und ein Feld mit
-        // save_callback ordnet Contao nicht mehr automatisch jsonData zu.
+        // It gets a save_callback via #[AsCallback] — and Contao no longer maps a
+        // field with a save_callback to jsonData automatically.
         self::assertSame('jsonData', $GLOBALS['TL_DCA']['tl_consho_payment_method']['fields']['iban']['targetColumn']);
     }
 
     public function testKeinVirtuellesFeldTraegtUniqueOderFallback(): void
     {
-        // DcaExtractor verbietet beides auf virtuellen Feldern.
+        // DcaExtractor forbids both on virtual fields.
         foreach (self::BANK_FIELDS as $field) {
             $eval = $GLOBALS['TL_DCA']['tl_consho_payment_method']['fields'][$field]['eval'] ?? [];
 
@@ -87,10 +87,10 @@ class PaymentMethodDcaTest extends TestCase
     }
 
     /**
-     * Spec E, offene Punkte (Abnahme E-7): Contao setzt beim Anlegen die
-     * Vorgabe JEDES Feldes, auch eines virtuellen aus einer fremden Palette —
-     * die Nachnahme trug `dueDays: 14` in jsonData. Vorgaben virtueller Felder
-     * gehören in den Handler; das Zahlungsziel zeigt seine als Platzhalter.
+     * E-7: when creating a record, Contao sets the default of EVERY field, even
+     * of a virtual one from another palette — cash on delivery carried
+     * `dueDays: 14` in jsonData. Defaults of virtual fields belong in the
+     * handler; the payment term shows its own as a placeholder.
      */
     public function testKeinVirtuellesFeldHatEineVorgabe(): void
     {
@@ -108,10 +108,10 @@ class PaymentMethodDcaTest extends TestCase
 
     public function testKeinFreiesGebuehrenfeld(): void
     {
-        // C5: § 56 Abs 3 ZaDiG 2018 — die Maske lädt nicht zum Aufschlag ein.
-        // Seit E-1 gibt es die STEUERWAHL für eine Gebühr (Z3), aber weiter
-        // kein Betragsfeld an jeder Zahlungsart; einen Betrag bringt nur die
-        // Nachnahme mit (Z4, E-3) — und nur in ihrer Palette.
+        // C5: § 56 (3) ZaDiG 2018 — the form does not invite a surcharge.
+        // Since E-1 there is the TAX CHOICE for a fee (Z3), but still no
+        // amount field on every payment method; only cash on delivery brings
+        // an amount (Z4, E-3) — and only in its palette.
         $allowed = ['feeTaxMode', 'feeTaxClass', 'fee', 'feeCurrency'];
 
         foreach ($GLOBALS['TL_DCA']['tl_consho_payment_method']['palettes'] as $type => $palette) {
@@ -135,8 +135,8 @@ class PaymentMethodDcaTest extends TestCase
 
     public function testReservierteSchluesselSindKeineModulfelder(): void
     {
-        // `instructions` und `net` sind reservierte Schlüssel im Config-Array
-        // (PaymentHandlerInterface) — nie ein virtuelles Feld ohne `sql`.
+        // `instructions` and `net` are reserved keys in the config array
+        // (PaymentHandlerInterface) — never a virtual field without `sql`.
         $fields = $GLOBALS['TL_DCA']['tl_consho_payment_method']['fields'];
 
         self::assertArrayHasKey('sql', $fields['instructions']);
@@ -148,10 +148,10 @@ class PaymentMethodDcaTest extends TestCase
     }
 
     /**
-     * Michael, 2026-10-14: „ja geht in Ordnung" — das Geheimnis des
-     * Test-Anbieters erscheint nicht in Lesewegen. `hideInput` blendet es in
-     * Contaos Detailansicht und im Versionsvergleich aus, und contao-ai core
-     * ab v1.8.1 maskiert es nach derselben Regel in allen Lesebefehlen.
+     * The secret of the test provider does not appear on read paths.
+     * `hideInput` hides it in Contao's detail view and in the version
+     * comparison, and contao-ai core from v1.8.1 masks it by the same rule in
+     * all read commands.
      */
     public function testDasTestgeheimnisZeigtSichInKeinemLeseweg(): void
     {
@@ -160,13 +160,13 @@ class PaymentMethodDcaTest extends TestCase
 
     public function testLoeschenIstDieStandardOperationDesKerns(): void
     {
-        // Nur eine namentliche Operation (ohne eigenes Array) bekommt von
-        // DefaultOperationsListener die DeleteAction-Prüfung angehängt — sonst
-        // greift MethodInUseVoter nicht und der Button wird nie ausgegraut.
+        // Only a named operation (without an array of its own) gets the
+        // DeleteAction check attached by DefaultOperationsListener — otherwise
+        // MethodInUseVoter does not take effect and the button is never greyed out.
         //
-        // Und das `!` ist kein Schmuck: Es setzt `primary`. Ohne das stünde
-        // der Knopf nur im ⋯-Menü, und eine ausgegraute Operation zeichnet
-        // das Template dort überhaupt nicht — der Hinweis wäre unsichtbar.
+        // And the `!` is not decoration: it sets `primary`. Without it the
+        // button would only stand in the ⋯ menu, and the template does not draw
+        // a greyed-out operation there at all — the hint would be invisible.
         $operations = $GLOBALS['TL_DCA']['tl_consho_payment_method']['list']['operations'];
 
         self::assertContains('!delete', $operations);

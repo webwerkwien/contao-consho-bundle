@@ -8,7 +8,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\RedirectRecorder;
 
 /**
  * Writes a language block of a translated entity with the rules of its mask
- * (docs/mehrsprachigkeit.md, 7.3): merged over what is stored, an alias
+ * (Block M, 7.3): merged over what is stored, an alias
  * generated from the title, old addresses handed to the redirects.
  *
  * Two callers. The mask (TranslationFieldsListener) uses the parts —

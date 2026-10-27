@@ -6,24 +6,24 @@ use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Das SQLite-Testschema für die beiden Warenkorb-Tabellen, gebaut nach
- * contao/dca/tl_consho_cart.php und tl_consho_cart_item.php.
+ * The SQLite test schema for the two cart tables, built after
+ * contao/dca/tl_consho_cart.php and tl_consho_cart_item.php.
  *
- * `tokenHash` ist NULL-bar, der UNIQUE-Index läuft seit C-3b über
- * `(tokenHash, shop)`: Ein Cookie identifiziert den Besucher, nicht den
- * Warenkorb — je Shop trägt derselbe Token einen eigenen. Mitglieder-Warenkörbe
- * tragen keinen Hash, und SQLite wie MySQL lassen beliebig viele NULL in einem
- * Unique-Index zu — eine leere Zeichenkette dagegen nur einmal.
+ * `tokenHash` is nullable, the UNIQUE index has covered `(tokenHash, shop)`
+ * since C-3b: a cookie identifies the visitor, not the
+ * cart — per shop the same token carries a cart of its own. Member carts
+ * carry no hash, and SQLite as well as MySQL allow any number of NULLs in a
+ * unique index — an empty string, by contrast, only once.
  *
- * Die Einfüger schreiben nur die per $overrides gesetzten Spalten, damit
- * ungeschriebene Spalten wirklich ihren Vorgabewert tragen.
+ * The inserters write only the columns set via $overrides, so that
+ * unwritten columns really carry their default value.
  *
- * 🔴 **`order` heißt hier `order`**, in Anführungszeichen, und nicht mehr
- * `orderId` (seit C-7, 2026-09-23). Die Umbenennung war bis dahin harmlos,
- * weil nichts die Spalte je beschrieben hat — und genau deshalb hätte kein
- * Test gemerkt, dass Doctrine reservierte Spaltennamen **nicht** selbst quotet,
- * auch nicht in `insert()`/`update()` mit einem Array. Ein Testschema, das dem
- * Produktionsschema an der einen heiklen Stelle ausweicht, prüft sie nicht.
+ * 🔴 **`order` is called `order` here**, quoted, and no longer
+ * `orderId` (since C-7). Until then the renaming was harmless,
+ * because nothing ever wrote the column — and precisely for that reason no
+ * test would have noticed that Doctrine does **not** quote reserved column names
+ * itself, not even in `insert()`/`update()` with an array. A test schema that
+ * dodges the production schema at the one tricky spot does not test it.
  */
 trait CartSchema
 {
@@ -33,8 +33,9 @@ trait CartSchema
     {
         /*
          * From the DCA (WG-5): the hand-written copy had to be told about
-         * every new column and was not told about `vouchers` (Prüfungsnotiz,
-         * Fall 31/57). DcaSchema quotes `order` and builds the keys.
+         * every new column and was not told about `vouchers` — hand-written
+         * test schemas go stale with the next column. DcaSchema quotes `order`
+         * and builds the keys.
          */
         DcaSchema::create($this->cartConnection, 'tl_consho_cart');
         // Builds the unique key pid,product,subscriptionRule,renews as well:

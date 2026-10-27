@@ -24,7 +24,7 @@ class ListPriceIssueSourceTest extends TestCase
     use TaxFixture;
 
     /**
-     * Wie oft verify() die Projektion gelesen hat.
+     * How often verify() read the projection.
      */
     private int $reads = 0;
 
@@ -58,7 +58,7 @@ class ListPriceIssueSourceTest extends TestCase
 
         self::assertSame($readsAfterFirstCall, $this->reads);
 
-        // Was consho:price:rebuild nach dem Beheben tut.
+        // What consho:price:rebuild does after the fix.
         $cache->delete(ListPriceIssueSource::CACHE_KEY);
         $source->issues();
 

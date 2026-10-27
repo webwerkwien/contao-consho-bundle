@@ -12,8 +12,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * A note at the top of an order whose digital goods went to an address
- * nobody has confirmed (Nachlese E4, spec F; Michael, 2026-10-09: "wie
- * empfohlen" — a note, no lock).
+ * nobody has confirmed (Nachlese E4, spec F) — a note,
+ * no lock.
  *
  * For digital goods the mail IS the way of delivery (spec A): a mistyped
  * address means the customer paid and never received anything, and the

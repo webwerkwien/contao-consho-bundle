@@ -11,7 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ListingElement;
 
 /**
  * Title, description and canonical of a listing page — Contao's own where they
- * are right, set where they are not (docs/block-b-katalog-frontend.md, 4.5).
+ * are right, set where they are not (Block B, 4.5).
  *
  * | address                                  | title, description | canonical                              |
  * |------------------------------------------|--------------------|----------------------------------------|
@@ -34,7 +34,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ListingElement;
  * left to the default, that maintained canonicalLink would win here too.
  *
  * Robots are never touched. cq addresses are kept from crawling by robots.txt,
- * and Google advises against noindex on top (docs/block-a-fundament.md, 2).
+ * and Google advises against noindex on top (Block A, 2).
  *
  * ── When it takes effect ──────────────────────────────────────────────────
  *
@@ -99,15 +99,14 @@ final class ListingHead
 
         // A category address with a released combination in cq is that landing
         // page's content: an old bookmark, or typed by hand. It gets its head,
-        // not a redirect (decided 2026-09-13).
+        // not a redirect.
         $landing = $address->facet ?? $this->facets->landingFor((int) $page->id, $state);
 
         if (null === $landing) {
             // Only from page two on. The controller passes 1 for page one AND
             // for a listing without pagination, where any ?page_c<ID>=… is noise
             // a visitor typed. Keeping it unconditionally made every such value
-            // canonical — measured on the test server on 2026-09-13, where
-            // ?page_c636=0 came out as its own canonical address.
+            // canonical: ?page_c636=0 came out as its own canonical address.
             if ($state->isEmpty() && $pageNumber > 1) {
                 $head->addKeepParamsForCanonical($pageParameter);
             }

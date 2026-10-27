@@ -53,7 +53,7 @@ final class DocumentIssuer implements DocumentIssuerInterface
             $shipment = $context['shipment'] ?? null;
 
             /*
-             * Once a parcel has gone (E-6b, Michael 2026-09-28): the day of
+             * Once a parcel has gone (E-6b): the day of
              * delivery is known and is what the invoice owes (§ 11 Abs. 1 Z 3
              * lit. d UStG 1994, § 14 Abs. 4 Satz 1 Nr. 6 UStG) — after a
              * partial shipment with the day the rest is expected.
@@ -64,6 +64,12 @@ final class DocumentIssuer implements DocumentIssuerInterface
                 $days = $context['deliveryDays'] ?? ['min' => 0, 'max' => 0];
                 $period = DeliveryPeriod::of($issuedAt, $days['min'], $days['max']);
                 $context['delivery'] = null === $period ? null : [...$period, 'kind' => 'expected'];
+
+                // L-1: paid before the goods go out — the invoice covers an
+                // advance payment and says so (formatVersion 11).
+                if (null !== $context['delivery'] && true === ($context['payment']['advance'] ?? false)) {
+                    $context['delivery']['advance'] = true;
+                }
             }
         }
 
@@ -223,8 +229,9 @@ final class DocumentIssuer implements DocumentIssuerInterface
      * order are two corrections.
      *
      * @param list<array<string, string>> $lines
+     * @param list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}> $prepaid what goes back onto single-purpose vouchers, negative (EZ-4)
      */
-    public function correct(int $invoiceId, array $lines, string $withdrawalNumber): int
+    public function correct(int $invoiceId, array $lines, string $withdrawalNumber, array $prepaid = []): int
     {
         $invoice = $this->repository->findDocumentRow($invoiceId);
 
@@ -248,6 +255,7 @@ final class DocumentIssuer implements DocumentIssuerInterface
             (int) $invoice['issuedAt'],
             $lines,
             $withdrawalNumber,
+            $prepaid,
         );
 
         $shopId = (int) $invoice['shop'];

@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * „Widerrufe" als eigener Menüpunkt (D-3, F11): dieselbe Tabelle, flach über
- * alle Bestellungen — und ein Label, das die Fälligkeit nennt.
+ * "Withdrawals" as a menu item of its own (D-3, F11): the same table, flat
+ * across all orders — and a label that names the due date.
  */
 final class WithdrawalListListenerTest extends TestCase
 {
@@ -81,9 +81,9 @@ final class WithdrawalListListenerTest extends TestCase
     }
 
     /**
-     * F12 — Michael: „die icons machen sinn statt Versand Rückversand, statt
-     * zahlung Rückzahlung und gesamt". Im Menüpunkt Spalten wie bei den
-     * Bestellungen, vorne die drei Symbole.
+     * F12: the icons stand for return shipping instead of shipping, refund
+     * instead of payment, and total. In the menu item, columns as for the
+     * orders, the three icons in front.
      */
     public function testImMenuepunktSpaltenMitDenDreiSymbolen(): void
     {
@@ -122,12 +122,12 @@ final class WithdrawalListListenerTest extends TestCase
     }
 
     /**
-     * WA: ohne Bestellung steht es in der Bestellspalte, wo man die Bestellung
-     * sucht; nach Fensterende eingegangen steht in beiden Ansichten dabei.
+     * WA: without an order it says so in the order column, where one looks for
+     * the order; received after the end of the window is noted in both views.
      */
     public function testNichtZugeordnetUndNachFensterende(): void
     {
-        // Unter der Bestellung zuerst: flatInModule stellt global auf Spalten.
+        // Under the order first: flatInModule switches to columns globally.
         $line = $this->listener('consho_order')->label(['number' => 'W-00009', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'received', 'refundedAt' => null, 'afterWindow' => 1]);
 
         self::assertIsString($line);

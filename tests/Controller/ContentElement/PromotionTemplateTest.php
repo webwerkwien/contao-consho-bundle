@@ -11,8 +11,8 @@ use Twig\TwigFunction;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductTile;
 
 /**
- * Block H (H-2): Störer und Streichpreis, an den echten Vorlagen gerendert —
- * und nur, wo es einen Bezugspreis gibt (B).
+ * Block H (H-2): badge and strike-through price, rendered on the real
+ * templates — and only where there is a reference price (B).
  */
 class PromotionTemplateTest extends TestCase
 {
@@ -80,7 +80,7 @@ class PromotionTemplateTest extends TestCase
     }
 
     /**
-     * Der Preisblock der echten Vorlage, ohne den Rest der Seite.
+     * The price block of the real template, without the rest of the page.
      *
      * @param array<string, mixed> $price
      */

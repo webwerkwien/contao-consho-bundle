@@ -23,8 +23,8 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxRateRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
 
 /**
- * E-6, V5: Die Versandkostenseite zeigt, was die Daten sagen — brutto mit dem
- * Satz des Shop-Landes (C25), Staffeln als Tabelle, Länder mit Namen.
+ * E-6, V5: The shipping costs page shows what the data says — gross at the
+ * shop country's rate (C25), scales as a table, countries by name.
  */
 class ShippingCostsViewTest extends TestCase
 {
@@ -54,8 +54,8 @@ class ShippingCostsViewTest extends TestCase
     }
 
     /**
-     * Eine Pauschale ohne Betrag in der Währung bietet auch der Checkout nicht
-     * an — die Seite zeigt sie deshalb nicht.
+     * A flat rate without an amount in the currency is not offered by the
+     * checkout either — so the page does not show it.
      */
     public function testOhneBetragInDerWaehrungKeineZeile(): void
     {
@@ -77,8 +77,8 @@ class ShippingCostsViewTest extends TestCase
     }
 
     /**
-     * Fable-Review E, K4: Das Häkchen an der Versandart allein verspricht
-     * nichts, solange der Shop keine Nachnahme als Zahlungsart anbietet.
+     * E: The checkbox on the shipping method alone promises
+     * nothing as long as the shop offers no cash on delivery as a payment method.
      */
     public function testOhneNachnahmeZahlungsartKeinHinweis(): void
     {

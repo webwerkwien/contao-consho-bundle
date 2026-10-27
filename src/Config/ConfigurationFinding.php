@@ -85,7 +85,7 @@ enum ConfigurationFinding: string
     // D-3: open withdrawals (F11), number ranges for refunds (F9).
     case WithdrawalsOpen = 'withdrawalsOpen';
     case RefundRangeMissing = 'refundRangeMissing';
-    // WA (A5, 2026-10-22): withdrawals from the form that match no order yet.
+    // WA (A5): withdrawals from the form that match no order yet.
     case WithdrawalsUnassigned = 'withdrawalsUnassigned';
 
     // D-4: the base group of the customers (K5).
@@ -135,7 +135,7 @@ enum ConfigurationFinding: string
 
     // Abo-1: a sale mode on offer without a price (A4). Its sister "only
     // consumers cannot subscribe" went with the fixed business-only lock
-    // (variant A, 2026-10-08).
+    // (variant A).
     case SaleModePriceMissing = 'saleModePriceMissing';
 
     // Abo-2b (P91): sold only by plans for some customer groups — listings
@@ -150,11 +150,11 @@ enum ConfigurationFinding: string
     // method — its follow-up orders are not created.
     case SubscriptionBillingMethodMissing = 'subscriptionBillingMethodMissing';
 
-    // Acceptance Abo-4: a start point without a domain — mails from the cron
+    // Abo-4: a start point without a domain — mails from the cron
     // and the console link to localhost.
     case StartPointWithoutDomain = 'startPointWithoutDomain';
 
-    // Acceptance GARAN (2026-10-09): a start point forwards to its first page,
+    // GARAN: a start point forwards to its first page,
     // and that is a product page without a product — the domain answers 500
     // (StartPointProductPageIssueSource).
     case StartPointForwardsToProductPage = 'startPointForwardsToProductPage';
@@ -172,7 +172,7 @@ enum ConfigurationFinding: string
     // E10: a decision on a cancellation whose mail did not leave.
     case DecisionNotSent = 'decisionNotSent';
 
-    // Abo-Nachlese (P74, review S1): a subscription customer names another
+    // Abo-Nachlese (P74): a subscription customer names another
     // country in the account; follow-up invoices keep the previous address.
     case SubscriptionCountryChanged = 'subscriptionCountryChanged';
 
@@ -189,7 +189,7 @@ enum ConfigurationFinding: string
     // label, or a label without a duration (DurabilityGuaranteeIssueSource).
     case DurabilityLabelMissing = 'durabilityLabelMissing';
     case DurabilityYearsMissing = 'durabilityYearsMissing';
-    // Review and acceptance GARAN: a label the web cannot reach, one too heavy
+    // GARAN: a label the web cannot reach, one too heavy
     // for a mail, a value at a variant that does nothing.
     case DurabilityLabelNotPublic = 'durabilityLabelNotPublic';
     case DurabilityLabelTooLarge = 'durabilityLabelTooLarge';
@@ -208,6 +208,8 @@ enum ConfigurationFinding: string
     case VoucherTaxed = 'voucherTaxed';
     case NotTaxableClassOnGoods = 'notTaxableClassOnGoods';
     case VoucherValueMissing = 'voucherValueMissing';
+    // EZ-1: a single-purpose voucher in a class sold without tax.
+    case SinglePurposeVoucherNotTaxed = 'singlePurposeVoucherNotTaxed';
 
     // Block R (O2, R6): the OSS threshold in sight while the business taxes
     // where the shop is (OssThresholdIssueSource).
@@ -226,9 +228,13 @@ enum ConfigurationFinding: string
     case CustomerPageLocksOut = 'customerPageLocksOut';
     case LoginPageMissing = 'loginPageMissing';
 
+    // K1: a shop with guest checkout whose start point names no "Lost
+    // password" page — the order page offers no account (AccountPasswordPage-
+    // IssueSource).
+    case AccountPasswordPageMissing = 'accountPasswordPageMissing';
+
     /**
-     * The back end modules in which the finding is put right (Michael,
-     * 2026-10-07, H1): a user sees it if they may open ONE of them. An empty
+     * The back end modules in which the finding is put right (H1): a user sees it if they may open ONE of them. An empty
      * list is for what no module repairs — a console command, an environment
      * variable — and only administrators see it.
      *
@@ -259,7 +265,7 @@ enum ConfigurationFinding: string
             self::TranslationSafetyMissing, self::ProductShopMissing, self::ProductPriceMissing, self::PriceTie, self::PriceCutAsPromotion,
             self::GroupPriceAboveList, self::DigitalFileMissing, self::SaleModePriceMissing,
             self::ProductKindMismatch, self::VoucherTaxed, self::NotTaxableClassOnGoods,
-            self::VoucherValueMissing, self::DurabilityLabelMissing, self::DurabilityYearsMissing,
+            self::VoucherValueMissing, self::SinglePurposeVoucherNotTaxed, self::DurabilityLabelMissing, self::DurabilityYearsMissing,
             self::DurabilityOnVariant, self::DeliveryArticleNotReady => ['consho_product'],
             self::DurabilityLabelNotPublic, self::DurabilityLabelTooLarge, self::DurabilityNestedUnused => ['consho_product', 'files'],
             self::MailFooterEmpty => ['consho_shop'],
@@ -271,7 +277,7 @@ enum ConfigurationFinding: string
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
             self::InvoiceArchiveFailed, self::ConfirmationNotSent, self::AnonymizationDue,
             self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid => ['consho_order'],
-            // The tax report is order data (review A1); the switch "Steuer im
+            // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
             self::SubscriptionsSuspended, self::CancellationsWaiting, self::DecisionNotSent, self::SubscriptionCountryChanged => ['consho_subscription'],
@@ -281,7 +287,7 @@ enum ConfigurationFinding: string
             self::OrderPageMissing, self::PrivacyPageMissing, self::WarrantyNoticeMissing,
             self::WarrantyNoticeFileMissing, self::WithdrawalFunctionMissing, self::WithdrawalFunctionAdvised,
             self::ShippingCostsPageMissing, self::StartPointWithoutDomain, self::StartPointForwardsToProductPage, self::CancellationPageMissing,
-            self::CustomerPageLocksOut, self::LoginPageMissing => ['page'],
+            self::CustomerPageLocksOut, self::LoginPageMissing, self::AccountPasswordPageMissing => ['page'],
             // The registration is a front end module of a theme.
             self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests => ['themes'],
             self::PinnedProductMissing, self::MiniCartMissing, self::CheckoutElementMissing, self::CartElementMissing,
@@ -418,7 +424,7 @@ enum ConfigurationFinding: string
             /*
              * An allow list that does not carry Consho's query parameters.
              * Until C-10 that was consho_notice alone, and only a refusal went
-             * unseen — a hint. Since the review of C-10 it covers every
+             * unseen — a hint. Since C-10 it covers every
              * parameter the shop reads from the address: the checkout step,
              * the purchase outcome and the order page's token. Stripped, the
              * checkout never leaves its first step and every link to an order
@@ -557,7 +563,7 @@ enum ConfigurationFinding: string
              * Not blocking either, although it concerns a mandatory detail:
              * the basis — UStR 2000 Rz 1524, the expected period on an invoice
              * issued before delivery — was read only through a secondary
-             * source (2026-09-24). A block would stop every sale on a reading
+             * source. A block would stop every sale on a reading
              * nobody has checked against the text yet.
              */
             self::DeliveryTimeMissing => true,
@@ -616,9 +622,8 @@ enum ConfigurationFinding: string
             self::MultipleShopsShareMembers => false,
 
             /*
-             * D-2, decision E1 (Michael, 2026-09-27: "Sperre bei AGB ist schon
-             * falsch, man muss keine haben. Sonst nur sperrend, wenn man in
-             * der EU Betreiber ist.").
+             * D-2, decision E1: terms are never required; the other texts block
+             * only where the operator is established in the EU.
              *
              * The function "Vertrag widerrufen" missing where the shop sits in
              * the EU/EEA is a warning AND blocks (CheckoutReadiness) — like
@@ -629,8 +634,7 @@ enum ConfigurationFinding: string
              * them, and the operator decides.
              *
              * A period under 14 days while the shop delivers into the EU/EEA
-             * (W4) is a warning that never blocks (Michael: "für einen shop in
-             * der eu unter dem default eine warnung zeigen") — which law
+             * (W4) is a warning that never blocks — which law
              * applies to a buyer is a question about the buyer, and the
              * operator may know better.
              */
@@ -714,14 +718,14 @@ enum ConfigurationFinding: string
             self::SaleModePriceMissing => true,
             // Right in a closed shop (Abo-2b, P91) — a note.
             self::SubscriptionNotListed => false,
-            // May be meant in another country (Michael: „Hinweis statt Sperre").
+            // May be meant in another country: a note, not a lock.
             self::SubscriptionSameTermOpen => false,
 
             // Nobody bills what the customer keeps using (Abo-4) — a warning.
             self::SubscriptionBillingMethodMissing => true,
 
             // The mail goes out and its links lead nowhere; nothing fails, so
-            // nobody sees it (acceptance Abo-4) — a warning.
+            // nobody sees it (Abo-4) — a warning.
             self::StartPointWithoutDomain => true,
 
             // The start point's own address is an error page, and nothing in
@@ -743,7 +747,7 @@ enum ConfigurationFinding: string
             // like a confirmation that did not go out.
             self::DecisionNotSent => true,
 
-            // Invoices go to an address the customer has left (review S1) —
+            // Invoices go to an address the customer has left —
             // a warning.
             self::SubscriptionCountryChanged => true,
 
@@ -772,7 +776,7 @@ enum ConfigurationFinding: string
 
             // Tax charged where none is due, or none where it is (WG3) —
             // money at every sale. Warnings.
-            self::VoucherTaxed, self::NotTaxableClassOnGoods => true,
+            self::VoucherTaxed, self::NotTaxableClassOnGoods, self::SinglePurposeVoucherNotTaxed => true,
 
             // The voucher is worth what was paid for it — usually its price,
             // so most likely right, but not said. A note.
@@ -787,12 +791,16 @@ enum ConfigurationFinding: string
 
             // A subscription needs an account (P12), a customer page a group it
             // admits — without them the customer is turned away and nothing is
-            // logged (acceptance Abo-8). Warnings, not blocking: a guest still
+            // logged (Abo-8). Warnings, not blocking: a guest still
             // buys once, and whether the shop wants accounts is the operator's.
             // Without guest checkout no new customer buys at all — still a
             // warning, since accounts created by hand need no registration.
             self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests,
             self::CustomerPageLocksOut, self::LoginPageMissing => true,
+
+            // K1: an offer the shop does not make — nothing fails, a guest
+            // still buys and can register the usual way. A note.
+            self::AccountPasswordPageMissing => false,
         };
     }
 }

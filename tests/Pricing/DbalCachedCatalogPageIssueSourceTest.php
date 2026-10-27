@@ -10,13 +10,13 @@ use Webwerkwien\ContaoConshoBundle\Pricing\DbalCachedCatalogPageIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * „Immer aus dem Cache laden" an einer Seite, während der Shop kundenabhängig
- * preist (C-4, Befund B1 des Abschlussreviews).
+ * "Always load from cache" on a page while the shop prices per
+ * customer (C-4).
  *
- * ⚠️ Was diese Tests NICHT zeigen: dass Contao dann wirklich die Gast-Seite
- * ausliefert. Das hängt an `Vary: Cookie` in AbstractController und ist hier
- * nachgelesen, nicht nachgestellt — ein Test dafür prüfte unsere eigene
- * Abschrift (Fall 23g). Geprüft wird die Entscheidung: Wann melden wir?
+ * ⚠️ What these tests do NOT show: that Contao then really serves the guest page.
+ * That hinges on `Vary: Cookie` in AbstractController and was read up
+ * there, not reproduced — a test for it would check our own
+ * transcript. What is checked is the decision: when do we report?
  */
 class DbalCachedCatalogPageIssueSourceTest extends TestCase
 {
@@ -45,8 +45,8 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
 
     public function testOhneKundenabhaengigePreiseIstDerHakenHarmlos(): void
     {
-        // Der Zustand vor C-4, und der jedes Shops ohne Kundengruppen: Alle
-        // sehen dasselbe, und genau dafür ist der geteilte Cache da.
+        // The state before C-4, and that of every shop without customer groups: everyone
+        // sees the same, and that is exactly what the shared cache is for.
         $this->cachedPage(2, 'Katalog');
 
         self::assertSame([], $this->issues());
@@ -66,9 +66,9 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
 
     public function testAuchEinGruppenpreisOhneNettogruppeReicht(): void
     {
-        // Zwei Wege zu kundenabhängigen Preisen, und dieser hier braucht am
-        // Shop keine Einstellung: Der Betreiber legt eine Preiszeile für eine
-        // Kundengruppe an, fertig.
+        // Two ways to customer-specific prices, and this one needs no setting
+        // on the shop: the operator creates a price row for a
+        // customer group, done.
         $this->connection->insert('tl_consho_price', ['pid' => 1, 'tstamp' => 1, 'currency' => 'EUR', 'net' => '8.0000', 'customerGroup' => 3]);
         $this->cachedPage(2, 'Katalog');
 
@@ -77,8 +77,8 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
 
     public function testEineNieGespeichertePreiszeileZaehltNicht(): void
     {
-        // tstamp 0 — dieselbe Regel wie in DbalPriceRepository::findCandidates().
-        // Sonst meldete schon das Öffnen einer Preismaske diesen Befund.
+        // tstamp 0 — the same rule as in DbalPriceRepository::findCandidates().
+        // Otherwise merely opening a price form would report this finding.
         $this->connection->insert('tl_consho_price', ['pid' => 1, 'tstamp' => 0, 'currency' => 'EUR', 'net' => '0.0000', 'customerGroup' => 3]);
         $this->cachedPage(2, 'Katalog');
 
@@ -95,10 +95,10 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
 
     public function testAlleBetroffenenSeitenStehenInEinemBefund(): void
     {
-        // Ein Befund, nicht einer je Seite: Der Betreiber geht die Liste
-        // einmal durch, und eine Quittierung, die beim nächsten Haken zerfällt,
-        // wäre richtig so — der Kontext trägt die Seiten und damit den
-        // Fingerabdruck.
+        // One finding, not one per page: the operator goes through the list
+        // once, and an acknowledgement that falls apart at the next tick
+        // would be right that way — the context carries the pages and with them the
+        // fingerprint.
         $this->connection->update('tl_consho_shop', ['netPriceGroups' => serialize(['3'])], ['id' => 1]);
         $this->cachedPage(2, 'Katalog');
         $this->cachedPage(3, 'Angebote');
@@ -111,20 +111,20 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
 
     public function testDerBefundIstEinHinweisUndSperrtNichts(): void
     {
-        // Jeder gezeigte Preis ist ein echter Preis dieses Shops — nur der
-        // falsche für diesen Besucher. Und der Betreiber hat den Haken selbst
-        // gesetzt.
+        // Every price shown is a real price of this shop — just the
+        // wrong one for this visitor. And the operator set the tick
+        // themselves.
         self::assertFalse(ConfigurationFinding::CatalogPageAlwaysCached->isWarning());
     }
 
     public function testOhneUebersteuerteCacheEinstellungenTutDerHakenNichts(): void
     {
-        // ⚠️ In der zweiten Reviewrunde gefunden: loadDetails() liest
+        // ⚠️ loadDetails() reads
         // `alwaysLoadFromCache = includeCache ? alwaysLoadFromCache : false`
-        // (PageModel, 933). Ein stehengebliebener Haken auf einer Seite, deren
-        // „Cache-Einstellungen überschreiben" wieder aus ist, wirkt gar nicht —
-        // und ein Befund dazu schickte den Betreiber zu einem Kästchen, das
-        // schon harmlos ist.
+        // (PageModel, 933). A leftover tick on a page whose
+        // "Override cache settings" is off again has no effect at all —
+        // and a finding about it would send the operator to a checkbox that
+        // is already harmless.
         $this->connection->update('tl_consho_shop', ['netPriceGroups' => serialize(['3'])], ['id' => 1]);
         $this->connection->insert('tl_page', [
             'id' => 2,
@@ -143,7 +143,7 @@ class DbalCachedCatalogPageIssueSourceTest extends TestCase
             'id' => $id,
             'type' => 'regular',
             'title' => $title,
-            // Beides, weil erst das Paar wirkt.
+            // Both, because only the pair has an effect.
             'includeCache' => 1,
             'alwaysLoadFromCache' => 1,
         ]);

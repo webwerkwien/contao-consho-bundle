@@ -13,7 +13,7 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingTaxMode;
  * Null means not chosen, and a method that asks for a fee without it is not
  * offered — whether a payment fee is an ancillary supply or a supply of its
  * own is a tax question Consho does not answer for the operator
- * (docs/block-e-versand-zahlung.md, section 3).
+ * (Block E, section 3).
  */
 final class PaymentMethod
 {

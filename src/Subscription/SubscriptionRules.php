@@ -10,7 +10,7 @@ use Doctrine\DBAL\Connection;
  * Reads subscription rules (Abo-2).
  *
  * 🔴 `groups` is a reserved word in MySQL 8, and Doctrine does not quote
- * reserved names on its own (Prüfungsnotiz Fall 31) — so the column goes
+ * reserved names on its own — so the column goes
  * through quoteIdentifier(), here and anywhere else it is named.
  */
 class SubscriptionRules

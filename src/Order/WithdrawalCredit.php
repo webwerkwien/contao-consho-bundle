@@ -11,8 +11,8 @@ use Doctrine\DBAL\Connection;
  *
  * ONE place for it, asked by everything that works out what an order still
  * owes: the balance (OrderBalanceReader), the start of an online payment
- * (PaymentStarter) and the change of payment method (PaymentChange). The
- * Fable review of D-3 found the latter two still charging the full grand
+ * (PaymentStarter) and the change of payment method (PaymentChange). Before
+ * D-3 the latter two still charged the full grand
  * total after a withdrawal — 100 € started online where 70 € were owed —
  * because each had worked out the claim on its own from the order row.
  *

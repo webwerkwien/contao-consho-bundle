@@ -31,8 +31,8 @@ class DompdfRendererTest extends TestCase
     }
 
     /**
-     * Der Schriften-Cache liegt unter var/, nicht in vendor/ — dort darf auf
-     * vielen Hostings niemand schreiben.
+     * The font cache lies under var/, not in vendor/ — on many hostings nobody
+     * may write there.
      */
     public function testDerSchriftenCacheWirdAngelegt(): void
     {
@@ -42,9 +42,9 @@ class DompdfRendererTest extends TestCase
     }
 
     /**
-     * PDF/A ist eingeschaltet: dompdf schreibt dann einen OutputIntent — und
-     * eine Vorlage, die Helvetica nennt, bricht NICHT ab, weil die
-     * Standardschrift DejaVu Sans ist und die einbettbar.
+     * PDF/A is switched on: dompdf then writes an OutputIntent — and a template
+     * that names Helvetica does NOT abort, because the default font is
+     * DejaVu Sans and that one can be embedded.
      */
     public function testPdfAIstAnUndEineKernschriftBrichtNichtAb(): void
     {
@@ -59,8 +59,8 @@ class DompdfRendererTest extends TestCase
     }
 
     /**
-     * Ein Bild als data:-Adresse kommt an — so reicht die Rechnung ihr Logo
-     * herein.
+     * An image as a data: URL arrives — that is how the invoice passes in its
+     * logo.
      */
     public function testEinBildAlsDataAdresseWirdEingebettet(): void
     {
@@ -70,11 +70,11 @@ class DompdfRendererTest extends TestCase
     }
 
     /**
-     * 🔴 Eine fremde Adresse wird NICHT geladen. Jede Rechnung wäre sonst ein
-     * Aufruf bei einem fremden Server, samt Uhrzeit und Absender — und eine
-     * Datei-Adresse läse aus dem Projekt, was immer die Vorlage nennt.
+     * 🔴 A foreign URL is NOT loaded. Otherwise every invoice would be a call
+     * to a foreign server, with time and sender — and a file URL would read
+     * from the project whatever the template names.
      *
-     * Beide Bilder fehlen im PDF; die Seite entsteht trotzdem.
+     * Both images are missing from the PDF; the page is created anyway.
      */
     public function testFremdeUndLokaleAdressenWerdenNichtGeladen(): void
     {
@@ -96,12 +96,12 @@ class DompdfRendererTest extends TestCase
     }
 
     /**
-     * 🔴 Fable-Review 2026-09-24: Die Schriftentabelle wird NICHT bei jedem
-     * PDF neu geschrieben. Zwei gleichzeitige Rechnungen konnten sonst eine
-     * halb geschriebene Datei lesen und im PDF/A-Modus abbrechen.
+     * 🔴 The font table is NOT rewritten for every PDF. Two simultaneous
+     * invoices could otherwise read a half-written file and abort in PDF/A
+     * mode.
      *
-     * Belegt über die Änderungszeit: zurückgesetzt nach dem ersten Lauf,
-     * unverändert nach dem zweiten.
+     * Shown via the modification time: reset after the first run, unchanged
+     * after the second.
      */
     public function testDieSchriftentabelleWirdNurGeschriebenWennSieAbweicht(): void
     {
@@ -120,12 +120,12 @@ class DompdfRendererTest extends TestCase
     }
 
     /**
-     * 🔴 Gemessen, nicht angenommen: Ein CMYK-JPEG lässt dompdf im
-     * PDF/A-Modus mit einer Exception abbrechen („CMYK images are not
-     * supported when generating a document in PDF/A mode"). Logos aus der
-     * Druckvorstufe sind oft CMYK — deshalb weist InvoiceLogo sie ab, und
-     * die Shop-Maske nimmt sie gar nicht erst an. Schlägt dieser Test einmal
-     * fehl, weil dompdf CMYK kann, darf die Abwehr fallen.
+     * 🔴 Measured, not assumed: a CMYK JPEG makes dompdf abort in PDF/A mode
+     * with an exception ("CMYK images are not supported when generating a
+     * document in PDF/A mode"). Logos from prepress are often CMYK — that is
+     * why InvoiceLogo rejects them, and the shop form does not accept them in
+     * the first place. If this test ever fails because dompdf can do CMYK,
+     * the defence may go.
      */
     public function testEinCmykBildBrichtPdfAAb(): void
     {

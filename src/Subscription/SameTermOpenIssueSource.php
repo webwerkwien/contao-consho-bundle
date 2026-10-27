@@ -10,13 +10,13 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
  * A rule "verlängert sich jeweils um die volle Mindestlaufzeit" open beyond
- * business customers (variant A, decision A1, 2026-10-08).
+ * business customers (variant A, decision A1).
  *
  * Until variant A the core held such a rule back from consumers by itself —
  * a consumer's contract that renews for another fixed year is what § 309
- * Nr. 9 lit. b BGB forbids in general terms. Michael: „nicht automatisch,
- * der Betreiber muss diese Jahresabos auf Geschäftskunden limitieren", and
- * „Hinweis statt Sperre": an operator in another country may mean it.
+ * Nr. 9 lit. b BGB forbids in general terms. Not automatically any more:
+ * the operator limits such yearly plans to business customers, and a note
+ * rather than a lock says so — an operator in another country may mean it.
  *
  * Open means: no customer groups (everyone with an account), or a group that
  * no shop marks as a net price group — the core's only sign of a business

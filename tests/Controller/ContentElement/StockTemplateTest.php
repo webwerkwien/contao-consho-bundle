@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductTile;
 use Webwerkwien\ContaoConshoBundle\Stock\StockState;
 
 /**
- * Block G (G7): der Bestand auf der Kachel, an der echten Vorlage gerendert —
- * wie TaxNoticeTemplateTest.
+ * Block G (G7): the stock on the tile, rendered on the real template —
+ * like TaxNoticeTemplateTest.
  */
 class StockTemplateTest extends TestCase
 {

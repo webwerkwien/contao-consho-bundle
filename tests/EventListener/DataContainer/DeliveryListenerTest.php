@@ -15,7 +15,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Masken der Lieferung (D-1, Z5).
+ * The forms of the delivery (D-1, Z5).
  */
 final class DeliveryListenerTest extends TestCase
 {
@@ -27,7 +27,7 @@ final class DeliveryListenerTest extends TestCase
         WithdrawalSchema::create($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -44,7 +44,7 @@ final class DeliveryListenerTest extends TestCase
 
     public function testEineNeueLieferungTraegtWasNochOffenIst(): void
     {
-        // Ein Wanderstock ist schon unterwegs.
+        // One hiking pole is already on its way.
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => 7, 'reportedAt' => 100]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => '1']);
         $this->connection->insert('tl_consho_delivery', ['id' => 2, 'pid' => 7]);
@@ -60,14 +60,14 @@ final class DeliveryListenerTest extends TestCase
     }
 
     /**
-     * Spec D, offene Punkte (Review 1, K3): Eine zweite, noch nicht gemeldete
-     * Lieferung bekam wieder die vollen offenen Mengen und scheiterte beim
-     * Melden der ersten mit „mehr als offen". Jetzt trägt sie, was die
-     * ungemeldeten anderen übrig lassen — und nichts, wenn nichts übrig ist.
+     * Block D: a second delivery that had not been reported yet got the full
+     * open quantities again and failed when the first one was reported, with
+     * "more than open". Now it carries what the other unreported ones leave
+     * over — and nothing if nothing is left.
      */
     public function testEineZweiteUngemeldeteLieferungTraegtNurDenRest(): void
     {
-        // Lieferung 1: noch nicht gemeldet, ein Wanderstock und der Rucksack.
+        // Delivery 1: not reported yet, one hiking pole and the backpack.
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => 7]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 1, 'quantity' => '1']);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 2, 'quantity' => '1']);
@@ -96,8 +96,8 @@ final class DeliveryListenerTest extends TestCase
     }
 
     /**
-     * F-4, F17: Digitale Zeilen werden freigegeben, nicht verpackt — eine
-     * Paketlieferung schlägt sie weder vor noch bietet sie zur Wahl an.
+     * F-4, F17: digital rows are released, not packed — a parcel delivery
+     * neither proposes them nor offers them for selection.
      */
     public function testDigitaleZeilenGehenNichtInsPaket(): void
     {

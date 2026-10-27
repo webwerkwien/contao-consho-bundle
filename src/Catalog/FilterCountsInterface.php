@@ -9,9 +9,9 @@ namespace Webwerkwien\ContaoConshoBundle\Catalog;
  * ProductQuery is the core's implementation: it counts on the visibility
  * projection, exact and in one grouped query per call. Measured in B-10 it
  * carries the target group, but stays proportional to the matches
- * (docs/block-b-katalog-frontend.md, 5.6 "Nach B-10"). Faster counting for
+ * (Block B, 5.6 "Nach B-10"). Faster counting for
  * large catalogues — precomputed or capped numbers — belongs in a separate,
- * paid module (Consho principle 6, decided 2026-09-14). Such a module replaces
+ * paid module (Consho principle 6). Such a module replaces
  * the counting by pointing this interface's service alias at its own service;
  * FilterPanelBuilder asks nothing but this interface.
  *

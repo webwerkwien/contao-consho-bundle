@@ -17,10 +17,10 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block H, H-4: Warenkorbregeln und Codes (H6, C3, W2–W6).
+ * Block H, H-4: cart rules and codes (H6, C3, W2–W6).
  *
- * Der Korb: Essig (Klasse 1, 20 %) 2 × 10 netto = 24 brutto, Buch (Klasse 2,
- * 10 %) 1 × 20 netto = 22 brutto — zwei Sätze, damit die Aufteilung zählt.
+ * The cart: vinegar (class 1, 20 %) 2 × 10 net = 24 gross, book (class 2,
+ * 10 %) 1 × 20 net = 22 gross — two rates, so that the split counts.
  */
 class CartDiscountsTest extends TestCase
 {
@@ -54,7 +54,7 @@ class CartDiscountsTest extends TestCase
 
     public function testDerBetragGiltBruttoUndErgibtGenauIhn(): void
     {
-        // W2: 10,00 € so, wie der Kunde liest — aufgeteilt nach Bruttoanteil 24:22.
+        // W2: €10.00 as the customer reads it — split by gross share 24:22.
         $this->rule(['code' => 'ZEHN', 'effect' => 'amount', 'amount' => '10', 'currency' => 'EUR']);
 
         $discount = $this->evaluate('ZEHN')->discount;
@@ -77,7 +77,7 @@ class CartDiscountsTest extends TestCase
 
     public function testDerRundungsrestGehtAufDenGroesstenAnteil(): void
     {
-        // 10 € auf drei gleiche Anteile: 3,33 + 3,33 + 3,34 — nicht 9,99.
+        // €10 on three equal shares: 3.33 + 3.33 + 3.34 — not 9.99.
         $this->rule(['code' => 'ZEHN', 'effect' => 'amount', 'amount' => '10', 'currency' => 'EUR']);
 
         $cart = new CartView([
@@ -98,7 +98,7 @@ class CartDiscountsTest extends TestCase
 
     public function testGrossUndKleinschreibungZaehlt(): void
     {
-        // W6, Michael: „Groß- und Kleinschreibung ist nicht egal".
+        // W6: upper and lower case are not interchangeable.
         $this->rule(['code' => 'Sale', 'percent' => '10']);
 
         self::assertSame(CodeStatus::Unknown, $this->evaluate('SALE')->codeStatus);
@@ -119,7 +119,7 @@ class CartDiscountsTest extends TestCase
 
     public function testAbosZaehlenNichtZumMindestbestellwert(): void
     {
-        // W3: Ein Abo von 10 € hebt den Korb nicht über 50 €.
+        // W3: a €10 subscription does not lift the cart above €50.
         $this->rule(['code' => 'AB50', 'percent' => '10', 'minimumOrder' => '50', 'currency' => 'EUR']);
 
         $cart = new CartView([
@@ -132,8 +132,8 @@ class CartDiscountsTest extends TestCase
     }
 
     /**
-     * WG8: Ein Gutschein ist keine Ware, die ein Rabatt mindert — und kein
-     * Bestellwert, der einen Mindestwert erreicht.
+     * WG8: a voucher is not goods that a discount reduces — and not an
+     * order value that reaches a minimum.
      */
     public function testEinGutscheinZaehltWederZumMindestwertNochZumRabatt(): void
     {
@@ -159,7 +159,7 @@ class CartDiscountsTest extends TestCase
 
     public function testBeiGleichstandGiltDerGetippteCode(): void
     {
-        // 10 % = 4,60 € gegen automatisch 4,60 €: der Kunde hat den Code getippt.
+        // 10 % = €4.60 against an automatic €4.60: the customer typed the code.
         $this->rule(['effect' => 'amount', 'amount' => '4.60', 'currency' => 'EUR']);
         $this->rule(['code' => 'ZEHN', 'percent' => '10']);
 
@@ -184,13 +184,13 @@ class CartDiscountsTest extends TestCase
 
         self::assertNotNull($discount);
         self::assertSame([[2, 2.0, 2.2]], $this->shares($discount->shares));
-        // H-5: nur die genannte Zeile bekommt einen Anteil, an ihrer Stelle im Korb.
+        // H-5: only the named line gets a share, at its place in the cart.
         self::assertSame([1 => '2.0000'], $discount->lines);
     }
 
     public function testJedeZeileBekommtIhrenAnteilAmNetto(): void
     {
-        // H-5 (R1): Klasse 1 nach dem, was der Kunde liest (12 : 24), der Rest auf die letzte.
+        // H-5 (R1): class 1 by what the customer reads (12 : 24), the remainder on the last one.
         $this->rule(['code' => 'SALE10', 'percent' => '10']);
 
         $cart = new CartView([
@@ -207,9 +207,9 @@ class CartDiscountsTest extends TestCase
     }
 
     /**
-     * Review H, S1 (zweites Review, P-2): Tee DE und Beratung AT in derselben
-     * Klasse — zwei Anteile, je mit Land; 10 € nach dem, was der Kunde liest
-     * (12 : 24), der Rest auf den größten.
+     * H: tea DE and consulting AT in the same
+     * class — two shares, each with its country; €10 by what the customer reads
+     * (12 : 24), the remainder on the largest.
      */
     public function testEinBetragTeiltNachKlasseUndLand(): void
     {
@@ -229,7 +229,7 @@ class CartDiscountsTest extends TestCase
 
     public function testDerAnteilJeZeileErgibtGenauDenAnteilDerKlasse(): void
     {
-        // 10 € brutto auf drei gleiche Zeilen einer Klasse: 3,3333 + 3,3333 + Rest.
+        // €10 gross on three equal lines of one class: 3.3333 + 3.3333 + remainder.
         $this->rule(['code' => 'ZEHN', 'effect' => 'amount', 'amount' => '10', 'currency' => 'EUR']);
 
         $cart = new CartView([
@@ -268,7 +268,7 @@ class CartDiscountsTest extends TestCase
 
     public function testDieGuenstigereRegelGiltKeineSumme(): void
     {
-        // C3: Code 20 % (9,20 €) gegen automatisch 5 € — der bessere, nicht beide.
+        // C3: code 20 % (€9.20) against an automatic €5 — the better one, not both.
         $this->rule(['code' => 'ZWANZIG', 'percent' => '20']);
         $this->rule(['effect' => 'amount', 'amount' => '5', 'currency' => 'EUR', 'title' => 'Automatisch']);
 
@@ -350,7 +350,7 @@ class CartDiscountsTest extends TestCase
         $this->discounts()->redeem(1, 'LETZTE', 100, 5, '', self::NOW);
         self::assertSame(CodeStatus::Exhausted, $this->evaluate('LETZTE')->codeStatus);
 
-        // H-5: Ein anderer Storno gibt nichts zurück, der eigene schon — die Zeile bleibt.
+        // H-5: another cancellation returns nothing, its own does — the line stays.
         $this->discounts()->afterCancellation(101, self::NOW + 1);
         self::assertSame(CodeStatus::Exhausted, $this->evaluate('LETZTE')->codeStatus);
 

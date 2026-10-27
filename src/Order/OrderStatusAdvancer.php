@@ -55,7 +55,7 @@ class OrderStatusAdvancer
          * Each candidate carries the condition of the FIELD it came from, not
          * one looked up by its id: with the same status in two fields, a
          * lookup by id found the first and always asked "settled" — after a
-         * payment nothing happened (Fable review of D-1, S5).
+         * payment nothing happened (D-1).
          *
          * The fields carry their own condition beyond the flags: a status
          * "when settled" without isCompleted would otherwise be set after the

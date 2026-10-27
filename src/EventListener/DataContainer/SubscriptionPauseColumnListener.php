@@ -8,8 +8,8 @@ use Contao\DataContainer;
 /**
  * The column "Pause bis" in the list of subscriptions (Abo pausieren, P111):
  * only a pause that runs or is announced. A pause that is over stays in
- * "Pausen" — in the list it read like one still running (acceptance on c5,
- * 2026-10-03: "Pause bis 03.10.2026" after it had ended).
+ * "Pausen" — in the list it read like one still running ("Pause bis
+ * 03.10.2026" after it had ended).
  */
 class SubscriptionPauseColumnListener
 {

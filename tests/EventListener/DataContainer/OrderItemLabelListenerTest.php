@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\OrderItemLabelListener;
 
 /**
- * DL4, Spec 6.4: die Art je Zeile in der Liste der Bestellung.
+ * DL4, Spec 6.4: the type per row in the order's list.
  */
 class OrderItemLabelListenerTest extends TestCase
 {

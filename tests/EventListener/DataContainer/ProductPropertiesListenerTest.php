@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\ProductProperties
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Spec Abo, offene Punkte (Review Abo-6, S3): Eine kopierte Variante kommt
- * ohne Achsenwerte; setzt der Betreiber dieselben wie bei einer Schwester,
- * nahm die Variantenmatrix still die erste. Jetzt lehnt das Speichern ab.
+ * Abo-6: a copied variant comes without axis values; if the operator set
+ * the same ones as on a sibling, the variant matrix silently took the
+ * first. Now saving rejects it.
  */
 class ProductPropertiesListenerTest extends TestCase
 {
@@ -24,8 +24,8 @@ class ProductPropertiesListenerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_product');
         DcaSchema::create($this->connection, 'tl_consho_product_option');
 
-        // Hauptprodukt 1 mit Variante 2 (rot, L); 3 ist die neue Kopie.
-        // Hauptprodukt 10 mit Variante 11 (rot, L) — ein anderes Produkt.
+        // Main product 1 with variant 2 (red, L); 3 is the new copy.
+        // Main product 10 with variant 11 (red, L) — another product.
         foreach ([[1, 0], [2, 1], [3, 1], [10, 0], [11, 10]] as [$id, $pid]) {
             $this->connection->insert('tl_consho_product', ['id' => $id, 'pid' => $pid]);
         }
@@ -61,7 +61,7 @@ class ProductPropertiesListenerTest extends TestCase
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_product_option WHERE pid = 3'));
     }
 
-    /** Teilmenge ist nicht gleich: rot allein ist eine andere Kombination als rot, L. */
+    /** A subset is not equal: red alone is a different combination than red, L. */
     public function testEineTeilmengeIstKeineDopplung(): void
     {
         (new ProductPropertiesListener($this->connection))->saveVariantOptions(serialize(['21']), $this->dc(3));
@@ -73,7 +73,7 @@ class ProductPropertiesListenerTest extends TestCase
     {
         $listener = new ProductPropertiesListener($this->connection);
 
-        // Variante 2 speichert ihre eigenen Werte erneut; 11 hat sie unter einem anderen Produkt.
+        // Variant 2 saves its own values again; 11 has them under another product.
         $listener->saveVariantOptions(serialize(['21', '31']), $this->dc(2));
 
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_product_option WHERE pid = 2'));

@@ -16,12 +16,13 @@ interface DocumentSourceInterface
      * @return array{
      *     issuer: array<string, string>,
      *     logo: array{uuid: string, hash: string}|null,
-     *     payment: array{instructions: string, details: array<string, string>, giroCode?: bool, dueDays?: int|null, meansCode?: string},
+     *     payment: array{instructions: string, details: array<string, string>, giroCode?: bool, dueDays?: int|null, meansCode?: string, advance?: bool},
      *     notes: array{footer: string, reverseCharge: string},
      *     deliveryDays?: array{min: int, max: int},
      *     shipment?: array{shippedAt: int, complete: bool, remainderDays: int}|null,
      *     subscription?: array{number: string, from: string, to: string}|null,
      *     payments?: list<array{method: string, amount: string}>,
+     *     prepaid?: list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>,
      *     eInvoice?: bool,
      * }
      */

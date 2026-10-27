@@ -27,13 +27,13 @@ class DbalArticleTreeTest extends TestCase
 
     public function testAMainProductBringsItsVariants(): void
     {
-        // Eine Variante ohne eigenen Preis erbt — ändert sich das Hauptprodukt, ändert sie sich mit.
+        // A variant without its own price inherits — if the main product changes, it changes along.
         self::assertEqualsCanonicalizing([1 => 1, 10 => 1, 11 => 1], $this->tree()->articlesOf([1]));
     }
 
     public function testAVariantBringsOnlyItselfWithItsMainProduct(): void
     {
-        // Der Preis einer Variante bewegt weder das Hauptprodukt noch die Geschwister.
+        // A variant's price moves neither the main product nor its siblings.
         self::assertSame([10 => 1], $this->tree()->articlesOf([10]));
     }
 
@@ -44,7 +44,7 @@ class DbalArticleTreeTest extends TestCase
 
     public function testAProductThatNoLongerExistsIsNotInTheTree(): void
     {
-        // Der Projektor ergänzt es selbst, damit seine Zeilen gelöscht werden.
+        // The projector adds it itself, so that its rows are deleted.
         self::assertSame([], $this->tree()->articlesOf([99]));
     }
 

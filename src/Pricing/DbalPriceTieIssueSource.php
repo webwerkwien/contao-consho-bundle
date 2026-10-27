@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 /**
  * Articles with two price rows of equal rank at the same time (plan B-8).
  *
- * Found in the B-5 research: two rows with the same currency, customer group
+ * Seen in B-5: two rows with the same currency, customer group
  * and threshold whose validity overlaps are a tie in PriceCalculator — the row
  * the database happens to return first wins. Whoever enters a "special offer"
  * as a limited list price row next to the regular one gets a random price.

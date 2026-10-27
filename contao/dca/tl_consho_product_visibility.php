@@ -11,7 +11,7 @@
  * so the listing no longer evaluates them per product row (B-9: a full scan of
  * tl_consho_product in every listing query). It can be rebuilt completely at
  * any time and checked by machine — consho:visibility:rebuild / :verify.
- * See docs/block-b-katalog-frontend.md, section 5.7.
+ * See Block B, section 5.7.
  *
  * `net`/`gross` are the "from" price in `currency`, on main product rows only.
  *

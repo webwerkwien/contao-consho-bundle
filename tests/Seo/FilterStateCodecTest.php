@@ -37,8 +37,8 @@ class FilterStateCodecTest extends TestCase
     }
 
     /**
-     * Block Verfügbarkeit, V5: „Nur verfügbare" mit einem Schlüssel, den kein
-     * Gruppen-Alias tragen kann (Unterstrich).
+     * Block Verfügbarkeit (availability), V5: "Nur verfügbare" (only available)
+     * with a key that no group alias can carry (underscore).
      */
     public function testNurVerfuegbareHinUndZurueck(): void
     {
@@ -56,10 +56,10 @@ class FilterStateCodecTest extends TestCase
     }
 
     /**
-     * Offener Punkt Verfügbarkeit (2026-10-09): Eine Merkmalgruppe darf „sort"
-     * heißen. Bis dahin las der Codec „sort:groß" als Sortierung, und die
-     * Gruppe war nicht filterbar. Ein alter Sortierlink verliert nur die
-     * Sortierung — „sort:price_asc" ist jetzt ein Filter, den keine Liste kennt.
+     * Open point of the availability block: a feature group may be called
+     * "sort". Previously the codec read "sort:groß" as a sort order, and the
+     * group could not be filtered. An old sort link only loses its sort
+     * order — "sort:price_asc" is now a filter that no list knows.
      */
     public function testEineGruppeNamensSortIstFilterbar(): void
     {

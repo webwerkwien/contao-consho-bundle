@@ -11,7 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationJoin;
  * Which products a listing shows.
  *
  * Reads the visibility projection, tl_consho_product_visibility — see
- * docs/block-b-katalog-frontend.md, section 5.7. One row per main product that
+ * Block B, section 5.7. One row per main product that
  * a listing of this shop, language and currency may show, visible AND priced,
  * with its "from" price; one row per visible variant.
  *
@@ -331,7 +331,7 @@ final class ProductQuery implements FilterCountsInterface
      *
      * ── 🔴 One article for all groups (block Verfügbarkeit, F2) ───────────
      *
-     * Until 2026-10-09 every group looked for a variant of its own: "rot" and
+     * Before, every group looked for a variant of its own: "rot" and
      * "M" found the shirt whose red one exists only in S and whose M only in
      * blue — a product the visitor then cannot buy in what they asked for.
      * Now one visible variant has to carry them all, each either as its own

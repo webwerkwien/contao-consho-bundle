@@ -19,13 +19,13 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
  *
  * Once per order: `cancelledAt` is set only where it is empty, and only then
  * does anything run — a status saved twice gives nothing back twice. One
- * transaction with the rollbacks (Abo-7b, second review S-3): a rollback that
+ * transaction with the rollbacks (Abo-7b): a rollback that
  * fails takes `cancelledAt` with it, or the guard would never let it run
  * again. Nested in a caller's transaction, it is a savepoint.
  *
  * The cancellation invoice (dev#1) is issued in the same transaction — a
  * cancellation that rolls back must not leave a cancellation document — and
- * archived only after the commit, as every other document (review Abo-4, S2).
+ * archived only after the commit, as every other document (Abo-4).
  * Nested in a caller's transaction the commit is only a savepoint; then
  * DeferredArchive files it when the caller's transaction is decided.
  *
@@ -51,7 +51,7 @@ class OrderCancellation
     }
 
     /**
-     * @param int $userId the back end user who cancelled, 0 for an automatic change (stock movement, Abnahme G-8)
+     * @param int $userId the back end user who cancelled, 0 for an automatic change (stock movement, G-8)
      *
      * @return bool whether this call cancelled the order — false where it already was
      */

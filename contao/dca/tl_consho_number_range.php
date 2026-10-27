@@ -7,7 +7,7 @@
  * and exist before anyone knows whether the order completes. Document numbers
  * must not: the tax office wants an unbroken sequence. Keeping them apart is
  * why this is a table and not a column.
- * See docs/block-a-fundament.md, section 3.5.
+ * See Block A, section 3.5.
  */
 $GLOBALS['TL_DCA']['tl_consho_number_range'] = [
     'config' => [
@@ -18,8 +18,8 @@ $GLOBALS['TL_DCA']['tl_consho_number_range'] = [
          * not forbid the act.** `DC_Table::delete()` and `deleteAll()` ask
          * `notDeletable` and nothing else, and "select multiple" builds its
          * actions from the config rather than from the operations list.
-         * Measured on c5 on 2026-09-23: the mass-edit view of this very table
-         * offered Löschen, although no row has a delete button.
+         * In Contao 5.7 the mass-edit view of this very table offered
+         * deleting, although no row has a delete button.
          *
          * What that meant here: the invoice counter was deletable. The next
          * invoice would then start at 1 again, beside the ones already
@@ -98,8 +98,7 @@ $GLOBALS['TL_DCA']['tl_consho_number_range'] = [
         // doNotCopy: copying a shop copies its number ranges (ctable), and
         // the counter went along — the copy's first invoice was the source's
         // next number, and with the same prefix a number existed twice.
-        // Found at the acceptance of C-12 (2026-09-26): "Testshop 2" was a
-        // copy and stood at 4 invoices without ever issuing one.
+        // A copied shop stood at 4 invoices without ever issuing one (C-12).
         'current' => [
             'inputType' => 'text',
             'exclude' => true,

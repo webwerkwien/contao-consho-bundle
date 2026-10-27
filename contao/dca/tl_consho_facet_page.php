@@ -11,14 +11,14 @@
  * does not get indexed. Nothing is released automatically, because a shop with
  * six filters has thousands of combinations and almost none of them is a page
  * anyone searches for.
- * See docs/block-a-fundament.md, section 2.
+ * See Block A, section 2.
  *
  * ── A landing page lives below its listing page ────────────────────────────
  *
  * pid is the category page carrying the listing element, and the landing
  * page's address is that page's auto_item: /kraeuter/schwedenbitter-250-ml.html.
  * Shop and language follow from the page, so there are no translation rows.
- * See docs/block-b-katalog-frontend.md, section 4.5 (decision B10).
+ * See Block B, section 4.5 (decision B10).
  *
  * ── Why this is a module and not a child in the site structure ─────────────
  *

@@ -16,8 +16,8 @@ use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die zwei Salden (Spec D 5.1, Entscheidung A1). Die Fälle sind die Tabelle
- * aus der Spezifikation, Abschnitt 11.
+ * The two balances (Spec D 5.1, decision A1). The cases are the table
+ * from the specification, section 11.
  */
 final class OrderBalanceReaderTest extends TestCase
 {
@@ -33,7 +33,7 @@ final class OrderBalanceReaderTest extends TestCase
         WithdrawalSchema::create($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -42,7 +42,7 @@ final class OrderBalanceReaderTest extends TestCase
         $this->connection->insert('tl_consho_order_status', ['id' => self::CANCELLED, 'isCancelled' => 1]);
         $this->connection->insert('tl_consho_order', ['id' => self::ORDER, 'grandTotal' => '100.0000']);
 
-        // Zwei Waren und eine Versandzeile, die nie in ein Paket kommt.
+        // Two goods and a shipping line that never goes into a parcel.
         $this->connection->insert('tl_consho_order_item', ['id' => 1, 'pid' => self::ORDER, 'quantity' => '2.0000']);
         $this->connection->insert('tl_consho_order_item', ['id' => 2, 'pid' => self::ORDER, 'quantity' => '1.0000']);
         $this->connection->insert('tl_consho_order_item', ['id' => 3, 'pid' => self::ORDER, 'quantity' => '1.0000', 'lineType' => 'shipping']);
@@ -61,9 +61,9 @@ final class OrderBalanceReaderTest extends TestCase
     }
 
     /**
-     * A4 (Michael, 2026-10-07: „wie empfohlen"): „Leistung erbracht" gilt als
-     * geliefert — sonst blieb sie in Liste und Dashboard für immer offen.
-     * Kein Paket: anyShipped bleibt falsch.
+     * A4: "Service performed" counts as delivered — otherwise it stayed open
+     * in the list and on the dashboard forever. No parcel: anyShipped stays
+     * false.
      */
     public function testEineErbrachteLeistungGiltAlsGeliefert(): void
     {
@@ -86,8 +86,8 @@ final class OrderBalanceReaderTest extends TestCase
     }
 
     /**
-     * Michael, 2026-09-27: „sie könnte aber abgeschlossen sein, wenn kein
-     * versand aber stornierte zahlung vorliegt".
+     * An order can be complete when nothing was shipped but the payment was
+     * reversed.
      */
     public function testStorniertNieVersandtGeldZurueckIstErledigt(): void
     {
@@ -172,8 +172,8 @@ final class OrderBalanceReaderTest extends TestCase
     }
 
     /**
-     * Numerisch, nicht als Zeichenkette: MySQL liefert decimal(12,4) als
-     * „80.0000", SQLite als „80" (Prüfungsnotiz, Fall 30).
+     * Numeric, not as a string: MySQL returns decimal(12,4) as "80.0000",
+     * SQLite as "80".
      */
     private static function assertAmount(string $expected, string $actual): void
     {
@@ -187,12 +187,12 @@ final class OrderBalanceReaderTest extends TestCase
         return $reader->of(self::ORDER) ?? self::fail('Die Bestellung fehlt.');
     }
 
-    // ── Widerrufe (D-3, F7) ───────────────────────────────────────────────
+    // ── Withdrawals (D-3, F7) ─────────────────────────────────────────────
 
     /**
-     * Angenommen, noch nicht erstattet: Die Forderung sinkt um den Anteil am
-     * Zeilenbrutto (lineTotal / Menge × angenommen), und die widerrufene,
-     * nicht versandte Ware ist nicht mehr offen.
+     * Accepted, not yet refunded: the claim drops by the share of the line's
+     * gross total (lineTotal / quantity × accepted), and the withdrawn goods
+     * not yet shipped are no longer open.
      */
     public function testEinAngenommenerWiderrufSenktForderungUndOffeneWare(): void
     {
@@ -211,7 +211,7 @@ final class OrderBalanceReaderTest extends TestCase
         $this->prices();
         $this->withdraw('accepted', [1 => '1'], '35.0000');
 
-        // 100 − 35 (30 Ware + 5 Versandanteil)
+        // 100 − 35 (30 goods + 5 shipping share)
         self::assertTrue(BigDecimal::of('65')->isEqualTo($this->balance()->claim));
     }
 
@@ -226,8 +226,8 @@ final class OrderBalanceReaderTest extends TestCase
     }
 
     /**
-     * Voll widerrufen vor dem Versand und erstattet: nichts geschuldet, nichts
-     * offen — erledigt, ohne dass etwas versandt wurde.
+     * Fully withdrawn before shipping and refunded: nothing owed, nothing
+     * open — done without anything having been shipped.
      */
     public function testVollWiderrufenUndErstattetIstErledigt(): void
     {
@@ -243,7 +243,7 @@ final class OrderBalanceReaderTest extends TestCase
     }
 
     /**
-     * Zeilenbrutto: 2 Wanderstöcke zu 60, 1 Rucksack zu 35, Versand 5.
+     * Line gross totals: 2 hiking poles at 60, 1 backpack at 35, shipping 5.
      */
     private function prices(): void
     {

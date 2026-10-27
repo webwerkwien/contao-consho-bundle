@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SuspendedSubscriptionIssueSource
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-5 (P38): „Ruhende Abos" als Hinweis, je Shop.
+ * Abo-5 (P38): "suspended subscriptions" as a notice, per shop.
  */
 final class SuspendedSubscriptionIssueSourceTest extends TestCase
 {

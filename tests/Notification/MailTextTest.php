@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Notification\MailText;
 class MailTextTest extends TestCase
 {
     /**
-     * Die erste echte Bestätigung (2026-09-25): „Net total€11.59" und
-     * „Account holderMichael Morgenbesser" — Zellen ohne Trenner.
+     * A real confirmation read "Net total€11.59" and "Account holderEva
+     * Example" — cells without a separator.
      */
     public function testTabellenzellenWerdenGetrenntUndZeilenUmgebrochen(): void
     {
@@ -21,8 +21,8 @@ class MailTextTest extends TestCase
     }
 
     /**
-     * Mehrzeiliges Markup, wie es die Vorlage schreibt: Der Zeilenumbruch
-     * zwischen zwei Zellen ist Quelltext, kein Inhalt.
+     * Multi-line markup, as the template writes it: the line break between
+     * two cells is source code, not content.
      */
     public function testUmbruecheZwischenTabellenTagsZaehlenNicht(): void
     {
@@ -32,7 +32,7 @@ class MailTextTest extends TestCase
     }
 
     /**
-     * Wer nur Text liest, bekam „View your order" ohne Adresse.
+     * Whoever reads only text got "View your order" without an address.
      */
     public function testLinksBehaltenIhrZiel(): void
     {
@@ -42,8 +42,8 @@ class MailTextTest extends TestCase
     }
 
     /**
-     * Review 2026-09-25: Die Betreiberkopie verlinkt die Kundenadresse per
-     * mailto: — im Text reicht die Adresse einmal.
+     * The operator copy links the customer address via mailto: — in the text
+     * the address is enough once.
      */
     public function testEinMailtoWiederholtDieAdresseNicht(): void
     {

@@ -9,8 +9,8 @@ use Twig\TwigFilter;
 use Twig\TwigFunction;
 
 /**
- * Block H (H-4): Rabattzeile und Code-Formular, an der echten
- * Warenkorb-Vorlage gerendert (Prüfungsnotiz, Fall 53).
+ * Block H (H-4): discount line and code form, rendered on the real cart
+ * template — a tested service is not a tested page.
  */
 class CartDiscountTemplateTest extends TestCase
 {

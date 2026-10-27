@@ -73,7 +73,7 @@ class LockedRecordListener
          * No version menu either. "Wiederherstellen" writes an old row back
          * with a plain UPDATE, past the voter and past onsubmit — and the old
          * row has lockedAt NULL: the payment was unlocked and changed at once
-         * (second Fable review of D-1, B1). DC_Table runs compare and restore
+         * (D-1). DC_Table runs compare and restore
          * only inside `if (!hideVersionMenu)`, so this closes both.
          */
         $GLOBALS['TL_DCA'][$table]['config']['hideVersionMenu'] = true;

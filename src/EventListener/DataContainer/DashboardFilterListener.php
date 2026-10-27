@@ -66,7 +66,7 @@ final class DashboardFilterListener
 
         // Contao carries the query on: from a filtered order list into the
         // withdrawals of one order, `consho_filter` is still there — but that
-        // list is not the one the filter means (review A6).
+        // list is not the one the filter means.
         if ($dc->table !== $table || !\in_array($filter, $allowed, true)) {
             return;
         }

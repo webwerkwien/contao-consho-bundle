@@ -22,7 +22,7 @@ class ShopCurrenciesDcaTest extends TestCase
 
         self::assertSame('select', $field['inputType']);
         self::assertTrue($field['eval']['multiple']);
-        // Bei knapp 300 Codes ist die Suche kein Komfort, sondern die Bedienung.
+        // With almost 300 codes, the search is not a convenience but the way to use it.
         self::assertTrue($field['eval']['chosen']);
         self::assertTrue($field['eval']['mandatory']);
         self::assertSame('blob', $field['sql']['type']);
@@ -31,9 +31,9 @@ class ShopCurrenciesDcaTest extends TestCase
     }
 
     /**
-     * C-1c Schritt 4: aus der Maske, aber nicht aus der Tabelle. Die Werte
-     * werden in Schritt 3 übernommen, die Spalte fällt erst nach bestandener
-     * Abnahme auf c5 — wie `gross` an tl_consho_price in C-1b.
+     * C-1c step 4: out of the form, but not out of the table. The values are
+     * taken over in step 3; the column is only dropped once that has been
+     * verified on a real installation — like `gross` on tl_consho_price in C-1b.
      */
     public function testDieAlteEinzelwaehrungIstAusDerPaletteVerschwundenAberNichtAusDerTabelle(): void
     {
@@ -46,9 +46,9 @@ class ShopCurrenciesDcaTest extends TestCase
     }
 
     /**
-     * Die Liste der Shops zeigt die erlaubten Währungen, nicht die alte
-     * Einzelwährung: Die setzt seit C-1c keine Maske und kein Befehl mehr, ein
-     * neuer Shop stand dort ohne Währung (gefunden bei der Abnahme I7).
+     * The list of shops shows the allowed currencies, not the old single
+     * currency: since C-1c no form and no command sets it any more, and a new
+     * shop stood there without a currency.
      */
     public function testDieListeZeigtDieErlaubtenWaehrungen(): void
     {
@@ -56,14 +56,13 @@ class ShopCurrenciesDcaTest extends TestCase
     }
 
     /**
-     * „Lieber laut als still, ich denke das wäre auch internationaler."
-     * (Michael, 2026-09-21)
+     * Loud rather than silent — which also suits an international product.
      *
-     * Ein neu angelegter Shop erbt kein EUR mehr aus dem Spalten-Vorgabewert.
-     * `DbalMarketRepository` filtert `WHERE currency <> ''` — ohne gewählte
-     * Währung fällt der Shop sichtbar aus den Märkten, statt still in Euro zu
-     * verkaufen. Und ein eingebautes EUR wäre eurozentrisch in einem Produkt,
-     * dessen Zweck gerade die Mehrwährungsfähigkeit ist.
+     * A newly created shop no longer inherits EUR from the column default.
+     * `DbalMarketRepository` filters `WHERE currency <> ''` — without a chosen
+     * currency the shop visibly drops out of the markets instead of silently
+     * selling in euros. And a built-in EUR would be eurocentric in a product
+     * whose very purpose is multi-currency capability.
      */
     public function testDieAlteEinzelwaehrungHatKeinenEuroVorgabewertMehr(): void
     {
@@ -71,7 +70,7 @@ class ShopCurrenciesDcaTest extends TestCase
     }
 
     /**
-     * @return list<string> die Feldnamen der Palette, ohne die Legenden
+     * @return list<string> the field names of the palette, without the legends
      */
     private function paletteFields(): array
     {

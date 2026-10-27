@@ -9,7 +9,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * The logo an invoice snapshot names — or none (Michael, 2026-09-24).
+ * The logo an invoice snapshot names — or none.
  *
  * The snapshot holds the file's UUID and hash, not the image. The logo is
  * printed only while the file under that UUID still has that content;

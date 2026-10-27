@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Voucher;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Doctrine\DBAL\Connection;
+use Symfony\Component\Intl\Currencies;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
@@ -37,8 +38,7 @@ class VoucherReturn
      * What each voucher paid for the order and has not had back, in the
      * order they paid.
      *
-     * A BLOCKED voucher is left out (review WG-7, S1; Michael, 2026-10-06:
-     * „ja, S1 so umsetzen"): money booked back onto it could never be spent
+     * A BLOCKED voucher is left out (WG-7): money booked back onto it could never be spent
      * again. Its share goes to the payment method instead, and the operator
      * pays it out — nothing is lost.
      *
@@ -80,22 +80,18 @@ class VoucherReturn
      * Books $amount back onto the order's vouchers, in the order they paid,
      * each up to what it paid. Never more than they paid altogether.
      *
+     * With the credited lines of a withdrawal, a single-purpose voucher gets
+     * back no more than those lines of its pot (EZ-4) — see plan().
+     *
+     * @param list<array<string, string>>|null $lines
+     *
      * @return list<int> the payment ids
      */
-    public function refund(int $orderId, string $amount, int $now, string $reference = '', string $language = ''): array
+    public function refund(int $orderId, string $amount, int $now, string $reference = '', string $language = '', array|null $lines = null): array
     {
-        $left = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
         $payments = [];
 
-        foreach ($this->paidBy($orderId) as $voucherId => $paid) {
-            if (!$left->isPositive()) {
-                break;
-            }
-
-            $back = BigDecimal::min($left, $paid);
-            $left = $left->minus($back);
-            $code = (string) $this->connection->fetchOne('SELECT code FROM tl_consho_voucher WHERE id = ?', [$voucherId]);
-
+        foreach ($this->plan($orderId, $amount, $lines) as ['voucher' => $voucherId, 'code' => $code, 'back' => $back, 'prepaid' => $prepaid]) {
             $this->connection->insert('tl_consho_payment', [
                 'pid' => $orderId,
                 'tstamp' => $now,
@@ -104,6 +100,10 @@ class VoucherReturn
                 'method' => mb_substr($this->label($code, $language), 0, 64),
                 'reference' => 'voucher:'.$voucherId,
                 'lockedAt' => $now,
+                // EZ-4: the tax of a single-purpose voucher goes back with its money.
+                'prepaidTaxRate' => $prepaid['rate'] ?? '0.0000',
+                'prepaidTaxCountry' => $prepaid['country'] ?? '',
+                'prepaidTax' => null === $prepaid ? '0.0000' : (string) $prepaid['tax']->negated(),
             ]);
 
             $paymentId = (int) $this->connection->lastInsertId();
@@ -123,6 +123,201 @@ class VoucherReturn
     }
 
     /**
+     * What refund() would book back onto single-purpose vouchers (EZ-4), as
+     * the snapshot's `prepaid` lists it — negative: the invoice correction
+     * takes back the deduction for what goes back onto them. Issued before
+     * the refund is booked; both run under the order's lock in one
+     * transaction, so both read the same state and plan the same.
+     *
+     * @param list<array<string, string>>|null $lines
+     *
+     * @return list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>
+     */
+    public function prepaidFor(int $orderId, string $amount, string $language = '', array|null $lines = null): array
+    {
+        $prepaid = [];
+
+        foreach ($this->plan($orderId, $amount, $lines) as $step) {
+            if (null === $step['prepaid']) {
+                continue;
+            }
+
+            $prepaid[] = [
+                'label' => mb_substr($this->label($step['code'], $language), 0, 64),
+                'country' => $step['prepaid']['country'],
+                'rate' => $step['prepaid']['rate'],
+                'net' => (string) $step['back']->minus($step['prepaid']['tax'])->negated()->toScale(4),
+                'tax' => (string) $step['prepaid']['tax']->negated()->toScale(4),
+                'gross' => (string) $step['back']->negated()->toScale(4),
+            ];
+        }
+
+        return $prepaid;
+    }
+
+    /**
+     * What refund() would book onto the vouchers altogether — with the
+     * lines of a withdrawal possibly less than asked; the rest goes to the
+     * payment method.
+     *
+     * @param list<array<string, string>>|null $lines
+     */
+    public function onVouchers(int $orderId, string $amount, array|null $lines = null): BigDecimal
+    {
+        $total = BigDecimal::zero()->toScale(4);
+
+        foreach ($this->plan($orderId, $amount, $lines) as $step) {
+            $total = $total->plus($step['back']);
+        }
+
+        return $total;
+    }
+
+    /**
+     * Which voucher gets how much back, in the order they paid, each up to
+     * what it paid — and for a single-purpose one the tax that goes with it:
+     * its share of the tax still standing on the order's payments by it,
+     * all of it when all goes back, so no cent of rounding stays behind.
+     *
+     * With $lines (the credited lines of a withdrawal), a single-purpose
+     * voucher gets back no more than what those lines credit in its pot —
+     * its tax class, country and rate; returned discounts at that country
+     * and rate count against it (EZ-4, F2). Otherwise a withdrawal of an
+     * article it never paid for would take back tax at a rate the correction
+     * does not carry. What it cannot take goes on to the next voucher and in
+     * the end to the payment method. Without $lines (a cancellation) all of
+     * it goes back.
+     *
+     * Read from the payments by reference: a voucher whose payments lost it
+     * to the anonymisation gets its money back without the tax.
+     *
+     * @param list<array<string, string>>|null $lines
+     *
+     * @return list<array{voucher: int, code: string, back: BigDecimal, prepaid: array{rate: string, country: string, tax: BigDecimal}|null}>
+     */
+    private function plan(int $orderId, string $amount, array|null $lines = null): array
+    {
+        $left = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
+        $plan = [];
+        $digits = null;
+        $caps = null === $lines ? null : self::caps($lines);
+
+        foreach ($this->paidBy($orderId) as $voucherId => $paid) {
+            if (!$left->isPositive()) {
+                break;
+            }
+
+            $voucher = $this->connection->fetchAssociative('SELECT code, taxClass, taxRate, taxCountry FROM tl_consho_voucher WHERE id = ?', [$voucherId]) ?: [];
+            $code = (string) ($voucher['code'] ?? '');
+            $back = BigDecimal::min($left, $paid);
+            $pot = null;
+
+            if (null !== $caps && (int) ($voucher['taxClass'] ?? 0) > 0) {
+                $pot = self::pot((int) $voucher['taxClass'], (string) ($voucher['taxCountry'] ?? ''), (string) ($voucher['taxRate'] ?? '0'));
+                $back = BigDecimal::min($back, BigDecimal::max(BigDecimal::zero(), $caps[$pot] ?? BigDecimal::zero()));
+
+                if (!$back->isPositive()) {
+                    continue;
+                }
+
+                $caps[$pot] = ($caps[$pot] ?? BigDecimal::zero())->minus($back);
+            }
+
+            $left = $left->minus($back);
+
+            $standing = $this->connection->fetchAssociative(
+                'SELECT SUM(amount) AS amount, SUM(prepaidTax) AS tax, MAX(prepaidTaxRate) AS rate, MAX(prepaidTaxCountry) AS country
+                   FROM tl_consho_payment WHERE pid = ? AND reference = ? AND prepaidTaxRate > 0',
+                [$orderId, 'voucher:'.$voucherId],
+            );
+            $prepaid = null;
+
+            if (false !== $standing && null !== $standing['amount'] && BigDecimal::of((string) $standing['amount'])->isPositive()) {
+                $digits ??= $this->digits($orderId);
+                $standingAmount = BigDecimal::of((string) $standing['amount']);
+                $standingTax = BigDecimal::of((string) $standing['tax']);
+                $standingNet = $standingAmount->minus($standingTax);
+
+                // The share's net is rounded and its tax is the rest, as a
+                // line is split (SinglePurpose::taxIn()); the whole return
+                // takes what stands, so the shares add up to it.
+                $prepaid = [
+                    'rate' => (string) BigDecimal::of((string) $standing['rate'])->toScale(4, RoundingMode::HalfUp),
+                    'country' => strtoupper((string) $standing['country']),
+                    'tax' => $back->isGreaterThanOrEqualTo($standingAmount)
+                        ? $standingTax->toScale(4, RoundingMode::HalfUp)
+                        : $back->minus($standingNet->multipliedBy($back)->dividedBy($standingAmount, $digits, RoundingMode::HalfUp))->toScale(4),
+                ];
+            }
+
+            $plan[] = ['voucher' => $voucherId, 'code' => $code, 'back' => $back->toScale(4), 'prepaid' => $prepaid];
+        }
+
+        return $plan;
+    }
+
+    /**
+     * Per pot what the credited lines give back: the articles (not a sold
+     * voucher, not shipping or a fee) by class, country and rate, less the
+     * discounts returned at that country and rate.
+     *
+     * @param list<array<string, string>> $lines amounts negative for a credit
+     *
+     * @return array<string, BigDecimal>
+     */
+    private static function caps(array $lines): array
+    {
+        $caps = [];
+        $discounts = [];
+
+        foreach ($lines as $line) {
+            $credit = BigDecimal::of('' !== ($line['lineTotal'] ?? '') ? $line['lineTotal'] : '0')->negated();
+            $country = strtoupper((string) ($line['taxCountry'] ?? ''));
+            $rate = (string) BigDecimal::of('' !== ($line['taxRate'] ?? '') ? $line['taxRate'] : '0')->toScale(4, RoundingMode::HalfUp);
+            $type = (string) ($line['lineType'] ?? '');
+
+            if (\in_array($type, ['', 'product'], true) && 'voucher' !== ($line['kind'] ?? '') && (int) ($line['taxClass'] ?? 0) > 0) {
+                $pot = self::pot((int) $line['taxClass'], $country, $rate);
+                $caps[$pot] = ($caps[$pot] ?? BigDecimal::zero())->plus($credit);
+            } elseif ('discount' === $type) {
+                $discounts[$country.'|'.$rate] = ($discounts[$country.'|'.$rate] ?? BigDecimal::zero())->plus($credit);
+            }
+        }
+
+        // A discount at a country and rate is shared among the pots there by
+        // what they credit — taken whole from each, it would count twice.
+        $credited = [];
+
+        foreach ($caps as $pot => $cap) {
+            [, $country, $rate] = explode('|', $pot);
+            $credited[$country.'|'.$rate] = ($credited[$country.'|'.$rate] ?? BigDecimal::zero())->plus($cap);
+        }
+
+        foreach ($caps as $pot => $cap) {
+            [, $country, $rate] = explode('|', $pot);
+            $discount = $discounts[$country.'|'.$rate] ?? null;
+
+            if (null !== $discount && $credited[$country.'|'.$rate]->isPositive()) {
+                $caps[$pot] = $cap->plus($discount->multipliedBy($cap)->dividedBy($credited[$country.'|'.$rate], 4, RoundingMode::HalfUp));
+            }
+        }
+
+        return $caps;
+    }
+
+    private static function pot(int $class, string $country, string $rate): string
+    {
+        return $class.'|'.strtoupper(trim($country)).'|'.BigDecimal::of('' !== $rate ? $rate : '0')->toScale(4, RoundingMode::HalfUp);
+    }
+
+    private function digits(int $orderId): int
+    {
+        $currency = (string) $this->connection->fetchOne('SELECT currency FROM tl_consho_order WHERE id = ?', [$orderId]);
+
+        return '' !== $currency && Currencies::exists($currency) ? Currencies::getFractionDigits($currency) : 2;
+    }
+
+    /**
      * A cancelled order (6.6, D2): what its vouchers paid goes back onto them,
      * and the vouchers it bought are blocked — every one, used in part or
      * not: the money for them goes back, so what is left on them must not
@@ -131,7 +326,7 @@ class VoucherReturn
     public function afterCancellation(int $orderId, int $now): void
     {
         /*
-         * Under the order's lock (review WG-7, L2), like a withdrawal's
+         * Under the order's lock (WG-7), like a withdrawal's
          * refund: a cancellation and a refund at the same moment would
          * otherwise both read what the vouchers paid and both book it back.
          */
@@ -151,10 +346,9 @@ class VoucherReturn
     }
 
     /**
-     * A withdrawal of bought vouchers (WG7, review WG-7 S1; Michael,
-     * 2026-10-06: „so lange der Gutschein nicht eingelöst ist, kann er
-     * widerrufen werden, wurde er eingelöst, wurde damit etwas erworben, was
-     * zurück gegeben werden muss"): per withdrawn piece one voucher of the
+     * A withdrawal of bought vouchers (WG7, WG-7): as long as a voucher
+     * is not redeemed it can be withdrawn; once redeemed, it bought something
+     * that has to be given back first — per withdrawn piece one voucher of the
      * line is taken back — blocked, marked with the withdrawal — and only
      * one NOT REDEEMED, its balance its whole value. What was bought with a
      * redeemed one has to be withdrawn or cancelled first; its refund fills
@@ -165,8 +359,7 @@ class VoucherReturn
      * another withdrawal took it — and the release never issues a withdrawn
      * piece. So only a redeemed voucher can stand in the way.
      *
-     * Three things stand in the way, said apart (second review WG-7, L-B,
-     * L-C): REDEEMED — an order it paid has not had it back; BLOCKED by the
+     * Three things stand in the way, said apart (WG-7): REDEEMED — an order it paid has not had it back; BLOCKED by the
      * operator (lost, replaced): taking it back would pay out what may already
      * have been handed over again; CHANGED by hand — its balance is not its
      * value although nothing was redeemed. Each the operator decides.

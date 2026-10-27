@@ -55,8 +55,8 @@ class PaymentStarterTest extends TestCase
     }
 
     /**
-     * D-3, Fable-Review B1: Nach einem angenommenen Widerruf startet die
-     * Online-Zahlung nur, was noch geschuldet ist — nicht die Bestellsumme.
+     * D-3: after an accepted withdrawal the online payment starts only what is
+     * still owed — not the order total.
      */
     public function testEinAngenommenerWiderrufSenktDenBetrag(): void
     {
@@ -72,7 +72,7 @@ class PaymentStarterTest extends TestCase
 
     protected function assertPostConditions(): void
     {
-        // Keine verschleppte Transaktion, auf keinem Pfad (Nachprüfung C-11, B2).
+        // No transaction left dangling, on any path (C-11).
         self::assertFalse($this->connection->isTransactionActive());
     }
 
@@ -93,7 +93,7 @@ class PaymentStarterTest extends TestCase
         self::assertSame(AttemptState::Open, $attempt['state']);
         self::assertSame('13.9000', $attempt['amount']);
 
-        // Der Handler bekommt die Adressen mit dem Klartext, gespeichert ist nur der Hash.
+        // The handler gets the addresses with the plain text, only the hash is stored.
         self::assertInstanceOf(PaymentAttempt::class, $seen);
         self::assertMatchesRegularExpression('~^https://shop\.test/return/([0-9a-f]{64})$~', $seen->returnUrl);
         preg_match('~/return/([0-9a-f]{64})$~', $seen->returnUrl, $m);
@@ -102,10 +102,9 @@ class PaymentStarterTest extends TestCase
     }
 
     /**
-     * Review C-11, Befund 1: Zwei Tabs klicken zugleich „Erneut versuchen".
-     * Der zweite wartet an der Sperre der Bestellung, findet den offenen
-     * Versuch des ersten und startet nichts — sonst zwei Versuche, zwei
-     * Zahlungen beim Anbieter.
+     * C-11: two tabs click "Try again" at the same time. The second waits at
+     * the order's lock, finds the first one's open attempt and starts
+     * nothing — otherwise two attempts, two payments at the provider.
      */
     public function testLaeuftSchonEinVersuchDerArtStartetKeinZweiter(): void
     {
@@ -116,21 +115,20 @@ class PaymentStarterTest extends TestCase
         self::assertCount(1, $this->stored);
         self::assertSame(2, $this->locks, 'jede Entscheidung unter der Sperre');
 
-        // Nach Abbruch darf wieder einer starten.
+        // After a cancellation one may start again.
         $this->stored[1]['state'] = AttemptState::Cancelled;
         self::assertSame(PaymentStartOutcome::Redirect, $starter->start(1, 102)?->outcome);
         self::assertCount(2, $this->stored);
 
-        // Ein offener Versuch einer ANDEREN Art (vor dem Wechsel) hält nichts auf.
+        // An open attempt of a DIFFERENT method (before the switch) holds nothing up.
         $this->stored = [1 => ['order' => 1, 'method' => 2, 'type' => 'prepayment', 'amount' => '13.9000', 'hash' => 'x', 'state' => AttemptState::Pending]];
         self::assertSame(PaymentStartOutcome::Redirect, $starter->start(1, 103)?->outcome);
     }
 
     /**
-     * Wer die Seite des Anbieters schließt, hinterlässt einen offenen Versuch.
-     * Nach 30 Minuten gilt er als verfallen (Michael, 2026-09-26: „ich bin
-     * damit einverstanden"): „Erneut versuchen" wird angeboten, der alte
-     * Versuch abgebrochen. Vorkasse (`pending`) verfällt nie.
+     * Whoever closes the provider's page leaves an open attempt behind.
+     * After 30 minutes it counts as expired: "Try again" is offered, the old
+     * attempt cancelled. Prepayment (`pending`) never expires.
      */
     public function testEinOffenerVersuchVerfaelltNachDreissigMinuten(): void
     {
@@ -148,15 +146,15 @@ class PaymentStarterTest extends TestCase
         self::assertSame(AttemptState::Cancelled, $this->stored[1]['state'], 'der verfallene Versuch ist abgebrochen');
         self::assertSame(AttemptState::Open, $this->stored[2]['state']);
 
-        // Vorkasse wartet auf eine Überweisung — kein Verfall.
+        // Prepayment waits for a bank transfer — no expiry.
         $this->stored[2]['state'] = AttemptState::Pending;
         self::assertFalse($starter->canRetry(1, $lapse + 100_000));
         self::assertNull($starter->start(1, $lapse + 100_000));
     }
 
     /**
-     * D-1-Review, S4: Eine stornierte Bestellung schuldet nichts — auch
-     * wenn ihr Status danach keine Flags trägt.
+     * D-1: a cancelled order owes nothing — even when its status carries no
+     * flags afterwards.
      */
     public function testEineStornierteBestellungStartetKeineZahlung(): void
     {
@@ -218,11 +216,11 @@ class PaymentStarterTest extends TestCase
             self::assertSame($expected, $starter->canRetry(1, 100), $state->value);
         }
 
-        // Versuch einer früheren Art (vor dem Wechsel): kein erneuter Versuch.
+        // Attempt of an earlier method (before the switch): no retry.
         $this->stored = [1 => ['order' => 1, 'method' => 2, 'type' => 'prepayment', 'amount' => '13.9000', 'hash' => 'x', 'state' => AttemptState::Cancelled]];
         self::assertFalse($starter->canRetry(1, 100));
 
-        // Teilweise bezahlt oder vom Status festgehalten: nicht.
+        // Partly paid or held by the status: no.
         $this->stored = [1 => ['order' => 1, 'method' => 7, 'type' => 'test', 'amount' => '13.9000', 'hash' => 'x', 'state' => AttemptState::Failed]];
         $this->payments = ['1.0000'];
         self::assertFalse($starter->canRetry(1, 100));
@@ -233,8 +231,9 @@ class PaymentStarterTest extends TestCase
     }
 
     /**
-     * P93: Enthält die Bestellung Abo-Zeilen, sagt die Sicht es dem Modul —
-     * mit den Zeilen, die Klarna und PayPal schon beim ersten Kauf brauchen.
+     * P93: if the order contains subscription lines, the view tells the
+     * module — with the lines Klarna and PayPal already need at the first
+     * purchase.
      */
     public function testDieSichtTraegtDieAboZeilen(): void
     {
@@ -252,8 +251,8 @@ class PaymentStarterTest extends TestCase
     }
 
     /**
-     * WG-5: Zahlte ein Gutschein einen Teil, sagt die Sicht dem Modul, was
-     * offen ist — wer `grandTotal` einzöge, nähme den Gutscheinteil doppelt.
+     * WG-5: if a gift card paid a part, the view tells the module what is
+     * open — whoever collected `grandTotal` would take the gift card part twice.
      */
     public function testDieSichtNenntDenOffenenBetrag(): void
     {
@@ -270,8 +269,9 @@ class PaymentStarterTest extends TestCase
     }
 
     /**
-     * Die Abo-Zeilen nicht lesen zu können, kostet die Zahlung nicht: Sie
-     * startet ohne, protokolliert — die Folgebestellungen gehen dann „Auf Rechnung".
+     * Not being able to read the subscription lines does not cost the payment:
+     * it starts without them and logs it — the follow-up orders then go "on
+     * invoice".
      */
     public function testOhneLesbareAboZeilenStartetDieZahlungTrotzdem(): void
     {
@@ -295,7 +295,7 @@ class PaymentStarterTest extends TestCase
         $orders->method('order')->willReturnCallback(fn (int $id): array|null => 1 === $id ? $this->order : null);
         $connection = $this->connection;
         $orders->method('lockOrder')->willReturnCallback(function (int $id) use ($connection): array|null {
-            // Die Sperre gilt nur in einer Transaktion (Nachprüfung C-11, B2).
+            // The lock only holds inside a transaction (C-11).
             self::assertTrue($connection->isTransactionActive(), 'lockOrder() außerhalb einer Transaktion');
             ++$this->locks;
 

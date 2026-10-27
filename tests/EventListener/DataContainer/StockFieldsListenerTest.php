@@ -17,8 +17,8 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block G, G-1: Bestand in der Produktmaske — welche Felder wo, und gebucht
- * wird die Differenz zum Wert beim Öffnen (G3).
+ * Block G, G-1: stock in the product form — which fields where, and what is
+ * booked is the difference to the value at opening (G3).
  */
 class StockFieldsListenerTest extends TestCase
 {
@@ -72,8 +72,8 @@ class StockFieldsListenerTest extends TestCase
     }
 
     /**
-     * G-5 (G10, G11): Digitale Ware führt keinen Bestand von Hand — ihr
-     * Bestand sind die Codes. Sie teilt nur die Schwelle, am Hauptprodukt.
+     * G-5 (G10, G11): digital goods keep no manual stock — their stock is the
+     * codes. They only share the threshold, on the main product.
      */
     public function testDigitaleWareNurMitSchwelle(): void
     {
@@ -93,8 +93,8 @@ class StockFieldsListenerTest extends TestCase
     }
 
     /**
-     * G3: Zehn beim Öffnen, dazwischen zwei verkauft, fünfzehn eingegeben —
-     * plus fünf, dreizehn auf Lager.
+     * G3: ten at opening, two sold in between, fifteen entered — plus five,
+     * thirteen in stock.
      */
     public function testGebuchtWirdDieDifferenzZumGeoeffnetenWert(): void
     {
@@ -125,7 +125,7 @@ class StockFieldsListenerTest extends TestCase
     }
 
     /**
-     * „Mehrere bearbeiten": Contao hängt die id an jeden Feldnamen.
+     * "Edit multiple": Contao appends the id to every field name.
      */
     public function testMehrereBearbeitenLiestDenWertMitDerId(): void
     {
@@ -164,11 +164,11 @@ class StockFieldsListenerTest extends TestCase
     }
 
     /**
-     * Contao legt ein Feld mit inputType, ohne `sql` und ohne save_callback
-     * still in die JSON-Spalte `jsonData` (VirtualFieldsMappingListener) —
-     * dann stünde der Bestand doch im Produkt und würde mitkopiert. Die
-     * Attribute werden vorher eingehängt (Priorität −16 vor −4096); fehlt
-     * einer, passiert es.
+     * Contao silently puts a field with an inputType, without `sql` and without
+     * a save_callback into the JSON column `jsonData`
+     * (VirtualFieldsMappingListener) — then the stock would be in the product
+     * after all and be copied along. The attributes are attached beforehand
+     * (priority −16 before −4096); if one is missing, it happens.
      */
     public function testDieFelderOhneSpalteHabenIhrenSaveCallback(): void
     {
@@ -186,7 +186,7 @@ class StockFieldsListenerTest extends TestCase
             self::assertArrayNotHasKey('sql', $fields[$field]);
             self::assertContains('fields.'.$field.'.save', $targets);
 
-            // Review G, B1: the callback returns null — without this flag
+            // G: the callback returns null — without this flag
             // DC_Table writes '' into a column tl_consho_product does not
             // have (DC_Table::save(), the condition before arrSubmit).
             self::assertTrue($fields[$field]['eval']['doNotSaveEmpty'] ?? false, $field);

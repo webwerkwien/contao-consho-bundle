@@ -57,8 +57,8 @@ class DeliveryReported
         private readonly MoneyFormatter $money,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
-        // A version of the delivery, as the order gets one (spec D, review 1,
-        // K1); optional for tests that do not look at it.
+        // A version of the delivery, as the order gets one (Block D);
+        // optional for tests that do not look at it.
         private readonly ContaoFramework|null $framework = null,
         private readonly UrlGeneratorInterface|null $router = null,
         // dev#2: the parcel's delivery note, archived when nothing can roll it
@@ -151,8 +151,7 @@ class DeliveryReported
         }
 
         /*
-         * The PDF only once nothing can roll the invoice back (review Abo-4,
-         * S2). Called inside a caller's transaction — the electronic release,
+         * The PDF only once nothing can roll the invoice back (Abo-4). Called inside a caller's transaction — the electronic release,
          * a subscription's billing — the commit above only released a
          * savepoint: the invoice number is still locked, and a later rollback
          * would free it while the rendered file stays behind, so the next
@@ -192,7 +191,7 @@ class DeliveryReported
         ], $invoiceId, $viewUrl);
 
         // Every "reported" hands a nested caller its invoice — whichever branch
-        // it leaves by (second review of Abo-4).
+        // it leaves by (Abo-4).
         return DeliveryReport::reported($sent, $nested ? $invoiceId : null);
     }
 

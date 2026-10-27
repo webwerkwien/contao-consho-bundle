@@ -67,11 +67,11 @@
     {% endif %}
 
     {#
-        Die Altersfreigabe des ganzen Korbs (C19): die höchste über alle
-        Zeilen, auch über die ohne Preis. Sie sperrt nichts — 6, 12 und 14 sind
-        per Definition nur Hinweis, 16 und 18 hält der Checkout auf, wo es eine
-        Identität zu prüfen gibt. Hier steht sie, damit ein Kunde es vor dem
-        Adressformular erfährt und nicht danach.
+        The age rating of the whole cart (C19): the highest over all
+        lines, also over those without a price. It blocks nothing — 6, 12 and
+4 are only a notice by definition, 16 and 18 are held up by the
+        checkout, where there is an identity to check. It stands here so that a
+        customer learns it before the address form and not after.
     #}
     {% if minimum_age|default(0) > 0 %}
         <p class="consho-cart__age" role="note">{{ "CONSHO.minimumAge"|trans([minimum_age], "contao_default") }}</p>
@@ -86,8 +86,7 @@
 
         {#
             ⚠️ The article is a <td>, not a <th scope="row">, and every cell
-            carries data-cellheadline (acceptance C-10, Michael 2026-09-25:
-            „okay, wenn das für mobile besser ist"). Themes that turn a table
+            carries data-cellheadline (C-10). Themes that turn a table
             into cards on a phone — the Contao demo theme among them — hide
             every <th> below the breakpoint and print attr(data-cellheadline)
             before each cell. A row header vanished there with the article
@@ -138,7 +137,7 @@
                             {% endif %}
                         </td>
                         <td data-cellheadline="{{ head_quantity }}">
-                            {#- A renewal keeps the old quantity (A11 as of 2026-10-01):
+                            {#- A renewal keeps the old quantity (A11):
                                shown, not a field. #}
                             {% if line.renews|default('') %}
                                 {{ line.quantity }}
@@ -302,8 +301,8 @@
 
         {% if checkout_url|default('') %}
             {#
-                Der Weg weiter (4.2). Ein Link, kein Formular: Zum Checkout zu
-                gehen ändert nichts, und ein GET darf man wiederholen.
+                The way on (4.2). A link, not a form: going to the checkout
+                changes nothing, and a GET may be repeated.
             #}
             <p class="consho-cart__checkout">
                 <a href="{{ checkout_url }}" class="consho-cart__checkout-link">

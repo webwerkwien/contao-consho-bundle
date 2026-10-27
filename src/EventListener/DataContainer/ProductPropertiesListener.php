@@ -14,7 +14,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductProperties;
  * Block A created `tl_consho_product_property` and `tl_consho_product_option`,
  * their models and their DCA files, but nothing that could put a row in either:
  * the product palette had no field for them and there is no back end module.
- * Found in B-3, when the filter machinery had nothing to filter on.
+ * B-3 added them, when the filter machinery had nothing to filter on.
  *
  * ── Two fields, because they are two different statements ─────────────────
  *

@@ -13,9 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * A withdrawal period under the statutory 14 days while the shop delivers
  * into the EU or the EEA (D-2, W4).
  *
- * Michael, 2026-09-27: "der betreiber soll einstellen, bis wann ein widerruf
- * möglich ist, wobei der gesetzlich Wert der default ist … für einen shop in
- * der eu unter dem default eine warnung zeigen".
+ * The operator sets until when a withdrawal is possible, with the statutory
+ * value as the default; a shop in the EU below the default gets a warning.
  *
  * The DELIVERY country decides, not the seat: a shop from outside the EU that
  * sells to consumers in it owes them their withdrawal right (Art. 6 Rome I —

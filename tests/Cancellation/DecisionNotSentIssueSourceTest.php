@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * E10: eine Entscheidung, deren Mail nicht hinausging, ist eine Warnung.
+ * E10: a decision whose mail did not go out is a warning.
  */
 final class DecisionNotSentIssueSourceTest extends TestCase
 {

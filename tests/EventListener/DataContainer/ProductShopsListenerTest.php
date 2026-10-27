@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\ProductShopsListe
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Shop-Auswahl der Produktmaske: Optionen, Laden, Speichern — seit CW-3
- * über ProductShops.
+ * The shop selection of the product form: options, loading, saving — since
+ * CW-3 via ProductShops.
  */
 class ProductShopsListenerTest extends TestCase
 {

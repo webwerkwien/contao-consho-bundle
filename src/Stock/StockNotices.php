@@ -58,7 +58,7 @@ class StockNotices
     }
 
     /**
-     * Only for an article the start point shows (Nachlese K5, review G-7 L6):
+     * Only for an article the start point shows (Nachlese K5, G-7):
      * the route took any article id, so a member could wish for one of
      * another shop or language and get a mail with a link that leads nowhere.
      * Read from the visibility projection, where the listing and the product

@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Webwerkwien\ContaoConshoBundle\EventListener\GeneratorMetaListener;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 
-/** D-6, G1: der Generator-Hinweis auf Shopseiten. */
+/** D-6, G1: the generator notice on shop pages. */
 class GeneratorMetaListenerTest extends TestCase
 {
     public function testEineShopseiteTraegtDenHinweis(): void
@@ -42,7 +42,7 @@ class GeneratorMetaListenerTest extends TestCase
 
     public function testEineFremdeSeiteBleibtUnberuehrt(): void
     {
-        // Mehrmandanten-Installation: nicht jede Seite gehört einem Shop.
+        // Multi-site installation: not every page belongs to a shop.
         self::assertSame([], $this->tags($this->head(shopId: 0)));
     }
 
@@ -58,7 +58,7 @@ class GeneratorMetaListenerTest extends TestCase
         self::assertCount(1, $this->tags($head));
     }
 
-    /** Fable-Review D-6, K1: der Weg der neuen Layouts, über LayoutEvent. */
+    /** D-6: the path of the new layouts, via LayoutEvent. */
     public function testAuchUeberDasLayoutEvent(): void
     {
         $head = new HtmlHeadBag();

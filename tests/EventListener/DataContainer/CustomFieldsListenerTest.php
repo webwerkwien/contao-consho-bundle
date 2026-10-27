@@ -22,9 +22,9 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationWriter;
 
 /**
- * Zusatzfeld-Werte, ZW-2: je Zusatzfeld des Produkttyps ein Feld in der
- * Produktmaske; die Eingabe wird geprüft, gesammelt und beim Absenden als
- * JSON gespeichert, mit Version. Eine Variante erbt, was sie leer lässt (Z2).
+ * Custom field values, ZW-2: one field in the product form per custom field
+ * of the product type; the input is validated, collected and saved as JSON
+ * on submit, with a version. A variant inherits what it leaves empty (Z2).
  */
 class CustomFieldsListenerTest extends TestCase
 {
@@ -38,8 +38,8 @@ class CustomFieldsListenerTest extends TestCase
             DcaSchema::create($this->connection, $table);
         }
 
-        // Produkt 10 liegt in einem Shop mit Deutsch und Französisch: fr ist
-        // seine Übersetzungssprache.
+        // Product 10 is in a shop with German and French: fr is its
+        // translation language.
         $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', urlPrefix TEXT NOT NULL DEFAULT '', urlSuffix TEXT NOT NULL DEFAULT '')");
         $this->connection->insert('tl_consho_shop', ['id' => 7, 'fallbackLanguage' => 'de']);
         $this->connection->insert('tl_page', ['type' => 'root', 'consho_shop' => 7, 'language' => 'de']);
@@ -70,7 +70,7 @@ class CustomFieldsListenerTest extends TestCase
 
     public function testJeFeldDesTypsEinEingabefeld(): void
     {
-        // Einsprachig: ohne Shop keine Übersetzungssprache.
+        // Monolingual: without a shop there is no translation language.
         $this->connection->delete('tl_consho_product_shop', ['pid' => 10]);
         $this->listener()->addFields($this->dc(10));
         $fields = $GLOBALS['TL_DCA']['tl_consho_product']['fields'];
@@ -97,7 +97,7 @@ class CustomFieldsListenerTest extends TestCase
     }
 
     /**
-     * Die Variante nennt im Hilfetext, was sie erbt (Z2).
+     * The variant names in its help text what it inherits (Z2).
      */
     public function testDieVarianteNenntDenGeerbtenWert(): void
     {
@@ -110,8 +110,8 @@ class CustomFieldsListenerTest extends TestCase
     }
 
     /**
-     * Abnahme c5, 2026-10-14: Das geerbte Datum steht im Hilfetext so, wie das
-     * Datumsfeld es zeigt — nicht „2024-03-01" neben „01.03.2024".
+     * The inherited date stands in the help text the way the date field shows
+     * it — not "2024-03-01" next to "01.03.2024".
      */
     public function testDasGeerbteDatumImFormatDerInstallation(): void
     {
@@ -129,8 +129,8 @@ class CustomFieldsListenerTest extends TestCase
     }
 
     /**
-     * Die erzeugten Felder lassen sich in der Gruppe nicht freigeben — sie
-     * folgen dem Recht der Spalte customFieldValues.
+     * The generated fields cannot be enabled in the user group — they follow
+     * the permission of the customFieldValues column.
      */
     public function testDasRechtDerSpalte(): void
     {
@@ -174,7 +174,7 @@ class CustomFieldsListenerTest extends TestCase
     }
 
     /**
-     * Eine falsche Zahl zeigt Contao am Feld; nichts wird gesammelt.
+     * Contao shows an invalid number at the field; nothing is collected.
      */
     public function testEineFalscheZahlAmFeld(): void
     {
@@ -193,10 +193,9 @@ class CustomFieldsListenerTest extends TestCase
     }
 
     /**
-     * Das Datums-Widget liefert einen Zeitstempel und zeigt einen — gespeichert
-     * wird YYYY-MM-DD. In der Zeitzone der Installation: Mitternacht in Wien
-     * ist in UTC noch der Vortag (Review ZW-K, Fund 4 — in UTC sah kein Test
-     * den Unterschied).
+     * The date widget delivers a timestamp and shows one — what is saved is
+     * YYYY-MM-DD. In the installation's time zone: midnight in Vienna is still
+     * the previous day in UTC (ZW-K — in UTC no test saw the difference).
      */
     public function testDatumHinUndZurueck(): void
     {
@@ -232,8 +231,8 @@ class CustomFieldsListenerTest extends TestCase
     }
 
     /**
-     * Z1: Textfelder bekommen je Übersetzungssprache ein eigenes Feld; Zahl,
-     * Datum und Ja/Nein nicht — sie lesen sich in jeder Sprache gleich.
+     * Z1: text fields get a field of their own per translation language;
+     * number, date and yes/no do not — they read the same in every language.
      */
     public function testTextfelderJeSprache(): void
     {

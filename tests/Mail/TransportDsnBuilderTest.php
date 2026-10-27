@@ -97,9 +97,9 @@ class TransportDsnBuilderTest extends TestCase
     }
 
     /**
-     * 🔴 Asked of Symfony itself, not of a string (C-9, 2026-09-25).
+     * 🔴 Asked of Symfony itself, not of a string (C-9).
      *
-     * Until then the Graph DSN was "microsoft-graph+api://…?tenant=" and the
+     * Before that the Graph DSN was "microsoft-graph+api://…?tenant=" and the
      * test above checked exactly that prefix — so it guarded the mistake. The
      * bridge only knows "microsoftgraph+api" and reads "tenantId"; no Graph
      * mail could ever have left. Every type the builder offers must now be

@@ -13,11 +13,11 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block G, G9: Ware zurück ins Lager — nie mehr, als der Kaufklick der Zeile
- * genommen hat, und über Storno und Rücksendung zusammen nicht doppelt.
+ * Block G, G9: Goods back into stock — never more than the row's purchase
+ * click took, and not twice across cancellation and return together.
  *
- * Durchgehend mit den echten Klassen: Der Kaufklick (StockAllocation) bucht
- * ab, dann kommt die Ware zurück.
+ * Throughout with the real classes: the purchase click (StockAllocation)
+ * deducts, then the goods come back.
  */
 class StockReturnTest extends TestCase
 {
@@ -52,13 +52,13 @@ class StockReturnTest extends TestCase
 
         self::assertSame('10.0000', $this->stock());
         self::assertSame(['order', 'cancellation'], $this->reasons());
-        // The cap stays; what the cancellation gave back is kept apart (second review S1).
+        // The cap stays; what the cancellation gave back is kept apart.
         self::assertSame(['3.0000', '3.0000'], array_map(StockBooking::scaled(...), array_values((array) $this->connection->fetchAssociative('SELECT stockBooked, stockCancelled FROM tl_consho_order_item WHERE id = 10'))));
     }
 
     /**
-     * Abnahme G-8: Der Storno aus dem Backend stand mit Benutzer 0 („Consho")
-     * im Protokoll, obwohl ihn ein Backend-Benutzer gesetzt hatte.
+     * G-8: The cancellation from the back end was logged with user 0 ("Consho"),
+     * although a back-end user had set it.
      */
     public function testDasStornoVermerktDenBenutzer(): void
     {
@@ -83,16 +83,16 @@ class StockReturnTest extends TestCase
         self::assertSame('2.0000', $this->returns()->forWithdrawalItem(30, true, 2000, 5));
         self::assertSame('9.0000', $this->stock());
 
-        // Korrigiert auf 1: bucht die Differenz, nicht die Zeile noch einmal.
+        // Corrected to 1: books the difference, not the row again.
         $this->connection->update('tl_consho_withdrawal_item', ['returnedQuantity' => '1.0000'], ['id' => 30]);
         self::assertSame('1.0000', $this->returns()->forWithdrawalItem(30, true, 2001, 5));
         self::assertSame('8.0000', $this->stock());
 
-        // Häkchen weg: auch das Zurückgebuchte geht wieder heraus.
+        // Checkbox off: what was booked back goes out again too.
         self::assertSame('0.0000', $this->returns()->forWithdrawalItem(30, false, 2002, 5));
         self::assertSame('7.0000', $this->stock());
 
-        // Unverändert gespeichert: keine weitere Bewegung.
+        // Saved unchanged: no further movement.
         $this->returns()->forWithdrawalItem(30, false, 2003, 5);
         self::assertSame(['order', 'return', 'return', 'return'], $this->reasons());
 
@@ -119,8 +119,8 @@ class StockReturnTest extends TestCase
     }
 
     /**
-     * Review G, S1: Rücksendung, Storno, dann „Widerruf bearbeiten" noch einmal
-     * gespeichert — das buchte mit dem genullten Deckel Ware AUS dem Lager.
+     * G: Return, cancellation, then "edit withdrawal" saved once more —
+     * with the zeroed cap that booked goods OUT of stock.
      */
     public function testNachDemStornoBuchtDieRuecksendungNichtMehr(): void
     {
@@ -134,12 +134,12 @@ class StockReturnTest extends TestCase
         self::assertSame('10.0000', $this->stock());
         self::assertSame(['order', 'return', 'cancellation'], $this->reasons());
 
-        // Zweites Review, S1: das zurückgesandte Stück ist beschädigt — das
-        // Häkchen weg nimmt es auch nach dem Storno wieder heraus …
+        // The returned item is damaged — taking the checkbox off takes it out
+        // again even after the cancellation …
         self::assertSame('0.0000', $this->returns()->forWithdrawalItem(30, false, 2003));
         self::assertSame('9.0000', $this->stock());
 
-        // … und wieder gesetzt kommt es zurück, nie mehr als die Rücksendung hielt.
+        // … and set again it comes back, never more than the return held.
         $this->connection->update('tl_consho_withdrawal_item', ['returnedQuantity' => '3.0000'], ['id' => 30]);
         self::assertSame('1.0000', $this->returns()->forWithdrawalItem(30, true, 2004));
         self::assertSame('10.0000', $this->stock());

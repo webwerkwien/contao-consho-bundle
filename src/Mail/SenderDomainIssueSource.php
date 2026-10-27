@@ -11,10 +11,10 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 /**
  * The sender's domain is none of the shop's domains (D-7, M5).
  *
- * From the D-1 acceptance: the shipping mail landed in drei.at's junk. SPF and
+ * Since D-1: a shipping mail once landed in a mailbox provider's junk. SPF and
  * DKIM passed; what stood out was a mail from one domain whose links all lead
  * to another — the pattern of the parcel phishing mail. On a test
- * server that is how it is; in a real shop it is a setting worth a second
+ * installation that is how it is; in a real shop it is a setting worth a second
  * look. A note, not a warning: a shop may deliberately send from the
  * company's main domain.
  *
@@ -51,7 +51,7 @@ final class SenderDomainIssueSource implements ConfigurationIssueSource
 
             // Punycode like tl_page.dns, which Contao stores encoded
             // (tl_page::checkDns) — shop@müller.at would otherwise never
-            // match xn--mller-kva.at (Fable review D-7, K1).
+            // match xn--mller-kva.at (D-7).
             $sender = strtolower(Idna::encode(substr((string) $shop['senderAddress'], $at + 1)));
             $domains = array_values(array_unique(array_map(
                 static fn (string $dns): string => strtolower($dns),

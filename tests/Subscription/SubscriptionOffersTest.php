@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRule;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRules;
 
 /**
- * Regeln: 5 Monatsabo (unbefristet), 9 Jahresabo nur für Gruppe 3,
- * 11 Jahresabo „gleiche Laufzeit", 12 Vierteljahresabo.
+ * Rules: 5 monthly subscription (open-ended), 9 yearly subscription only for group 3,
+ * 11 yearly subscription "same term", 12 quarterly subscription.
  */
 class SubscriptionOffersTest extends TestCase
 {
@@ -40,9 +40,9 @@ class SubscriptionOffersTest extends TestCase
     }
 
     /**
-     * Variante A (2026-10-08): „volle Mindestlaufzeit" ist nicht mehr fest
-     * Geschäftskunden vorbehalten — eine offene Regel steht allen offen, die
-     * Kundengruppen beschränken (Regel 9 hier für Gruppe 3).
+     * Variant A: "full minimum term" is no longer reserved for
+     * business customers — an open rule is open to everyone; the
+     * customer groups restrict it (rule 9 here for group 3).
      */
     public function testGleicheLaufzeitEntscheidenNurDieGruppen(): void
     {
@@ -61,7 +61,7 @@ class SubscriptionOffersTest extends TestCase
         $offers = $this->offers(new SaleModeSettings(false, [5]));
 
         self::assertTrue($offers->allows(1, 5, []));
-        // Nicht als Einmalkauf verkauft, und eine Regel, die das Produkt nicht hat.
+        // Not sold as a one-off purchase, and a rule the product does not have.
         self::assertFalse($offers->allows(1, 0, []));
         self::assertFalse($offers->allows(1, 7, []));
         self::assertFalse($offers->allows(1, -1, []));

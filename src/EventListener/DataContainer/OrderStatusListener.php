@@ -41,7 +41,7 @@ class OrderStatusListener
         // What a cancellation undoes (K6). Optional for the tests built by
         // hand; the container wires it.
         private readonly OrderCancellation|null $cancellation = null,
-        // Who cancelled, for the stock movement (Abnahme G-8); optional likewise.
+        // Who cancelled, for the stock movement (G-8); optional likewise.
         private readonly Security|null $security = null,
         // dev#1: whether the open invoice can be cancelled with the order.
         private readonly CancellationInvoice|null $invoice = null,

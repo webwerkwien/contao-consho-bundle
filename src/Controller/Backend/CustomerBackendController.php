@@ -34,7 +34,7 @@ use Webwerkwien\ContaoConshoBundle\Privacy\CustomerExport;
  *
  * The erasure (D-5) writes, and cannot be undone: it asks, besides the
  * module, for the right to EDIT every order it touches — like "Widerruf
- * bearbeiten" and "Erneut senden" (Fable review D-5, S4).
+ * bearbeiten" and "Erneut senden" (D-5).
  *
  * Everything else comes from the query string (GET), so a filtered list is
  * a link one can keep: `shop`, `q`, `page`, and `customer` for the detail.

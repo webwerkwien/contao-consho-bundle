@@ -160,10 +160,10 @@ final class WithdrawalBackendController
             $result = match (true) {
                 // The same answer for "no such order" and "not yours to edit":
                 // a separate one told who may not edit it that the number
-                // exists in the shop (review WA, K4).
+                // exists in the shop (WA).
                 'assign' === $action && (null === $order || !$this->security->isGranted(ContaoCorePermissions::DC_PREFIX.'tl_consho_order', new UpdateAction('tl_consho_order', $order))) => ProcessingResult::refused('assignNotFound'),
                 'assign' === $action => $this->assignment->assign($id, (int) $order['id']),
-                // Review WA, S2. The module right is the gate, as for seeing
+                // WA: the module right is the gate, as for seeing
                 // it: there is no order whose rights could decide, and the
                 // table is notEditable, so an UpdateAction on it is always no.
                 'dismiss' === $action => $this->assignment->dismiss($id, $request->request->getString('reason'), time()),
@@ -199,7 +199,7 @@ final class WithdrawalBackendController
                 'scope' => (string) $withdrawal['scope'],
                 'part' => (string) ($withdrawal['part'] ?? ''),
                 'message' => (string) ($withdrawal['message'] ?? ''),
-                // Review WA, S2: dismissed, it shows the decision instead of the actions.
+                // WA: dismissed, it shows the decision instead of the actions.
                 'dismissed' => 'rejected' === $withdrawal['state'],
                 'decidedAt' => null === $withdrawal['decidedAt'] ? '' : $this->moment((int) $withdrawal['decidedAt'], $language),
                 'reason' => (string) ($withdrawal['reason'] ?? ''),
@@ -343,7 +343,7 @@ final class WithdrawalBackendController
             'dates' => [
                 // A hint, not a judgement (spec 6.3): the operator weighs it.
                 'windowClosesAt' => null === $window?->closesAt ? '' : $this->moment($window->closesAt, $language),
-                // Rejected, nothing falls due — like the list (abnahme D-3).
+                // Rejected, nothing falls due — like the list (D-3).
                 'refundDueAt' => 'rejected' === $state ? '' : $this->day(WithdrawalSignals::refundDue($received), $language),
                 'overdue' => 'attention' === $signals['state'][0]->value,
             ],
@@ -357,7 +357,7 @@ final class WithdrawalBackendController
                 'shipping' => null === $withdrawal['refundShipping'] ? '0' : (string) BigDecimal::of((string) $withdrawal['refundShipping'])->toScale(2),
                 'shippingLeft' => $this->money->format($proposal['shippingLeft'], $currency, $language),
                 'returned' => null !== $withdrawal['returnReceivedAt'],
-                // DL4 (acceptance Abo-8): only goods come back — the hint on
+                // DL4 (Abo-8): only goods come back — the hint on
                 // holding back the refund only where a physical line is accepted.
                 'physical' => false !== $this->connection->fetchOne(
                     "SELECT 1 FROM tl_consho_withdrawal_item wi

@@ -11,8 +11,8 @@ use Symfony\Contracts\Translation\TranslatorInterface;
  * Pure on purpose: every caller hands in the amount it already SHOWS, so the
  * sentence and the price column beside it cannot say two things.
  *
- * "Läuft weiter, jederzeit kündbar" is monthly only since variant A
- * (2026-10-08); a rule from before it billed otherwise ends, and the sentence
+ * "Läuft weiter, jederzeit kündbar" is monthly only since variant A;
+ * a rule from before it billed otherwise ends, and the sentence
  * says so. The conversion into the monthly plan's price (A8) is gone.
  */
 final class SubscriptionTerms

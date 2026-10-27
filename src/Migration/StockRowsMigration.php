@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
  *
  * StockRows runs when a product is saved. A product with a key pool from
  * Block F would otherwise count as unlimited until somebody saves it — and
- * be orderable with an empty pool, which G10 ends. Found at the deploy on
- * c5 (2026-10-05), not by a test: the tests always save first.
+ * be orderable with an empty pool, which G10 ends. No test would see it:
+ * the tests always save first.
  *
  * Runs for every main product that needs rows and has no active one — kept
  * stock of a physical good, or a key pool of a digital one (its own delivery

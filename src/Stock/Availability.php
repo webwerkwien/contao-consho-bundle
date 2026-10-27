@@ -131,10 +131,10 @@ class Availability
      * release takes no code. "Lizenz verlängern" lines (renews > 0) take none
      * either: the keys move on with the licence.
      *
-     * Each line counts at least zero (review G, S2): a line delivered AND
+     * Each line counts at least zero (G): a line delivered AND
      * withdrawn would otherwise count minus one and hide an open line.
      *
-     * ── Plain reads, in this order (review G, B2 and its second review) ───
+     * ── Plain reads, in this order (G) ─────────────────────────────────────
      *
      * At the purchase click this runs under the lock of the stock row and in
      * READ COMMITTED (OrderPlacer), so a purchase that waited sees the one

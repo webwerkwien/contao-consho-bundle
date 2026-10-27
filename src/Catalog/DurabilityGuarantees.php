@@ -13,7 +13,7 @@ use Doctrine\DBAL\Connection;
  * - From the MAIN product: a variant inherits (GA2).
  * - Physical goods only (GA5), by the rule of DbalArticleShippingData: the
  *   main product's type, else the article's own, no type at all is physical
- *   (review GARAN, 1 — a variant with a digital type of its own below a main
+ *   (GARAN — a variant with a digital type of its own below a main
  *   product without one is not goods).
  * - Both halves or nothing: a duration without its label cannot be shown in
  *   the harmonised form, and a label without a duration is one Consho does
@@ -32,7 +32,7 @@ class DurabilityGuarantees
     public function __construct(
         private readonly Connection $connection,
         /*
-         * A label the web cannot reach is no label (acceptance on c5): the
+         * A label the web cannot reach is no label: the
          * page would show a broken image, and the confirmation would carry
          * a label nobody saw before the button. Left out everywhere at once,
          * and DurabilityGuaranteeIssueSource says why. Optional for the tests.

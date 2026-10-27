@@ -10,7 +10,7 @@ namespace Webwerkwien\ContaoConshoBundle\Seo;
  * find the same release.
  *
  * Every question is asked for one listing page: a landing page lives below the
- * category page it narrows down (docs/block-b-katalog-frontend.md, 4.5), so the
+ * category page it narrows down (Block B, 4.5), so the
  * same combination may be released on one category and not on another.
  */
 final class FacetPageResolver

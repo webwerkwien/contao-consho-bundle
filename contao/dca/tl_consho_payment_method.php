@@ -11,7 +11,7 @@
  * report an amount with its origin; the mask offers none.
  *
  * A method that occurs in an order cannot be deleted (PaymentMethodDeleteVoter).
- * See docs/block-c-warenkorb-checkout.md, sections 5.1 and 6.2. "select multiple"
+ * See Block C, sections 5.1 and 6.2. "select multiple"
  * → delete skips a method in use silently: DC_Table::deleteAll() catches the
  * AccessDeniedException per id and continues with the next one.
  */
@@ -152,7 +152,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
             'exclude' => true,
             'eval' => ['maxlength' => 255, 'tl_class' => 'w50'],
         ],
-        // The Giro-Code on the invoice (C-8, Michael 2026-09-24: switchable).
+        // The Giro-Code on the invoice (C-8), switchable.
         // Part of the bank section, not of prepayment: any method with a bank
         // connection — a later purchase on account — takes it over with the
         // section. Frozen into the invoice as the finished payload (GiroCode).
@@ -169,7 +169,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
          */
         // No `default`: Contao sets the default of EVERY field on create, of a
         // virtual one from another palette too — cash on delivery carried
-        // `dueDays: 14` (acceptance E-7). Empty means the handler's 14 days
+        // `dueDays: 14` (E-7). Empty means the handler's 14 days
         // (InvoicePaymentHandler::DEFAULT_DUE_DAYS), shown as the placeholder.
         'dueDays' => [
             'inputType' => 'text',
@@ -242,8 +242,8 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
             'exclude' => true,
             'eval' => ['mandatory' => true, 'minlength' => 16, 'maxlength' => 255, 'hideInput' => true, 'tl_class' => 'w50'],
         ],
-        // What a charge of a follow-up order answers (Abo-4b, P100) — the
-        // acceptance sets it before the cron runs. Virtual, like the secret.
+        // What a charge of a follow-up order answers (Abo-4b, P100) — a
+        // test sets it before the cron runs. Virtual, like the secret.
         'testFollowUpResult' => [
             'inputType' => 'select',
             'exclude' => true,
@@ -256,7 +256,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
          * How a FEE of this method is taxed (E-1, Z3). The operator's choice,
          * not Consho's: as an ancillary supply the fee follows the goods, as a
          * supply of its own it has one rate — both readings exist, neither is
-         * settled in a primary text (docs/block-e-versand-zahlung.md, 3).
+         * settled in a primary text (Block E, 3).
          * No default on purpose: a preset would read as advice. Empty means
          * not chosen, and a fee without a choice is not offered at checkout.
          */

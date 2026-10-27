@@ -16,7 +16,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationJoin;
  *    variant matrix, which applies VisibilityCriteria::variant();
  *  - no inheritance — that is ProductDetailAssembler;
  *  - no safety texts — they must not fall back to the default language and are
- *    ProductSafetyResolver's (docs/mehrsprachigkeit.md, 4).
+ *    ProductSafetyResolver's (Block M, 4).
  *
  * Texts and labels fall back to the default language through TranslationJoin.
  * In the default language no join is built at all.

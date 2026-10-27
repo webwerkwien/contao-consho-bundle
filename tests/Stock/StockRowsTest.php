@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block G, G1: eine Bestandszeile je Artikel eines körperlichen Produkts mit
- * „Bestand führen" — nie gelöscht, nur stillgelegt.
+ * Block G, G1: one stock row per article of a physical product with
+ * "manage stock" — never deleted, only retired.
  */
 class StockRowsTest extends TestCase
 {
@@ -39,7 +39,7 @@ class StockRowsTest extends TestCase
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 1]);
         $this->connection->insert('tl_consho_product', ['id' => 3, 'pid' => 1]);
 
-        // Von der Variante aus wie vom Hauptprodukt.
+        // From the variant just as from the main product.
         $this->rows()->sync(3, 100);
 
         self::assertSame([[2, 1, 1], [3, 1, 1]], $this->stock());
@@ -65,7 +65,7 @@ class StockRowsTest extends TestCase
         self::assertSame([[1, 1, 0]], $this->stock());
         self::assertNull($this->rows()->activeRow(1));
 
-        // Wieder eingeschaltet: dieselbe Zeile, derselbe Bestand.
+        // Switched on again: the same row, the same stock.
         $this->connection->update('tl_consho_product', ['stockTracked' => 1], ['id' => 1]);
         $this->rows()->sync(1, 101);
 

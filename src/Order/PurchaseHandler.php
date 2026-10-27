@@ -85,8 +85,8 @@ final class PurchaseHandler implements PurchaseHandlerInterface
             paymentMethod: $state->payment->id,
             paymentMethodTitle: $state->payment->title,
 
-            // Frozen like the title (C-9, Michael 2026-09-25: „den Hinweis
-            // beim Kauf an der Bestellung einfrieren → OK"). The confirmation
+            // Frozen like the title (C-9): the notice is frozen on the
+            // order at the purchase. The confirmation
             // of an order without an invoice at the purchase has nothing else
             // to read it from — and today's method may say something else.
             paymentInstructions: (string) ($method->config['instructions'] ?? ''),
@@ -98,8 +98,7 @@ final class PurchaseHandler implements PurchaseHandlerInterface
             termsAcceptedAt: 0 !== $state->data->termsAcceptedAt ? $state->data->termsAcceptedAt : null,
 
             // The figure above the button. OrderFactory refuses to write an
-            // order that does not come to it (C-7, after the review of
-            // 2026-09-23), and it is the amount a payment will later be for —
+            // order that does not come to it (C-7), and it is the amount a payment will later be for —
             // so a disagreement cannot reach either.
             expectedGrandTotal: $state->grossTotal,
 

@@ -17,7 +17,7 @@ use Webwerkwien\ContaoConshoBundle\Order\StatusFlags;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Der automatische Statuswechsel (Spec D 5.3).
+ * The automatic status change (Spec D 5.3).
  */
 final class OrderStatusAdvancerTest extends TestCase
 {
@@ -47,7 +47,7 @@ final class OrderStatusAdvancerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -94,8 +94,8 @@ final class OrderStatusAdvancerTest extends TestCase
     }
 
     /**
-     * Ein Status „wenn alles erledigt" ohne isCompleted verlangt über seine
-     * Flags nichts — die Bedingung des Shop-Felds gilt trotzdem.
+     * A status "when everything is done" without isCompleted demands nothing
+     * through its flags — the condition of the shop field applies anyway.
      */
     public function testAllesErledigtOhneFlagWartetTrotzdemAufBeideSalden(): void
     {
@@ -107,8 +107,8 @@ final class OrderStatusAdvancerTest extends TestCase
     }
 
     /**
-     * Review S5: derselbe Status in zwei Feldern — nach der Zahlung gilt die
-     * Bedingung des Zahlungsfelds, nicht die von „alles erledigt".
+     * The same status in two fields — after the payment the condition of the
+     * payment field applies, not that of "everything done".
      */
     public function testDerselbeStatusInZweiFeldernFolgtDemFeldDesEreignisses(): void
     {
@@ -119,8 +119,8 @@ final class OrderStatusAdvancerTest extends TestCase
     }
 
     /**
-     * Ein Status mit isCompleted oder isCancelled hält die Bestellung fest
-     * wie locksChanges.
+     * A status with isCompleted or isCancelled locks the order like
+     * locksChanges.
      */
     public function testAusAbgeschlossenWirdNichtGewechselt(): void
     {
@@ -148,10 +148,10 @@ final class OrderStatusAdvancerTest extends TestCase
     }
 
     /**
-     * Fable-Review D-7, S1: „Wenn alles erledigt ist" → ein stornierender
-     * Status KANN greifen — alles vor dem Versand widerrufen und voll
-     * erstattet: Forderung 0, bezahlt 0, nichts versandt. Deshalb warnt
-     * OrderStatusIssueSource (M4) nur für „nach Zahlung" und „nach Lieferung".
+     * D-7: "When everything is done" → a cancelling status CAN apply —
+     * everything withdrawn before shipping and fully refunded: claim 0, paid 0,
+     * nothing shipped. That is why OrderStatusIssueSource (M4) warns only for
+     * "after payment" and "after delivery".
      */
     public function testVollErstattetOhneVersandSetztEinenStornierendenStatusWennAllesErledigtIst(): void
     {

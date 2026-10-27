@@ -35,6 +35,6 @@ enum CodeStatus: string
     // Valid, but a rule without code takes more off — the better one applies (C3).
     case Superseded = 'superseded';
 
-    // Free shipping where the order has no shipping to save (review H, L1): not applied, not used up.
+    // Free shipping where the order has no shipping to save (H): not applied, not used up.
     case NothingToSave = 'nothingToSave';
 }

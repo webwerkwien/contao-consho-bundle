@@ -12,10 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 /**
  * The payments of an order in the back end, with amounts as money.
  *
- * Found at the acceptance of Abo-5 (2026-09-30): the header said
- * "Gesamtsumme 1.2000" and the row "1.2000 (Überweisung)" — the raw
- * decimal(10,4), the trap of Fall 30 once more, on a list that had been there
- * since Block D.
+ * Before Abo-5 the header said "Gesamtsumme 1.2000" and the row "1.2000
+ * (Überweisung)" — the raw decimal(10,4), which MySQL returns with its
+ * trailing zeros, on a list that had been there since Block D.
  */
 class PaymentListListener
 {

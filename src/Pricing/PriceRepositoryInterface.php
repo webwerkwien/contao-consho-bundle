@@ -16,7 +16,7 @@ interface PriceRepositoryInterface
      *
      * The subscription rule since Abo-2: 0 is the one-time sale, any other id
      * the rows of exactly that contract — never the two mixed. A monthly
-     * amount among one-time rows would win as the cheapest (docs/block-abo.md, A2).
+     * amount among one-time rows would win as the cheapest (Block Abo, A2).
      *
      * @param list<int> $customerGroupIds
      *

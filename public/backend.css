@@ -1,40 +1,38 @@
 /*
- * Consho — Symbole für die drei Backend-Menügruppen.
+ * Consho — icons for the three back end menu groups.
  *
- * Contao vergibt jeder Gruppe die Klasse `group-<gruppenname>` (BackendUser::
- * navigation()). Die Modul-Einträge darunter tragen keine Symbole — in Contao 5
- * setzt `menu_level_1` nur Einrückung. Symbole gibt es also ausschließlich auf
- * Gruppenebene.
+ * Contao gives every group the class `group-<groupname>` (BackendUser::
+ * navigation()). The module entries below it carry no icons — in Contao 5
+ * `menu_level_1` only sets indentation. So icons exist at group level only.
  *
- * ── Warum `mask` und nicht `background-image` ─────────────────────────────
+ * ── Why `mask` and not `background-image` ─────────────────────────────────
  *
- * Contaos eigene Gruppensymbole sind grau — `--nav-group`, dieselbe Farbe wie
- * die Beschriftung daneben. Die übrigen Symbole im Ordner sind eingefärbt:
- * `store` orange, `copy` grün, `info` blau. Direkt als Hintergrundbild gesetzt,
- * bringen sie ihre Farbe mit und stehen bunt neben Contaos grauen.
+ * Contao's own group icons are grey — `--nav-group`, the same colour as the
+ * label beside them. The other icons in the folder are coloured: `store`
+ * orange, `copy` green, `info` blue. Set directly as a background image, they
+ * bring their colour along and stand out colourfully next to Contao's grey ones.
  *
- * `mask` dreht das um: Die Datei liefert nur noch die FORM, die Farbe kommt aus
- * `background-color`. Damit lässt sich jedes Symbol des Ordners in exakt der
- * Menüfarbe zeichnen — und weil `--nav-group` im dunklen Schema von selbst auf
- * #9fa4a8 wechselt, entfällt jede eigene Dark-Mode-Regel.
+ * `mask` turns that round: the file supplies only the SHAPE, the colour comes
+ * from `background-color`. So any icon of the folder can be drawn in exactly
+ * the menu colour — and because `--nav-group` switches to #9fa4a8 in the dark
+ * scheme by itself, no dark mode rule of our own is needed.
  *
- * Die Maske sitzt auf einem `::before`, nicht auf dem Link selbst: Eine Maske
- * auf dem `<a>` würde auch dessen Text ausstanzen.
+ * The mask sits on a `::before`, not on the link itself: a mask on the `<a>`
+ * would cut out its text as well.
  *
- * ── 🔴 Die Falle mit `var()` und relativen Pfaden ─────────────────────────
+ * ── 🔴 The trap with `var()` and relative paths ─────────────────────────────
  *
- * Contao stellt für seine Gruppensymbole Variablen bereit (`--icon-wrench`).
- * Aus einer FREMDEN Datei sind die unbrauchbar: Ihr Wert ist ein relativer
- * Pfad, und der wird gegen das Stylesheet aufgelöst, das die Variable BENUTZT.
- * Aus dieser Datei heraus zeigt `--icon-wrench` auf
- * `bundles/contaoconsho/icons/wrench.svg` — ein 404, ohne jede Meldung.
- * Belegt am 2026-09-09 auf dem Testserver.
+ * Contao provides variables for its group icons (`--icon-wrench`). From a
+ * FOREIGN file they are useless: their value is a relative path, and it is
+ * resolved against the stylesheet that USES the variable. From this file
+ * `--icon-wrench` points at `bundles/contaoconsho/icons/wrench.svg` — a 404,
+ * without any message.
  *
- * Eigene Variablen sind davon nicht betroffen: `--consho-icon` wird hier
- * deklariert UND hier benutzt, der Pfad löst also gegen diese Datei auf.
+ * Our own variables are not affected: `--consho-icon` is declared here AND
+ * used here, so the path resolves against this file.
  *
- * ⚠️ Deshalb `../../` und nicht `/system/…` — so trifft es auch, wenn Contao
- * in einem Unterverzeichnis installiert ist.
+ * ⚠️ Hence `../../` and not `/system/…` — that way it also works when Contao
+ * is installed in a subdirectory.
  */
 
 #tl_navigation .menu_level_0 a[class^="group-consho"] {
@@ -54,36 +52,36 @@
     mask: var(--consho-icon) center / 13px 13px no-repeat;
 }
 
-/* Betrieb — Bestellungen. Der Einkaufswagen. */
+/* Operations — orders. The shopping cart. */
 #tl_navigation .group-consho {
     --consho-icon: url("../../system/themes/flexible/icons/store.svg");
 }
 
-/* Stammdaten — Produkte, Hersteller. */
+/* Master data — products, manufacturers. */
 #tl_navigation .group-consho_data {
     --consho-icon: url("../../system/themes/flexible/icons/modules.svg");
 }
 
-/* Einrichtung — dasselbe Symbol wie Contaos eigene Systemgruppe. */
+/* Setup — the same icon as Contao's own system group. */
 #tl_navigation .group-consho_setup {
     --consho-icon: url("../../system/themes/flexible/icons/wrench.svg");
 }
 
 /*
- * ── Statussignale in der Bestellliste ────────────────────────────────────
+ * ── Status signals in the order list ─────────────────────────────────────
  *
- * Dieselbe Maskentechnik wie oben, hier aber mit vier Farben statt einer:
- * Das SYMBOL sagt, worum es geht (Bestellung, Zahlung, Lieferung), die FARBE
- * sagt, wie es steht.
+ * The same mask technique as above, but with four colours instead of one:
+ * the ICON says what it is about (order, payment, delivery), the COLOUR says
+ * how it stands.
  *
- * Die Farben sind Contaos eigene semantische Variablen, nicht die Hex-Werte
- * seiner Symbole. Jede davon ist im dunklen Schema neu gesetzt — ein festes
- * #c7241f bliebe dort ein dunkles Rot auf dunklem Grund.
+ * The colours are Contao's own semantic variables, not the hex values of its
+ * icons. Each of them is set anew in the dark scheme — a fixed #c7241f would
+ * stay a dark red on a dark ground there.
  *
- * Die Signale stehen am ZEILENANFANG, nicht am Ende. Am Ende säßen sie neben
- * den Operator-Knöpfen: bunte Zeichen neben bunten Zeichen, die einen bedeuten
- * „Zustand", die anderen „hier klicken". Vorn bilden sie eine Spalte, die sich
- * nach unten abscannen lässt.
+ * The signals stand at the START of the row, not at the end. At the end they
+ * would sit next to the operation buttons: coloured signs next to coloured
+ * signs, the one meaning "state", the other "click here". At the front they
+ * form a column that can be scanned downwards.
  */
 
 .consho-signals {
@@ -110,17 +108,17 @@
 }
 
 /*
- * Lieferung: das Duplizieren-Symbol — zwei versetzte Kästen, die als Pakete
- * lesbar sind. Contao hat weder Lastwagen noch Paket in der passenden
- * Strichstärke; `archive` wäre wörtlicher, ist aber mit stroke-width 1.5
- * gezeichnet und wirkt neben den anderen zu dünn.
+ * Delivery: the duplicate icon — two offset boxes that read as parcels.
+ * Contao has neither a lorry nor a parcel in the matching stroke width;
+ * `archive` would be more literal, but it is drawn with stroke-width 1.5 and
+ * looks too thin next to the others.
  */
 .consho-signal--copy {
     --consho-icon: url("../../system/themes/flexible/icons/copy.svg");
 }
 
-/* Der Widerruf (D-3): der Rückgängig-Pfeil — die Liste „Widerrufe" dreht die
- * drei Symbole der Bestellung um (Gesamt, Rücksendung, Rückzahlung). */
+/* The withdrawal (D-3): the undo arrow — the list "Widerrufe" turns the
+ * order's three icons round (overall, return, refund). */
 .consho-signal--undo {
     --consho-icon: url("../../system/themes/flexible/icons/undo.svg");
 }
@@ -131,31 +129,28 @@
 .consho-signal--done { background-color: var(--green, #49840b); }
 
 /*
- * ── Der Sortierhinweis der Bilderauswahl ──────────────────────────────────
+ * ── The sorting hint of the image picker ──────────────────────────────────
  *
- * Contaos Hinweis wird ausgeblendet — der Satz steht bei uns in der
- * Feldhilfe.
+ * Contao's hint is hidden — we carry the sentence in the field help.
  *
- * Drei Versuche, ihn zu platzieren, drei neue Überlappungen: über den
- * Bildern, unter der Feldhilfe, wieder über den Bildern. Der Absatz ist auf
- * `top: -50px` gebaut, also auf die Annahme, dass über dem Dateibaum genau
- * eine Feldbeschriftung steht — jede Palette, die anders aussieht, bringt
- * ihn durcheinander.
+ * Three attempts to place it, three new overlaps: above the images, below the
+ * field help, above the images again. The paragraph is built on
+ * `top: -50px`, that is on the assumption that exactly one field label stands
+ * above the file tree — every palette that looks different upsets it.
  *
- * Der Hinweis existiert, weil eine DCA im Allgemeinen keine Feldhilfe zum
- * Sortieren hat. Unsere hat eine. Damit ist der Absatz nicht falsch
- * positioniert, sondern überflüssig.
+ * The hint exists because a DCA in general has no field help for sorting.
+ * Ours has one. So the paragraph is not misplaced but superfluous.
  */
 #tl_consho_product .selector_container p.sort_hint {
     display: none;
 }
 
 /*
- * ── Der Knopf an einem Hinweis ────────────────────────────────────────────
+ * ── The button on a notice ────────────────────────────────────────────────
  *
- * Klein und zurückhaltend: Er steht in einer Meldungsbox, und ein
- * vollwertiger Knopf würde dort mehr Gewicht bekommen als die Meldung
- * selbst. Warnungen tragen ihn nicht — siehe BackendSystemMessagesListener.
+ * Small and restrained: it stands in a message box, and a full button would
+ * carry more weight there than the message itself. Warnings do not carry it —
+ * see BackendSystemMessagesListener.
  */
 .consho-ack {
     display: inline;
@@ -179,14 +174,14 @@
 }
 
 /*
- * Tabs über den Übersetzungsabschnitten — gesetzt von backend-tabs.js.
+ * Tabs over the translation sections — set by backend-tabs.js.
  *
- * Alle Regeln hängen an Klassen, die erst das Script vergibt. Ohne JavaScript
- * greift hier also nichts, und die Abschnitte bleiben gewöhnliche aufklappbare
- * Fieldsets.
+ * All rules hang on classes only the script assigns. Without JavaScript
+ * nothing here applies, and the sections stay ordinary collapsible fieldsets.
  *
- * Die Farben kommen aus Contaos eigenen Variablen, damit das dunkle Schema
- * ohne eigene Regel mitzieht — dasselbe Prinzip wie bei den Menüsymbolen oben.
+ * The colours come from Contao's own variables, so that the dark scheme
+ * follows without a rule of its own — the same principle as with the menu
+ * icons above.
  */
 .consho-translation-tabs {
     display: flex;
@@ -214,18 +209,18 @@
     font-weight: 600;
 }
 
-/* Im Tab-Modus benennt der Tab den Abschnitt; die Legende mit ihrem
-   Aufklappknopf wäre doppelt und würde den Abschnitt wieder zuklappen lassen. */
+/* In tab mode the tab names the section; the legend with its toggle button
+   would be a duplicate and would let the section fold up again. */
 fieldset.consho-translation-panel > legend {
     display: none;
 }
 
 /*
- * ── „Widerruf bearbeiten" (D-3, F12) ──────────────────────────────────────
+ * ── "Widerruf bearbeiten" (D-3, F12) ──────────────────────────────────────
  *
- * Kopf mit den drei Symbolen der Liste, zwei Spalten für Erklärung und
- * Fristen, die Knöpfe nebeneinander. Farben und Schriften bleiben Contaos:
- * nur Anordnung, keine eigene Optik.
+ * Head with the list's three icons, two columns for declaration and
+ * deadlines, the buttons side by side. Colours and fonts stay Contao's:
+ * layout only, no look of our own.
  */
 .consho-withdrawal-page {
     padding: 0 15px 15px;
@@ -293,10 +288,9 @@ fieldset.consho-translation-panel > legend {
 }
 
 /*
- * Dashboard (Block Dashboard): Kopf, dann je Shop ein Block, höchstens zwei
- * nebeneinander (Michael, 2026-10-07, D2), auf schmalen Bildschirmen
- * untereinander. Farben nur aus Contaos Variablen — das dunkle Schema setzt
- * sie selbst um.
+ * Dashboard (Block Dashboard): header, then one block per shop, at most two
+ * side by side (D2), one below the other on narrow screens. Colours only from
+ * Contao's variables — the dark scheme converts them itself.
  */
 .consho-dashboard__header {
     margin: 0 0 20px;
@@ -381,9 +375,9 @@ fieldset.consho-translation-panel > legend {
 }
 
 /*
- * Flex statt Raster: vier Karten teilen sich die ganze Breite, kommt die
- * fünfte (Reklamationen) dazu, rücken alle zusammen — kein leerer Platz für
- * eine Karte, die meist fehlt (Michael, 2026-10-07).
+ * Flex instead of grid: four cards share the full width; when the fifth
+ * (complaints) joins, they all move closer — no empty space for a card that
+ * is usually missing.
  */
 .consho-dashboard__tiles {
     display: flex;
@@ -469,9 +463,9 @@ a.consho-dashboard__box:hover {
 }
 
 /*
- * Einrichtung (Block I): dieselben Kästen wie das Dashboard, die Schritte als
- * nummerierte Liste mit Zustand. Grün erledigt, Rot offen, Orange prüfen —
- * dieselben Variablen wie die Signale der Produktliste.
+ * Setup (Block I): the same boxes as the dashboard, the steps as a numbered
+ * list with a state. Green done, red open, orange to check — the same
+ * variables as the signals of the product list.
  */
 .consho-setup__intro {
     margin: 0 0 16px;
@@ -543,7 +537,7 @@ a.consho-dashboard__box:hover {
     margin: 8px 8px 0 0;
 }
 
-/* Der Cache ist neutral: kein Zustand, keine Warnfarbe am Kasten (I4b). */
+/* The cache is neutral: no state, no warning colour on the box (I4b). */
 .consho-setup__cache {
     margin-top: 16px;
 }
@@ -556,10 +550,9 @@ a.consho-dashboard__box:hover {
 .consho-setup__measured--failed { color: var(--red, #c7241f); }
 
 /*
- * Warnungen und Hinweise als zwei zählende Kästen rechts vom Kopfbalken
- * (Michael, 2026-10-09, DB1: „rechts vom Headerbalken"): grau bei 0, rot bzw.
- * blau ab 1; die Liste öffnet sich als Dialog. Auf schmalen Bildschirmen
- * rutschen die Kästen unter den Balken.
+ * Warnings and notices as two counting boxes to the right of the header bar
+ * (DB1): grey at 0, red or blue from 1; the list opens as a dialog. On narrow
+ * screens the boxes slide below the bar.
  */
 .consho-dashboard__top {
     display: flex;
@@ -570,10 +563,9 @@ a.consho-dashboard__box:hover {
 }
 
 /*
- * Wachstum 999 : 1 — in einer Zeile bekommt der Balken praktisch den ganzen
- * freien Platz; rutschen die Kästen auf eine eigene Zeile, füllen sie sie
- * (Michael, 2026-10-09: „dann sollten die zwei Boxen die gesamte Breite
- * ausfüllen"). Ohne Media-Query, also ohne geratene Umbruchbreite.
+ * Growth 999 : 1 — in one line the bar gets practically all the free space;
+ * when the boxes slide onto a line of their own, they fill it. No media
+ * query, so no guessed breakpoint.
  */
 .consho-dashboard__top .consho-dashboard__header {
     flex: 999 1 320px;
@@ -666,23 +658,22 @@ button.consho-dashboard__finding:focus-visible {
     cursor: pointer;
 }
 
-/* Contaos Meldungen bringen eigene Ränder mit; im Dialog genügt sein Abstand. */
+/* Contao's messages bring their own margins; in the dialog its spacing is enough. */
 .consho-dashboard__dialog > :last-child {
     margin-bottom: 0;
 }
 
 /*
- * ── Brutto | Netto als Schalter ───────────────────────────────────────────
+ * ── Brutto | Netto as a switch ────────────────────────────────────────────
  *
- * Zwei Radio-Buttons, gezeichnet als ein Schalter mit zwei Hälften (Michael,
- * 2026-10-24). Die Radios bleiben im Formular, nur unsichtbar: Tastatur,
- * Screenreader und Speichern laufen wie zuvor. Gesetzt über die tl_class
- * `consho-switch` (Preise, Versandpreise).
+ * Two radio buttons, drawn as one switch with two halves. The radios stay in
+ * the form, only invisible: keyboard, screen reader and saving work as
+ * before. Set through the tl_class `consho-switch` (prices, shipping prices).
  *
- * Die Optionen stehen in je einem <span> (RadioButton::generate()); `flex`
- * auf dem Span schluckt das Leerzeichen zwischen Radio und Label. `float`
- * statt Flex auf dem Fieldset, weil die Legende in einem Flex-Fieldset kein
- * Flex-Element ist und die Browser sie unterschiedlich setzen.
+ * Each option sits in a <span> (RadioButton::generate()); `flex` on the span
+ * swallows the space between radio and label. `float` instead of flex on the
+ * fieldset, because the legend in a flex fieldset is not a flex item and
+ * browsers place it differently.
  */
 .consho-switch .tl_radio_container > span {
     position: relative;
@@ -723,7 +714,7 @@ button.consho-dashboard__finding:focus-visible {
     background: var(--form-button-hover, #f6f6f8);
 }
 
-/* Orange mit weißer Schrift in beiden Schemata: --white ist im dunklen schwarz. */
+/* Orange with white text in both schemes: --white is black in the dark one. */
 .consho-switch .tl_radio:checked + label {
     position: relative;
     border-color: var(--contao, #f47c00);
@@ -737,16 +728,16 @@ button.consho-dashboard__finding:focus-visible {
 }
 
 /*
- * ── Einzelne Checkbox als Schiebeschalter ─────────────────────────────────
+ * ── A single checkbox as a slide switch ───────────────────────────────────
  *
- * Ein/Aus wie bei Brutto | Netto, aber für eine einzelne Checkbox (Michael,
- * 2026-10-24: „ja, so vorgehen"). Es bleibt die echte Checkbox, nur anders
- * gezeichnet: Speichern, submitOnChange und Tastatur laufen wie zuvor.
- * Gesetzt über die tl_class `consho-toggle`, an jeder einzelnen Checkbox der Consho-Masken.
+ * On/off like Brutto | Netto, but for a single checkbox. It stays the real
+ * checkbox, only drawn differently: saving, submitOnChange and keyboard work
+ * as before. Set through the tl_class `consho-toggle`, on every single
+ * checkbox of the Consho masks.
  *
- * CheckBox::generateCheckbox() legt Checkbox und Label in ein <span>; als
- * Flex-Zeile steht der Schalter mittig neben dem Label, und das Leerzeichen
- * dazwischen fällt weg.
+ * CheckBox::generateCheckbox() puts checkbox and label into a <span>; as a
+ * flex row the switch stands centred next to the label, and the space in
+ * between disappears.
  */
 .consho-toggle .tl_checkbox_single_container > span {
     display: inline-flex;
@@ -781,7 +772,7 @@ button.consho-dashboard__finding:focus-visible {
     transition: transform 0.15s;
 }
 
-/* Orange wie die gewählte Hälfte bei Brutto | Netto. */
+/* Orange like the chosen half of Brutto | Netto. */
 .consho-toggle .tl_checkbox:checked {
     background: var(--contao, #f47c00);
 }
@@ -800,8 +791,8 @@ button.consho-dashboard__finding:focus-visible {
     cursor: default;
 }
 
-/* 'readonly' => true wird zum Attribut readonly, das Browser an einer
- * Checkbox nicht beachten: Sie ließe sich umlegen, gespeichert würde nichts. */
+/* 'readonly' => true becomes the attribute readonly, which browsers ignore on
+ * a checkbox: it could be flipped, and nothing would be saved. */
 .consho-toggle .tl_checkbox[readonly] {
     opacity: 0.5;
     cursor: default;

@@ -43,8 +43,8 @@ class ArchiveFolderListenerTest extends TestCase
     }
 
     /**
-     * Wie der Dateimanager: Marker weg, Symlinks neu, Log. Ohne die Symlinks
-     * lieferte der alte Link unter public/ den Ordner weiter aus.
+     * Like the file manager: marker gone, symlinks anew, log. Without the
+     * symlinks the old link under public/ would keep serving the folder.
      */
     public function testEinOeffentlicherOrdnerWirdBeimSpeichernGesperrtWieImDateimanager(): void
     {
@@ -74,8 +74,8 @@ class ArchiveFolderListenerTest extends TestCase
     }
 
     /**
-     * Die Ausnahme erscheint am Feld und hält das Formular — die Auswahl
-     * wird nie gespeichert.
+     * The exception appears at the field and holds the form — the selection is
+     * never saved.
      */
     public function testEinOeffentlicherOberordnerWirdAmFeldAbgelehnt(): void
     {

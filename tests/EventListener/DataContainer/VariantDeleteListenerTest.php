@@ -12,10 +12,10 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\VariantDeleteList
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Michael, 2026-10-11 („1 als (b)"): Wer ein Hauptprodukt löscht, löscht
- * seine Varianten mit — samt Preisen, Übersetzungen und Zuordnungen, alles in
- * DEMSELBEN Papierkorb-Eintrag, damit „Wiederherstellen" das Produkt ganz
- * zurückbringt. Vorher blieben die Varianten verwaist zurück.
+ * Whoever deletes a main product deletes its variants with it — prices,
+ * translations and assignments included, all in THE SAME recycle bin entry,
+ * so that "Restore" brings the product back in full. Previously the
+ * variants were left behind as orphans.
  */
 class VariantDeleteListenerTest extends TestCase
 {
@@ -35,8 +35,8 @@ class VariantDeleteListenerTest extends TestCase
             require __DIR__.'/../../../contao/dca/'.$table.'.php';
         }
 
-        // Hauptprodukt 5 mit den Varianten 6 und 7; Produkt 9 als Nachbar mit
-        // eigener Übersetzung unter derselben Nummer in einer anderen Tabelle.
+        // Main product 5 with variants 6 and 7; product 9 as a neighbour with its
+        // own translation under the same number in another table.
         $this->connection->insert('tl_consho_product', ['id' => 5, 'pid' => 0, 'title' => 'Essig']);
         $this->connection->insert('tl_consho_product', ['id' => 6, 'pid' => 5, 'title' => 'Essig 1 l']);
         $this->connection->insert('tl_consho_product', ['id' => 7, 'pid' => 5, 'title' => 'Essig 2 l']);
@@ -47,7 +47,7 @@ class VariantDeleteListenerTest extends TestCase
         $this->connection->insert('tl_consho_product_shop', ['id' => 63, 'pid' => 7, 'shop' => 1]);
         $this->connection->insert('tl_consho_product_option', ['id' => 64, 'pid' => 7, 'optionId' => 3]);
 
-        // Der Eintrag, den DC_Table vor dem ondelete für das Hauptprodukt schreibt.
+        // The entry that DC_Table writes for the main product before the ondelete.
         $this->connection->insert('tl_undo', [
             'id' => 1,
             'fromTable' => 'tl_consho_product',
@@ -70,7 +70,7 @@ class VariantDeleteListenerTest extends TestCase
         self::assertSame([], $this->ids('tl_consho_price'));
         self::assertSame([], $this->ids('tl_consho_product_shop'));
         self::assertSame([], $this->ids('tl_consho_product_option'));
-        // Nur die Übersetzung der Variante, nicht die des Herstellers 6.
+        // Only the variant's translation, not that of manufacturer 6.
         self::assertSame([62], $this->ids('tl_consho_translation'));
     }
 
@@ -87,10 +87,10 @@ class VariantDeleteListenerTest extends TestCase
         self::assertSame([61], array_map(static fn (array $row): int => (int) $row['id'], $data['tl_consho_translation']));
         self::assertSame([63], array_map(static fn (array $row): int => (int) $row['id'], $data['tl_consho_product_shop']));
         self::assertSame([64], array_map(static fn (array $row): int => (int) $row['id'], $data['tl_consho_product_option']));
-        // 1 Hauptprodukt + 2 Varianten + 4 Kinder.
+        // 1 main product + 2 variants + 4 children.
         self::assertSame(7, (int) $undo['affectedRows']);
 
-        // Contao stellt Tabelle für Tabelle wieder her: das Produkt vor seinen Preisen.
+        // Contao restores table by table: the product before its prices.
         self::assertSame('tl_consho_product', array_key_first($data));
     }
 
@@ -103,8 +103,8 @@ class VariantDeleteListenerTest extends TestCase
     }
 
     /**
-     * Ohne Varianten fragt der Listener nicht einmal nach dem Eintrag — ein
-     * Löschen ohne Papierkorb-Eintrag scheitert nicht an ihm.
+     * Without variants the listener does not even ask for the entry — a delete
+     * without a recycle bin entry does not fail on it.
      */
     public function testOhneVariantenBrauchtEsKeinenEintrag(): void
     {
@@ -135,8 +135,8 @@ class VariantDeleteListenerTest extends TestCase
     }
 
     /**
-     * Nach KeyPoolListener und StockFieldsListener: die sehen die Varianten
-     * noch in der Datenbank (Contao ruft höhere Priorität zuerst).
+     * After KeyPoolListener and StockFieldsListener: they still see the
+     * variants in the database (Contao calls higher priority first).
      */
     public function testLaeuftAlsLetzterOndelete(): void
     {
@@ -148,10 +148,10 @@ class VariantDeleteListenerTest extends TestCase
     }
 
     /**
-     * 🔴 Stünde das Produkt in seiner eigenen ctable, löschte reviseTable()
-     * beim nächsten Aufruf der Liste jedes Hauptprodukt (pid 0, kein Elternteil).
-     * Die Zuordnungen dagegen gehören hinein — und werden nicht von Contao
-     * kopiert, sondern von ProductCopyListener.
+     * 🔴 If the product were in its own ctable, reviseTable() would delete every
+     * main product (pid 0, no parent) the next time the list is called. The
+     * assignments, on the other hand, belong in it — and are copied not by
+     * Contao but by ProductCopyListener.
      */
     public function testDieCtableDesProdukts(): void
     {

@@ -44,18 +44,17 @@
         <p class="consho-checkout__renewal-refused" role="alert">{{ "CONSHO.subscription.renewalRefused"|trans([renewal_refused], "contao_default") }}</p>
     {% elseif blockers|default([]) is not empty %}
         {#
-            11.2: eine Warnung sperrt den Checkout dieses Shops. Was fehlt,
-            steht im Backend — dem Kunden zu sagen, dass keine Zahlungsart
-            eingerichtet ist, hilft niemandem.
+1.2: a warning blocks the checkout of this shop. What is missing
+            is shown in the back end — telling the customer that no payment
+            method is set up helps nobody.
         #}
         <p class="consho-checkout__blocked" role="alert">{{ "CONSHO.checkout.blocked"|trans({}, "contao_default") }}</p>
     {% elseif already_ordered|default(false) %}
         {#
-            F2: Der Kaufklick kam ein zweites Mal an, nachdem der erste schon
-            festgeschrieben hatte — zurück im Browser und noch einmal
-            abgeschickt. Der Warenkorb ist konvertiert und damit unauffindbar;
-            „Ihr Warenkorb ist leer" wäre die falsche Auskunft für jemanden,
-            der gerade gekauft hat.
+            F2: the purchase click arrived a second time after the first had
+            already been committed — back in the browser and submitted again.
+            The cart is converted and can no longer be found; "Ihr Warenkorb
+            ist leer" would be the wrong answer for someone who has just bought.
         #}
         <p class="consho-checkout__already-ordered" role="status">{{ "CONSHO.checkout.alreadyOrdered"|trans({}, "contao_default") }}</p>
     {% elseif state.cart.isEmpty %}
@@ -93,11 +92,11 @@
                     <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
 
                     {#
-                        WCAG 3.3.2: „required" allein ist eine Anweisung an den
-                        Browser, keine an den Menschen. Wer das Formular liest,
-                        bevor er es ausfüllt, muss sehen, was nötig ist — und
-                        ein Screenreader liest den Stern über aria-hidden nicht
-                        mit, weil das Feld schon required ist.
+                        WCAG 3.3.2: "required" alone is an instruction to the
+                        browser, not to the person. Whoever reads the form before
+                        filling it in has to see what is needed — and a screen
+                        reader does not read the asterisk (aria-hidden), because
+                        the field is already required.
                     #}
                     <p class="consho-checkout__required-note">{{ "CONSHO.checkout.requiredNote"|trans({}, "contao_default") }}</p>
 
@@ -113,10 +112,10 @@
                                 </label>
                                 {% if field == 'country' %}
                                     {#
-                                        Eine Auswahl, kein Freitext: „Österreich"
-                                        statt „AT" hätte keinen Steuersatz und
-                                        damit keinen Preis — der Besucher läse
-                                        eine Meldung über seinen Warenkorb.
+                                        A choice, not free text: "Österreich"
+                                        instead of "AT" would have no tax rate
+                                        and so no price — the visitor would read
+                                        a message about their cart.
                                     #}
                                     <select id="{{ id }}" name="billing_country" required autocomplete="billing country">
                                         <option value="">{{ "CONSHO.checkout.choose"|trans({}, "contao_default") }}</option>
@@ -174,7 +173,7 @@
                         </legend>
                         {% for field in shipping_fields|default(address_fields) %}
                             {% set id = 'consho_shipping_' ~ field ~ '_' ~ element_id %}
-                            {#- Keine Anrede und keine E-Mail in der Lieferadresse (Abnahme C-10): Die Bestellung speichert sie dort nicht, die Kontaktdaten sind die der Rechnungsadresse. Und alles hier gilt nur, wenn das Häkchen oben gesetzt ist — deshalb sagt es die Legende. -#}
+                            {#- No salutation and no e-mail in the delivery address (C-10): the order does not store them there, the contact details are those of the billing address. And everything here applies only when the box above is ticked — which is why the legend says so. -#}
                             {% set required = field in ['lastname', 'street', 'postal', 'city', 'country'] %}
                             <p>
                                 <label for="{{ id }}">
@@ -327,10 +326,10 @@
                                         <a href="{{ text.url }}" target="_blank" rel="noopener noreferrer">
                                             {{- ("CONSHO.checkout.legal." ~ kind)|trans({}, "contao_default") -}}
                                             {#
-                                                WCAG 3.2.5 / G201: Dass ein neues Fenster aufgeht,
-                                                muss man vorher wissen können — sichtbar UND für
-                                                Screenreader. Das Fenster selbst bleibt: Wer die AGB
-                                                liest, soll den ausgefüllten Checkout nicht verlieren.
+                                                WCAG 3.2.5 / G201: that a new window opens has to be
+                                                knowable beforehand — visibly AND for screen readers.
+                                                The window itself stays: whoever reads the terms should
+                                                not lose the filled-in checkout.
                                             #}
                                             <span class="consho-checkout__new-window">{{ "CONSHO.checkout.legal.newWindow"|trans({}, "contao_default") }}</span></a>
                                     {% else %}
@@ -339,12 +338,12 @@
                                     {% if not loop.last %} · {% endif %}
                                 {% endfor %}
                                 {#
-                                    Die harmonisierte Gewährleistungs-Mitteilung
-                                    (§ 4 Abs 1 Z 12 FAGG, DVO (EU) 2025/1960). Die
-                                    Guidelines (2.3) nennen die Checkout-Seite
-                                    ausdrücklich als zulässigen Ort und verlangen
-                                    einen KLICKBAREN Link zum selben Ziel wie der
-                                    QR-Code — den trägt die verlinkte Seite.
+                                    The harmonised notice on the legal guarantee
+                                    (§ 4 Abs 1 Z 12 FAGG, Implementing Regulation (EU)
+025/1960). The guidelines (2.3) name the checkout
+                                    page expressly as an acceptable place and ask for a
+                                    CLICKABLE link to the same target as the QR code —
+                                    the linked page carries it.
                                 #}
                                 {% if warranty_url|default(null) %}
                                     · <a href="{{ warranty_url }}" target="_blank" rel="noopener noreferrer">
@@ -379,8 +378,7 @@
                             the operator can change it.
                         #}
                         {#
-                            The hint on a line of its own (acceptance on c5,
-                            2026-09-29): inline it read as part of the consent.
+                            The hint on a line of its own: inline it read as part of the consent.
                         #}
                         {#
                             Abo-2, P14 (A12): still ONE box and one tick, worded
@@ -404,7 +402,7 @@
                                     </label>
                                 </p>
                                 <p class="consho-checkout__hint" id="consho_digital_consent_hint_{{ element_id }}"><small>{{ (consent_kinds == ['service'] ? "CONSHO.checkout.digitalConsentHintService" : ('service' in consent_kinds ? "CONSHO.checkout.digitalConsentHintMixed" : "CONSHO.checkout.digitalConsentHint"))|trans({}, "contao_default") }}</small></p>
-                                {#- Abo-7b (review S5): a renewal waits for the consent too. #}
+                                {#- Abo-7b: a renewal waits for the consent too. #}
                                 {% if renewal_consent_hint|default(false) %}
                                     <p class="consho-checkout__hint consho-checkout__hint--renewal"><small>{{ "CONSHO.checkout.renewalConsentHint"|trans({}, "contao_default") }}</small></p>
                                 {% endif %}
@@ -429,11 +427,10 @@
                                         <span class="consho-checkout__review-title">
                                             {{- line.title|default("CONSHO.cart.unknownArticle"|trans({}, "contao_default")) -}}
                                             {#
-                                                Die Artikelnummer steht dabei, weil CartTitles den Titel des
-                                                HAUPTPRODUKTS liefert: Zwei Varianten desselben Produkts läsen
-                                                sich sonst gleich — ausgerechnet dort, wo § 8 FAGG die
-                                                wesentlichen Merkmale verlangt. Dieselbe Regel wie im
-                                                Warenkorb seit C-3.
+                                                The article number is shown because CartTitles returns the title
+                                                of the MAIN PRODUCT: two variants of the same product would
+                                                otherwise read the same — precisely where § 8 FAGG asks for the
+                                                main characteristics. The same rule as in the cart since C-3.
                                             #}
                                             {%- if line.sku %} <span class="consho-checkout__review-sku">{{ line.sku }}</span>
                                             {%- else %} <span class="consho-checkout__review-position">#{{ line.position }}</span>{% endif -%}
@@ -458,12 +455,11 @@
 
                             <dl class="consho-checkout__totals">
                                 {#
-                                    ⚠️ Mit BETRAG, nicht nur mit Namen. § 8 Abs. 2 FAGG verweist auf
-                                    § 4 Abs. 1 Z 4: Gesamtpreis samt Steuern UND allen Fracht-, Liefer-
-                                    und Versandkosten; § 312j Abs. 2 BGB sagt dasselbe über
-                                    Art. 246a EGBGB. Die erste Fassung nannte nur „Paket" — die
-                                    Differenz zwischen den Zeilensummen und dem Gesamtbetrag blieb
-                                    unerklärt (Review 2026-09-22).
+                                    ⚠️ With the AMOUNT, not only the name. § 8 Abs. 2 FAGG refers to
+                                    § 4 Abs. 1 Z 4: the total price including taxes AND all freight,
+                                    delivery and shipping costs; § 312j Abs. 2 BGB says the same via
+                                    Art. 246a EGBGB. With only the method's name ("Paket"), the difference
+                                    between the line totals and the grand total would stay unexplained.
                                 #}
                                 {% if review_shipping|default(null) %}
                                     <dt>{{ "CONSHO.checkout.shipping"|trans({}, "contao_default") }}</dt>
@@ -501,7 +497,7 @@
                                     <dd>{{ net_total }}</dd>
                                     <dd class="consho-checkout__reverse-charge">{{ "CONSHO.checkout.reverse_charge"|trans({}, "contao_default") }}</dd>
                                 {% elseif untaxed|default(false) %}
-                                    {#- Acceptance WG-7: not taxable — no net line, no "incl. VAT". #}
+                                    {#- WG-7: not taxable — no net line, no "incl. VAT". #}
                                     <dt>{{ "CONSHO.checkout.total.plain"|trans({}, "contao_default") }}</dt>
                                     <dd><strong>{{ total }}</strong></dd>
                                 {% else %}
@@ -530,12 +526,12 @@
                             </dl>
 
                             {#
-                                Der Knopf nur, wenn auch gekauft werden kann.
-                                Ein Kaufknopf neben einer Meldung wie „Bitte
-                                vervollständigen Sie Ihre Adresse" wirft bei
-                                jedem Klick an dieselbe Stelle zurück — er sähe
-                                aus wie ein Ausweg und wäre keiner. Was fehlt,
-                                steht oben in der Problem-Region.
+                                The button only when a purchase is possible.
+                                A purchase button next to a message like "Bitte
+                                vervollständigen Sie Ihre Adresse" throws back to
+                                the same place on every click — it would look like
+                                a way out and would not be one. What is missing is
+                                shown above, in the problem region.
                             #}
                             {% if is_ready %}
                                 <button type="submit" class="consho-checkout__buy">

@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Pricing\ResolvedPrice;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block H, H-3: Katalog-Rabattregeln (H5, C1, C2) — auf den Preis, den die
- * Zeilen entschieden haben.
+ * Block H, H-3: catalogue discount rules (H5, C1, C2) — applied to the price the
+ * rows have decided on.
  */
 class CatalogPriceRulesTest extends TestCase
 {
@@ -28,7 +28,7 @@ class CatalogPriceRulesTest extends TestCase
             DcaSchema::create($this->connection, $table);
         }
 
-        // 1: Hersteller 3, Typ 4, Eigenschaft 50. 2: Hersteller 9. 5: Variante von 1 mit Eigenschaft 60.
+        // 1: manufacturer 3, type 4, property 50. 2: manufacturer 9. 5: variant of 1 with property 60.
         $this->connection->insert('tl_consho_product', ['id' => 1, 'pid' => 0, 'manufacturer' => 3, 'productType' => 4]);
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 0, 'manufacturer' => 9]);
         $this->connection->insert('tl_consho_product', ['id' => 5, 'pid' => 1]);
@@ -47,8 +47,8 @@ class CatalogPriceRulesTest extends TestCase
     }
 
     /**
-     * WG8: Eine Regel für alle trifft den Gutschein nicht — Geld unter
-     * seinem Wert zu verkaufen, hat niemand gesagt. Auch nicht die Variante.
+     * WG8: a rule for everything does not hit the voucher — nobody said to sell
+     * money below its value. Nor the variant.
      */
     public function testEinGutscheinWirdNieReduziert(): void
     {
@@ -114,7 +114,7 @@ class CatalogPriceRulesTest extends TestCase
 
     public function testEineGruppenregelAufDemListenpreisTraegtDieGruppe(): void
     {
-        // Review H, P4: sonst hielte nur der Netto-Vergleich in ComparePrices den Streichpreis fern.
+        // H: otherwise only the net comparison in ComparePrices would keep the strike-through price away.
         $this->rule(['percent' => '20', 'memberGroups' => serialize(['9', '7'])]);
 
         self::assertSame(7, $this->apply(1, groups: [3, 7, 9])->customerGroup);
@@ -199,7 +199,7 @@ class CatalogPriceRulesTest extends TestCase
      */
     private function apply(int $article, int|null $main = null, array $groups = [], ResolvedPrice|null $price = null, int $at = self::NOW): ResolvedPrice
     {
-        // Jedes Mal neu: die Klasse liest die Regeln einmal je Anfrage.
+        // Fresh every time: the class reads the rules once per request.
         return (new CatalogPriceRules($this->connection))->apply($article, $main ?? $article, $price ?? new ResolvedPrice('10.0000', 'EUR', PriceSource::List, '1'), $groups, $at);
     }
 }

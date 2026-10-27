@@ -18,14 +18,14 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen die echten DCA- und Sprachdateien und eine SQLite-Datenbank.
+ * Against the real DCA and language files and an SQLite database.
  *
- * Die DCA-Dateien statt einer nachgebauten Kopie, weil genau ihr Inhalt
- * entscheidet, was beim Kopieren eines Felds entfernt werden muss — eine Kopie
- * im Test würde nur prüfen, was man ohnehin schon erwartet hat.
+ * The DCA files instead of a rebuilt copy, because exactly their content
+ * decides what must be removed when a field is copied — a copy in the test
+ * would only check what one expected anyway.
  *
- * DC_Table selbst läuft hier nicht. Ob Contao ein Feld ohne Spalte wirklich
- * aus dem UPDATE hält, zeigt erst das Speichern im Browser.
+ * DC_Table itself does not run here. Whether Contao really keeps a field
+ * without a column out of the UPDATE only shows when saving in the browser.
  */
 class TranslationFieldsListenerTest extends TestCase
 {
@@ -44,7 +44,7 @@ class TranslationFieldsListenerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_product_shop');
 
-        // Aus der DCA, so streng wie die echte Tabelle — beide Unique-Indizes.
+        // From the DCA, as strict as the real table — both unique indexes.
         DcaSchema::create($this->connection, 'tl_consho_translation');
 
         require __DIR__.'/../../../contao/languages/de/default.php';
@@ -83,7 +83,7 @@ class TranslationFieldsListenerTest extends TestCase
         foreach (['title', 'alias', 'teaser', 'metaDescription', 'description', 'safetyWarnings', 'safetyInformation'] as $field) {
             self::assertArrayHasKey($field.'__en', $fields);
 
-            // Ohne sql-Schlüssel legt contao:migrate keine Spalte an.
+            // Without an sql key, contao:migrate creates no column.
             self::assertArrayNotHasKey('sql', $fields[$field.'__en']);
             self::assertArrayNotHasKey('search', $fields[$field.'__en']);
             self::assertTrue($fields[$field.'__en']['eval']['doNotSaveEmpty']);
@@ -91,25 +91,25 @@ class TranslationFieldsListenerTest extends TestCase
             self::assertSame([[$listener, 'save']], $fields[$field.'__en']['save_callback']);
         }
 
-        // Pflicht nur bedingt (Spezifikation 7.3); unique prüfte die Haupttabelle.
+        // Mandatory only conditionally (spec 7.3); unique checked the main table.
         self::assertArrayNotHasKey('mandatory', $fields['title__en']['eval']);
         self::assertArrayNotHasKey('unique', $fields['alias__en']['eval']);
         self::assertSame('alias', $fields['alias__en']['eval']['rgxp']);
         self::assertSame(['Bezeichnung (en)', 'Name des Produkts.'], $fields['title__en']['label']);
-        // Übernimmt Beschriftung und Eingabe des Originals — keine eigenen Sprachtexte nötig.
+        // Takes over label and input of the original — no language texts of its own needed.
         self::assertSame('Meta-Beschreibung (en)', $fields['metaDescription__en']['label'][0]);
         self::assertTrue($fields['metaDescription__en']['eval']['decodeEntities']);
 
-        // Das Original bleibt, wie es war.
+        // The original stays as it was.
         self::assertTrue($fields['title']['eval']['mandatory']);
         self::assertArrayHasKey('sql', $fields['title']);
     }
 
     public function testTheCallbacksOfTheOriginalFieldAreNotCopied(): void
     {
-        // Contao hängt die #[AsCallback]-Callbacks vor dem onload ein. Der
-        // Alias-Callback des Originals würde sonst einen Haupttabellen-Alias
-        // aus dem Haupttabellen-Titel erzeugen — im Übersetzungsfeld.
+        // Contao attaches the #[AsCallback] callbacks before the onload. The
+        // original's alias callback would otherwise generate a main table alias
+        // from the main table title — in the translation field.
         $GLOBALS['TL_DCA']['tl_consho_product']['fields']['alias']['save_callback'] = [['ProductAliasListener', '__invoke']];
 
         $this->shop(7, 'de', 'de', 'en');
@@ -151,7 +151,7 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testAVariantWithoutShopsOfItsOwnOffersTheLanguagesOfItsMainProduct(): void
     {
-        // Leere Shop-Auswahl an der Variante heißt „wie das Hauptprodukt".
+        // An empty shop selection on the variant means "like the main product".
         $this->shop(7, 'de', 'de', 'en');
         $this->assign(5, 7);
 
@@ -162,9 +162,9 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testEditingSeveralProductsOffersTheTranslationLanguagesOfAllShops(): void
     {
-        // „Mehrere bearbeiten": DC_Table setzt die ID erst in der Datensatz-
-        // schleife, nach dem onload. Ohne Rückfall gäbe es dort keinen einzigen
-        // Sprachabschnitt, gleich welche Produkte ausgewählt sind.
+        // "Edit multiple": DC_Table only sets the ID in the record loop, after
+        // the onload. Without a fallback there would not be a single language
+        // section there, whichever products are selected.
         $this->shop(7, 'de', 'de', 'en');
         $this->shop(8, 'fr', 'fr', 'it');
         $this->assign(5, 7);
@@ -175,10 +175,10 @@ class TranslationFieldsListenerTest extends TestCase
     }
 
     /**
-     * C-8: Ein Shop übersetzt seine Rechnungstexte in SEINE Sprachen — eine
-     * italienische Fußzeile gehört nicht in die Maske eines Shops, der nie
-     * italienisch verkauft. Die Palette ist die echte aus der DCA, damit die
-     * beiden Felder auch wirklich hinten ankommen.
+     * C-8: a shop translates its invoice texts into ITS languages — an Italian
+     * footer does not belong in the form of a shop that never sells in Italian.
+     * The palette is the real one from the DCA, so that the two fields really
+     * arrive at the end.
      */
     public function testEinShopBietetNurSeineEigenenSprachenAn(): void
     {
@@ -211,8 +211,8 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testATranslationIsOnlyEditableByWhoMayEditTheOriginalField(): void
     {
-        // Das erzeugte Feld kann in keiner Benutzergruppe freigegeben werden;
-        // es übernimmt deshalb das Recht am übersetzten Feld.
+        // The generated field cannot be enabled in any user group; it therefore
+        // takes over the permission of the translated field.
         $this->shop(7, 'de', 'de', 'en');
         $this->assign(5, 7);
 
@@ -245,9 +245,8 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testStoreKeepsWhatWasNotSubmitted(): void
     {
-        // write() ersetzt den ganzen Block. Ohne das Überlagern mit dem
-        // gespeicherten Stand leerte jedes Formular, das nicht alle Felder
-        // trägt, die übrigen.
+        // write() replaces the whole block. Without overlaying the stored state,
+        // every form that does not carry all fields would empty the others.
         $this->storage()->write('tl_consho_product', 5, 'en', ['title' => 'Bitters', 'alias' => 'bitters', 'teaser' => 'Kept']);
 
         $listener = $this->listener();
@@ -294,7 +293,7 @@ class TranslationFieldsListenerTest extends TestCase
         $listener->save('Bitters', $this->dc('tl_consho_product', 5, 'title__en'));
         $listener->store($this->dc('tl_consho_product', 5));
 
-        // Ein Hersteller steht an anderer Stelle im Pfad — derselbe Alias ist frei.
+        // A manufacturer sits elsewhere in the path — the same alias is free.
         $listener->save('Bitters', $this->dc('tl_consho_manufacturer', 4, 'title__en'));
         $listener->store($this->dc('tl_consho_manufacturer', 4));
 
@@ -313,8 +312,8 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testTheRowBeingSavedDoesNotBlockItsOwnAlias(): void
     {
-        // Zeilen-ID 2, Produkt-ID 5: Wer die Produkt-ID ausschlösse, fände die
-        // eigene Zeile als Dublette und lehnte den unveränderten Alias ab.
+        // Row ID 2, product ID 5: whoever excluded the product ID would find the
+        // own row as a duplicate and reject the unchanged alias.
         $this->storage()->write('tl_consho_manufacturer', 1, 'en', ['title' => 'Maker']);
         $this->storage()->write('tl_consho_product', 5, 'en', ['title' => 'Bitters', 'alias' => 'bitters']);
 
@@ -323,8 +322,8 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testAnAliasIsRequiredWhenTheBlockHasContentButNoTitle(): void
     {
-        // Spezifikation 7.3: Pflicht, sobald in der Sprache etwas ausgefüllt
-        // ist — und ohne Titel gibt es nichts, woraus er entstehen könnte.
+        // Spec 7.3: mandatory as soon as something is filled in for the language
+        // — and without a title there is nothing it could be generated from.
         $listener = $this->listener();
         $listener->save('Only a teaser', $this->dc('tl_consho_product', 5, 'teaser__en'));
 
@@ -348,7 +347,7 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testRecordsSubmittedTogetherAreStoredApart(): void
     {
-        // „Mehrere bearbeiten" schickt mehrere Datensätze in einer Anfrage.
+        // "Edit multiple" sends several records in one request.
         $listener = $this->listener();
         $listener->save('Bitters', $this->dc('tl_consho_product', 5, 'title__en'));
         $listener->save('Amaro', $this->dc('tl_consho_product', 6, 'title__en'));
@@ -361,8 +360,8 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testNachEinerGeaendertenSpracheWirdAuchDieNaechsteGeschrieben(): void
     {
-        // Ein `$changed || …` in falscher Reihenfolge übersprang den zweiten
-        // Block, sobald der erste geändert war.
+        // A `$changed || …` in the wrong order skipped the second block as soon
+        // as the first one had changed.
         $listener = $this->listener();
         $listener->save('Bitters', $this->dc('tl_consho_product', 5, 'title__en'));
         $listener->save('Amaro', $this->dc('tl_consho_product', 5, 'title__it'));
@@ -375,9 +374,9 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testAChangeToATranslationAloneAsksForANewVersion(): void
     {
-        // Die Übersetzungsfelder kommen nie ins UPDATE der Haupttabelle. Ist
-        // sonst nichts geändert, bleibt DC_Table::submit() ohne UPDATE und
-        // damit ohne Version — die Änderung stünde in keiner.
+        // The translation fields never go into the UPDATE of the main table. If
+        // nothing else has changed, DC_Table::submit() stays without an UPDATE
+        // and thus without a version — the change would be in none.
         $this->storage()->write('tl_consho_product', 5, 'en', ['title' => 'Bitters', 'alias' => 'bitters']);
 
         $listener = $this->listener();
@@ -407,7 +406,7 @@ class TranslationFieldsListenerTest extends TestCase
 
     public function testAnUnchangedTranslationDoesNotAskForANewVersion(): void
     {
-        // Sonst entstünde bei jedem Speichern eine Version, auch ohne Änderung.
+        // Otherwise every save would create a version, even without a change.
         $this->storage()->write('tl_consho_product', 5, 'en', ['title' => 'Bitters', 'alias' => 'bitters']);
 
         $listener = $this->listener();
@@ -430,8 +429,8 @@ class TranslationFieldsListenerTest extends TestCase
             $this->storage(),
             new AliasFactory($this->countingSlug(), $this->connection),
             $security,
-            // Echt über dieselbe Datenbank: Erreicht ihn ein Test hier doch,
-            // scheitert er laut an fehlenden Tabellen statt still nichts zu tun.
+            // For real, through the same database: if a test here does reach it, it
+            // fails loudly on missing tables instead of silently doing nothing.
             new RedirectRecorder($this->connection, new DbalProductPageRepository($this->connection), new ShopLanguages($this->connection)),
         );
     }
@@ -442,8 +441,8 @@ class TranslationFieldsListenerTest extends TestCase
     }
 
     /**
-     * Die Zählschleife von Contao\CoreBundle\Slug\Slug::generate(), damit die
-     * übergebene Dublettenprüfung wirklich gegen die Datenbank läuft.
+     * The counting loop of Contao\CoreBundle\Slug\Slug::generate(), so that the
+     * duplicate check passed in really runs against the database.
      */
     private function countingSlug(): Slug
     {
@@ -469,7 +468,7 @@ class TranslationFieldsListenerTest extends TestCase
      */
     private function dc(string $table, int $id, string $field = '', array $record = []): DC_Table&MockObject
     {
-        // DC_Table, nicht DataContainer: Nur dort gibt es createNewVersion.
+        // DC_Table, not DataContainer: only there does createNewVersion exist.
         $dc = $this->createMock(DC_Table::class);
         $dc->method('__get')->willReturnMap([['table', $table], ['id', $id], ['field', $field]]);
         $dc->method('getCurrentRecord')->willReturn($record);

@@ -8,7 +8,7 @@ use Doctrine\DBAL\Connection;
 
 /**
  * The values of a product's custom fields (block "Zusatzfeld-Werte", ZW-1;
- * decisions Z1–Z5, Michael 2026-10-14: „ja, alles wie empfohlen") — one rule
+ * decisions Z1–Z5) — one rule
  * for the mask, the product page and a command.
  *
  * - Which fields a product has comes from the product type of its main
@@ -206,8 +206,8 @@ class CustomFieldValues
 
             default:
                 // One line, as the mask's widget: a command could store a
-                // line break, which would break the Markdown list (review
-                // ZW-C, S2). Checked here, so mask, command and translation
+                // line break, which would break the Markdown list
+                // (ZW-C). Checked here, so mask, command and translation
                 // refuse alike.
                 if (1 === preg_match('/[\x00-\x1F\x7F]/u', $value)) {
                     throw new \InvalidArgumentException(\sprintf('%s: the text holds a line break or another control character.', $field->alias));

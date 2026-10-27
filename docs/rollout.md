@@ -1,8 +1,8 @@
 # Rollout
 
-Consho legt eigene Tabellen an und erweitert `tl_page`. Contao leitet das Schema aus den DCA-Dateien ab; `contao:migrate` erzeugt die Spalten.
+Consho creates its own tables and extends `tl_page`. Contao derives the schema from the DCA files; `contao:migrate` creates the columns.
 
-## Die Reihenfolge ist Cache → migrate → Cache
+## The order is cache → migrate → cache
 
 ```bash
 vendor/bin/contao-console cache:clear
@@ -10,140 +10,139 @@ vendor/bin/contao-console contao:migrate
 vendor/bin/contao-console cache:clear
 ```
 
-**Nicht** migrate → Cache. Contao liest die DCA im `prod`-Environment aus dem Cache. Solange der alte Cache steht, kennt `contao:migrate` die neuen Felder nicht — der Trockenlauf meldet dann seelenruhig „All migrations completed", obwohl keine einzige Spalte existiert.
+**Not** migrate → cache. In the `prod` environment Contao reads the DCA from the cache. As long as the old cache is in place, `contao:migrate` does not know the new fields — the dry run then calmly reports "All migrations completed", although not a single column exists.
 
-### 🔴 `--no-interaction` **fügt hinzu, löscht aber nie**
+### 🔴 `--no-interaction` **adds, but never deletes**
 
-Ein umbenanntes Feld erzeugt zwei Änderungen: die neue Spalte anlegen, die alte entfernen. `contao:migrate --no-interaction` führt **nur die erste** aus und meldet trotzdem „All migrations completed" — die `DROP`-Zeilen stehen in der Ausgabe, unter ihnen aber „Executed 0 SQL queries".
+A renamed field produces two changes: create the new column, remove the old one. `contao:migrate --no-interaction` executes **only the first** and still reports "All migrations completed" — the `DROP` lines are in the output, but below them it says "Executed 0 SQL queries".
 
-Belegt am 2026-09-09: Nach einer Feldumbenennung standen alte und neue Spalte nebeneinander, mit den alten Werten darin.
+After a field rename, the old and the new column stood side by side, with the old values still in the old one.
 
 ```bash
 vendor/bin/contao-console contao:migrate --no-interaction --with-deletes
 ```
 
-> ⚠️ **Vor `--with-deletes` die Werte übernehmen.** Ein `UPDATE tabelle SET neu = alt` dauert eine Zeile — danach ist die alte Spalte weg und mit ihr der Inhalt. Die richtige Reihenfolge ist: migrieren (neue Spalte entsteht) → Werte kopieren → `--with-deletes`.
+> ⚠️ **Copy the values over before `--with-deletes`.** An `UPDATE tabelle SET neu = alt` takes one line — afterwards the old column is gone, and its content with it. The right order is: migrate (the new column appears) → copy the values → `--with-deletes`.
 >
-> Gegenprobe, ob wirklich nichts übrig blieb:
+> Cross-check that really nothing was left over:
 >
 > ```sql
 > SELECT COLUMN_NAME FROM information_schema.COLUMNS
 > WHERE TABLE_NAME = 'tl_…' AND COLUMN_NAME IN ('alt', 'neu');
 > ```
 
-## Opcode-Cache des Webservers
+## The web server's opcode cache
 
-Prüft der Webserver seinen OPcache nicht nach (`opcache.validate_timestamps = 0` oder ein langer
-`revalidate_freq`), läuft nach einem Update im Web die **alte** Fassung jeder geänderten Klasse weiter,
-während die Konsole — `cache:warmup`, `contao:migrate` — schon den neuen Stand hat. Nichts scheitert,
-es sieht nur aus, als hätte die Änderung nicht gewirkt. Auf dem Testserver der Bundles so gemessen
-(2026-10-08). Abhilfe: nach dem Update den Opcode-Cache leeren (Contao Manager → Wartung) oder PHP-FPM
-neu starten.
+If the web server does not revalidate its OPcache (`opcache.validate_timestamps = 0` or a long
+`revalidate_freq`), the web keeps running the **old** version of every changed class after an update,
+while the console — `cache:warmup`, `contao:migrate` — already has the new state. Nothing fails,
+it just looks as if the change had no effect. Remedy: after the update, clear the opcode cache
+(Contao Manager → Wartung (Maintenance)) or restart PHP-FPM.
 
-## Danach gegenzählen
+## Count afterwards
 
-Seit Block I sagt ein Befehl, ob jeder Shop noch verkauft — Exit-Code 1, sobald einer es nicht tut,
-mit den Gründen darunter:
+Since Block I, one command tells whether every shop still sells — exit code 1 as soon as one does not,
+with the reasons below:
 
 ```bash
 vendor/bin/contao-console consho:check
 ```
 
-Der Trockenlauf lügt nicht, er sieht nur nichts. Prüfen:
+The dry run does not lie, it just does not see anything. Check:
 
 ```sql
 SELECT COUNT(*) FROM information_schema.COLUMNS
 WHERE TABLE_NAME = 'tl_page' AND COLUMN_NAME = 'consho_shop';
 ```
 
-Erwartet: 1
+Expected: 1
 
-## Das Fenster zwischen Schritt 1 und 2
+## The window between step 1 and 2
 
-Nach dem ersten `cache:clear` kennt Contao die Felder, die Datenbank aber noch nicht.
+After the first `cache:clear`, Contao knows the fields, but the database does not yet.
 
 | | |
 |---|---|
-| Backend | 🔴 Startpunkt bearbeiten wirft einen SQL-Fehler — das Formular fragt die Spalten namentlich ab |
-| Frontend | 🔴 seit C-1a nicht mehr unbetroffen — Produktlisten fragen `tl_consho_product_list_price.country` ab und der minütliche Grenzen-Cron (`ListPriceBoundaryCron`) `tl_consho_shop.country`; beide Spalten fehlen noch, beide werfen einen SQL-Fehler, bis `contao:migrate` gelaufen ist |
+| Back end | 🔴 editing a start page throws an SQL error — the form queries the columns by name |
+| Front end | 🔴 no longer unaffected since C-1a — product lists query `tl_consho_product_list_price.country` and the per-minute boundary cron (`ListPriceBoundaryCron`) queries `tl_consho_shop.country`; both columns are still missing, both throw an SQL error until `contao:migrate` has run |
 
-Das Fenster ist kurz, aber real. Bei Kundeninstallationen in eine Randzeit legen oder kurz den Wartungsmodus setzen.
+The window is short, but real. On customer installations, schedule it for off-peak hours or briefly enable maintenance mode.
 
-## Heimatland und Listenpreise je Land (C-1a)
+## Home country and list prices per country (C-1a)
 
-Nach dem Deploy von C-1a zeigt **kein Shop Preise, bis sein Heimatland gesetzt ist** — ohne Heimatland gibt es kein Brutto. Die Backend-Startseite warnt („Heimatland fehlt").
+After deploying C-1a, **no shop shows prices until its home country is set** — without a home country there is no gross price. The back-end start page warns about the missing home country ("Heimatland fehlt").
 
-1. Cache → migrate → Cache wie oben. `ListPriceMarketMigration` baut Listenpreise und Sichtbarkeit einmal neu und setzt dabei den Fingerabdruck der Märkte — das erste Speichern einer Seite danach baut **nicht** noch einmal neu.
-2. Den eindeutigen Schlüssel prüfen — er wechselt von `(pid, currency)` auf `(pid, currency, country)`:
+1. Cache → migrate → cache as above. `ListPriceMarketMigration` rebuilds list prices and visibility once and sets the fingerprint of the markets in doing so — the first save of a page afterwards does **not** rebuild again.
+2. Check the unique key — it changes from `(pid, currency)` to `(pid, currency, country)`:
 
    ```sql
    SHOW INDEX FROM tl_consho_product_list_price WHERE Non_unique = 0;
    ```
 
-   Erwartet: `PRIMARY` und ein Index über `pid`, `currency`, `country`. `contao:migrate` löscht den alten Index dabei regulär, wie jede andere Schemaänderung. Wer die Schemaänderung im interaktiven Lauf mit „no" ablehnt, lehnt die **ganze Liste** ab — dann fehlt auch die Spalte `country`, und die Migration wartet einfach. Neben einer vorhandenen Spalte `country` bleibt der alte Index nur stehen, wenn die Schemaänderung **teilweise** durchlief (etwa ein fehlgeschlagenes `DROP INDEX` oder ein Eingriff von Hand). Dann bricht `ListPriceMarketMigration` mit einer Meldung ab, statt die Projektion still zu leeren — der alte Schlüssel träfe sonst `INSERT … ON DUPLICATE KEY` und würde die Länder durcheinanderbringen. `contao:migrate` erneut ausführen, damit es den Index löscht; danach läuft diese Migration von selbst durch.
-3. In jeder Shop-Konfiguration unter „Länder" das Heimatland eintragen und speichern — das Speichern berechnet die Preise dieses Marktes.
-4. Gegenprobe:
+   Expected: `PRIMARY` and an index over `pid`, `currency`, `country`. `contao:migrate` drops the old index in the regular way, like any other schema change. Anyone who declines the schema change with "no" in the interactive run declines the **whole list** — then the `country` column is missing too, and the migration simply waits. Next to an existing `country` column, the old index only remains if the schema change went through **partially** (for instance a failed `DROP INDEX` or a manual intervention). In that case `ListPriceMarketMigration` aborts with a message instead of silently emptying the projection — otherwise the old key would hit `INSERT … ON DUPLICATE KEY` and mix up the countries. Run `contao:migrate` again so that it drops the index; after that this migration runs through on its own.
+3. In every shop configuration, enter the home country under "Länder" (Countries) and save — saving calculates the prices of this market.
+4. Cross-check:
 
    ```sql
    SELECT COUNT(*) FROM tl_consho_product_list_price WHERE country = '';
    ```
 
-   Erwartet: 0. Dazu `consho:price:verify` und `consho:visibility:verify` ohne Abweichung.
+   Expected: 0. In addition, `consho:price:verify` and `consho:visibility:verify` without deviations.
 
-> ⚠️ **Steuersätze wirken jetzt auf die Listen.** Beginnt oder endet ein Satz, schaltet `ListPriceBoundaryCron` das Brutto aller Artikel dieser Steuerklasse um. Bei der Normalklasse ist das der ganze Katalog in einem Lauf — Contaos Cron deshalb über die Kommandozeile laufen lassen, nicht über den Web-Cron mit seinem Zeitlimit.
+> ⚠️ **Tax rates now affect the lists.** When a rate begins or ends, `ListPriceBoundaryCron` switches the gross price of all articles of that tax class. For the standard class that is the whole catalogue in one run — so let Contao's cron run from the command line, not through the web cron with its time limit.
 
-## Preiseingabe und Wegfall von `gross` (C-1b)
+## Price input and removal of `gross` (C-1b)
 
-1. Cache → migrate → Cache wie oben. `contao:migrate --no-interaction` legt `inputCountry` und `inputMode` an. Bestehende Preiszeilen bekommen „netto" und öffnen sich in der Maske mit ihrem Netto — dem Wert, mit dem seit C-1a gerechnet und angezeigt wird. Eine Migration der Preiszeilen und einen Befund für alte Zeilen, deren Brutto nicht zum Netto passte, gibt es nicht (Entscheidung 2026-09-15: keine produktive Installation).
+1. Cache → migrate → cache as above. `contao:migrate --no-interaction` creates `inputCountry` and `inputMode`. Existing price rows get "netto" (net) and open in the form with their net amount — the value that has been used for calculation and display since C-1a. There is no migration of the price rows and no finding for old rows whose gross amount did not match the net amount.
 
-   **Vorher lesend prüfen:** `SELECT id, pid, currency, net FROM tl_consho_price WHERE tstamp = 0;` — solche Zeilen (etwa außerhalb des Backends angelegt) zählen ab C-1b für keine Preisberechnung. Jede einzeln entscheiden: im Backend öffnen und speichern, oder löschen. Nie gespeicherte Zeilen aus einer geschlossenen Browser-Sitzung stehen als „EUR 0.0000 netto" in der Liste, wirken aber nirgends — Contaos normales Verhalten.
-2. Die Spalte `gross` bleibt stehen, bis Löschungen ausdrücklich zugelassen werden — `--no-interaction` überspringt sie. Erst lesen, was gelöscht würde:
+   **Check beforehand, read-only:** `SELECT id, pid, currency, net FROM tl_consho_price WHERE tstamp = 0;` — such rows (created outside the back end, for instance) do not count for any price calculation from C-1b on. Decide on each one individually: open and save it in the back end, or delete it. Rows that were never saved, left behind by a closed browser session, show up in the list as "EUR 0.0000 netto" but have no effect anywhere — Contao's normal behaviour.
+2. The `gross` column stays until deletions are explicitly allowed — `--no-interaction` skips it. First read what would be deleted:
 
    ```bash
    php bin/console contao:migrate --dry-run --with-deletes --no-interaction --env=prod
    ```
 
-   Steht darin **nur** das Löschen von `tl_consho_price.gross`, denselben Befehl ohne `--dry-run` ausführen. Stehen weitere `DROP`-Zeilen darin, **nicht** ausführen — sie gehören nicht zu diesem Schritt und brauchen eine eigene Entscheidung.
-3. **Feldrechte der Benutzergruppen:** Die Felder `net` und `gross` gibt es in der Maske nicht mehr. Gruppen mit eingeschränkten Feldrechten brauchen für `tl_consho_price` die Felder **Währung, Eingabe als, Betrag und Land gemeinsam** — sonst blendet Contao die Eingabe aus, und eine neue Preiszeile lässt sich nicht speichern (Meldung „Ohne Betrag …").
-4. Eine Preiszeile in einer Währung, die kein Shop führt, lehnt die Maske beim Speichern ab („In der Währung … verkauft kein Shop") — erst eine Währung eines Shops wählen. Eine Preiszeile, die angelegt, aber nie gespeichert wurde (`tstamp` 0), zählt für keine Preisberechnung.
+   If it lists **only** the deletion of `tl_consho_price.gross`, run the same command without `--dry-run`. If it lists further `DROP` lines, do **not** run it — they do not belong to this step and need a decision of their own.
+3. **Field permissions of user groups:** The fields `net` and `gross` no longer exist in the form. Groups with restricted field permissions need the fields **Währung, Eingabe als, Betrag and Land together** (Currency, Enter as, Amount, Country) for `tl_consho_price` — otherwise Contao hides the input, and a new price row cannot be saved (message "Ohne Betrag …").
+4. A price row in a currency that no shop carries is rejected by the form on save ("In der Währung … verkauft kein Shop") — choose a currency of a shop first. A price row that was created but never saved (`tstamp` 0) does not count for any price calculation.
 
-## Versand- und Zahlungsarten (C-2)
+## Shipping and payment methods (C-2)
 
-1. Cache → migrate → Cache wie oben. `contao:migrate --no-interaction` legt `tl_consho_shipping_method`, `tl_consho_shipping_price`, `tl_consho_payment_method`, die Spalten `shippingMethods`/`paymentMethods` an `tl_consho_shop`, vier Spalten samt zwei Indizes an `tl_consho_order` und `instructions` an `tl_consho_translation` an. Nichts wird gelöscht.
-2. **`symfony/validator`** steht jetzt in `composer.json` des Bundles. Es kommt ohnehin mit `contao/core-bundle`; ein `composer update` ist dafür nicht nötig.
-3. **Einrichtung, in dieser Reihenfolge:** Steuerklasse vorhanden → Versandart anlegen (Steuerklasse ist Pflicht, auch bei „anteilig") → Betrag je Shop-Währung → Zahlungsart anlegen → beide veröffentlichen → in der Shop-Konfiguration anhaken und ordnen. Eine gewählte Versandart ohne Betrag in der Shop-Währung meldet die Startseite.
-4. **Feldrechte der Benutzergruppen:** Für `tl_consho_shipping_price` gilt dasselbe wie für `tl_consho_price` — **Währung, Eingabe als, Betrag und Land gemeinsam** freigeben. Die Module „Versandarten" und „Zahlungsarten" müssen Gruppen ohne Adminrechte eigens erlaubt werden, ebenso bei eingeschränkten Feldrechten die Felder der Zahlungsart samt Bankverbindung (Kontoinhaber, IBAN, BIC, Bank) und an der Shop-Konfiguration „Versandarten" und „Zahlungsarten".
-5. Eine Art, die in einer Bestellung vorkommt, hat einen ausgegrauten Löschen-Knopf; beim Löschen über „Mehrere bearbeiten" wird sie still übersprungen. Abschalten über „Veröffentlicht".
-6. Beim Kopieren einer Versandart oder eines Produkts bleiben nie gespeicherte Betrags- bzw. Preiszeilen Entwürfe (`tstamp` 0) und stehen in der Liste wie gespeicherte Zeilen — sie zählen nirgends. Aufräumen: lesend `SELECT id, pid, currency FROM tl_consho_shipping_price WHERE tstamp = 0;` (ebenso `tl_consho_price`), dann im Backend öffnen und speichern oder löschen.
+1. Cache → migrate → cache as above. `contao:migrate --no-interaction` creates `tl_consho_shipping_method`, `tl_consho_shipping_price`, `tl_consho_payment_method`, the columns `shippingMethods`/`paymentMethods` on `tl_consho_shop`, four columns plus two indexes on `tl_consho_order`, and `instructions` on `tl_consho_translation`. Nothing is deleted.
+2. **`symfony/validator`** is now in the bundle's `composer.json`. It comes with `contao/core-bundle` anyway; a `composer update` is not needed for it.
+3. **Setup, in this order:** a tax class exists → create a shipping method (the tax class is mandatory, even with "anteilig" (proportional)) → amount per shop currency → create a payment method → publish both → tick and order them in the shop configuration. The start page reports a selected shipping method without an amount in the shop currency.
+4. **Field permissions of user groups:** The same applies to `tl_consho_shipping_price` as to `tl_consho_price` — allow **Währung, Eingabe als, Betrag and Land together**. The modules "Versandarten" (Shipping methods) and "Zahlungsarten" (Payment methods) must be explicitly allowed for groups without admin rights; likewise, with restricted field permissions, the fields of the payment method including the bank details (Kontoinhaber, IBAN, BIC, Bank) and, on the shop configuration, "Versandarten" and "Zahlungsarten".
+5. A method that occurs in an order has a greyed-out delete button; when deleting via "Mehrere bearbeiten" (Edit multiple) it is silently skipped. Switch it off via "Veröffentlicht" (Published).
+6. When copying a shipping method or a product, amount or price rows that were never saved remain drafts (`tstamp` 0) and appear in the list like saved rows — they count nowhere. To clean up: read-only `SELECT id, pid, currency FROM tl_consho_shipping_price WHERE tstamp = 0;` (likewise `tl_consho_price`), then open and save them in the back end, or delete them.
 
-## Währung an den Startpunkt (C-1c)
+## Currency on the start page (C-1c)
 
-> ⚠️ **Ein bestehender Shop verhält sich danach genau wie vorher.** Die Migration trägt seine Währung an alle seine Startpunkte und macht sie zu seiner einzigen erlaubten. Wer eine Währung führt, sieht kein neues Feld.
+> ⚠️ **An existing shop behaves exactly as before afterwards.** The migration writes its currency to all of its start pages and makes it its only allowed one. A shop that carries one currency sees no new field.
 
-1. Cache → migrate → Cache wie oben. `contao:migrate --no-interaction` legt `currencies` an `tl_consho_shop` an, `consho_currency` an `tl_page` und `currency` an `tl_consho_product_visibility` (samt neuem Unique-Schlüssel und drei geänderten Indizes). Es ändert außerdem den Spaltenvorgabewert von `currency` an `tl_consho_price`, `tl_consho_shipping_price` **und `tl_consho_shop`** von `EUR` auf leer — drei `ALTER TABLE`. **Nichts wird gelöscht** — `tl_consho_shop.currency` bleibt stehen, siehe Schritt 5.
+1. Cache → migrate → cache as above. `contao:migrate --no-interaction` creates `currencies` on `tl_consho_shop`, `consho_currency` on `tl_page` and `currency` on `tl_consho_product_visibility` (together with a new unique key and three changed indexes). It also changes the column default of `currency` on `tl_consho_price`, `tl_consho_shipping_price` **and `tl_consho_shop`** from `EUR` to empty — three `ALTER TABLE`. **Nothing is deleted** — `tl_consho_shop.currency` stays, see step 5.
 
-2. **Zwischen Upload und `contao:migrate` ist die Seite nicht benutzbar — kein Wartungsfenster von Stunden.** Die Spalten fehlen in diesem Moment, und der Code fragt sie ab:
+2. **Between upload and `contao:migrate` the site is not usable — this is not a maintenance window of hours.** The columns are missing at that moment, and the code queries them:
 
-   | Pfad | im Fenster |
+   | Path | in the window |
    |---|---|
-   | Produktliste, Filter, Sitemap | **HTTP 500** (`ProductQuery` vergleicht `m.currency`) |
-   | Backend-Startseite | **HTTP 500** (die Befundquellen lesen `currencies` und `consho_currency`) |
-   | Grenzen-Cron | scheitert |
-   | Detailseite | 200, ohne Preis |
-   | Warenkorb, Mini-Warenkorb | leer, aber sauber |
+   | Product list, filter, sitemap | **HTTP 500** (`ProductQuery` compares `m.currency`) |
+   | Back-end start page | **HTTP 500** (the finding sources read `currencies` and `consho_currency`) |
+   | Boundary cron | fails |
+   | Detail page | 200, without price |
+   | Basket, mini basket | empty, but clean |
 
-   Dass Warenkorb und Resolver das Fenster sauber abfangen, ist kein Gesamtbild — **es sind die zwei Pfade, für die es eigens gebaut wurde.** Cache → migrate → Cache in einem Zug, nicht über die Mittagspause verteilt.
+   That the basket and the resolver handle the window cleanly is not the whole picture — **they are the two paths that were specifically built for it.** Cache → migrate → cache in one go, not spread over a lunch break.
 
-   > **Dasselbe Fenster hat C-3b**, und dort ist es kürzer erklärt: Der eindeutige Schlüssel von
-   > `tl_consho_cart` wandert von `(tokenHash)` auf `(tokenHash, shop)`. Bis `contao:migrate` lief,
-   > steht der alte, engere Schlüssel noch — ein Besucher mit Warenkorb in Shop A, der in Shop B auf
-   > „In den Warenkorb" klickt, bekommt in diesem Fenster einen **HTTP 500** statt eines 303.
-   > **Betrifft nur Installationen mit mindestens zwei Shops.** Eine Migration braucht der Wechsel
-   > nicht: `contao:migrate` tauscht Indizes selbst, `CommandCompiler` schützt nur Tabellen und
-   > Spalten. Und er scheitert nicht an Bestandsdaten — was unter `(tokenHash)` eindeutig war, ist
-   > es unter `(tokenHash, shop)` weiterhin.
+   > **C-3b has the same window**, and there it is explained more briefly: the unique key of
+   > `tl_consho_cart` moves from `(tokenHash)` to `(tokenHash, shop)`. Until `contao:migrate` has run,
+   > the old, narrower key is still in place — a visitor with a basket in shop A who clicks
+   > "In den Warenkorb" (Add to basket) in shop B gets an **HTTP 500** instead of a 303 in this window.
+   > **Only affects installations with at least two shops.** The change needs no migration:
+   > `contao:migrate` swaps indexes itself, `CommandCompiler` only protects tables and
+   > columns. And it does not fail on existing data — what was unique under `(tokenHash)` is
+   > still unique under `(tokenHash, shop)`.
 
-3. **Gegenzählen, drei Abfragen (lesend):**
+3. **Count, three queries (read-only):**
 
    ```sql
    SELECT COUNT(*) FROM tl_page WHERE type = 'root' AND consho_shop > 0;
@@ -151,15 +150,15 @@ Nach dem Deploy von C-1a zeigt **kein Shop Preise, bis sein Heimatland gesetzt i
    SELECT id, title, currency, currencies FROM tl_consho_shop;
    ```
 
-   Die ersten beiden Zahlen müssen **gleich** sein, und jeder Shop muss in `currencies` die Währung führen, die in `currency` steht — **außer in drei Fällen, die die Migration absichtlich auslässt:**
+   The first two numbers must be **equal**, and every shop must carry in `currencies` the currency that is in `currency` — **except in three cases that the migration deliberately leaves out:**
 
-   | Ausgelassen wird | weil |
+   | Left out | because |
    |---|---|
-   | Startpunkt, dessen Shop **gelöscht** ist | es gibt niemanden, dessen Währung er erben könnte |
-   | Shop mit **leerer** Altspalte | es gibt nichts zu übertragen |
-   | Shop, dessen `currencies` **schon gepflegt** war | eine Wahl wird nicht durch die Altspalte ersetzt |
+   | A start page whose shop has been **deleted** | there is no one whose currency it could inherit |
+   | A shop with an **empty** legacy column | there is nothing to transfer |
+   | A shop whose `currencies` had **already been maintained** | a choice is not replaced by the legacy column |
 
-   Die ersten beiden vorab prüfen — dann weiß man vor dem Deploy, ob die Zahlen überhaupt gleich sein können:
+   Check the first two in advance — then you know before the deploy whether the numbers can be equal at all:
 
    ```sql
    SELECT id, title, consho_shop FROM tl_page
@@ -168,266 +167,267 @@ Nach dem Deploy von C-1a zeigt **kein Shop Preise, bis sein Heimatland gesetzt i
    SELECT id, title FROM tl_consho_shop WHERE currency = '';
    ```
 
-4. **Feldrechte der Benutzergruppen:** `currencies` an der Shop-Konfiguration und `consho_currency` am Startpunkt eigens freigeben.
+4. **Field permissions of user groups:** explicitly allow `currencies` on the shop configuration and `consho_currency` on the start page.
 
-5. **`tl_consho_shop.currency` fällt erst nach der Abnahme — und `--with-deletes` allein genügt dafür nicht.** Contao baut das Sollschema aus den DCA-Definitionen; solange das Feld dort mit `sql` steht, ist die Spalte Teil des Solls und **kein Probelauf schlägt etwas vor.** Der Ablauf ist: erst belegen, dass die Werte angekommen sind (Schritt 3), dann das Feld aus `contao/dca/tl_consho_shop.php` entfernen, dann `contao:migrate --with-deletes` mit Probelauf. Dasselbe Vorgehen wie bei `gross` in C-1b.
+5. **`tl_consho_shop.currency` is only removed in a later step — and `--with-deletes` alone is not enough for that.** Contao builds the target schema from the DCA definitions; as long as the field is defined there with `sql`, the column is part of the target and **no dry run proposes anything.** The procedure is: first prove that the values have arrived (step 3), then remove the field from `contao/dca/tl_consho_shop.php`, then `contao:migrate --with-deletes` with a dry run. The same procedure as for `gross` in C-1b.
 
-### Eine weitere Währung einführen — in dieser Reihenfolge
+### Introducing another currency — in this order
 
-**Ohne Schritt 2 lehnt die Preismaske die neue Währung ab, und das sieht wie ein Fehler aus.** Die Maske bietet nur Währungen an, in denen auch verkauft wird; ein Markt entsteht erst, wenn ein Startpunkt die Währung führt.
+**Without step 2 the price form rejects the new currency, and that looks like a bug.** The form only offers currencies that are also sold in; a market only comes into being when a start page carries the currency.
 
-1. In der Shop-Konfiguration die Währung bei **Währungen** zusätzlich anhaken.
-2. Den Startpunkt anlegen oder kopieren, dort die neue Währung wählen — **und unveröffentlicht lassen.** Das genügt: Die Marktabfrage filtert bewusst **nicht** nach „veröffentlicht", damit ein depublizierter Startpunkt nicht die Preise seiner Währung aus der Projektion nimmt.
-3. Preise pflegen. Jetzt nimmt die Maske die Währung an.
-4. Warten, bis der Vollständigkeitsbefund auf der Startseite schweigt — er zählt die Produkte, die in dieser Währung noch keinen Preis haben.
-5. Startpunkt veröffentlichen.
+1. In the shop configuration, additionally tick the currency under **Währungen** (Currencies).
+2. Create or copy the start page, choose the new currency there — **and leave it unpublished.** That is enough: the market query deliberately does **not** filter by "published", so that an unpublished start page does not take the prices of its currency out of the projection.
+3. Maintain prices. Now the form accepts the currency.
+4. Wait until the completeness finding on the start page goes quiet — it counts the products that do not yet have a price in this currency.
+5. Publish the start page.
 
-> 🔴 **Eine Währung am Shop wieder abzuwählen, die ein Startpunkt noch führt, geht durch — und zwar lautlos.** Es gibt dafür keine Sperre: Die Prüfung am Startpunkt läuft nur, wenn dort jemand speichert, und bleibt nur eine Währung übrig, verschwindet das Feld sogar aus der Maske. Der Startpunkt verkauft dann weiter in einer Währung, die sein Shop nicht mehr führt.
+> 🔴 **Deselecting a currency on the shop that a start page still carries goes through — and silently.** There is no lock for it: the check on the start page only runs when someone saves there, and if only one currency is left, the field even disappears from the form. The start page then keeps selling in a currency that its shop no longer carries.
 >
-> Deshalb meldet es die Backend-Startseite: **„Startpunkt verkauft in einer Währung, die sein Shop nicht annimmt"** (Warnung). **Erst den Startpunkt umstellen, dann die Währung abwählen** — die Meldung ist die Rückfalllinie, nicht der vorgesehene Weg.
+> That is why the back-end start page reports it: **a start page sells in a currency that its shop does not accept** (warning). **First switch the start page over, then deselect the currency** — the message is the fallback, not the intended way.
 
-## Warenkorb (C-3)
+## Basket (C-3)
 
-1. Cache → migrate → Cache wie oben. `contao:migrate --no-interaction` legt `tl_consho_cart` und `tl_consho_cart_item` an, dazu `afterAddToCart` an `tl_consho_shop` und `consho_cartPage` an `tl_page`. Nichts wird gelöscht.
-2. **Einrichtung:** Am **Startpunkt** die Warenkorbseite wählen (Legende „Consho", neben der Shop-Konfiguration) — auf diese Seite gehört ein Element **Warenkorb**. In der Shop-Konfiguration unter „Checkout" steht, wohin es nach dem Hinzufügen geht; ab Werk zum Warenkorb.
-3. **Feldrechte der Benutzergruppen:** `afterAddToCart` an der Shop-Konfiguration und `consho_cartPage` am Startpunkt eigens freigeben. Die beiden neuen Inhaltselemente (`consho_cart`, `consho_mini_cart`) stehen in der Kategorie „Consho" und müssen Gruppen ohne Adminrechte erlaubt werden.
-4. Die Warenkorbtabellen haben **kein Backend-Modul** — bewusst. Warenkörbe sind flüchtig und tragen Personendaten. Zum Nachsehen genügt lesendes SQL: `SELECT id, member, shop, state, createdAt, updatedAt FROM tl_consho_cart;`
+1. Cache → migrate → cache as above. `contao:migrate --no-interaction` creates `tl_consho_cart` and `tl_consho_cart_item`, plus `afterAddToCart` on `tl_consho_shop` and `consho_cartPage` on `tl_page`. Nothing is deleted.
+2. **Setup:** On the **start page**, choose the basket page (legend "Consho", next to the shop configuration) — that page needs a **Warenkorb** (Basket) element. In the shop configuration under "Checkout" you set where the visitor goes after adding; by default to the basket.
+3. **Field permissions of user groups:** explicitly allow `afterAddToCart` on the shop configuration and `consho_cartPage` on the start page. The two new content elements (`consho_cart`, `consho_mini_cart`) are in the "Consho" category and must be allowed for groups without admin rights.
+4. The basket tables have **no back-end module** — on purpose. Baskets are transient and carry personal data. Read-only SQL is enough to look at them: `SELECT id, member, shop, state, createdAt, updatedAt FROM tl_consho_cart;`
 
-### 🔴 Ohne eingerichteten Contao-Cron räumt niemand auf
+### 🔴 Without a configured Contao cron, nobody cleans up
 
-Der Aufräum-Cron läuft **täglich** und löscht offene Warenkörbe nach 30 Tagen, umgewandelte nach 7. Beides sind feste Werte im Code, absichtlich ohne Schalter.
+The clean-up cron runs **daily** and deletes open baskets after 30 days, converted ones after 7. Both are fixed values in the code, deliberately without a setting.
 
-Er läuft aber nur, wenn Contaos Cron auf dieser Installation überhaupt ausgelöst wird — per Web-Cron, `contao:cron` aus der Kommandozeile oder einem Dienst. **Passiert das nicht, sammelt die Installation Warenkörbe ohne Ende** — und ab C-5 stehen darin Adressen, das Ergebnis der UID-Prüfung und ein Geburtsdatum. Nichts weist darauf hin; es fällt erst auf, wenn jemand in die Tabelle sieht.
+But it only runs if Contao's cron is triggered on this installation at all — via the web cron, `contao:cron` from the command line, or a service. **If that does not happen, the installation collects baskets without end** — and from C-5 on, they contain addresses, the result of the VAT ID check and a date of birth. Nothing points to it; it only shows when someone looks into the table.
 
-Gegenprüfen: `SELECT COUNT(*), MIN(FROM_UNIXTIME(updatedAt)) FROM tl_consho_cart;` — ist der älteste Eintrag über 30 Tage alt, läuft der Cron nicht.
+Cross-check: `SELECT COUNT(*), MIN(FROM_UNIXTIME(updatedAt)) FROM tl_consho_cart;` — if the oldest entry is more than 30 days old, the cron is not running.
 
-### 🔴 Die `Origin`-Prüfung hängt an `trusted_proxies`
+### 🔴 The `Origin` check depends on `trusted_proxies`
 
-„In den Warenkorb" läuft über eine eigene Route, die Contaos Anfrage-Token bewusst nicht prüft (die Katalogseite ist geteilt gecacht, ein Token darin gehörte einem fremden Besucher). An seiner Stelle steht ein Vergleich des `Origin`-Kopfs gegen `Request::getSchemeAndHttpHost()` — und der hängt an Symfonys `trusted_proxies`:
+"In den Warenkorb" (Add to basket) runs through its own route that deliberately does not check Contao's request token (the catalogue page is cached in the shared cache, a token in it would belong to another visitor). In its place there is a comparison of the `Origin` header against `Request::getSchemeAndHttpHost()` — and that depends on Symfony's `trusted_proxies`:
 
-| Einstellung | Folge |
+| Setting | Consequence |
 |---|---|
-| zu weit gefasst | Ein Angreifer setzt `X-Forwarded-Host`, der Vergleich wird selbstbezüglich und damit **wertlos** |
-| nicht gesetzt, aber ein Proxy davor | Die Prüfung weist **alles** ab — niemand kann etwas in den Warenkorb legen |
+| too broad | An attacker sets `X-Forwarded-Host`, the comparison becomes self-referential and thus **worthless** |
+| not set, but a proxy in front | The check rejects **everything** — nobody can put anything into the basket |
 
-**Beides scheitert lautlos.** Nach dem Aufschalten hinter einem Proxy oder CDN einmal von Hand etwas in den Warenkorb legen.
+**Both fail silently.** After going live behind a proxy or CDN, put something into the basket once by hand.
 
-### 🔴 Ein Proxy oder CDN ohne ESI zerlegt den Mini-Warenkorb
+### 🔴 A proxy or CDN without ESI breaks the mini basket
 
-Der Mini-Warenkorb ist ein ESI-Fragment: Die Seite bleibt im geteilten Cache, das Fragment wird je Aufruf frisch geholt. Ein vorgeschalteter Cache, der ESI nicht auflöst, liefert entweder den Platzhalter oder den Warenkorb des vorigen Besuchers.
+The mini basket is an ESI fragment: the page stays in the shared cache, the fragment is fetched fresh on every request. An upstream cache that does not resolve ESI delivers either the placeholder or the previous visitor's basket.
 
-Ohne solchen Cache rendert Symfony das Fragment direkt mit — das ist der Normalfall auf einem einfachen Hosting und unbedenklich.
+Without such a cache, Symfony renders the fragment inline — that is the normal case on simple hosting and harmless.
 
-### 🔴 Das Warenkorb-Cookie nimmt **jede** Seite aus dem geteilten Cache
+### 🔴 The basket cookie takes **every** page out of the shared cache
 
-Gemessen auf dem Testserver bei der Abnahme von C-3 (2026-09-20), an der Startseite — einer Seite **ohne** jedes Consho-Element:
+Measured on the home page of an installation — a page **without** any Consho element:
 
 | | `Cache-Control` | `Contao-Cache` |
 |---|---|---|
-| ohne Cookie | `public, s-maxage=86400` | `fresh` |
-| mit `consho_cart` | `private` | `miss` |
+| without cookie | `public, s-maxage=86400` | `fresh` |
+| with `consho_cart` | `private` | `miss` |
 
-Das ist Contaos normales Verhalten: `ContaoCache` → `StripCookiesSubscriber` lässt nur Cookies einer Allow-List durch, jedes andere macht die Anfrage nicht cachebar. Die Liste steht in `.env` und ist ab Werk **auskommentiert**.
+This is Contao's normal behaviour: `ContaoCache` → `StripCookiesSubscriber` only lets through cookies on an allow list; any other makes the request uncacheable. The list is in `.env` and is **commented out** by default.
 
-**Die Folge trifft genau das, wofür der Mini-Warenkorb als ESI-Fragment gebaut wurde.** Sobald ein Besucher etwas hineinlegt, wird ihm **jede** Seite frisch gebaut — für ihn bringt die Aufteilung nichts mehr. Nichts weist darauf hin; es fällt nur auf, wenn jemand die Kopfzeilen vergleicht.
+**The consequence hits exactly what the mini basket was built as an ESI fragment for.** As soon as a visitor puts something into the basket, **every** page is built fresh for them — for them the split no longer achieves anything. Nothing points to it; it only shows when someone compares the headers.
 
 ```
 COOKIE_ALLOW_LIST=PHPSESSID,csrf_https-contao_csrf_token,csrf_contao_csrf_token,trusted_device,REMEMBERME,consho_cart
 ```
 
-> ⚠️ **Erst prüfen, dann eintragen.** Das Cookie auf die Allow-List zu setzen ist nur richtig, wenn in der gecachten Seite wirklich nichts Cookie-Abhängiges steht — sonst serviert der Proxy den Warenkorb des einen Besuchers dem nächsten. Der Mini-Warenkorb ist sauber getrennt (eigene `Response`, `renderer: 'esi'`); ein Projekt-Template, das den Warenkorb **direkt** in die Seite rendert, ist es nicht. Nach dem Eintragen einmal mit zwei verschiedenen Warenkörben dieselbe URL abrufen und die Beträge vergleichen.
+> ⚠️ **Check first, then add it.** Putting the cookie on the allow list is only right if there is really nothing cookie-dependent in the cached page — otherwise the proxy serves one visitor's basket to the next. The mini basket is cleanly separated (its own `Response`, `renderer: 'esi'`); a project template that renders the basket **directly** into the page is not. After adding it, fetch the same URL once with two different baskets and compare the amounts.
 >
-> Ob die ESI-Hälfte danach wirklich greift, misst **C-12 (13.2)** — bis dahin ist sie eine Erwartung, keine Tatsache.
+> Whether the ESI half really takes effect afterwards is measured by **C-12 (13.2)** — until then it is an expectation, not a fact.
 
-## Giro-Code auf der Rechnung (C-8)
+## Giro-Code on the invoice (C-8)
 
-- **Neue Voraussetzung: die PHP-Erweiterung GD** (`ext-gd`). Ohne sie verweigert Composer die
-  Installation des Bundles — gewollt, statt Rechnungen, auf denen der Code still fehlt. GD ist in php-src
-  als „Maintained" geführt und bei den meisten Hostern aktiv; prüfen mit `php -m | grep -i gd`, und zwar
-  für die Web-PHP-Version, nicht nur für die Kommandozeile.
-- Neue Abhängigkeit `chillerlan/php-qrcode` — kommt mit `composer update … --with-dependencies`.
-- Der Code ist **aus**, bis der Betreiber an der Zahlungsart „Giro-Code auf der Rechnung" anhakt. Vorher
-  den **Kontoinhaber** gegen den Kontoauszug prüfen: Seit 9. Oktober 2025 gleichen Banken Name und IBAN
-  ab, ein abweichender Name warnt jeden zahlenden Kunden. Höchstens 70 Zeichen (SEPA).
-- Schnappschuss Fassung 3 — keine Migration, ältere Rechnungen werden unverändert gelesen.
+- **New requirement: the PHP extension GD** (`ext-gd`). Without it Composer refuses to install
+  the bundle — intended, rather than invoices on which the code is silently missing. GD is listed in php-src
+  as "Maintained" and active at most hosts; check with `php -m | grep -i gd`, and do so
+  for the web PHP version, not only for the command line.
+- New dependency `chillerlan/php-qrcode` — comes with `composer update … --with-dependencies`.
+- The code is **off** until the operator ticks "Giro-Code auf der Rechnung" (Giro-Code on the invoice) on the
+  payment method. Before that, check the **account holder** against the bank statement: since 9 October 2025 banks
+  match name and IBAN, and a differing name warns every paying customer. At most 70 characters (SEPA).
+- Snapshot version 3 — no migration, older invoices are read unchanged.
 
-## Zahlung und Versand als Ereignisse (D-1)
+## Payment and shipping as events (D-1)
 
-- Neue Spalten, von `contao:migrate` angelegt: `tl_consho_order.cancelledAt`, `.paymentSettledAt`,
+- New columns, created by `contao:migrate`: `tl_consho_order.cancelledAt`, `.paymentSettledAt`,
   `tl_consho_order_status.isCompleted`, `tl_consho_payment.lockedAt`, `tl_consho_delivery.reportedAt`,
   `.lockedAt`, `tl_consho_shop.statusAfterPayment`, `.statusAfterDelivery`, `.statusWhenSettled`.
-- **Bestehende Lieferungen haben kein `reportedAt`** und zählen danach als **nicht versandt**. Wer vor D-1
-  Lieferungen erfasst hat, meldet sie nach dem Update mit „Als versandt melden" — Achtung, das schickt
-  dem Kunden die Versandmail.
-- **Bestehende Status mit „Gilt als bezahlt" oder „Gilt als versendet"** an Bestellungen, deren Salden
-  das nicht hergeben, bleiben stehen — geprüft wird erst ein Wechsel. Die Liste zeigt den Widerspruch
-  an den Signalen.
-- Den automatischen Statuswechsel stellt der Betreiber je Shop ein (Legende „Automatischer
-  Bestellstatus"), ab Werk aus. Ein Status für „alles erledigt" sollte „Schließt die Bestellung ab"
-  tragen, sonst sperrt er den Zahlungswechsel nicht.
+- **Existing deliveries have no `reportedAt`** and count as **not shipped** afterwards. Anyone who recorded
+  deliveries before D-1 reports them after the update with "Als versandt melden" (Report as shipped) — note that
+  this sends the customer the shipping mail.
+- **Existing statuses with "Gilt als bezahlt" (Counts as paid) or "Gilt als versendet" (Counts as shipped)** on
+  orders whose balances do not support that stay as they are — only a change is checked. The list shows the
+  contradiction in the signals.
+- The operator sets up the automatic status change per shop (legend "Automatischer
+  Bestellstatus" (Automatic order status)), off by default. A status for "everything done" should carry
+  "Schließt die Bestellung ab" (Completes the order), otherwise it does not lock the payment change.
 
-## Abnahme von Block C (C-12)
+## Block C (C-12)
 
-- **Reverse Charge verlangt jetzt die UID des Shops** (Shop-Konfiguration, „Eigene UID-Nummer"). Ein
-  Shop, der an Unternehmen im EU-Ausland liefert, trägt sie ein **und** den Reverse-Charge-Hinweis für die
-  Rechnung; fehlt der Hinweis, meldet das Dashboard `reverseChargeNoteMissing`. Ohne UID rechnet der
-  Checkout auch bei geprüfter Kunden-UID mit Steuer.
-- Ein Shop, der **vor** diesem Stand kopiert wurde, hat die Zählerstände seines Originals geerbt — vor dem
-  ersten echten Beleg in seinen Nummernkreisen prüfen und bei Bedarf auf 0 setzen.
-- **Seiten-Cache und Warenkorb-Cookie** (gemessen 2026-09-26): Contao sendet an jeder gecachten Seite
-  `Vary: Cookie`, wer `consho_cart` trägt, bekommt jede Seite frisch gerendert. Seit C-12 geht der Cookie
-  nach dem Kauf, sobald kein offener Warenkorb mehr an ihm hängt — vorher blieb er 30 Tage.
-- **Contao-Formulare auf gecachten Katalogseiten** (Login, Newsletter, Kommentare) können mit 400
-  „Invalid CSRF token" scheitern, wenn der Besucher die Seite **ohne** Cookie geladen und den
-  Warenkorb-Cookie **danach** bekommen hat, etwa in einem zweiten Tab. Der Kaufknopf ist nicht betroffen
-  (eigene Route). Auswege: das Formular auf eine ungecachte Seite legen oder als ESI-Fragment einbinden.
+- **Reverse charge now requires the shop's VAT ID** (shop configuration, "Eigene UID-Nummer" (Own VAT ID)). A
+  shop that delivers to businesses in other EU countries enters it **and** the reverse charge note for the
+  invoice; if the note is missing, the dashboard reports `reverseChargeNoteMissing`. Without a VAT ID the
+  checkout charges tax even when the customer's VAT ID has been verified.
+- A shop that was copied **before** this version has inherited the counter values of its original — before the
+  first real document in its number ranges, check them and set them to 0 if needed.
+- **Page cache and basket cookie:** Contao sends `Vary: Cookie` on every cached page; whoever carries
+  `consho_cart` gets every page freshly rendered. Since C-12 the cookie goes after the purchase, as soon as no
+  open basket is attached to it any more — before, it stayed for 30 days.
+- **Contao forms on cached catalogue pages** (login, newsletter, comments) can fail with 400
+  "Invalid CSRF token" if the visitor loaded the page **without** a cookie and received the basket
+  cookie **afterwards**, for instance in a second tab. The buy button is not affected
+  (own route). Ways out: put the form on an uncached page, or include it as an ESI fragment.
 
-## Online-Zahlung (C-11)
+## Online payment (C-11)
 
-- Neue Spalten `tl_consho_payment.attempt` (eindeutig, `NULL` bei Handeingabe) und
-  `tl_consho_payment_attempt.returnState` — `contao:migrate` legt sie an.
-- Neue Routen `/_consho/payment/notify/{token}` (POST, ohne Anfrage-Token — die Signatur des Anbieters
-  steht dafür) und `/_consho/payment/return/{token}` (GET). Sie müssen **von außen erreichbar** sein; ein
-  Wartungsmodus oder Zugriffsschutz davor lässt Anbieter ihre Meldungen wiederholen, bis er weg ist.
-- **`CONSHO_TEST_PAYMENT=1` nur auf Testinstallationen.** Der Test-Anbieter bestätigt Zahlungen, ohne
-  Geld anzunehmen; solange die Variable steht, warnt das Dashboard. Der Test-Anbieter ruft den eigenen
-  Server per HTTPS auf — der Server muss sich also selbst erreichen können.
-- Eine gesetzte `QUERY_PARAMS_ALLOW_LIST` braucht `consho_.*`; der Befund `noticeParamStripped` nennt
-  jetzt auch die Parameter des Test-Anbieters.
+- New columns `tl_consho_payment.attempt` (unique, `NULL` for manual entry) and
+  `tl_consho_payment_attempt.returnState` — `contao:migrate` creates them.
+- New routes `/_consho/payment/notify/{token}` (POST, without request token — the provider's signature
+  stands in for it) and `/_consho/payment/return/{token}` (GET). They must be **reachable from outside**; a
+  maintenance mode or access protection in front of them makes providers repeat their notifications until it is gone.
+- **`CONSHO_TEST_PAYMENT=1` only on test installations.** The test provider confirms payments without
+  accepting money; as long as the variable is set, the dashboard warns. The test provider calls its own
+  server via HTTPS — so the server must be able to reach itself.
+- A `QUERY_PARAMS_ALLOW_LIST` that is set needs `consho_.*`; the finding `noticeParamStripped` now also names
+  the parameters of the test provider.
 
-## Bestellseite (C-10)
+## Order page (C-10)
 
-- **Gleich nach dem Update auf jede Bestellseite das Inhaltselement „Bestellseite" setzen.** Bis dahin
-  sperrt der Befund `orderElementMissing` den Checkout — gewollt: Ohne das Element führen der Kaufklick und
-  der Link in der Bestätigung auf eine leere Seite.
-- Neue Spalte `tl_consho_order_item.taxClass`. Bestellungen von vor dem Update tragen 0; bei ihnen lässt
-  sich die Zahlungsart nur zwischen Arten ohne Betrag (Nachlass) wechseln.
-- Wer die Zahlungsart wechseln darf, braucht einen **Nummernkreis für Stornorechnungen** — den verlangt
-  die Bereitschaftsprüfung schon seit C-6, sobald eine Art beim Bestellen abrechnet.
+- **Right after the update, put the content element "Bestellseite" (Order page) on every order page.** Until
+  then the finding `orderElementMissing` locks the checkout — intended: without the element, the buy click and
+  the link in the confirmation lead to an empty page.
+- New column `tl_consho_order_item.taxClass`. Orders from before the update carry 0; for them the payment method
+  can only be switched between methods without an amount (discount).
+- Whoever may switch the payment method needs a **number range for cancellation invoices** — the readiness check
+  has required it since C-6, as soon as a method invoices at the time of ordering.
 
-## Links zur Bestellseite und Sperren gegen Massenanfragen (D-2, D-4, D-6)
+## Links to the order page and limits against mass requests (D-2, D-4, D-6)
 
-- **Die Migration `OrderTokenExpiryMigration` befristet bestehende Links** ab ihrer Ausstellung: aus Mails
-  90 Tage, aus Weiterleitungen einen Tag. Links aus Mails von vor C-10 lassen sich von Weiterleitungen
-  nicht unterscheiden und gelten dann nur einen Tag; wer so einen hat, fordert auf der Bestellseite einen
-  neuen an. Den Rest räumt der tägliche Contao-Cron — ohne eingerichteten Cron bleiben die Zeilen liegen
-  (sie öffnen nichts mehr).
-- 🔴 **Die Formulare begrenzen je IP**: Widerrufsformular (`consho.rate_limit.withdrawal_form`, 5 in
-  15 Minuten) und „Neuen Link anfordern" (`consho.rate_limit.order_link_ip`, 5 in 15 Minuten); dazu je
-  Adresse `order_link_address` und `email_confirmation` (je 3 in der Stunde). **Hinter einem Proxy oder
-  CDN ohne `TRUSTED_PROXIES`** ist die IP die des Proxys — dann teilen sich alle Kunden des Shops fünf
-  Versuche je Viertelstunde. Vor dem Rollout `TRUSTED_PROXIES` setzen und prüfen, dass
-  `Request::getClientIp()` die Adresse des Besuchers liefert.
+- **The migration `OrderTokenExpiryMigration` puts an expiry on existing links**, counted from when they were
+  issued: from mails 90 days, from redirects one day. Links from mails from before C-10 cannot be told apart from
+  redirects and then only last one day; whoever has such a link requests a new one on the order page. The daily
+  Contao cron clears the rest — without a configured cron the rows stay behind (they no longer open anything).
+- 🔴 **The forms are limited per IP**: the withdrawal form (`consho.rate_limit.withdrawal_form`, 5 in
+  15 minutes) and "Neuen Link anfordern" (Request a new link) (`consho.rate_limit.order_link_ip`, 5 in
+  15 minutes); in addition, per address, `order_link_address` and `email_confirmation` (3 per hour each).
+  **Behind a proxy or CDN without `TRUSTED_PROXIES`** the IP is that of the proxy — then all customers of the
+  shop share five attempts per quarter of an hour. Before the rollout, set `TRUSTED_PROXIES` and check that
+  `Request::getClientIp()` returns the visitor's address.
 
-## Art am Produkttyp (Block Dienstleistung)
+## Kind on the product type (Block Dienstleistung)
 
-Der Produkttyp trägt die **Art** — körperliche Ware, digital oder Dienstleistung —, Bestellzeile und Abo frieren
-sie beim Kauf ein. Die alten Spalten `isPhysical` (Produkttyp, Bestellzeile) und `withdrawalKind` (Produkt,
-Bestellzeile, Abo) liest nichts mehr, und **sie werden nicht übernommen** (Michael, 2026-10-01: keine
-„Altlasten mitschleppen um eine testinstallation am laufen zu halten").
+The product type carries the **kind** — physical goods, digital or service —, and the order line and subscription
+freeze it at the time of purchase. Nothing reads the old columns `isPhysical` (product type, order line) and
+`withdrawalKind` (product, order line, subscription) any more, and **they are not carried over** — no legacy data
+is migrated just to keep a test installation running.
 
-- **Neuinstallation:** nichts zu tun. Jeder Typ beginnt als „körperliche Ware" — für digitale Produkte und
-  Dienstleistungen die Art am Typ setzen, **bevor** verkauft wird.
-- **Bestehende Testinstallationen:** neu aufsetzen statt migrieren. `contao:migrate --no-interaction` legt
-  `kind`, `taxCountry` und `performedAt` an, löscht die alten Spalten aber nicht (siehe oben); alte Bestellungen
-  hätten danach überall `kind = physical`.
-- **Steuersätze:** Eine Dienstleistung wird im Land des Shops versteuert — dessen Satz muss für die Steuerklasse
-  der Dienstleistung angelegt sein, sonst ist sie nicht kaufbar.
-- Ob eine online erbrachte Leistung „elektronisch erbracht" und damit digital ist, entscheidet der Betreiber
-  beim Anlegen des Typs; die Hilfe am Feld sagt es.
+- **New installation:** nothing to do. Every type starts as "physical goods" — for digital products and
+  services, set the kind on the type **before** selling.
+- **Existing test installations:** set up anew instead of migrating. `contao:migrate --no-interaction` creates
+  `kind`, `taxCountry` and `performedAt`, but does not delete the old columns (see above); old orders would
+  then have `kind = physical` everywhere.
+- **Tax rates:** A service is taxed in the shop's country — its rate must exist for the tax class of the
+  service, otherwise it cannot be bought.
+- Whether a service provided online is "electronically supplied" and therefore digital is decided by the operator
+  when creating the type; the help text on the field says so.
 
-## Lager (Block G)
+## Stock (Block G)
 
-- **`keyPoolWarning` entfällt** (G-5). `contao:migrate --no-interaction` legt die neuen Spalten an,
-  löscht die alte aber nicht (siehe oben) — `contao:migrate` einmal interaktiv laufen lassen oder
-  die Spalte `tl_consho_product.keyPoolWarning` ausdrücklich löschen. Ein Wert darin wird nicht
-  übernommen: die neue Schwelle `stockWarning` sitzt am Hauptprodukt.
-- **Bestand ist ausgeschaltet**, bis „Bestand führen" am Produkt gesetzt ist. Nach dem Einschalten
-  steht der Bestand jedes Artikels auf 0 — der Artikel ist dann „derzeit nicht verfügbar", bis der
-  Bestand in der Produktmaske gebucht ist. **Erst buchen, dann veröffentlichen**, oder vorübergehend
-  „auch ohne Bestand verkaufen" setzen.
-- **Schlüsselvorräte** zählen sofort als Bestand; ein leerer Vorrat macht den Artikel nicht mehr
-  bestellbar. Vor dem Ausrollen die Vorräte prüfen (Befund „Bestand knapp oder leer").
-- **Cron:** „Benachrichtigen, wenn wieder da" läuft stündlich über Contaos Cron, wie die Freigabe.
-- **Die Datenbank muss READ COMMITTED können** — InnoDB kann es; der Kaufklick setzt es für seine
-  Transaktion selbst.
+- **`keyPoolWarning` is dropped** (G-5). `contao:migrate --no-interaction` creates the new columns,
+  but does not delete the old one (see above) — run `contao:migrate` interactively once, or
+  explicitly delete the column `tl_consho_product.keyPoolWarning`. A value in it is not
+  carried over: the new threshold `stockWarning` sits on the main product.
+- **Stock is switched off** until "Bestand führen" (Keep stock) is set on the product. After switching it on,
+  the stock of every article is 0 — the article is then "derzeit nicht verfügbar" (currently unavailable) until
+  the stock has been booked in the product form. **Book first, then publish**, or temporarily
+  set "Auch ohne Bestand verkaufen" (Sell without stock).
+- **Key pools** count as stock immediately; an empty pool makes the article no longer
+  orderable. Before rolling out, check the pools (finding "Bestand knapp oder leer" (Stock low or gone)).
+- **Cron:** "Benachrichtigen, wenn wieder da" (Notify me when back) runs hourly via Contao's cron, like the release.
+- **The database must support READ COMMITTED** — InnoDB does; the buy click sets it for its own
+  transaction.
 
-## Kundenkonten für Abos (Abnahme Abo-8)
+## Customer accounts for subscriptions (Abo-8)
 
-Ein Abo braucht ein Konto (P12), und **Consho legt keine Konten an** — Kunden kommen über Contaos Registrierung
-oder der Betreiber legt sie an. Ohne Registrierungsweg kaufen im Shop nur Gäste, einmalig.
+A subscription needs an account (P12), and **Consho does not create accounts** — customers come through Contao's
+registration, or the operator creates them. Without a registration path, only guests buy in the shop, one-off.
 
-- **Registrierungsmodul mit Kontoaktivierung per E-Mail** („Kontoaktivierung", `reg_activate`). Contao legt jedes
-  neue Mitglied deaktiviert an (`ModuleRegistration`: `disable = 1`); ohne Aktivierungsmail bleibt es das, bis der
-  Betreiber es im Backend freischaltet — er bekommt nur eine Benachrichtigung.
-  Oder Consho schaltet selbst frei: **„Konten sofort freischalten"** am Registrierungsmodul (Nachlese KK-1) —
-  das Konto ist sofort aktiv und kommt zusätzlich in die Kundengruppe des Shops. Schließt die Aktivierungsmail aus.
-  Der Befund „Registrierungsweg fehlt" meldet einen Shop mit Abos, dem beides fehlt.
-- **Standardgruppe = Kundengruppe des Shops** (`reg_groups` = `tl_consho_shop.customerGroup`). Ein Konto ohne die
-  Gruppe fehlt in der Kundenliste.
-- 🔴 **Geschützte Kundenseiten für alle Kundengruppen freigeben** — „Meine Abos" (`consho_subscriptionsPage`),
-  „Meine Bestellungen", Mitgliederbereich: Kundengruppe **und** Nettogruppen. Contao kennt für geschützte Seiten
-  kein „alle Mitglieder", nur Gruppen und „Gäste". Fehlt die Gruppe, gibt es 403, und ohne 403-Seite am Startpunkt
-  Contaos allgemeine Fehlerseite **ohne Logeintrag**. Eine 403-Seite am Startpunkt
-  anlegen. Seit der Nachlese (KK-2) melden das die Befunde „Kundenseite sperrt Kunden aus" (auch bei geerbtem
-  Schutz) und „Anmeldeseite fehlt" (geschützte Kundenseite, aber keine 401-Seite unter dem Startpunkt).
+- **Registration module with account activation by e-mail** ("Kontoaktivierung" (Account activation),
+  `reg_activate`). Contao creates every new member disabled (`ModuleRegistration`: `disable = 1`); without an
+  activation mail it stays that way until the operator enables it in the back end — the operator only gets a
+  notification.
+  Or Consho enables it itself: **"Konten sofort freischalten" (Activate accounts at once)** on the registration
+  module (Nachlese KK-1) — the account is active immediately and is additionally put into the shop's customer
+  group. Excludes the activation mail.
+  The finding for a missing registration path reports a shop with subscriptions that lacks both.
+- **Default group = the shop's customer group** (`reg_groups` = `tl_consho_shop.customerGroup`). An account
+  without the group is missing from the customer list.
+- 🔴 **Allow protected customer pages for all customer groups** — "Meine Abos" (My subscriptions)
+  (`consho_subscriptionsPage`), "Meine Bestellungen" (My orders), member area: customer group **and** net groups.
+  For protected pages Contao knows no "all members", only groups and "guests". If the group is missing, there is
+  a 403, and without a 403 page on the start page Contao's generic error page **without a log entry**. Create a
+  403 page on the start page. Since the Nachlese (KK-2), the findings "customer page locks customers out" (also
+  with inherited protection) and "login page missing" (protected customer page, but no 401 page below the start
+  page) report this.
 
-## Mails vor dem Start messen (D-7, M8)
+## Test the mails before going live (D-7, M8)
 
-- 🔴 **Jede Mailart einmal von der echten Shop-Domain** an ein frisches Gmail- und ein Outlook-Postfach
-  schicken — Bestätigung, Zahlung erhalten, versendet, Eingangsbestätigung Widerruf, Ablehnung, Erstattung,
-  neuer Link — und **den Spam-Ordner ansehen**, nicht nur den Posteingang. Im Test landeten „Zahlung
-  erhalten" und die Eingangsbestätigung bei Gmail im Spam, obwohl SPF, DKIM und DMARC bestanden.
-- Postfächer, die den Absender schon kennen oder in denen eine Mail als „kein Spam" markiert wurde, sagen
-  nichts: Der Filter ist dann trainiert.
-- Vorher: die Testmail-Seite der Mail-Konfiguration zeigt SPF, DMARC und ob der Absender zur Anmeldung
-  passt; die Startseite meldet `senderDomainMismatch`, wenn die Absender-Domain zu keinem Startpunkt passt.
+- 🔴 **Send every kind of mail once from the real shop domain** to a fresh Gmail and a fresh Outlook mailbox —
+  confirmation, payment received, shipped, acknowledgement of a withdrawal, rejection, refund,
+  new link — and **look at the spam folder**, not only the inbox. In testing, "payment
+  received" and the acknowledgement of receipt landed in spam at Gmail, although SPF, DKIM and DMARC passed.
+- Mailboxes that already know the sender, or in which a mail was marked as "not spam", tell you
+  nothing: the filter has then been trained.
+- Beforehand: the test mail page of the mail configuration shows SPF, DMARC and whether the sender matches the
+  login; the start page reports `senderDomainMismatch` if the sender domain matches no start page.
 
-## Bestellbestätigung (C-9)
+## Order confirmation (C-9)
 
-- **Neue Abhängigkeiten** `symfony/mailer` (kam bisher nur über Contao) und
-  `symfony/microsoft-graph-mailer`; PHP ab **8.4.1**. `composer update webwerkwien/contao-consho-bundle
+- **New dependencies** `symfony/mailer` (so far only came through Contao) and
+  `symfony/microsoft-graph-mailer`; PHP from **8.4.1**. `composer update webwerkwien/contao-consho-bundle
   --with-dependencies`.
-- **Gleich nach dem Update an jedem Startpunkt die Gewährleistungs-Mitteilung als Datei wählen** (PDF,
-  PNG oder JPEG, farbig, unverändert, in der Sprache des Startpunkts) — vorher gibt es das Feld nicht.
-  Bis dahin sperrt der Befund `warrantyNoticeFileMissing` den Checkout; gewollt, weil jede Bestätigung
-  sonst unvollständig wäre. Das Paket der Kommission „Harmonised notice in 24 languages" enthält je
-  Sprache eine PDF mit Farb- (Seite 1) und Schwarz-Weiß-Fassung (Seite 2); online gilt nur die farbige.
-  Den Termin also in ein Wartungsfenster legen.
-- 🔴 **`contao:migrate` in einem Aufruf, ohne `--schema-only` oder `--migrations-only`** — auf der
-  Konsole, nicht getrennt über den Contao Manager. `ConfirmationBeforeMailMigration` markiert die Bestellungen
-  von vor C-9 mit `confirmationSentAt = 0` („keine Bestätigung fällig") und kann das nur im **ersten**
-  Durchgang, solange `tl_page.consho_warrantyNotice` noch fehlt. Wer das Schema allein einspielt, sieht danach
-  jede alte Bestellung in der Warnung „nicht versendet".
-  Dasselbe gilt für `DecisionSentMigration` (E10): Sie legt `tl_consho_cancellation.decisionSentAt` selbst an
-  und setzt Entscheidungen von vorher auf 0. Legt zuerst das Schema die Spalte an, läuft sie nie, und jede
-  alte Entscheidung steht in der Warnung „Entscheidung nicht versendet".
-- Die Mail geht im Request des Kaufklicks hinaus, nach dem Commit. Zehn Sekunden gelten **je
-  Verbindungsschritt**, nicht für den ganzen Versand; scheitert der Transport an der Kundenmail, wird die
-  Betreiberkopie nicht mehr versucht.
-  Die Mail-Konfiguration muss also vom **Webserver** aus erreichbar sein, nicht nur von der Kommandozeile.
-- Betreiberadresse und Absender sollten verschiedene Postfächer sein (Microsoft 365, Hinweis
+- **Right after the update, choose the guarantee notice as a file on every start page** (PDF,
+  PNG or JPEG, in colour, unaltered, in the language of the start page) — before that the field does not exist.
+  Until then the finding `warrantyNoticeFileMissing` locks the checkout; intended, because every confirmation
+  would otherwise be incomplete. The Commission's package "Harmonised notice in 24 languages" contains, per
+  language, one PDF with a colour version (page 1) and a black-and-white version (page 2); online only the colour
+  one applies. So schedule this for a maintenance window.
+- 🔴 **`contao:migrate` in one call, without `--schema-only` or `--migrations-only`** — on the
+  console, not separately through the Contao Manager. `ConfirmationBeforeMailMigration` marks the orders
+  from before C-9 with `confirmationSentAt = 0` ("no confirmation due") and can only do that in the **first**
+  pass, while `tl_page.consho_warrantyNotice` is still missing. Anyone who applies the schema on its own will then
+  see every old order in the "not sent" warning.
+  The same applies to `DecisionSentMigration` (E10): it creates `tl_consho_cancellation.decisionSentAt` itself
+  and sets decisions from before to 0. If the schema creates the column first, it never runs, and every
+  old decision shows up in the "decision not sent" warning.
+- The mail goes out in the request of the buy click, after the commit. Ten seconds apply **per
+  connection step**, not to the whole sending; if the transport fails on the customer mail, the
+  operator copy is no longer attempted.
+  So the mail configuration must be reachable from the **web server**, not only from the command line.
+- The operator address and the sender should be different mailboxes (Microsoft 365, notice
   `operatorAddressIsSender`).
-- **Nach dem Update die Mail-Konfiguration mit „Testmail senden" prüfen.** Passwörter, die vor C-9
-  gespeichert wurden und `# < > ( ) \ = " '` enthalten, sind verstümmelt gespeichert — neu eingeben.
-- Neue Spalte `tl_consho_order.paymentInstructions` (Zahlungshinweis, beim Kauf eingefroren) — ältere
-  Bestellungen haben keinen; ihre Bestätigung nimmt ihn aus der Rechnung, wo es eine gibt.
+- **After the update, check the mail configuration with "Testmail senden" (Send test mail).** Passwords that were
+  saved before C-9 and contain `# < > ( ) \ = " '` are stored mangled — enter them again.
+- New column `tl_consho_order.paymentInstructions` (payment instructions, frozen at the time of purchase) — older
+  orders have none; their confirmation takes them from the invoice, where there is one.
 
-## Steuerbezeichnung und andere Texte anpassen (Block Wertgutscheine, WG-7)
+## Adjusting the tax label and other texts (Block Wertgutscheine, WG-7)
 
-Consho schreibt im deutschen Shop durchgehend **„USt."** bzw. „Umsatzsteuer" (Michael, 2026-10-06:
-„einheitlich USt."). So heißt die Steuer im Gesetz, in Österreich wie in Deutschland (§ 1 UStG; § 6
-PAngV spricht von Preisen, die „die Umsatzsteuer … enthalten"). „Mehrwertsteuer" ist der
-umgangssprachliche Name. Eine bestimmte Abkürzung schreibt die PAngV nach dem, was wir gelesen haben,
-nicht vor — **wer „inkl. MwSt." will, ändert den Text, nicht den Code.**
+In the German shop, Consho consistently writes **"USt."** or "Umsatzsteuer". That is what the tax is called in the
+law, in Austria as in Germany (§ 1 UStG; § 6 PAngV speaks of prices that "die Umsatzsteuer … enthalten").
+"Mehrwertsteuer" is the colloquial name. As far as we have read, the PAngV does not prescribe a particular
+abbreviation — **whoever wants "inkl. MwSt." changes the text, not the code.**
 
-Contao lädt Sprachdateien des Projekts **nach** denen der Erweiterungen. Eine Datei
-`contao/languages/de/default.php` **im Projektverzeichnis der Installation** (neben `composer.json`,
-nicht im Bundle) überschreibt also jeden Consho-Text, Schlüssel für Schlüssel:
+Contao loads the project's language files **after** those of the extensions. A file
+`contao/languages/de/default.php` **in the project directory of the installation** (next to `composer.json`,
+not in the bundle) therefore overrides any Consho text, key by key:
 
 ```php
 <?php
-// contao/languages/de/default.php — im Projekt, nicht im Bundle
+// contao/languages/de/default.php — in the project, not in the bundle
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxNotice'] = 'inkl. MwSt., zzgl. Versandkosten';
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxOnly'] = 'inkl. MwSt.';
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxNoticeNet'] = 'zzgl. MwSt., zzgl. Versandkosten';
@@ -436,57 +436,57 @@ $GLOBALS['TL_LANG']['CONSHO']['checkout']['total']['gross'] = 'Gesamtsumme (inkl
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['reviewNet'] = 'zzgl. MwSt.';
 ```
 
-Wo die Steuer genannt wird:
+Where the tax is named:
 
-| Schlüssel | Wo | Vorgabe |
+| Key | Where | Default |
 |---|---|---|
-| `CONSHO.priceTaxNotice`, `priceTaxOnly` | unter dem Preis (Produktseite, Kachel, Warenkorb, Mini-Warenkorb), brutto | „inkl. USt., zzgl. Versandkosten" / „inkl. USt." |
-| `CONSHO.priceTaxNoticeNet`, `priceTaxOnlyNet` | ebenda, für Netto-Kundengruppen | „zzgl. USt., …" |
-| `CONSHO.checkout.total.gross`, `checkout.reviewNet` | Prüfseite der Kasse | „Gesamtsumme (inkl. USt.)" / „zzgl. USt." |
-| `CONSHO.invoice.tax`, `taxRate`, `taxes`, `taxTotal` | Rechnung, Bestellseite, Bestellbestätigung | „USt.", „USt.-Satz", „Umsatzsteuer je Satz", „Umsatzsteuer" |
+| `CONSHO.priceTaxNotice`, `priceTaxOnly` | below the price (product page, tile, basket, mini basket), gross | "inkl. USt., zzgl. Versandkosten" / "inkl. USt." |
+| `CONSHO.priceTaxNoticeNet`, `priceTaxOnlyNet` | same place, for net customer groups | "zzgl. USt., …" |
+| `CONSHO.checkout.total.gross`, `checkout.reviewNet` | review page of the checkout | "Gesamtsumme (inkl. USt.)" / "zzgl. USt." |
+| `CONSHO.invoice.tax`, `taxRate`, `taxes`, `taxTotal` | invoice, order page, order confirmation | "USt.", "USt.-Satz", "Umsatzsteuer je Satz", "Umsatzsteuer" |
 
-⚠️ **Danach den Cache leeren** (`cache:clear` bzw. im Contao Manager), sonst bleibt der alte Text.
-Und: Eine **Rechnung** ist ein Schnappschuss — sie wird mit dem Text zur Zeit des Renderns gezeigt,
-der Betrag ändert sich nicht.
+⚠️ **Clear the cache afterwards** (`cache:clear` or in the Contao Manager), otherwise the old text remains.
+And: an **invoice** is a snapshot — it is shown with the text at the time of rendering,
+the amount does not change.
 
-Gilt für die ganze Installation. Ein eigenes Feld je Shop (etwa ein AT- und ein DE-Shop mit
-verschiedener Schreibweise) gibt es nicht; es kommt, wenn ein Betreiber es braucht.
+Applies to the whole installation. A separate field per shop (for instance an AT and a DE shop with
+different spellings) does not exist; it will come when an operator needs it.
 
-Bei nicht steuerbaren Artikeln (Steuerklasse „nicht steuerbar", Wertgutscheine) entfällt der Satz
-ganz; wird etwas versandt, bleibt `CONSHO.priceShippingOnly` („zzgl. Versandkosten").
+For non-taxable articles (tax class "nicht steuerbar" (not taxable), gift vouchers) the sentence is dropped
+entirely; if something is shipped, `CONSHO.priceShippingOnly` ("zzgl. Versandkosten") remains.
 
-## Steuer im Bestimmungsland, Steuermeldung, E-Rechnung (Block R)
+## Tax in the country of destination, tax report, e-invoice (Block R)
 
-- 🔴 **Verhalten geändert:** Bis Block R berechnete Consho Ware und digitale Leistungen an Privatkunden
-  in anderen EU-Ländern immer mit dem Satz des Kundenlandes. Jetzt gilt ohne den Schalter
-  **„Steuer im Bestimmungsland"** (Shop-Konfiguration, Legende Umsatzsteuer, Standard aus) der Satz
-  des Shoplandes. Wer über der Lieferschwelle von 10.000 € liegt oder auf sie verzichtet hat
-  (OSS-Registrierung), schaltet ihn **vor dem nächsten Verkauf** ein. Er gilt für alle Shops mit
-  derselben UID.
-- **Steuermeldung** (seit Block Dashboard im Dashboard): Zähler gegen die Schwelle je UID und der Quartalsexport als CSV.
-  Bestellungen von vor Block R haben kein Bestimmungsland und fehlen dort.
-- **E-Rechnung:** Schalter in der Legende Rechnungsabsender, braucht Firmenname, Land, eigene UID und
-  die Kontakt-E-Mail für Rechnungen. Nur Geschäftskunden bekommen sie.
-- **Buchhaltungsmodule** docken über `Document\Handoff\IssuedDocumentHandlerInterface` an: jeder
-  ausgestellte Beleg einmal, nach dem Commit und nach der Ablage, mit Schnappschuss und PDF. Consho
-  wiederholt nicht — ein Modul, das nichts verlieren darf, führt eine eigene Warteschlange.
-- Neue Abhängigkeit `horstoeko/zugferd` (zieht u. a. `jms/serializer`, FPDI). **Ohne**
-  `--with-dependencies` installieren: mit der Option hob Composer im Test 45 fremde Pakete mit an,
-  darunter `doctrine/dbal` 4.5, an dem `contao:migrate` scheiterte.
+- 🔴 **Behaviour changed:** Until Block R, Consho always charged goods and digital services to consumers
+  in other EU countries at the rate of the customer's country. Now, without the switch
+  **"Steuer im Bestimmungsland" (Tax at destination)** (shop configuration, legend "Umsatzsteuer" (VAT), off by
+  default), the rate of the shop's country applies. Whoever is above the delivery threshold of €10,000 or has
+  waived it (OSS registration) switches it on **before the next sale**. It applies to all shops with
+  the same VAT ID.
+- **Tax report** (in the dashboard since Block Dashboard): counter against the threshold per VAT ID and the
+  quarterly export as CSV. Orders from before Block R have no country of destination and are missing there.
+- **E-invoice:** switch in the legend "Rechnungsabsender" (Invoice sender); needs company name, country, own VAT
+  ID and the contact e-mail for invoices. Only business customers receive it.
+- **Accounting modules** dock on via `Document\Handoff\IssuedDocumentHandlerInterface`: every
+  issued document once, after the commit and after filing, with snapshot and PDF. Consho
+  does not retry — a module that must not lose anything keeps its own queue.
+- New dependency `horstoeko/zugferd` (pulls in `jms/serializer`, FPDI, among others). Install it **without**
+  `--with-dependencies`: with the option, Composer in a test also upgraded 45 unrelated packages,
+  among them `doctrine/dbal` 4.5, on which `contao:migrate` failed.
 
 ## Dashboard (Block Dashboard)
 
-- **Benutzergruppen:** Das neue Modul „Dashboard" in den erlaubten Modulen ankreuzen. Ohne das Recht
-  sieht ein Redakteur die Hinweise weiter auf Contaos Startseite. Die Steuermeldung ist jetzt eine
-  Ansicht des Dashboards (`do=consho_dashboard&view=taxReport`) und verlangt **Dashboard und
-  Bestellungen** — Kacheln, Kennzahlen und Steuermeldung zeigt das Dashboard nur, wer das Zielmodul
-  öffnen darf. Das alte Recht „Steuermeldung" ist ohne Wirkung und darf stehen bleiben.
-- Lesezeichen auf `do=consho_tax_report` führen ins Leere; neue Adresse siehe oben.
-- `contao:migrate` legt den Index auf `tl_consho_order.createdAt` an.
+- **User groups:** Tick the new module "Dashboard" in the allowed modules. Without that permission
+  an editor keeps seeing the notices on Contao's start page. The tax report is now a
+  view of the dashboard (`do=consho_dashboard&view=taxReport`) and requires **Dashboard and
+  orders** — the dashboard only shows tiles, key figures and the tax report to someone who may open the target
+  module. The old "Steuermeldung" (Tax report) permission has no effect and may stay.
+- Bookmarks to `do=consho_tax_report` lead nowhere; for the new address see above.
+- `contao:migrate` creates the index on `tl_consho_order.createdAt`.
 
-## Einbinden während der Entwicklung
+## Including the bundle during development
 
-In der `composer.json` der Zielinstallation:
+In the `composer.json` of the target installation:
 
 ```json
 {
@@ -500,115 +500,115 @@ In der `composer.json` der Zielinstallation:
 composer require webwerkwien/contao-consho-bundle:@dev
 ```
 
-> ⚠️ **Constraint locker halten.** Ein Pfad-Repository mit einer engen Version führt zu einem Constraint-Mismatch gegen die Packagist-Fassung, sobald es eine gibt.
+> ⚠️ **Keep the constraint loose.** A path repository with a narrow version leads to a constraint mismatch against the Packagist version as soon as there is one.
 
-### 🔴 Nach jedem Upload die Vendor-Kopie erzwingen
+### 🔴 Force the vendor copy after every upload
 
-**`composer update` erneuert die Kopie bei `symlink: false` und bestehendem Lock-File nicht.** Der Befehl läuft durch, meldet Erfolg, räumt den Cache auf — und im `vendor/` liegt weiterhin der alte Code.
+**`composer update` does not renew the copy with `symlink: false` and an existing lock file.** The command runs through, reports success, clears the cache — and `vendor/` still holds the old code.
 
-Belegt am 2026-09-09 auf dem Testserver: Nach dem Upload einer geänderten `contao/config/config.php` und einem erfolgreichen `composer update` stand im Vendor-Ordner die vorherige Fassung. Sichtbar wurde es nur durch Gegenzählen.
+After uploading a changed `contao/config/config.php` and a successful `composer update`, the vendor folder still held the previous version. It only became visible by cross-checking.
 
 ```bash
-cd /web
+cd <project-dir>
 rm -rf vendor/webwerkwien/contao-consho-bundle
 cp -R packages/contao-consho-bundle vendor/webwerkwien/contao-consho-bundle
 COMPOSER_HOME=/tmp/.composer composer dump-autoload --no-plugins
 vendor/bin/contao-console cache:clear
 ```
 
-**Danach gegenprüfen, dass die Änderung wirklich angekommen ist** — etwa mit einem `grep` auf eine Zeile, die es vorher nicht gab:
+**Afterwards cross-check that the change has really arrived** — for instance with a `grep` for a line that did not exist before:
 
 ```bash
-grep -n "<neue Zeile>" vendor/webwerkwien/contao-consho-bundle/<datei>
+grep -n "<new line>" vendor/webwerkwien/contao-consho-bundle/<file>
 ```
 
-> 🎯 Ohne diese Gegenprobe sucht man den Fehler im Code, während er im Deployment liegt. Der Cache war geleert, der Befehl meldete Erfolg — nur die Datei war die alte.
+> 🎯 Without this cross-check you look for the error in the code while it lies in the deployment. The cache had been cleared, the command reported success — only the file was the old one.
 
-## 🔒 Der Schlüssel für die Mail-Zugangsdaten
+## 🔒 The key for the mail credentials
 
-Consho verschlüsselt SMTP-Passwörter in der Datenbank. Der Schlüssel gehört **in die Umgebung, nicht in die Datenbank** — sonst läge er neben dem, was er schützt, und ein Auszug gäbe beides auf einmal her.
+Consho encrypts SMTP passwords in the database. The key belongs **in the environment, not in the database** — otherwise it would sit next to what it protects, and one dump would yield both at once.
 
-**Ohne eigenes Zutun** leitet Consho den Schlüssel aus `APP_SECRET` ab, das Contao bei der Installation selbst in die `.env.local` schreibt (HKDF mit festem Zweck, also nicht derselbe Wert). Für eine Installation über den Contao Manager ist damit nichts zu tun.
+**Without any action on your part**, Consho derives the key from `APP_SECRET`, which Contao writes into `.env.local` itself during installation (HKDF with a fixed purpose, so not the same value). For an installation via the Contao Manager there is nothing to do.
 
-**Wer einen eigenen Schlüssel will** — etwa damit ein Wechsel von `APP_SECRET` die Mailpasswörter nicht berührt:
+**If you want your own key** — for instance so that a change of `APP_SECRET` does not affect the mail passwords:
 
 ```bash
 php -r "echo base64_encode(random_bytes(32)), PHP_EOL;"
 ```
 
-Den Wert als `CONSHO_SECRET_KEY` in die `.env.local` schreiben, dann `cache:clear`. Er hat Vorrang vor `APP_SECRET`.
+Write the value as `CONSHO_SECRET_KEY` into `.env.local`, then `cache:clear`. It takes precedence over `APP_SECRET`.
 
 | | |
 |---|---|
-| **`CONSHO_SECRET_KEY` nicht gesetzt** | Schlüssel aus `APP_SECRET` (das Contao ohnehin verlangt — ohne startet die Installation nicht) |
-| **`CONSHO_SECRET_KEY` gesetzt, aber falsch** | Fehler beim ersten Passwort, **kein** stiller Rückfall auf `APP_SECRET` — die gespeicherten Passwörter wären sonst unlesbar, ohne dass jemand wüsste, warum |
-| ⚠️ **`CONSHO_SECRET_KEY` leer** (`CONSHO_SECRET_KEY=`) oder kein Base64 | Gilt als **nicht gesetzt** → Schlüssel aus `APP_SECRET`. Symfonys Env-Prozessoren unterscheiden leer nicht von fehlend. Wer einen eigenen Schlüssel hatte und die Zeile leert, macht die gespeicherten Passwörter unlesbar |
-| **Gedreht** (der eigene Schlüssel, oder `APP_SECRET`, wo er die Quelle ist) | ⚠️ **Alle gespeicherten Passwörter sind danach unlesbar** und müssen neu eingegeben werden. Kein Routinevorgang. Ebenso beim **nachträglichen Setzen** von `CONSHO_SECRET_KEY`, wenn vorher aus `APP_SECRET` abgeleitet wurde |
+| **`CONSHO_SECRET_KEY` not set** | Key from `APP_SECRET` (which Contao requires anyway — the installation does not start without it) |
+| **`CONSHO_SECRET_KEY` set, but wrong** | Error at the first password, **no** silent fallback to `APP_SECRET` — otherwise the stored passwords would be unreadable without anyone knowing why |
+| ⚠️ **`CONSHO_SECRET_KEY` empty** (`CONSHO_SECRET_KEY=`) or not Base64 | Counts as **not set** → key from `APP_SECRET`. Symfony's env processors do not distinguish empty from missing. Anyone who had their own key and empties the line makes the stored passwords unreadable |
+| **Rotated** (your own key, or `APP_SECRET` where it is the source) | ⚠️ **All stored passwords are unreadable afterwards** and must be entered again. Not a routine operation. The same applies when **setting** `CONSHO_SECRET_KEY` **later**, if the key was previously derived from `APP_SECRET` |
 
-> Der Schlüssel steht als 44 Base64-Zeichen in der Datei und wird über den `base64`-Env-Prozessor zu 32 Byte. **Einen `hex2bin`-Prozessor gibt es in Symfony nicht** — ein Hexschlüssel ergäbe hier 48 Byte Unsinn und scheiterte erst beim Versandversuch. `default::` sorgt dafür, dass eine fehlende Variable `null` ergibt statt einer `EnvNotFoundException` beim Bauen des Containers — dann greift `APP_SECRET`.
+> The key is stored in the file as 44 Base64 characters and becomes 32 bytes via the `base64` env processor. **There is no `hex2bin` processor in Symfony** — a hex key would produce 48 bytes of nonsense here and would only fail at the first sending attempt. `default::` makes a missing variable yield `null` instead of an `EnvNotFoundException` while the container is built — then `APP_SECRET` applies.
 
-### 🔴 Öffentliche Dateien brauchen einen eigenen Schritt
+### 🔴 Public files need a step of their own
 
-Consho liefert `public/backend.css` mit — die Symbole der drei Menügruppen hängen daran. Die Datei muss nach `public/bundles/contaoconsho/` veröffentlicht werden:
+Consho ships `public/backend.css` — the icons of the three menu groups depend on it. The file must be published to `public/bundles/contaoconsho/`:
 
 ```bash
 vendor/bin/contao-console assets:install public --symlink --relative
 ```
 
-Bei einem Rollout über `composer install` erledigt das die Managed Edition von selbst. **Beim Upload von Hand nicht** — `composer dump-autoload` rührt öffentliche Dateien nicht an. Gegenprobe:
+In a rollout via `composer install`, the Managed Edition does this by itself. **Not with a manual upload** — `composer dump-autoload` does not touch public files. Cross-check:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" https://<host>/bundles/contaoconsho/backend.css
 ```
 
-Erwartet: 200. Bei 404 fehlt der `assets:install`-Schritt.
+Expected: 200. A 404 means the `assets:install` step is missing.
 
-### 🔴 Ein Upload überschreibt — er **löscht nicht**
+### 🔴 An upload overwrites — it **does not delete**
 
-Ein `tar`- oder `scp`-Upload legt neue Dateien hin und ersetzt vorhandene. Eine Datei, die im Projekt **gelöscht** wurde, bleibt auf dem Server liegen.
+A `tar` or `scp` upload puts new files in place and replaces existing ones. A file that was **deleted** in the project stays on the server.
 
-Am 2026-09-09 vorgeführt: Eine entfernte Listener-Klasse lag weiter im Paketordner, wurde mit in den `vendor/` kopiert und ließ `cache:clear` scheitern — mit einem Fehler, der auf eine Klasse zeigte, die es im Projekt gar nicht mehr gab.
+A removed listener class stayed in the package folder, was copied into `vendor/` along with the rest and made `cache:clear` fail — with an error pointing to a class that no longer existed in the project at all.
 
-**Deshalb den Paketordner vor dem Upload leeren:**
+**So empty the package folder before the upload:**
 
 ```bash
-ssh <ziel> 'rm -rf /web/packages/contao-consho-bundle && mkdir -p /web/packages/contao-consho-bundle'
-tar czf - --exclude='.git' --exclude='vendor' . | ssh <ziel> "cd /web/packages/contao-consho-bundle && tar xzf -"
+ssh <target> 'rm -rf <project-dir>/packages/contao-consho-bundle && mkdir -p <project-dir>/packages/contao-consho-bundle'
+tar czf - --exclude='.git' --exclude='vendor' . | ssh <target> "cd <project-dir>/packages/contao-consho-bundle && tar xzf -"
 ```
 
-> 🎯 Dieselbe Familie wie die beiden Fallen darunter: **Der Befehl meldet Erfolg, der Zielzustand stimmt trotzdem nicht.**
+> 🎯 The same family as the two traps below: **The command reports success, yet the target state is not right.**
 
-### 🔴 `cache:clear` nie nach `/dev/null` schicken
+### 🔴 Never send `cache:clear` to `/dev/null`
 
-Am 2026-09-09 kostete das eine Stunde. Im Deploy-Einzeiler stand `vendor/bin/contao-console cache:clear >/dev/null 2>&1`. Der Befehl **scheiterte** dabei jedes Mal — an einer ungültigen Service-Definition — und gab den Grund vollständig aus. Die Umleitung warf ihn weg.
+A deploy one-liner contained `vendor/bin/contao-console cache:clear >/dev/null 2>&1`. The command **failed** every time — on an invalid service definition — and printed the reason in full. The redirect threw it away.
 
-Zurück blieb ein halb aktualisierter Stand: neue Dateien im `vendor/`, alter Container im Cache. Die Symptome waren entsprechend widersprüchlich, und die Suche lief im Code statt im Deployment.
+What remained was a half-updated state: new files in `vendor/`, the old container in the cache. The symptoms were correspondingly contradictory, and the search went through the code instead of the deployment.
 
-Ausgabe **filtern** ist in Ordnung, **unterdrücken** nicht:
+**Filtering** the output is fine, **suppressing** it is not:
 
 ```bash
 vendor/bin/contao-console cache:clear 2>&1 | grep -v imagick | tail -2
 ```
 
-Der Fehler steht außerdem in `var/logs/prod-YYYY-MM-DD.log` — nicht im System-Log des Backends und nicht in den Logs des Contao Managers.
+The error is also in `var/logs/prod-YYYY-MM-DD.log` — not in the back end's system log and not in the Contao Manager's logs.
 
-### 🔴 Laufende Messenger-Worker behalten den alten Container
+### 🔴 Running Messenger workers keep the old container
 
-Contao 5 startet über den minütlichen CLI-Cron (`contao.cron.supervise_workers`) drei Worker `messenger:consume` mit `--time-limit=55` — Voreinstellung aus dem Skeleton der Managed Edition. Jeder lädt den Container **einmal beim Start**. Wird währenddessen `var/cache/prod` gelöscht, fehlen ihm beim Beenden Dateien:
+Contao 5 starts three `messenger:consume` workers with `--time-limit=55` via the per-minute CLI cron (`contao.cron.supervise_workers`) — the default from the Managed Edition skeleton. Each loads the container **once at start-up**. If `var/cache/prod` is deleted in the meantime, it is missing files when it shuts down:
 
 ```
 php.CRITICAL: Uncaught Error: Failed opening required '…/var/cache/prod/Container…/get….php'
 ```
 
-Erkennbar am Zeitpunkt: **55 Sekunden nach dem Cron-Start**, meist `:56`. Keine Webanfrage ist betroffen, das Log füllt sich trotzdem bei jedem Deploy.
+Recognisable by the timing: **55 seconds after the cron start**, usually at `:56`. No web request is affected, but the log still fills up on every deploy.
 
-**`messenger:stop-workers` löst das nicht zuverlässig.** Belegt am 2026-09-14 auf dem Testserver, im Code nachgelesen:
+**`messenger:stop-workers` does not solve this reliably.** Observed in practice and confirmed in the code:
 
-- Das Signal liegt im Pool `cache.messenger.restart_workers_signal`, Elternpool `cache.app` — also unter `var/cache/prod/pools`. Das Löschen des Caches nimmt es mit.
-- Ein Worker prüft das Signal nur vor seiner Pause (`--sleep` 5, 10 bzw. 20 s), und nicht, solange er eine Nachricht abarbeitet.
-- Mit 5 s und mit 25 s Wartezeit war je ein Deploy sauber und einer nicht.
+- The signal lives in the pool `cache.messenger.restart_workers_signal`, parent pool `cache.app` — that is, under `var/cache/prod/pools`. Deleting the cache takes it along.
+- A worker only checks the signal before its pause (`--sleep` 5, 10 or 20 s), and not while it is processing a message.
+- With a wait of 5 s and with one of 25 s, one deploy each was clean and one was not.
 
-**Verlässlich ist ein Betrieb ohne dauerhafte Worker.** In `config/config.yaml` der Installation:
+**What is reliable is running without permanent workers.** In the installation's `config/config.yaml`:
 
 ```yaml
 contao:
@@ -616,6 +616,6 @@ contao:
         workers: []
 ```
 
-`workers` ersetzt die Liste aus dem Skeleton, statt sie zu ergänzen. Die Nachrichten (Suchindex, Backend-Suche) arbeitet dann der Web-Worker nach Seitenaufrufen ab; `contao:cron` läuft weiter minutengenau, auch die Grenzen-Crons von Consho. Auf dem Testserver seit 2026-09-14 so — die Deploys danach blieben ohne Fehler im Log.
+`workers` replaces the list from the skeleton instead of extending it. The messages (search index, back-end search) are then processed by the web worker after page requests; `contao:cron` keeps running every minute, including Consho's boundary crons. With this setting, the deploys that followed left no errors in the log.
 
-> ⚠️ Dasselbe gilt für ein Update über den Contao Manager: Dessen Setup löscht den Cache sofort, ohne `stop-workers`.
+> ⚠️ The same applies to an update via the Contao Manager: its setup deletes the cache immediately, without `stop-workers`.

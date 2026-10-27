@@ -23,9 +23,8 @@ use Webwerkwien\ContaoConshoBundle\Notification\OrderConfirmationSourceInterface
  * for every place in Consho that needs to know an address belongs to whoever
  * is asking.
  *
- * Michael, 2026-09-28: „baue die Funktion für die Bestätigungsmail so, dass
- * sie von mehreren Diensten in Anspruch genommen werden kann" — a function of
- * Consho, not a module of its own.
+ * Built so that several services can use it — a function of Consho, not a
+ * module of its own.
  *
  *  - The TOKEN is Contao's opt-in (`contao.opt_in`): valid 24 hours, kept as
  *    proof after the confirmation, removed by Contao's own cron, listed in the

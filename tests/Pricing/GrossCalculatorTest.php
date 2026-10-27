@@ -33,7 +33,7 @@ class GrossCalculatorTest extends TestCase
 
     public function testACountryWithoutARateFailsLoudly(): void
     {
-        // Lieber kein Preis als ein still falscher: ohne Satz kein Brutto.
+        // Better no price than a silently wrong one: no rate, no gross.
         $this->expectException(TaxRateNotFound::class);
 
         $this->grossCalculator(['AT' => '20.0000'])->gross('10.0000', 1, 'IT', 1_790_000_000);
@@ -48,7 +48,7 @@ class GrossCalculatorTest extends TestCase
         yield 'krummes Brutto, 20 %' => ['19.99', 'AT', '16.6583'];
         yield 'Deutschland, 19 %' => ['11.90', 'DE', '10.0000'];
         yield 'Satz null' => ['10.00', 'CH', '10.0000'];
-        // 0,0003 / 1,2 = 0,00025 — HalfEven und HalfDown ergäben 0,0002.
+        // 0.0003 / 1.2 = 0.00025 — HalfEven and HalfDown would give 0.0002.
         yield 'kaufmännisch aufgerundet' => ['0.0003', 'AT', '0.0003'];
     }
 

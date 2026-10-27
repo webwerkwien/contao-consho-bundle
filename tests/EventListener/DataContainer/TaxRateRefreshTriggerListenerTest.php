@@ -12,8 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Ein geänderter Steuersatz ändert das Anzeige-Brutto jedes Artikels dieser
- * Klasse (C25) — gemeldet werden die Artikel, gerechnet wird am Ende des Requests.
+ * A changed tax rate changes the display gross of every item of this class
+ * (C25) — the items are reported, the calculation happens at the end of the
+ * request.
  */
 class TaxRateRefreshTriggerListenerTest extends TestCase
 {
@@ -29,7 +30,7 @@ class TaxRateRefreshTriggerListenerTest extends TestCase
         $this->createCatalogSchema($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_tax_rate');
 
-        // Klasse 1: Produkt 1 und seine Variante 10. Klasse 2: Produkt 2.
+        // Class 1: product 1 and its variant 10. Class 2: product 2.
         $this->insertProduct(['id' => 1, 'pid' => 0, 'taxClass' => 1]);
         $this->insertProduct(['id' => 10, 'pid' => 1, 'taxClass' => 1]);
         $this->insertProduct(['id' => 2, 'pid' => 0, 'taxClass' => 2]);
@@ -69,7 +70,7 @@ class TaxRateRefreshTriggerListenerTest extends TestCase
 
     public function testRestoringARateVersionReportsItsClass(): void
     {
-        // $data ohne id und pid, wie Versions::restore() es übergibt.
+        // $data without id and pid, as Versions::restore() passes it.
         $this->listener()->onRestoreVersion('tl_consho_tax_rate', 7, 2, ['rate' => '19.0000']);
 
         self::assertSame([1, 10], $this->queue->take());
@@ -77,7 +78,7 @@ class TaxRateRefreshTriggerListenerTest extends TestCase
 
     public function testDeletingATaxClassReportsItsArticles(): void
     {
-        // Die Sätze gehen als Kindzeilen mit, ohne ihr eigenes ondelete.
+        // The rates go along as child rows, without their own ondelete.
         $this->listener()->onDeleteClass($this->dc(2), 1);
 
         self::assertSame([2], $this->queue->take());
@@ -103,7 +104,7 @@ class TaxRateRefreshTriggerListenerTest extends TestCase
     }
 
     /**
-     * Wie copyChildren() ihn baut: ohne Konstruktor, nur die id gesetzt.
+     * As copyChildren() builds it: without a constructor, only the id set.
      */
     private function dc(int $id): DC_Table
     {

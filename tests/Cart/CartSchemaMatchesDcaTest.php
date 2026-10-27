@@ -7,10 +7,11 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Das Warenkorb-Testschema ist handgeschrieben — wegen `order`, das DcaSchema
- * nicht anlegen kann. Damit es nicht wieder still hinter der DCA zurückbleibt
- * (Prüfungsnotiz, Fall 31; zuletzt Block H mit `discountCode`), vergleicht
- * dieser Test die Spalten mit den Feldern der DCA, die eine SQL-Spalte haben.
+ * The cart test schema is built from the DCA (DcaSchema), `order` included
+ * and quoted. This test keeps it that way: it compares the columns of the
+ * created tables with the DCA fields that have an SQL column, so a schema
+ * that falls behind the DCA (a test schema must use the production columns;
+ * most recently Block H with `discountCode`) fails here.
  */
 class CartSchemaMatchesDcaTest extends TestCase
 {

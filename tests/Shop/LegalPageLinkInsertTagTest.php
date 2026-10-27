@@ -18,10 +18,10 @@ use Webwerkwien\ContaoConshoBundle\Shop\LegalPageLinkInsertTag;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 
 /**
- * WA, I1 (Michael, 2026-10-22: „Insert-Tag Widerruf-Link für z.B. Footer"):
- * der Link zur Seite „Vertrag widerrufen" des Startpunkts. Dasselbe für
- * „Verträge hier kündigen" (Michael, 2026-10-24: „brauchen wir das auch für
- * Abo Kündigen?" → „ja, gleich bauen").
+ * WA, I1:
+ * the link to the start point's "Vertrag widerrufen" (withdraw from the
+ * contract) page. The same for "Verträge hier kündigen" (cancel contracts
+ * here), for subscriptions.
  */
 final class LegalPageLinkInsertTagTest extends TestCase
 {
@@ -34,7 +34,7 @@ final class LegalPageLinkInsertTagTest extends TestCase
         self::assertSame(['contao.db.tl_page.3', 'contao.db.tl_page.12'], $result->getCacheTags(), 'Startpunkt und Zielseite');
     }
 
-    /** Eigene Seite und eigener Text, nicht die des Widerrufs. */
+    /** A page and text of its own, not those of the withdrawal. */
     public function testKuendigungMitIhrerSeiteUndIhremText(): void
     {
         $result = $this->tag()->__invoke($this->insertTag('consho_cancellation_link'));
@@ -63,7 +63,7 @@ final class LegalPageLinkInsertTagTest extends TestCase
         self::assertSame(OutputType::url, $result->getOutputType());
     }
 
-    /** Nie ein Link ins Leere. */
+    /** Never a link to nowhere. */
     public function testLeerStattKaputt(): void
     {
         foreach (['consho_withdrawal_link', 'consho_withdrawal_url', 'consho_cancellation_link', 'consho_cancellation_url'] as $name) {

@@ -31,7 +31,7 @@ class FlatRateShippingTest extends TestCase
 
     public function testOhneBetragInDerWaehrungIstSieNichtVerfuegbar(): void
     {
-        // Spec 6.1: fehlt der Betrag, nicht verfügbar (plus Befund, Task 9).
+        // Spec 6.1: if the amount is missing, not available (plus a finding, task 9).
         self::assertFalse((new FlatRateShipping())->isAvailable($this->context(), ['net' => null]));
         self::assertFalse((new FlatRateShipping())->isAvailable($this->context(), []));
     }

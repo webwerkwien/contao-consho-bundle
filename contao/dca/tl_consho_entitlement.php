@@ -83,7 +83,7 @@ $GLOBALS['TL_DCA']['tl_consho_entitlement'] = [
          * and cleared by SubscriptionDelinquency alone, from the orders, never
          * by hand (P39); apart from `revoked`, which is the operator's.
          *
-         * Not in the palette (review L7): a read-only datim field goes back
+         * Not in the palette: a read-only datim field goes back
          * into the row on every save, without its seconds. The list label
          * says "ruht seit …" (EntitlementListener).
          */

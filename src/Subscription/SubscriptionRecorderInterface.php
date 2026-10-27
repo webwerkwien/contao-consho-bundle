@@ -5,7 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Subscription;
 /**
  * Records the subscriptions of a freshly created order (Abo-3). An interface
  * so the purchase can be tested with a double while the dependency stays
- * required — a nullable one would fail in silence (Prüfungsnotiz, Regel 25).
+ * required — a nullable one would fail in silence.
  */
 interface SubscriptionRecorderInterface
 {

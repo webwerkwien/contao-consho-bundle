@@ -7,7 +7,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationVersioning;
 
 /**
  * The two Contao callbacks that hand out the parent record's version number —
- * docs/mehrsprachigkeit.md, 7.4.
+ * Block M, 7.4.
  *
  * Both fire from Contao\Versions itself, not from DC_Table. Every version of
  * these tables therefore carries the translations, however it came about: the

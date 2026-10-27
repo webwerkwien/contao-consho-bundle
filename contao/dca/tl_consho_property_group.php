@@ -7,7 +7,7 @@
  * mechanism. Custom fields hold everything else and are deliberately not
  * filterable. Shopware and WooCommerce arrived at the same separation
  * independently; Isotope does not have it, which is why its filter had to run
- * over generic value tables. See docs/block-a-fundament.md, section 3.1.
+ * over generic value tables. See Block A, section 3.1.
  */
 $GLOBALS['TL_DCA']['tl_consho_property_group'] = [
     'config' => [

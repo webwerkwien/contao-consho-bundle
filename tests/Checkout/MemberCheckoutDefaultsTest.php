@@ -29,8 +29,8 @@ class MemberCheckoutDefaultsTest extends TestCase
     {
         $this->insertMember($this->connection, 7, [
             'company' => 'web.example.net',
-            'firstname' => 'Michael',
-            'lastname' => 'Morgenbesser',
+            'firstname' => 'Eva',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -42,7 +42,7 @@ class MemberCheckoutDefaultsTest extends TestCase
         $data = $this->defaults()->applyTo(new CheckoutData(), 7);
 
         self::assertSame('web.example.net', $data->billing->company);
-        self::assertSame('Michael', $data->billing->firstname);
+        self::assertSame('Eva', $data->billing->firstname);
         self::assertSame('Teststraße 1', $data->billing->street);
         self::assertSame('1100', $data->billing->postal);
         self::assertSame('Wien', $data->billing->city);
@@ -51,16 +51,16 @@ class MemberCheckoutDefaultsTest extends TestCase
     }
 
     /**
-     * 🔴 Die Entscheidung vom 2026-09-23 (Michael): **`gender` wird nicht
-     * übernommen.** Contao speichert `male`/`female` — ein Geschlecht, keine
-     * Anrede. Direkt übernommen stünde „male" auf der Rechnung; übersetzt wäre
-     * es eine Annahme über die Anrede, die das Feld nicht trägt.
+     * 🔴 **`gender` is not taken over.** Contao stores `male`/`female` — a
+     * gender, not a form of address. Taken over directly, "male" would stand
+     * on the invoice; translated, it would be an assumption about the form of
+     * address that the field does not carry.
      */
     public function testDasGeschlechtWirdNichtZurAnrede(): void
     {
         $this->insertMember($this->connection, 7, [
             'gender' => 'male',
-            'lastname' => 'Morgenbesser',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -73,7 +73,7 @@ class MemberCheckoutDefaultsTest extends TestCase
     public function testEineHinterlegteLieferadresseWirdAngehaktUndUebernommen(): void
     {
         $this->insertMember($this->connection, 7, [
-            'lastname' => 'Morgenbesser',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -87,9 +87,9 @@ class MemberCheckoutDefaultsTest extends TestCase
 
         $data = $this->defaults()->applyTo(new CheckoutData(), 7);
 
-        // Angehakt, nicht nur gefüllt: Ungesetzt läge die Adresse in einem
-        // Teil des Formulars, den niemand aufklappt — und das Paket ginge an
-        // die Rechnungsadresse, während das Konto etwas anderes sagt.
+        // Ticked, not just filled: unset, the address would lie in a
+        // part of the form nobody expands — and the parcel would go to
+        // the billing address while the account says something else.
         self::assertTrue($data->separateShipping);
         self::assertSame('Anderegasse 2', $data->shipping->street);
     }
@@ -97,7 +97,7 @@ class MemberCheckoutDefaultsTest extends TestCase
     public function testOhneLieferadresseBleibtDasHaeckchenAus(): void
     {
         $this->insertMember($this->connection, 7, [
-            'lastname' => 'Morgenbesser',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -111,15 +111,15 @@ class MemberCheckoutDefaultsTest extends TestCase
     }
 
     /**
-     * 🔴 Der Kern: Vorbelegt wird nur, was **niemand angefasst** hat. Wer
-     * seinen Vornamen löscht, weil er als Firma bestellt, darf ihn beim
-     * nächsten Seitenaufruf nicht zurückbekommen.
+     * 🔴 The core: only what **nobody has touched** is prefilled. Whoever
+     * deletes his first name because he orders as a company must not get it
+     * back on the next page view.
      */
     public function testEineAngefassteAdresseWirdNichtUeberschrieben(): void
     {
         $this->insertMember($this->connection, 7, [
-            'firstname' => 'Michael',
-            'lastname' => 'Morgenbesser',
+            'firstname' => 'Eva',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -137,14 +137,14 @@ class MemberCheckoutDefaultsTest extends TestCase
 
     public function testEinGastBekommtNichts(): void
     {
-        $this->insertMember($this->connection, 7, ['lastname' => 'Morgenbesser', 'city' => 'Wien']);
+        $this->insertMember($this->connection, 7, ['lastname' => 'Example', 'city' => 'Wien']);
 
         self::assertTrue($this->defaults()->applyTo(new CheckoutData(), 0)->billing->isEmpty());
     }
 
     public function testEinMitgliedOhneAdresseAendertNichts(): void
     {
-        // Genau die Lage der Demo-Mitglieder auf c5: Konto ja, Adresse nein.
+        // Exactly the situation of demo members: account yes, address no.
         $this->insertMember($this->connection, 7, ['gender' => 'male']);
 
         $data = $this->defaults()->applyTo(new CheckoutData(), 7);
@@ -159,10 +159,10 @@ class MemberCheckoutDefaultsTest extends TestCase
     }
 
     /**
-     * 🔴 Contao lässt `country` sechs Zeichen, für Untergliederungen wie
-     * `GB-ENG`. Consho rechnet überall mit ISO 3166-1 alpha-2 — Steuersätze,
-     * Lieferländer, Shop-Whitelist. Ein `GB` daraus zu raten wäre ein
-     * Lieferland, das der Kunde nie gewählt hat.
+     * 🔴 Contao allows `country` six characters, for subdivisions such as
+     * `GB-ENG`. Consho works with ISO 3166-1 alpha-2 everywhere — tax rates,
+     * delivery countries, shop whitelist. Guessing a `GB` from it would be a
+     * delivery country the customer never chose.
      */
     public function testEinLandmitUntergliederungWirdNichtGeraten(): void
     {
@@ -181,15 +181,15 @@ class MemberCheckoutDefaultsTest extends TestCase
     }
 
     /**
-     * Contao 5 speichert den Code in GROSSBUCHSTABEN — `Countries::getCountryCodes()`
-     * sagt es im Wortlaut. Contao 4 tat es klein, und genau diese Annahme
-     * wäre die falsche gewesen. Der Test hält beide Schreibweisen fest, damit
-     * eine Altinstallation nicht still ohne Steuersatz dasteht.
+     * Contao 5 stores the code in UPPER CASE — `Countries::getCountryCodes()`
+     * says so verbatim. Contao 4 stored it in lower case, and exactly that
+     * assumption would have been the wrong one. The test holds both spellings,
+     * so that an old installation does not silently end up without a tax rate.
      */
     public function testEinKleingeschriebenesLandWirdGrossUebernommen(): void
     {
         $this->insertMember($this->connection, 7, [
-            'lastname' => 'Morgenbesser',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -202,7 +202,7 @@ class MemberCheckoutDefaultsTest extends TestCase
     public function testDieUidKommtMitUndVerdraengtKeineEingetippte(): void
     {
         $this->insertMember($this->connection, 7, [
-            'lastname' => 'Morgenbesser',
+            'lastname' => 'Example',
             'street' => 'Teststraße 1',
             'postal' => '1100',
             'city' => 'Wien',
@@ -212,23 +212,22 @@ class MemberCheckoutDefaultsTest extends TestCase
 
         self::assertSame('ATU12345678', $this->defaults()->applyTo(new CheckoutData(), 7)->vatId);
 
-        // Eine im Checkout eingetippte UID gehört dem Besucher — auch wenn die
-        // Adresse daneben noch unberührt ist.
+        // A VAT ID typed in the checkout belongs to the visitor — even when the
+        // address next to it is still untouched.
         $eigene = new CheckoutData(vatId: 'DE999999999');
 
         self::assertSame('DE999999999', $this->defaults()->applyTo($eigene, 7)->vatId);
     }
 
     /**
-     * 🔴 **Die vorbelegte Adresse wird normalisiert wie eine getippte.**
+     * 🔴 **The prefilled address is normalised like a typed one.**
      *
-     * Gefunden im Fremdmodell-Review vom 2026-09-23: Die Vorbelegung war der
-     * eine Weg auf die Rechnung, der an `AddressNormalizer` vorbeiführte —
-     * und zwar für den Kunden, der das Formular nie angefasst hat und dessen
-     * Werte deshalb auch niemand berichtigt.
+     * The prefill was the one way onto the invoice that bypassed
+     * `AddressNormalizer` — and that for the customer who never touched the
+     * form and whose values therefore nobody corrects either.
      *
-     * Was im Mitgliedskonto steht, hat Contao nie normalisiert: Die
-     * Registrierung nimmt die E-Mail, wie sie getippt wurde.
+     * What is in the member account Contao has never normalised: the
+     * registration takes the e-mail as it was typed.
      */
     public function testDieVorbelegteAdresseWirdNormalisiertWieEineGetippte(): void
     {
@@ -251,26 +250,25 @@ class MemberCheckoutDefaultsTest extends TestCase
         self::assertSame('Hauptstr. 1', $billing->street, 'Doppelte Leerzeichen fallen weg.');
 
         /*
-         * ⚠️ **Ausgeschriebene Straßennamen gehören NICHT hierher.** Im
-         * ersten Entwurf stand hier eine Zusicherung auf „…straße" — falsch:
-         * `STREET_ABBREVIATIONS` gehört zu `suggestions()`, einem Vorschlag,
-         * den der Kunde annehmen kann. `normalize()` fasst sie nicht an, und
-         * das ist richtig: Eine Adresse gegen den Willen des Bewohners
-         * umzuschreiben, gehört nicht in einen stillen Rechenschritt.
+         * ⚠️ **Spelled-out street names do NOT belong here.** The first
+         * draft had an assertion on "…straße" here — wrong:
+         * `STREET_ABBREVIATIONS` belongs to `suggestions()`, a suggestion
+         * the customer can accept. `normalize()` does not touch them, and
+         * that is right: rewriting an address against the resident's will
+         * does not belong in a silent calculation step.
          */
 
-        // Und was er ausdrücklich NICHT anfasst, bleibt: Namen gehören auf
-        // eine Rechnung, wie sie geschrieben werden.
+        // And what it explicitly does NOT touch stays: names belong on
+        // an invoice as they are written.
         self::assertSame('Muster', $billing->lastname);
     }
 
     /**
-     * 🔴 **Der echte Normalisierer, kein Mock.** Er ist seit dem Review vom
-     * 2026-09-23 Teil der Zusicherung: Was diese Klasse liefert, landet auf
-     * einer Rechnung, und bis dahin war die Vorbelegung der einzige Weg
-     * dorthin, der an `AddressNormalizer` vorbeiführte — ausgerechnet für den
-     * Kunden, der das Formular nie angefasst und deshalb auch nichts
-     * berichtigt hat.
+     * 🔴 **The real normaliser, not a mock.** It is part of the assertion:
+     * what this class delivers ends up on an invoice, and until then the
+     * prefill was the only way there that bypassed `AddressNormalizer` — of
+     * all people for the customer who never touched the form and therefore
+     * corrected nothing.
      */
     private function defaults(): MemberCheckoutDefaults
     {

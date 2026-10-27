@@ -30,10 +30,10 @@
                 <span class="invisible"> {{ "CONSHO.miniCart.lines"|trans({}, "contao_default") }}</span>
             </span>
             {#
-                Netto oder brutto entscheidet der Controller (C-4). Der Zusatz
-                steht hier ausgeschrieben nur für Lesegeräte: Ein Mini-Warenkorb
-                hat Platz für eine Zahl, aber eine Zahl ohne Angabe, ob die
-                Steuer darin ist, ist keine Preisangabe.
+                Net or gross is decided by the controller (C-4). The suffix is
+                spelled out here for screen readers only: a mini cart has room for
+                one number, but a number that does not say whether tax is included
+                is no price indication.
             #}
             <span class="consho-mini-cart__total">
                 {{- total -}}

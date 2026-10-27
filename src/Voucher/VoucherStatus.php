@@ -17,6 +17,8 @@ enum VoucherStatus: string
     case Blocked = 'blocked';
     case Expired = 'expired';
     case OtherCurrency = 'otherCurrency';
+    // A single-purpose voucher with nothing in the basket it may pay for (EZ-1, F4).
+    case NotApplicable = 'notApplicable';
     // Gone from the shop's reach: deleted, or no longer valid in this shop.
     case Unknown = 'unknown';
 }

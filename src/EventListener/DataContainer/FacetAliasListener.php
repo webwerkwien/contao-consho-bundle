@@ -12,7 +12,7 @@ use Doctrine\DBAL\Connection;
  * Checks the path segment of a facet landing page before it is stored.
  *
  * A landing page answers at /<listing page alias>/<alias>.html — the auto_item
- * of its listing page (docs/block-b-katalog-frontend.md, 4.5). Three things can
+ * of its listing page (Block B, 4.5). Three things can
  * make that address wrong without anything failing on save:
  *
  * 1. Form. Contao's rgxp "alias" allows [\w.-], so capitals, underscores and

@@ -17,9 +17,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
 
 /**
- * WG5: Die Code-Eingabe im Warenkorb hatte keine Bremse — ein Skript konnte
- * Code um Code probieren. Gezählt werden nur Fehlversuche, je IP und je
- * Warenkorb; hier mit einer Grenze von drei statt zehn.
+ * WG5: the code entry in the cart had no brake — a script could try
+ * code after code. Only failed attempts are counted, per IP and per
+ * cart; here with a limit of three instead of ten.
  */
 class CodeEntryTest extends TestCase
 {
@@ -55,7 +55,7 @@ class CodeEntryTest extends TestCase
 
         self::assertNull($this->carts->takeNotice(1));
 
-        // Auch ein gültiger Code wird jetzt nicht mehr angesehen.
+        // Even a valid code is no longer looked at now.
         $this->entry()->submit(1, 'HERBST', '10.0.0.1', self::NOW);
 
         self::assertSame('A3', $this->carts->discountCodeOf(1));
@@ -73,8 +73,8 @@ class CodeEntryTest extends TestCase
     }
 
     /**
-     * W6: „herbst" ist ein anderer Code als „HERBST" — und damit ein
-     * Fehlversuch.
+     * W6: "herbst" is a different code from "HERBST" — and thus a
+     * failed attempt.
      */
     public function testGrossUndKleinschreibungZaehlt(): void
     {
@@ -100,7 +100,7 @@ class CodeEntryTest extends TestCase
     }
 
     /**
-     * Ein neuer Warenkorb beginnt nicht bei null, solange dieselbe IP rät.
+     * A new cart does not start at zero as long as the same IP keeps guessing.
      */
     public function testDieIpZaehltUeberWarenkoerbeHinweg(): void
     {
@@ -115,7 +115,7 @@ class CodeEntryTest extends TestCase
     }
 
     /**
-     * Und eine neue IP nicht, solange derselbe Warenkorb rät.
+     * Nor does a new IP, as long as the same cart keeps guessing.
      */
     public function testDerWarenkorbZaehltUeberIpsHinweg(): void
     {
@@ -129,9 +129,9 @@ class CodeEntryTest extends TestCase
     }
 
     /**
-     * WG8 (E3): getippt wird, wie es auf dem Papier steht — klein, mit
-     * Leerzeichen und Bindestrichen; gespeichert wird der Code selbst, in
-     * der Reihenfolge der Eingabe, jeder einmal.
+     * WG8 (E3): it is typed as it is printed on paper — lower case, with
+     * spaces and hyphens; what is stored is the code itself, in
+     * the order of entry, each one once.
      */
     public function testGutscheinWirdNormalisiertUndInReihenfolgeGemerkt(): void
     {
@@ -151,9 +151,9 @@ class CodeEntryTest extends TestCase
     }
 
     /**
-     * Ein Gutschein ist Geld: ein falscher Code wird nicht gemerkt, gemeldet
-     * und gezählt — und ein Gutschein eines anderen Shops ist hier ein
-     * falscher Code (WG9), nicht ein verratener.
+     * A voucher is money: a wrong code is not remembered, it is reported
+     * and counted — and a voucher of another shop is a
+     * wrong code here (WG9), not a revealed one.
      */
     public function testUnbekannterGutscheinWirdGezaehltUndNichtGemerkt(): void
     {
@@ -169,14 +169,14 @@ class CodeEntryTest extends TestCase
         $this->voucher(2, 'EEEEFFFFGGGGHHHH');
         $this->entry()->addVoucher(1, 1, 'EEEEFFFFGGGGHHHH', '10.0.0.1', self::NOW);
 
-        // Die Bremse ist dieselbe wie für Rabattcodes: der vierte, gültige
-        // Code wird nicht mehr angesehen.
+        // The brake is the same as for discount codes: the fourth, valid
+        // code is no longer looked at.
         self::assertSame([], $this->carts->vouchersOf(1));
         self::assertSame(CartNotice::TooManyCodes, $this->carts->takeNotice(1));
     }
 
     /**
-     * Freigeschaltet für weitere Shops (WG9): dort gilt er wie im eigenen.
+     * Enabled for further shops (WG9): there it applies as in its own.
      */
     public function testGutscheinGiltInFreigeschaltetemShop(): void
     {

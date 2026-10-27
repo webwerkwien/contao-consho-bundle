@@ -40,7 +40,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
  *                  be compared must not become no limit
  *   sameCountry    only when billing and delivery country are the same
  *   notHandedOutAtOnce  not for a basket with digital content or a voucher
- *                  (Nachlese E5b; Michael, 2026-10-09: "Nicht anbieten"). Here
+ *                  (Nachlese E5b). Here
  *                  the release IS the delivery and brings the invoice; holding
  *                  it back until the money came would leave the customer
  *                  without an invoice to pay. Whoever wants the money first

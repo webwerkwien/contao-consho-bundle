@@ -75,8 +75,8 @@ class SecretCipherTest extends TestCase
      * Refused at use, not at construction (v0.1.2). Consho's terminate
      * listeners build the mail services on every request and every console
      * command; a check in the constructor took down Contao's post-update
-     * script on an installation without the key (the agency site,
-     * 2026-10-16), long before anything wanted to send mail.
+     * script on an installation without the key, long before anything
+     * wanted to send mail.
      */
     public function testAKeyOfTheWrongLengthIsRefusedWhenUsed(): void
     {
@@ -109,10 +109,10 @@ class SecretCipherTest extends TestCase
     }
 
     /**
-     * N2 (Nachlese Stufe 2, Michael 2026-10-17: „ja, ableiten"): Ohne
-     * CONSHO_SECRET_KEY kommt der Schlüssel aus APP_SECRET, das Contao bei der
-     * Installation selbst anlegt — ein Betreiber ohne SSH kam sonst nie zu
-     * einem SMTP-Passwort.
+     * N2 (Nachlese stage 2): Without
+     * CONSHO_SECRET_KEY the key comes from APP_SECRET, which Contao creates
+     * itself on installation — otherwise an operator without SSH could never
+     * set an SMTP password.
      */
     public function testOhneEigenenSchluesselLeitetErAusAppSecretAb(): void
     {
@@ -125,11 +125,11 @@ class SecretCipherTest extends TestCase
     }
 
     /**
-     * Fable-Review (2026-10-17): Zweckangabe, Hash und Länge der Ableitung
-     * waren durch keinen Test festgelegt — „v1" → „v2" überlebte die ganze
-     * Suite. Jede solche Änderung ist eine stille Schlüsselrotation: alle aus
-     * APP_SECRET abgeleiteten Passwörter wären unlesbar. Dieser Chiffretext
-     * entstand einmal mit der Ableitung von 0.1.3 und muss lesbar bleiben.
+     * Purpose string, hash and length of the derivation were pinned by no
+     * test — "v1" → "v2" survived the whole suite. Every such change is a
+     * silent key rotation: all passwords derived from APP_SECRET would be
+     * unreadable. This ciphertext was created once with the derivation of
+     * 0.1.3 and must stay readable.
      */
     public function testEinMitDerAbleitungVon013GespeicherterWertBleibtLesbar(): void
     {
@@ -147,9 +147,9 @@ class SecretCipherTest extends TestCase
     }
 
     /**
-     * Ein gesetzter, aber falscher Consho-Schlüssel fällt NICHT still auf
-     * APP_SECRET zurück: Die gespeicherten Passwörter wären dann unlesbar, und
-     * niemand wüsste, warum.
+     * A Consho key that is set but wrong does NOT silently fall back to
+     * APP_SECRET: the stored passwords would then be unreadable, and nobody
+     * would know why.
      */
     public function testEinFalscherEigenerSchluesselFaelltNichtZurueck(): void
     {

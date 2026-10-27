@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SubscriptionPauseColumnListener;
 
 /**
- * Abnahme „Abo pausieren" (2026-10-03): „Pause bis" zeigte nach dem Ende der
- * Pause weiter das vergangene Datum.
+ * Pausing a subscription: "Paused until" kept showing the past date after
+ * the pause had ended.
  */
 final class SubscriptionPauseColumnListenerTest extends TestCase
 {

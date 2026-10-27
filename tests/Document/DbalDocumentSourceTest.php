@@ -25,9 +25,10 @@ class DbalDocumentSourceTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // From the DCA since block R (review F10): the hand-written table
+        // From the DCA since block R: the hand-written table
         // had neither `eInvoice` nor `invoiceContactEmail`, so no test could
-        // see them reach the snapshot (Fall 31/57, the fifth time).
+        // see them reach the snapshot — a hand-written schema goes stale with
+        // the next column.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_shop');
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT '', consho_currency TEXT NOT NULL DEFAULT '')",
@@ -64,9 +65,9 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * C-12: Contao speichert Texteingaben kodiert. Der Schnappschuss hält, was
-     * der Betreiber gemeint hat — die Vorlage maskiert einmal, sonst stand
-     * „&#40;Binnenmarktregelung&#41;" auf der Rechnung (Abnahme 2026-09-26).
+     * C-12: Contao stores text input encoded. The snapshot holds what the
+     * operator meant — the template escapes once, otherwise
+     * "&#40;Binnenmarktregelung&#41;" stood on the invoice.
      */
     public function testKodierteEingabenKommenAlsKlartextInDenSchnappschuss(): void
     {
@@ -87,7 +88,7 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * UUID UND Prüfsumme — die UUID allein bemerkt kein ausgetauschtes Logo.
+     * UUID AND checksum — the UUID alone does not notice a replaced logo.
      */
     public function testDasLogoWirdMitUuidUndPruefsummeFestgehalten(): void
     {
@@ -95,10 +96,10 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Die Prüfsumme kommt aus dem INHALT, nicht aus tl_files.hash — dort
-     * steht in diesem Test absichtlich etwas anderes. InvoiceLogo vergleicht
-     * gegen den Inhalt; stünde hier ein veralteter Tabellenwert, erschiene das
-     * Logo auf keiner neu erzeugten Rechnung je wieder.
+     * 🔴 The checksum comes from the CONTENT, not from tl_files.hash — in this
+     * test that column deliberately holds something else. InvoiceLogo compares
+     * against the content; if an outdated table value stood here, the logo
+     * would never appear again on any newly generated invoice.
      */
     public function testDiePruefsummeKommtAusDemInhaltNichtAusDerTabelle(): void
     {
@@ -106,8 +107,8 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * Ein gesetztes Logo, dessen Datei es nicht (mehr) gibt, ist keins — es
-     * gäbe nichts einzufrieren.
+     * A logo that is set but whose file does not exist (any more) is none —
+     * there would be nothing to freeze.
      */
     public function testEinLogoOhneDateiIstKeines(): void
     {
@@ -115,8 +116,8 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * Nur die Bankangaben, und nur die gefüllten — was ein Modul sonst in
-     * jsonData ablegt, gehört nicht auf eine Rechnung.
+     * Only the bank details, and only the filled ones — whatever else a module
+     * puts in jsonData does not belong on an invoice.
      */
     public function testNurGefuellteBankangabenKommenMit(): void
     {
@@ -127,10 +128,29 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * Giro-Code: der Wunsch der Zahlungsart, gelesen aus jsonData — ohne
-     * nach dem Typ zu fragen. Eine spätere Zahlungsart „Kauf auf Rechnung"
-     * mit Bankverbindung bekommt ihn damit ohne neuen Code (Michael,
-     * 2026-09-24). Die Tabelle hier hat gar keine Spalte `type`.
+     * L-1: whether the customer pays before the goods go out. Prepayment and
+     * anything collected online do; a purchase on account and cash on
+     * delivery pay after delivery, and their invoice is no advance invoice.
+     */
+    public function testVorkasseUndOnlineZahlungSindVorauszahlungen(): void
+    {
+        foreach (['prepayment' => true, 'test' => true, 'invoice' => false, 'cod' => false] as $type => $advance) {
+            $this->connection->update('tl_consho_payment_method', ['type' => $type], ['id' => 4]);
+
+            self::assertSame($advance, $this->source()->contextFor($this->order('de'))['payment']['advance'], $type);
+        }
+
+        // No method: paid in full by vouchers at the purchase (WG-5, E1).
+        self::assertTrue($this->source()->contextFor(['paymentMethod' => '0'] + $this->order('de'))['payment']['advance']);
+        // A method that no longer exists.
+        self::assertFalse($this->source()->contextFor(['paymentMethod' => '99'] + $this->order('de'))['payment']['advance']);
+    }
+
+    /**
+     * Giro code: the wish of the payment method, read from jsonData — without
+     * asking for the type. A later payment method "purchase on account" with
+     * bank details thus gets it without new code. The table here has no
+     * `type` column at all.
      */
     public function testDerGiroCodeWunschKommtAusJsonDataUnabhaengigVomTyp(): void
     {
@@ -144,7 +164,7 @@ class DbalDocumentSourceTest extends TestCase
         $payment = $this->source()->contextFor($this->order('de'))['payment'];
 
         self::assertTrue($payment['giroCode']);
-        // Der Schalter ist keine Bankangabe und erscheint nicht in der Tabelle der Rechnung.
+        // The switch is not a bank detail and does not appear in the invoice's table.
         self::assertArrayNotHasKey('giroCode', $payment['details']);
     }
 
@@ -157,8 +177,8 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * In der Sprache der Bestellung — und wo keine Übersetzung steht, der
-     * Text des Datensatzes, wie überall sonst (TranslationJoin).
+     * In the language of the order — and where there is no translation, the
+     * text of the record, as everywhere else (TranslationJoin).
      */
     public function testInEinerZweitspracheDieUebersetzungSonstDerHaupttext(): void
     {
@@ -174,9 +194,8 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * Block R (R10, review F10): der Schalter des Shops und die Kontakt-E-Mail
-     * kommen über die Quelle in den Schnappschuss — bis zur Entscheidung
-     * „Geschäftskunde".
+     * Block R (R10): the shop's switch and the contact e-mail reach the
+     * snapshot through the source — up to the decision "business customer".
      */
     public function testDerSchalterDesShopsReichtBisInDenSchnappschuss(): void
     {
@@ -184,7 +203,7 @@ class DbalDocumentSourceTest extends TestCase
         self::assertFalse($before['eInvoice'] ?? null);
 
         $this->connection->update('tl_consho_shop', ['eInvoice' => 1, 'invoiceContactEmail' => 'rechnung@example.org'], ['id' => 3]);
-        // Vorkasse mit IBAN: SEPA-Überweisung (ohne Typ wäre es ZZZ).
+        // Prepayment with IBAN: SEPA credit transfer (without a type it would be ZZZ).
         $this->connection->update('tl_consho_payment_method', ['type' => 'prepayment'], ['id' => 4]);
         $context = $this->source()->contextFor($this->order('de'));
 
@@ -214,9 +233,9 @@ class DbalDocumentSourceTest extends TestCase
      * @return array<string, string>
      */
     /**
-     * Abo-4 (P31): Abonummer und Leistungszeitraum einer Folgebestellung, als
-     * Kalendertage in der Zone der Installation — der Zeitraum von der
-     * BESTELLUNG, wo er eingefroren ist, nicht vom Abo, das weiterschaltet.
+     * Abo-4 (P31): subscription number and service period of a follow-up order,
+     * as calendar days in the installation's zone — the period from the
+     * ORDER, where it is frozen, not from the subscription, which moves on.
      */
     public function testEineFolgebestellungNenntAboUndZeitraum(): void
     {
@@ -227,7 +246,7 @@ class DbalDocumentSourceTest extends TestCase
         date_default_timezone_set('Europe/Vienna');
 
         try {
-            // 29.10.2026 00:30 Wien ist in UTC noch der 28.10.
+            // 29.10.2026 00:30 Vienna is still the 28.10. in UTC.
             $from = (string) (new \DateTimeImmutable('2026-10-29 00:30'))->getTimestamp();
             $until = (string) (new \DateTimeImmutable('2026-11-29 00:30'))->getTimestamp();
 
@@ -251,13 +270,13 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
-     * WG12: Die Zahlungen vor der Rechnung, in der Reihenfolge ihres Eingangs
-     * — nur die dieser Bestellung.
+     * WG12: The payments before the invoice, in the order they came in
+     * — only those of this order.
      */
     public function testDieZahlungenDerBestellungKommenMit(): void
     {
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
-        // Mit einer Bestellnummer fragt die Quelle auch nach der Sendung.
+        // With an order number the source also asks for the shipment.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_delivery');
         $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 200, 'amount' => '-1.0000', 'method' => 'refund']);
         $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 100, 'amount' => '5.0000', 'method' => 'Gutschein']);
@@ -267,5 +286,45 @@ class DbalDocumentSourceTest extends TestCase
             [['method' => 'Gutschein', 'amount' => '5.0000'], ['method' => 'refund', 'amount' => '-1.0000']],
             $this->source()->contextFor(['id' => '9'] + $this->order('de'))['payments'],
         );
+    }
+
+    /**
+     * EZ-4: per single-purpose voucher what it paid on this order, refunds to
+     * it deducted, with the tax its sale carried — named as the redemption
+     * named it. A voucher refunded in full drops out, other payments are not
+     * part of it.
+     */
+    public function testWasEinzweckGutscheineBereitsVersteuertBezahltHaben(): void
+    {
+        \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
+        \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_delivery');
+        $tax = ['prepaidTaxRate' => '20.0000', 'prepaidTaxCountry' => 'at'];
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 100, 'amount' => '30.0000', 'method' => 'Gutschein …MDSN', 'reference' => 'voucher:1', 'prepaidTax' => '5.0000'] + $tax);
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 200, 'amount' => '-6.0000', 'method' => 'refund', 'reference' => 'voucher:1', 'prepaidTax' => '-1.0000'] + $tax);
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 100, 'amount' => '12.0000', 'method' => 'Gutschein …HHHH', 'reference' => 'voucher:2', 'prepaidTax' => '2.0000'] + $tax);
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 300, 'amount' => '-12.0000', 'method' => 'refund', 'reference' => 'voucher:2', 'prepaidTax' => '-2.0000'] + $tax);
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 100, 'amount' => '5.0000', 'method' => 'Gutschein …WXYZ', 'reference' => 'voucher:3']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 8, 'receivedAt' => 100, 'amount' => '30.0000', 'method' => 'Gutschein …MDSN', 'reference' => 'voucher:1', 'prepaidTax' => '5.0000'] + $tax);
+
+        self::assertSame(
+            [['label' => 'Gutschein …MDSN', 'country' => 'AT', 'rate' => '20.0000', 'net' => '20.0000', 'tax' => '4.0000', 'gross' => '24.0000']],
+            $this->source()->contextFor(['id' => '9'] + $this->order('de'))['prepaid'],
+        );
+    }
+
+    /**
+     * The anonymisation empties the reference: two vouchers at different
+     * rates then stand apart, not merged under one rate and one name.
+     */
+    public function testOhneReferenzStehtJedeZahlungFuerSich(): void
+    {
+        \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
+        \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_delivery');
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 100, 'amount' => '24.0000', 'method' => 'Gutschein …MDSN', 'prepaidTaxRate' => '20.0000', 'prepaidTaxCountry' => 'AT', 'prepaidTax' => '4.0000']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 9, 'receivedAt' => 100, 'amount' => '11.0000', 'method' => 'Gutschein …HHHH', 'prepaidTaxRate' => '10.0000', 'prepaidTaxCountry' => 'AT', 'prepaidTax' => '1.0000']);
+
+        $prepaid = $this->source()->contextFor(['id' => '9'] + $this->order('de'))['prepaid'];
+
+        self::assertSame([['Gutschein …MDSN', '20.0000', '4.0000'], ['Gutschein …HHHH', '10.0000', '1.0000']], array_map(static fn (array $entry): array => [$entry['label'], $entry['rate'], $entry['tax']], $prepaid));
     }
 }

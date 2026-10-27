@@ -8,7 +8,7 @@
     part, message as typed), error (a key of CONSHO.withdrawal or null).
 
     No number and no "no longer possible": either would tell a stranger
-    whether the order exists (review WA, S1). The number is in the mail.
+    whether the order exists (WA). The number is in the mail.
 
     The two button labels are fixed by law (§ 356a BGB, § 13a FAGG, Art. 11a
     Directive 2011/83/EU) and come from the language file, not from here.
@@ -22,7 +22,7 @@
     {% if done %}
         <p class="consho-withdrawal__done" role="status">{{ ('CONSHO.withdrawal.' ~ done)|trans({}, 'contao_default') }}</p>
     {% elseif not form %}
-        {# A button in a GET form, like the order page's (acceptance D-2): the
+        {# A button in a GET form, like the order page's (D-2): the
            theme styles it as a button, and a GET changes nothing. #}
         <form method="get" class="consho-withdrawal__start">
             <input type="hidden" name="consho_withdraw" value="1">

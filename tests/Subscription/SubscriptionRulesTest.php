@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRules;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Regel 1 ist ein Monatsabo für alle, Regel 2 ein Jahresabo nur für die Gruppen 3 und 4.
+ * Rule 1 is a monthly subscription for everyone, rule 2 a yearly subscription only for groups 3 and 4.
  */
 class SubscriptionRulesTest extends TestCase
 {
@@ -19,9 +19,9 @@ class SubscriptionRulesTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        // Aus der DCA (Fall 31): die abgeschriebene Tabelle kannte `pauseMonths`
-        // nicht (Abo pausieren). `groups` ist in MySQL 8 reserviert — das
-        // Repository muss es beim Lesen quoten.
+        // From the DCA: the copied-out table did not know `pauseMonths`
+        // (pausing a subscription). `groups` is reserved in MySQL 8 — the
+        // repository must quote it when reading.
         DcaSchema::create($this->connection, 'tl_consho_subscription_rule');
         $this->connection->insert('tl_consho_subscription_rule', ['id' => 1, 'title' => 'Monatsabo', 'billingInterval' => 1, 'renewal' => 'indefinite']);
         $this->connection->insert('tl_consho_subscription_rule', [
@@ -63,7 +63,7 @@ class SubscriptionRulesTest extends TestCase
     {
         $rules = (new SubscriptionRules($this->connection))->byIds([1, 2]);
 
-        // Leer gilt für alle, sonst genügt eine gemeinsame Gruppe.
+        // Empty applies to everyone, otherwise one shared group is enough.
         self::assertTrue($rules[1]->isFor([]));
         self::assertFalse($rules[2]->isFor([]));
         self::assertFalse($rules[2]->isFor([5]));

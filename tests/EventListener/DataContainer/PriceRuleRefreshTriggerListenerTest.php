@@ -16,8 +16,8 @@ use Webwerkwien\ContaoConshoBundle\Pricing\ResolvedPrice;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block H (H-3): eine gespeicherte Preisregel meldet alle Produkte, entwertet
- * die Produktseiten und lässt die Regeln neu lesen.
+ * Block H (H-3): a saved price rule reports all products, invalidates the
+ * product pages and has the rules read anew.
  */
 class PriceRuleRefreshTriggerListenerTest extends TestCase
 {
@@ -53,7 +53,7 @@ class PriceRuleRefreshTriggerListenerTest extends TestCase
         $rules = new CatalogPriceRules($this->connection);
         $price = new ResolvedPrice('10.0000', 'EUR', PriceSource::List, '1');
 
-        // Einmal gefragt, ohne Regel: gemerkt für die Anfrage.
+        // Asked once, without a rule: remembered for the request.
         self::assertSame('10.0000', $rules->apply(1, 1, $price, [], 1000)->net);
 
         $this->connection->insert('tl_consho_price_rule', ['tstamp' => 1, 'title' => 'Aktion', 'published' => 1, 'percent' => '20']);

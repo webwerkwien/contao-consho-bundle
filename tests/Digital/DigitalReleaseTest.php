@@ -27,8 +27,8 @@ use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * F-4: Wann digitale Positionen freigegeben werden (F10, F16) und was die
- * Freigabe schreibt (F17).
+ * F-4: When digital items are released (F10, F16) and what the release
+ * writes (F17).
  */
 class DigitalReleaseTest extends TestCase
 {
@@ -63,18 +63,18 @@ class DigitalReleaseTest extends TestCase
         // Without row locks: the voucher ledger reads under FOR UPDATE (WG-4).
         $this->connection = \Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks::connection();
         $c = $this->connection;
-        // Aus der DCA (Fall 31, 57): die Ausgabe der Gutscheine (WG-4) liest Spalten, die eine abgeschriebene Tabelle nicht hatte.
+        // From the DCA: issuing the vouchers (WG-4) reads columns a hand-copied table did not have.
         foreach (['tl_consho_order_item', 'tl_consho_product', 'tl_consho_voucher', 'tl_consho_voucher_booking', 'tl_consho_withdrawal', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_shop'] as $table) {
             \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($c, $table);
         }
         DigitalSchema::create($c);
-        // Was eine Auslieferung schreibt, bevor sie „noch nicht" sagt (F-6).
+        // What a delivery writes before it says "not yet" (F-6).
         $c->executeStatement('CREATE TABLE handler_writes (id INTEGER PRIMARY KEY AUTOINCREMENT, entitlement INTEGER NOT NULL)');
 
         // Grace explicitly 0: the DCA default is 7 (the hand-written table had
         // 0), and the dates below count without it; one test sets it to 2.
         $c->insert('tl_consho_shop', ['id' => 1, 'withdrawalDays' => 14, 'withdrawalGraceDays' => 0]);
-        // Zeile 10: E-Book (digital, Datei, 12 Monate), 11: Buch (körperlich).
+        // Line 10: e-book (digital, file, 12 months), 11: book (physical).
         $c->insert('tl_consho_product', ['id' => 7, 'digitalDelivery' => 'test', 'entitlementMonths' => 12]);
         $c->insert('tl_consho_product', ['id' => 8]);
         $c->insert('tl_consho_order_item', ['id' => 10, 'pid' => 5, 'product' => 7, 'quantity' => 2, 'kind' => 'digital']);
@@ -102,9 +102,9 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Bezahlt und zugestimmt: Die Freigabe schreibt die Berechtigung mit
-     * Menge und Ende, fragt die Auslieferung und meldet genau die digitale
-     * Zeile als Lieferung — ohne „Versendet"-Mail.
+     * Paid and consented: the release writes the entitlement with quantity and
+     * end, asks the delivery and reports exactly the digital line as a
+     * delivery — without a "shipped" mail.
      */
     public function testBezahltUndZugestimmtWirdFreigegeben(): void
     {
@@ -117,10 +117,10 @@ class DigitalReleaseTest extends TestCase
         $row = $this->connection->fetchAssociative('SELECT * FROM tl_consho_entitlement');
         self::assertIsArray($row);
         self::assertSame([5, 10, 3, 7, 'test', $now], [(int) $row['pid'], (int) $row['orderItem'], (int) $row['member'], (int) $row['product'], $row['deliveryType'], (int) $row['validFrom']]);
-        // SQLite gibt NUMERIC ohne Nachkommastellen zurück, MariaDB decimal mit.
+        // SQLite returns NUMERIC without decimal places, MariaDB returns decimal with them.
         self::assertEquals(2, (float) $row['quantity'], 'eine Berechtigung mit Menge (F7)');
         self::assertSame((new \DateTimeImmutable('@'.$now))->modify('+12 months')->getTimestamp(), (int) $row['validUntil']);
-        // Kein Abo zur Zeile (Einmalkauf, oder gekauft vor Abo-3 — P22): wie bisher.
+        // No subscription for the line (one-off purchase, or bought before Abo-3 — P22): as before.
         self::assertSame(0, (int) $row['subscription']);
 
         self::assertCount(1, $this->handed);
@@ -129,9 +129,9 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * DL1: Eine Dienstleistung liefert nichts aus. Die Freigabe ist die
-     * Berechtigung allein — auch wenn am Produkt aus einer früheren Art noch
-     * eine Auslieferungsart steht (dafür gibt es den Befund).
+     * DL1: A service delivers nothing. The release is the entitlement alone —
+     * even if a delivery type from an earlier kind is still set on the product
+     * (there is an issue for that).
      */
     public function testEineDienstleistungWirdOhneAuslieferungFreigeschaltet(): void
     {
@@ -146,10 +146,10 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * WG3, WG-4: Ein Wertgutschein wird keine Berechtigung, sondern je Stück
-     * ein Gutschein — sobald bezahlt, ohne auf die Widerrufsfrist zu warten
-     * und ohne Zustimmung. Wert und Bezahltes aus der Zeile, Währung und Shop
-     * aus der Bestellung; die Zeile gilt als geliefert.
+     * WG3, WG-4: A voucher does not become an entitlement but one voucher per
+     * piece — as soon as it is paid, without waiting for the withdrawal period
+     * and without consent. Value and amount paid from the line, currency and
+     * shop from the order; the line counts as delivered.
      */
     public function testEinBezahlterGutscheinWirdAusgegeben(): void
     {
@@ -167,10 +167,36 @@ class DigitalReleaseTest extends TestCase
         self::assertEquals([[10, 2.0]], array_map(static fn (array $r): array => [(int) $r['orderItem'], (float) $r['quantity']], $this->connection->fetchAllAssociative('SELECT orderItem, quantity FROM tl_consho_delivery_item')));
     }
 
+    /**
+     * EZ-5: class, rate and country come from the line that sold it — what
+     * the line was sold as, not what the product says by the time it is paid.
+     * A multi-purpose line leaves them empty.
+     */
+    public function testEinEinzweckGutscheinFriertKlasseSatzUndLandEin(): void
+    {
+        $this->connection->update('tl_consho_order_item', ['kind' => 'voucher', 'lineTotal' => '60.0000', 'quantity' => 1, 'voucherValue' => '60.0000', 'voucherSinglePurpose' => 1, 'taxClass' => 3, 'taxRate' => '20.0000', 'taxCountry' => 'AT'], ['id' => 10]);
+        $this->connection->update('tl_consho_product', ['voucherValidMonths' => 0, 'voucherSinglePurpose' => 0], ['id' => 7]);
+        $this->order['paymentSettledAt'] = self::CREATED + 30;
+
+        self::assertSame(1, $this->release()->releaseDue(5, self::CREATED + 60));
+
+        self::assertEquals(['taxClass' => 3, 'taxRate' => 20, 'taxCountry' => 'AT'], array_map(static fn ($v) => is_numeric($v) ? (float) $v : $v, (array) $this->connection->fetchAssociative('SELECT taxClass, taxRate, taxCountry FROM tl_consho_voucher')));
+    }
+
+    public function testEinMehrzweckGutscheinHatKeineKlasse(): void
+    {
+        $this->connection->update('tl_consho_order_item', ['kind' => 'voucher', 'lineTotal' => '60.0000', 'quantity' => 1, 'taxClass' => 3, 'taxRate' => '20.0000', 'taxCountry' => 'AT'], ['id' => 10]);
+        $this->order['paymentSettledAt'] = self::CREATED + 30;
+
+        self::assertSame(1, $this->release()->releaseDue(5, self::CREATED + 60));
+
+        self::assertEquals(['taxClass' => 0, 'taxRate' => 0, 'taxCountry' => ''], array_map(static fn ($v) => is_numeric($v) ? (float) $v : $v, (array) $this->connection->fetchAssociative('SELECT taxClass, taxRate, taxCountry FROM tl_consho_voucher')));
+    }
+
     public function testUnbezahltWirdKeinGutscheinAusgegeben(): void
     {
         $this->connection->update('tl_consho_order_item', ['kind' => 'voucher', 'lineTotal' => '90.0000'], ['id' => 10]);
-        // Zugestimmt und Frist vorbei: zählt für den Gutschein nicht, nur die Zahlung (WG6).
+        // Consented and period over: does not count for the voucher, only the payment does (WG6).
         $this->order['digitalConsentAt'] = self::CREATED;
 
         self::assertSame(0, $this->release()->releaseDue(5, self::CREATED + 30 * 86_400));
@@ -178,8 +204,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Ohne Wert gilt, was für ein Stück bezahlt wurde; die Gültigkeit kommt
-     * vom Grundprodukt und endet am letzten Tag.
+     * Without a value, what was paid for one piece applies; the validity comes
+     * from the base product and ends on the last day.
      */
     public function testOhneWertDasBezahlteUndDieGueltigkeitAusMonaten(): void
     {
@@ -193,14 +219,13 @@ class DigitalReleaseTest extends TestCase
         $voucher = $this->connection->fetchAssociative('SELECT faceValue, validUntil FROM tl_consho_voucher ORDER BY id LIMIT 1');
         self::assertIsArray($voucher);
         self::assertEquals(45, (float) $voucher['faceValue']);
-        // Ausgegeben am 16.09.2025 (Wien) → gültig bis 16.09.2028. Ein festes
-        // Datum, keine nachgerechnete Formel (Regel 24, Review WG-7).
+        // Issued on 16.09.2025 (Vienna) → valid until 16.09.2028. A fixed
+        // date, not a formula computed the same way as the code (WG-7).
         self::assertSame((int) strtotime('2028-09-16 00:00'), (int) $voucher['validUntil']);
     }
 
     /**
-     * Review WG-7, L3: 31. Jänner plus ein Monat ist der 28. Februar, nicht
-     * PHPs 3. März.
+     * WG-7: 31 January plus one month is 28 February, not PHP's 3 March.
      */
     public function testEinMonatAbMonatsendeEndetAmMonatsende(): void
     {
@@ -221,8 +246,8 @@ class DigitalReleaseTest extends TestCase
 
         $this->release()->releaseDue(5, self::CREATED + 60);
 
-        // Geliefert gemeldet: die Zeile ist nicht mehr offen — wie der echte
-        // Saldo es nach der Meldung sagt (OrderBalance aus den Lieferungen).
+        // Reported as delivered: the line is no longer open — as the real
+        // balance says after the report (OrderBalance from the deliveries).
         unset($this->open[10]);
         self::assertSame(0, $this->release()->releaseDue(5, self::CREATED + 120));
 
@@ -230,9 +255,10 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Abo-3, P21: Die Berechtigung einer Abo-Zeile zeigt auf ihr Abo und
-     * endet mit der bezahlten Periode — nicht nach `entitlementMonths`, das
-     * zum Einmalkauf gehört (hier 12 Monate am Produkt, bewusst stehen gelassen).
+     * Abo-3, P21: The entitlement of a subscription line points to its
+     * subscription and ends with the paid period — not after
+     * `entitlementMonths`, which belongs to the one-off purchase (12 months on
+     * the product here, deliberately left in place).
      */
     public function testEineAboZeileEndetMitDerPeriode(): void
     {
@@ -241,7 +267,7 @@ class DigitalReleaseTest extends TestCase
         $periodUntil = self::CREATED + 30 * 86_400;
 
         $this->connection->insert('tl_consho_subscription', ['id' => 44, 'subscriptionNumber' => 'WEB-00005-1', 'orderItem' => 10, 'periodUntil' => $periodUntil]);
-        // Gegenprobe: ein Abo einer anderen Zeile ändert an Zeile 10 nichts.
+        // Control case: a subscription of another line changes nothing on line 10.
         $this->connection->insert('tl_consho_subscription', ['id' => 45, 'subscriptionNumber' => 'WEB-00006-1', 'orderItem' => 99, 'periodUntil' => 1]);
 
         self::assertSame(1, $this->release()->releaseDue(5, self::CREATED + 60));
@@ -250,14 +276,15 @@ class DigitalReleaseTest extends TestCase
         self::assertIsArray($row);
         self::assertSame([44, $periodUntil], [(int) $row['subscription'], (int) $row['validUntil']]);
 
-        // Die Auslieferung bekommt dasselbe Ende und dasselbe Abo.
+        // The delivery gets the same end and the same subscription.
         self::assertSame([44, $periodUntil], [$this->handed[0]->subscription, $this->handed[0]->validUntil]);
         self::assertNull($this->handed[0]->suspendedAt);
     }
 
     /**
-     * Review Abo-5, L3: Wird freigegeben, während das Abo ruht, ruht die neue
-     * Berechtigung von Anfang an — nicht erst ab dem nächsten Cron-Lauf.
+     * Abo-5: If the release happens while the subscription is suspended, the
+     * new entitlement is suspended from the start — not only from the next
+     * cron run.
      */
     public function testEineFreigabeWaehrendDasAboRuhtRuhtMit(): void
     {
@@ -274,8 +301,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Abo-7b (P69): Die Verlängerung übernimmt die Berechtigung des alten
-     * Abos — dieselbe Zeile, dieselben Schlüssel, kein Aufruf der Auslieferung.
+     * Abo-7b (P69): The renewal takes over the old subscription's entitlement
+     * — the same row, the same keys, no call to the delivery.
      */
     public function testEineVerlaengerungUebernimmtDieBerechtigungDesAltenAbos(): void
     {
@@ -283,7 +310,7 @@ class DigitalReleaseTest extends TestCase
         $this->order['paymentSettledAt'] = self::CREATED + 30;
         $periodUntil = self::CREATED + 60 * 86_400;
 
-        // Altes Abo 40 aus Bestellung 3 (Zeile 7), seine Berechtigung 70.
+        // Old subscription 40 from order 3 (line 7), its entitlement 70.
         $this->connection->insert('tl_consho_subscription', ['id' => 40, 'subscriptionNumber' => 'WEB-00003-1', 'orderItem' => 7, 'periodUntil' => self::CREATED + 10 * 86_400, 'renewedBy' => 44]);
         $this->connection->insert('tl_consho_entitlement', ['id' => 70, 'pid' => 3, 'orderItem' => 7, 'member' => 9, 'product' => 3, 'quantity' => '1.0000', 'deliveryType' => 'key', 'validFrom' => 1, 'validUntil' => self::CREATED + 10 * 86_400, 'subscription' => 40]);
         $this->connection->insert('tl_consho_subscription', ['id' => 44, 'subscriptionNumber' => 'WEB-00005-1', 'orderItem' => 10, 'periodUntil' => $periodUntil, 'predecessor' => 40]);
@@ -294,13 +321,13 @@ class DigitalReleaseTest extends TestCase
         self::assertSame([[70, 5, 10, 44, $periodUntil]], array_map(static fn (array $r): array => array_map('intval', array_values($r)), $rows));
         self::assertSame([], $this->handed, 'kein neuer Schlüssel');
 
-        // Geliefert gemeldet wie jede Freigabe — die Rechnung hängt daran.
+        // Reported as delivered like every release — the invoice depends on it.
         self::assertEquals([[10, 2.0]], array_map(static fn (array $r): array => [(int) $r['orderItem'], (float) $r['quantity']], $this->connection->fetchAllAssociative('SELECT orderItem, quantity FROM tl_consho_delivery_item')));
     }
 
     public function testOhneAlteBerechtigungWirdGewoehnlichFreigegeben(): void
     {
-        // Das alte Abo wurde nie freigegeben (leerer Vorrat): neue Berechtigung.
+        // The old subscription was never released (empty pool): new entitlement.
         $this->order['digitalConsentAt'] = self::CREATED;
         $this->order['paymentSettledAt'] = self::CREATED + 30;
         $this->connection->insert('tl_consho_subscription', ['id' => 44, 'subscriptionNumber' => 'WEB-00005-1', 'orderItem' => 10, 'periodUntil' => self::CREATED + 30 * 86_400, 'predecessor' => 40]);
@@ -320,15 +347,15 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * F16: Ohne Zustimmung wartet ein Verbraucher das Ende der Frist ab —
-     * dann wird freigegeben, das Widerrufsrecht ist bis dahin geblieben.
+     * F16: Without consent a consumer waits for the end of the period — then
+     * the release happens; the right of withdrawal has remained until then.
      */
     /**
-     * F16, Review S1: Ohne Zustimmung erst nach Ablauf der Frist — ab dem Tag
-     * des Vertragsabschlusses (§ 11 Abs. 2 Z 3 FAGG, § 355 Abs. 2 BGB), bis
-     * zum ENDE des letzten Tages in der Zeitzone der Installation, plus
-     * Kulanz, wie das Widerrufsfenster aus D. Bestellt am 16.09.2025 um 07:20
-     * Wiener Zeit: frei ab 01.10.2025 00:00.
+     * F16: Without consent only after the period has expired — from the day
+     * the contract was concluded (§ 11 Abs. 2 Z 3 FAGG, § 355 Abs. 2 BGB),
+     * until the END of the last day in the installation's time zone, plus
+     * goodwill buffer, like the withdrawal window from D. Ordered on
+     * 16.09.2025 at 07:20 Vienna time: free from 01.10.2025 00:00.
      */
     public function testOhneZustimmungNachAblaufDerFrist(): void
     {
@@ -349,8 +376,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Review B2: Ein erklärter, noch nicht entschiedener Widerruf hält die
-     * Freigabe an — der Kunde ist womöglich zurückgetreten.
+     * A declared withdrawal that has not been decided yet holds the release
+     * back — the customer may have withdrawn.
      */
     public function testEinOffenerWiderrufHaeltDieFreigabeAn(): void
     {
@@ -365,9 +392,9 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Review S2: Die Zustimmung lässt das Widerrufsrecht erst erlöschen, wenn
-     * die Bestätigung auf dauerhaftem Datenträger beim Kunden ist. Ist die
-     * Bestellbestätigung nicht hinausgegangen, wartet die Freigabe.
+     * Consent only makes the right of withdrawal expire once the confirmation
+     * on a durable medium has reached the customer. If the order confirmation
+     * has not gone out, the release waits.
      */
     public function testZustimmungWirktErstMitVerschickterBestaetigung(): void
     {
@@ -377,8 +404,8 @@ class DigitalReleaseTest extends TestCase
 
         self::assertSame(0, $this->release()->releaseDue(5, self::CREATED + 60));
 
-        // Zweiter Review, S-A: Kommt die Bestätigung nie, gilt die Frist wie
-        // ohne Zustimmung — danach wird geliefert, nicht nie.
+        // If the confirmation never comes, the period applies as without
+        // consent — after it, delivery happens, not never.
         self::assertSame(1, $this->release()->releaseDue(5, 1_759_269_600), 'nach Fristende auch ohne Bestätigung');
     }
 
@@ -392,9 +419,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Zweiter Review, S-B: Ruft jemand die Freigabe in seiner eigenen
-     * Transaktion auf, bleibt dessen Ebene stehen — und die Entscheidung
-     * über sie bei ihm.
+     * If someone calls the release within their own transaction, their level
+     * stays open — and the decision about it stays with them.
      */
     public function testInEinerOffenenTransaktionDesAufrufers(): void
     {
@@ -415,9 +441,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Spec F, offene Punkte (zweites Review, K-A): Scheitert auch das
-     * Zurückrollen — die Verbindung ist weg —, kommt trotzdem die Ursache
-     * beim Aufrufer an, nicht der Fehler des Zurückrollens.
+     * Spec F, open points: If the rollback fails too — the connection is gone
+     * —, the cause still reaches the caller, not the error of the rollback.
      */
     public function testEinScheiterndesZurueckrollenVerdecktDieUrsacheNicht(): void
     {
@@ -446,9 +471,9 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Review B1: Wirft eine Auslieferung, steht danach keine Transaktion mehr
-     * offen — sonst liefe im Cron jede weitere Bestellung in einer, die nie
-     * festgeschrieben wird.
+     * If a delivery throws, no transaction is left open afterwards — otherwise
+     * in the cron every further order would run in one that is never
+     * committed.
      */
     public function testEineWerfendeAuslieferungHinterlaesstKeineOffeneTransaktion(): void
     {
@@ -468,10 +493,10 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Review S4, Regel 24: dieselbe Freigabe mit der ECHTEN Lieferungs-
-     * meldung statt eines Doubles — äußere Transaktion, Savepoint je Zeile,
-     * report() mit eigenem begin/commit darin. Danach ist die Lieferung
-     * gemeldet und alles festgeschrieben.
+     * The same release with the REAL delivery report instead of a double —
+     * outer transaction, savepoint per line, report() with its own
+     * begin/commit inside. Afterwards the delivery is reported and everything
+     * committed.
      */
     public function testMitDerEchtenLieferungsmeldung(): void
     {
@@ -529,8 +554,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * F19: Kann die Auslieferung noch nicht liefern — ein leerer Vorrat —,
-     * bleibt die Zeile offen: keine Berechtigung, keine Lieferung.
+     * F19: If the delivery cannot deliver yet — an empty pool —, the line
+     * stays open: no entitlement, no delivery.
      */
     public function testKannDieAuslieferungNichtLiefernBleibtDieZeileOffen(): void
     {
@@ -546,8 +571,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Review Nachlese, S2: Was spät freigegeben wird — ein aufgefüllter
-     * Vorrat —, fragt sofort, ob die Bestellung ruht; ohne Freigabe nicht.
+     * Nachlese: What is released late — a refilled pool — asks right away
+     * whether the order is suspended; without a release it does not.
      */
     public function testEineFreigabeFragtObDieBestellungRuht(): void
     {
@@ -598,7 +623,7 @@ class DigitalReleaseTest extends TestCase
         } catch (\RuntimeException) {
         }
 
-        // Scheitert es NACH den Zeilen (in report()), bleibt ebenso nichts offen.
+        // If it fails AFTER the lines (in report()), nothing stays open either.
         self::assertSame(0, $this->connection->getTransactionNestingLevel());
 
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_entitlement'));
@@ -606,15 +631,15 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * F-7: Nur der Cron lässt „bereit" schicken — mit dem Zeitpunkt der
-     * Freigabe, damit die Mail nur das Neue nennt.
+     * F-7: Only the cron has "ready" sent — with the time of the release, so
+     * that the mail only names what is new.
      */
     public function testNurAufWunschEineMail(): void
     {
         $this->order['businessCustomer'] = 1;
         $this->order['paymentSettledAt'] = self::CREATED;
 
-        // Ein Objekt, kein Array per Referenz: PHPStan verfolgt die Closure nicht.
+        // An object, not an array by reference: PHPStan does not follow the closure.
         /** @var \ArrayObject<int, array{int, int, string}> $sent */
         $sent = new \ArrayObject();
         $mail = $this->createMock(\Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail::class);
@@ -636,10 +661,10 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Abnahme DL, Fund 4 (Michael, 2026-10-02: „ja, Fund 4 wie vorgeschlagen"):
-     * Stellt die Freigabe die Rechnung aus („Auf Rechnung", bei Lieferung),
-     * geht die Freigabemail auch ohne Wunsch hinaus — mit der Rechnung. Sonst
-     * erreicht sie den Kunden nur auf der Bestellseite.
+     * DL:
+     * If the release issues the invoice ("on account", on delivery), the
+     * release mail goes out even without being requested — with the invoice.
+     * Otherwise it only reaches the customer on the order page.
      */
     public function testEineAusgestellteRechnungGehtMitDerFreigabemail(): void
     {
@@ -663,10 +688,9 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * WG4: Die Gutscheine gehen immer per Mail hinaus — sie ist der Weg zum
-     * Käufer — und tragen die Rechnung, die die Freigabe ausstellt. Eine Mail
-     * „digitale Inhalte bereit" gibt es dabei nicht: es wurde nichts
-     * freigeschaltet.
+     * WG4: The vouchers always go out by mail — it is the way to the buyer —
+     * and carry the invoice the release issues. There is no "digital content
+     * ready" mail in that case: nothing was activated.
      */
     public function testDieGutscheineGehenMitIhrerMailUndDerRechnung(): void
     {
@@ -691,8 +715,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Gutschein und E-Book in einem Lauf: das E-Book trägt die Rechnung in
-     * seiner Mail, die Gutscheinmail kommt ohne.
+     * Voucher and e-book in one run: the e-book carries the invoice in its
+     * mail, the voucher mail comes without.
      */
     public function testNebenDigitalenInhaltenTraegtDieAndereMailDieRechnung(): void
     {
@@ -723,9 +747,9 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Review Abo-4, S2: Die Rechnung, die eine Freigabe ausstellt, wird erst
-     * NACH dem Commit der Freigabe archiviert — nicht darin, wo ein späterer
-     * Rollback die Nummer freigäbe und die PDF-Datei zurückließe.
+     * Abo-4: The invoice a release issues is only archived AFTER the release's
+     * commit — not inside it, where a later rollback would free the number
+     * and leave the PDF file behind.
      */
     public function testDieRechnungWirdNachDemCommitArchiviert(): void
     {
@@ -753,7 +777,7 @@ class DigitalReleaseTest extends TestCase
     {
         $orders = $this->createMock(PaymentChangeRepositoryInterface::class);
         // As DbalPaymentChangeRepository returns it: every value a string,
-        // NULL as '' (acceptance 2026-09-29, rule 25).
+        // NULL as '' — the shape the runtime really hands over.
         $orders->method('lockOrder')->willReturnCallback(fn (int $id): array|null => 5 === $id ? $this->asStrings($this->order) : null);
         $orders->method('order')->willReturnCallback(fn (int $id): array|null => 5 === $id ? $this->asStrings($this->order) : null);
 
@@ -807,8 +831,8 @@ class DigitalReleaseTest extends TestCase
     }
 
     /**
-     * Beide Formen der Bestellzeile — roh aus der Datenbank (NULL) und
-     * durch lockOrder() (''): Storniert ist keine, zugestimmt hat keine.
+     * Both forms of the order row — raw from the database (NULL) and through
+     * lockOrder() (''): neither is cancelled, neither has consented.
      */
     public function testNullUndLeerSindDasselbe(): void
     {

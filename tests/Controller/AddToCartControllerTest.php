@@ -36,14 +36,14 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Die Route, die als erste in Consho etwas aus dem offenen Netz entgegennimmt.
+ * The route that is the first in Consho to accept something from the open web.
  *
- * Die Prüfungen laufen gegen echte Mitspieler: PurchaseCheck, CartResolver und
- * DbalCartRepository sind `final` und lassen sich ohnehin nicht doubeln — sie
- * arbeiten hier auf einer SQLite-Datenbank im Arbeitsspeicher, die beide
- * Testschemata trägt (Katalog und Warenkorb) und sich eine Verbindung teilt.
- * Gedoubelt ist nur, was ein laufendes Contao bräuchte: das Framework mit
- * seinen Adaptern, die Seiten- und Shop-Datensätze und der Adressgenerator.
+ * The checks run against real collaborators: PurchaseCheck, CartResolver and
+ * DbalCartRepository are `final` and cannot be doubled anyway — they work
+ * here on an in-memory SQLite database that carries both test schemas
+ * (catalogue and cart) and shares one connection. Only what a running Contao
+ * would need is doubled: the framework with its adapters, the page and shop
+ * records, and the URL generator.
  */
 class AddToCartControllerTest extends TestCase
 {
@@ -64,7 +64,7 @@ class AddToCartControllerTest extends TestCase
 
     private string $afterAddToCart = 'cart';
 
-    /** @var list<int> die Gruppen des angemeldeten Mitglieds (Abo-2) */
+    /** @var list<int> the groups of the logged-in member (Abo-2) */
     private array $memberGroups = [];
     private int $cartPageId = self::CART_PAGE;
     private int $rootShopId = self::SHOP;
@@ -83,18 +83,18 @@ class AddToCartControllerTest extends TestCase
         $this->insertRootPage(self::ROOT_PAGE, 'de', self::SHOP);
     }
 
-    // ── Warum die Route die Anfrage-Prüfung ausnimmt ────────────────────────
+    // ── Why the route is exempt from the request check ──────────────────────
 
     public function testDieRouteNimmtDieAnfragePruefungAus(): void
     {
-        // C11: eine geteilt gecachte Seite kann das Token eines anderen
-        // Besuchers tragen. Stattdessen SameSite=Lax und die Origin-Prüfung.
+        // C11: a page cached as shared can carry the token of another visitor.
+        // Instead: SameSite=Lax and the origin check.
         $attributes = (new \ReflectionMethod(AddToCartController::class, '__invoke'))->getAttributes(Route::class);
 
         self::assertCount(1, $attributes);
 
-        // Die Eigenschaften, nicht die Getter: getPath() & Co. sind seit
-        // symfony/routing 7.4 veraltet.
+        // The properties, not the getters: getPath() & co. are deprecated since
+        // symfony/routing 7.4.
         $route = $attributes[0]->newInstance();
 
         self::assertSame('/_consho/cart/add', $route->path);
@@ -105,9 +105,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testDieKlasseIstAlsControllerAusgezeichnet(): void
     {
-        // Ohne das Attribut bleibt der Dienst privat, der Controller-Resolver
-        // bekommt ihn nicht aus dem Container und baut ihn mit `new` — was am
-        // Konstruktor scheitert. Die Route gäbe es dann, arbeiten würde sie nie.
+        // Without the attribute the service stays private, the controller
+        // resolver does not get it from the container and builds it with `new` —
+        // which fails at the constructor. The route would then exist but never work.
         self::assertCount(
             1,
             (new \ReflectionClass(AddToCartController::class))->getAttributes(AsController::class),
@@ -169,7 +169,7 @@ class AddToCartControllerTest extends TestCase
         self::assertNull(AddToCartController::sameOriginOrNull($request, ''));
     }
 
-    // ── Was die Route tatsächlich tut ───────────────────────────────────────
+    // ── What the route actually does ────────────────────────────────────────
 
     public function testEineFremdeHerkunftSchreibtNichtsUndAntwortetMitDreiUndVierzig(): void
     {
@@ -197,8 +197,8 @@ class AddToCartControllerTest extends TestCase
         self::assertSame('lax', $cookies[0]->getSameSite());
         self::assertTrue($cookies[0]->isHttpOnly());
 
-        // Der Hash im Datensatz gehört zum ausgelieferten Cookie — sonst fände
-        // der nächste Aufruf den Warenkorb nicht wieder.
+        // The hash in the record belongs to the cookie handed out — otherwise
+        // the next call would not find the cart again.
         self::assertSame(
             CartToken::hash((string) $cookies[0]->getValue()),
             $this->cartConnection->fetchOne('SELECT tokenHash FROM tl_consho_cart'),
@@ -206,8 +206,8 @@ class AddToCartControllerTest extends TestCase
 
         self::assertSame(CartNotice::Added->value, $this->cartConnection->fetchOne('SELECT notice FROM tl_consho_cart'));
 
-        // SQLite gibt eine NUMERIC-Spalte nicht zeichengetreu zurück, deshalb
-        // numerisch vergleichen.
+        // SQLite does not return a NUMERIC column character for character, hence
+        // the numeric comparison.
         self::assertSame(3.0, (float) $this->cartConnection->fetchOne('SELECT quantity FROM tl_consho_cart_item'));
     }
 
@@ -222,9 +222,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testDieAngeboteWerdenMitDenGruppenGefragt(): void
     {
-        // Fable-Review Abo-2, L3: ohne diesen Test sähe eine Route, die die
-        // Gruppen vergisst, genauso grün aus. Seit Variante A entscheiden sie
-        // allein (keine Geschäftskunden-Sperre mehr).
+        // Abo-2: without this test a route that forgets the groups would look
+        // just as green. The groups alone decide (there is no business-customer
+        // lock any more).
         $this->publishArticle();
         $this->cartConnection->update('tl_consho_shop', ['netPriceGroups' => serialize(['3'])], ['id' => self::SHOP]);
         $this->memberGroups = [3];
@@ -238,8 +238,8 @@ class AddToCartControllerTest extends TestCase
 
     public function testOhneModellfeldIstEsDerEinmalkauf(): void
     {
-        // Formulare ohne Modellwahl — jedes Produkt vor Abo-2, jedes reine
-        // Einmalkauf-Produkt danach — bleiben gültig.
+        // Forms without a model choice — every product before Abo-2, every pure
+        // one-time purchase product after it — stay valid.
         $this->publishArticle();
 
         $this->controller(offers: $this->offersOf([0]))($this->post());
@@ -252,8 +252,8 @@ class AddToCartControllerTest extends TestCase
      */
     public static function unreadablePlans(): iterable
     {
-        // Abo-1, bf4dda4: `(int) "Monatsabo"` war 0 — der Einmalkauf. Nur
-        // Ziffern gelten, alles andere ist ein Modell, das es nicht gibt.
+        // Abo-1, bf4dda4: `(int) "Monatsabo"` was 0 — the one-time purchase. Only
+        // digits count, anything else is a model that does not exist.
         yield 'Wort' => ['Monatsabo'];
         yield 'leer' => [''];
         yield 'negativ' => ['-5'];
@@ -284,8 +284,8 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineAblehnungLegtKeinenWarenkorbAn(): void
     {
-        // Ein Bot, der Unsinn postet, darf weder eine Zeile noch ein Cookie
-        // hinterlassen.
+        // A bot posting nonsense must leave neither a row nor a cookie
+        // behind.
         $response = $this->controller()($this->post(['article' => '999']));
 
         self::assertSame(Response::HTTP_SEE_OTHER, $response->getStatusCode());
@@ -296,9 +296,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineAblehnungLaesstDenBestehendenWarenkorbUnberuehrt(): void
     {
-        // Seit C-3c schreibt eine Ablehnung nichts mehr an den Warenkorb —
-        // der Grund reist in der Adresse. Der vorhandene Korb behält seine
-        // Position und bekommt keine Notiz, die dort niemand mehr liest.
+        // Since C-3c a rejection writes nothing to the cart any more — the
+        // reason travels in the address. The existing cart keeps its line and
+        // gets no notice that nobody reads there any more.
         $this->publishArticle();
 
         $token = CartToken::generate();
@@ -336,18 +336,18 @@ class AddToCartControllerTest extends TestCase
 
     public function testEinMitgebrachtesCookieWirdNichtErneuertAuchWennDerWarenkorbNeuEntsteht(): void
     {
-        // Der Fall, in dem die Frage „braucht die Antwort ein Cookie?"
-        // tatsächlich etwas entscheidet: Das Cookie ist da, der Warenkorb
-        // dahinter nicht mehr — die Aufräum-Cron hat ihn geholt. Es entsteht
-        // ein neuer, unter dem Hash des mitgebrachten Tokens, und ohne
-        // Set-Cookie. Hinge die Frage am neu angelegten Warenkorb statt an der
-        // Anfrage, trüge jede solche Antwort ein Cookie mit genau dem Wert,
-        // den der Browser ohnehin schon hat.
+        // The case in which the question "does the response need a cookie?"
+        // actually decides something: the cookie is there, the cart behind it
+        // no longer — the clean-up cron has taken it. A new one is created,
+        // under the hash of the token brought along, and without Set-Cookie.
+        // If the question hung on the newly created cart instead of on the
+        // request, every such response would carry a cookie with exactly the
+        // value the browser already has.
         //
-        // Zusammen mit den beiden Tests darüber — kein Cookie mitgebracht,
-        // genau eines zurück; Cookie mitgebracht und Warenkorb vorhanden,
-        // keines zurück — sind damit alle drei Lagen über die Kopfzeilen
-        // geprüft, und keine mehr über den Rückgabewert einer Hilfsmethode.
+        // Together with the two tests above — no cookie brought along, exactly
+        // one back; cookie brought along and cart present, none back — all
+        // three situations are thus checked via the headers, and none any more
+        // via the return value of a helper method.
         $this->publishArticle();
 
         $token = CartToken::generate();
@@ -365,9 +365,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineUngueltigeMengeWirdNichtAlsHinzugefuegtGemeldet(): void
     {
-        // addItem() liefert false, wenn die Summe die Spalte sprengen würde —
-        // geschrieben wurde dann nichts. Wer den Rückgabewert verschluckt,
-        // meldet „hinzugefügt" und zeigt die alte Menge.
+        // addItem() returns false if the sum would overflow the column —
+        // nothing was written then. Whoever swallows the return value reports
+        // "added" and shows the old quantity.
         $this->publishArticle();
 
         $token = CartToken::generate();
@@ -394,11 +394,11 @@ class AddToCartControllerTest extends TestCase
         self::assertSame(Response::HTTP_SEE_OTHER, $response->getStatusCode());
         self::assertSame(0, $this->countCarts());
 
-        // Der Grund, den die Prüfung gefällt hat, und nicht irgendeiner:
-        // refuse() reicht ihn nur durch, aber ohne diese Zusicherung überlebt
-        // ein `refuse(… Unavailable)` die ganze Suite (Abschlussreview C-3c).
-        // Die Zuordnung Verdict→Notice ist in PurchaseCheckTest gemessen, die
-        // Durchreichung bis in die Adresse war es nicht.
+        // The reason the check arrived at, and not just any: refuse() only
+        // passes it through, but without this assertion a `refuse(… Unavailable)`
+        // survives the whole suite (C-3c). The mapping Verdict→Notice is
+        // measured in PurchaseCheckTest; passing it through into the address
+        // was not.
         self::assertStringContainsString(
             CartNotice::PARAM.'='.CartNotice::InvalidQuantity->value,
             (string) $response->headers->get('Location'),
@@ -407,13 +407,12 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineFehlendeVariantenwahlNenntIhrenEigenenGrund(): void
     {
-        // needs_choice war über die Route überhaupt nicht gemessen. Ohne einen
-        // Fall je Grund prüft die Suite nur, dass *irgendein* Grund ankommt —
-        // und ein refuse(), das immer „unavailable" sagt, überlebt sie.
+        // needs_choice was not measured via the route at all. Without one case
+        // per reason the suite only checks that *some* reason arrives — and a
+        // refuse() that always says "unavailable" survives it.
         //
-        // Ein Hauptprodukt MIT Varianten ist keine Ware, sondern die Wahl
-        // davor (PurchaseCheck): Es steht in der Liste, kaufen lässt es sich
-        // nicht.
+        // A main product WITH variants is not goods but the choice before them
+        // (PurchaseCheck): it is in the list, it cannot be bought.
         $this->publishArticle();
         $this->insertProduct(['id' => 22, 'pid' => self::ARTICLE, 'published' => 1]);
 
@@ -428,11 +427,11 @@ class AddToCartControllerTest extends TestCase
 
     public function testDerWarenkorbEinesAnderenShopsBleibtUnberuehrt(): void
     {
-        // Die Zusicherung ist unverändert: Ein Artikel aus Shop 1 darf nicht
-        // im Warenkorb von Shop 2 landen. Der Weg dorthin ist seit C-3b ein
-        // anderer — der fremde Korb wird gar nicht mehr gefunden, weil ein
-        // Token je Shop einen trägt und dieser Shop noch keinen hat. Statt
-        // einer Ablehnung entsteht deshalb ein zweiter Korb.
+        // The assertion is unchanged: an article from shop 1 must not land in
+        // the cart of shop 2. The way there is a different one since C-3b — the
+        // foreign cart is not even found any more, because a token carries one
+        // per shop and this shop does not have one yet. Instead of a rejection,
+        // a second cart is therefore created.
         $this->publishArticle();
 
         $token = CartToken::generate();
@@ -456,11 +455,11 @@ class AddToCartControllerTest extends TestCase
 
     public function testEinAngemeldetesMitgliedFuegtInDenEigenenWarenkorbEinNichtInDenDesCookies(): void
     {
-        // CartResolver::resolve() ignoriert das Cookie, sobald jemand
-        // angemeldet ist (12) — der Artikel muss im Warenkorb des Mitglieds
-        // landen, nicht in dem, auf den ein mitgebrachtes fremdes Cookie
-        // zeigt. Zusätzlich darf für ein Mitglied kein Cookie ausgestellt
-        // werden: sein Warenkorb wird über das Konto gefunden.
+        // CartResolver::resolve() ignores the cookie as soon as someone is
+        // logged in (12) — the article must land in the member's cart, not in
+        // the one a foreign cookie brought along points to. In addition, no
+        // cookie may be issued for a member: their cart is found via the
+        // account.
         $this->publishArticle();
 
         $foreignToken = CartToken::generate();
@@ -486,16 +485,15 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineAblehnungSchreibtKeineNotizInDenFremdenWarenkorb(): void
     {
-        // Der Artikel ist nur in Shop A sichtbar, das Cookie zeigt auf einen
-        // Warenkorb von Shop B, und die Menge ist ungültig (0). Die Ablehnung
-        // darf nicht auf den Warenkorb von Shop B geschrieben werden — der
-        // hat mit diesem Artikel nie etwas zu tun gehabt.
+        // The article is only visible in shop A, the cookie points to a cart of
+        // shop B, and the quantity is invalid (0). The rejection must not be
+        // written to the cart of shop B — that one never had anything to do
+        // with this article.
         //
-        // ⚠️ Seit C-3b landet sie nirgends: Dieser Shop hat noch keinen Korb,
-        // auf den sie geschrieben werden könnte, und eine Ablehnung legt
-        // keinen an. Der Besucher bekommt also gar keine Rückmeldung — genau
-        // die Lücke, die C-3c schließt, indem der Grund an den Kaufknopf
-        // wandert statt auf eine Warenkorbzeile.
+        // ⚠️ Since C-3b it lands nowhere: this shop has no cart yet to which it
+        // could be written, and a rejection does not create one. So the visitor
+        // gets no feedback at all — exactly the gap C-3c closes by moving the
+        // reason to the purchase button instead of onto a cart line.
         $this->publishArticle();
 
         $token = CartToken::generate();
@@ -523,9 +521,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testOhneShopAntwortetDieRouteMitVierhundert(): void
     {
-        // Die Seite gehört zu keinem Shop (consho_shop = 0 auf der
-        // Root-Seite) — ohne Shop gibt es weder einen Sichtbarkeits-Kontext
-        // noch einen Warenkorb, dem ein Artikel zugeordnet werden könnte.
+        // The page belongs to no shop (consho_shop = 0 on the root page) —
+        // without a shop there is neither a visibility context nor a cart to
+        // which an article could be assigned.
         $this->publishArticle();
         $this->rootShopId = 0;
 
@@ -544,9 +542,9 @@ class AddToCartControllerTest extends TestCase
         $eigener = $this->controller()($this->post(referer: self::HOST.'/katalog/schuhe.html?seite=2'));
         self::assertSame(self::HOST.'/katalog/schuhe.html?seite=2', $eigener->headers->get('Location'));
 
-        // Ohne brauchbaren Verweis die Warenkorbseite, nicht die Produktseite
-        // (Spezifikation 7.1 Schritt 4). „Zurück zur Seite" ist eine Zusage
-        // darüber, woher der Besucher kam — und genau die fehlt hier.
+        // Without a usable referrer the cart page, not the product page
+        // (specification 7.1, step 4). "Back to the page" is a promise about
+        // where the visitor came from — and that is exactly what is missing here.
         $fremder = $this->controller()($this->post(referer: 'https://boese.example/weiter'));
         self::assertSame(self::CART_URL, $fremder->headers->get('Location'));
 
@@ -556,11 +554,10 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineAblehnungGehtDorthinZurueckWoGeklicktWurde(): void
     {
-        // Umgedreht mit C-3c: Der Grund wird nicht mehr auf eine
-        // Warenkorbzeile geschrieben, sondern vom Kaufknopf gezeigt — also
-        // gehört der Besucher zurück auf die Seite, von der er kam, und zwar
-        // unabhängig von „Nach dem Hinzufügen". Die Warenkorbseite könnte den
-        // Grund gar nicht mehr rendern.
+        // Reversed with C-3c: the reason is no longer written onto a cart line
+        // but shown by the purchase button — so the visitor belongs back on the
+        // page they came from, regardless of "Nach dem Hinzufügen" (after
+        // adding). The cart page could no longer render the reason at all.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -577,8 +574,8 @@ class AddToCartControllerTest extends TestCase
     }
 
     /**
-     * Block G (G7): ausverkauft kommt nicht in den Korb. Mehr als übrig ist
-     * dagegen schon — der Korb sagt, was übrig ist (G5).
+     * Block G (G7): sold out does not go into the cart. More than what is
+     * left does, though — the cart says what is left (G5).
      */
     public function testAusverkauftKommtNichtInDenKorb(): void
     {
@@ -598,7 +595,7 @@ class AddToCartControllerTest extends TestCase
         );
         self::assertSame(0, (int) $this->cartConnection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart_item'));
 
-        // Ein Stück da, drei gewünscht: kommt in den Korb.
+        // One piece there, three wanted: goes into the cart.
         $this->cartConnection->update('tl_consho_stock', ['quantity' => '1.0000'], ['article' => self::ARTICLE]);
         $this->controller()($this->post(['article' => (string) self::ARTICLE, 'quantity' => '3'], $token, referer: self::CATALOGUE_URL));
 
@@ -607,10 +604,10 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineAblehnungGehtAuchImWarenkorbModusZurueckZurSeite(): void
     {
-        // „Zum Warenkorb" gilt für den Erfolgsfall. Eine Ablehnung hat mit dem
-        // Warenkorb nichts zu tun (Michael, 2026-09-20) — sonst stünde der
-        // Besucher vor einem Korb, in dem sich nichts geändert hat, und ohne
-        // Erklärung, warum.
+        // "Zum Warenkorb" (to the cart) applies to the success case. A rejection
+        // has nothing to do with the cart — otherwise the visitor would stand in
+        // front of a cart in which nothing has changed, and without an
+        // explanation why.
         $this->publishArticle();
         $this->afterAddToCart = 'cart';
 
@@ -627,9 +624,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testAuchEineAbgelehnteMengeGehtZurueckZurSeite(): void
     {
-        // Dieselbe Regel für die Ablehnung, die erst addItem() feststellt:
-        // Die Deckelung der Spalte ist keine andere Art von Ablehnung als
-        // eine unsichtbare Ware und nimmt denselben Weg.
+        // The same rule for the rejection that only addItem() detects: capping
+        // the column is no different kind of rejection than invisible goods and
+        // takes the same path.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -649,9 +646,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testEineAblehnungBrauchtDieWarenkorbseiteNichtMehr(): void
     {
-        // Ohne eingestellte Warenkorbseite ändert sich für eine Ablehnung
-        // seit C-3c nichts: Sie ging vorher dorthin und geht jetzt ohnehin
-        // zurück zur Seite. Der Grund reist unverändert mit.
+        // Without a configured cart page nothing changes for a rejection since
+        // C-3c: it went there before and now goes back to the page anyway. The
+        // reason travels along unchanged.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
         $this->cartPageId = 0;
@@ -669,12 +666,11 @@ class AddToCartControllerTest extends TestCase
 
     public function testEinErfolgNimmtDieAlteAblehnungAusDerAdresse(): void
     {
-        // Gefunden im Abschlussreview von C-3c. Der Rücksprung geht auf den
-        // Referer — und der trägt nach einer Ablehnung bereits
-        // ?consho_notice=. Wer die Menge korrigiert und erneut klickt, landete
-        // mit der ALTEN Meldung neben einem hochgezählten Mini-Warenkorb.
-        // Eine falsche Meldung ist schlimmer als das Schweigen, das C-3c
-        // beheben sollte.
+        // C-3c: the return goes to the referrer — and after a rejection that
+        // already carries ?consho_notice=. Whoever corrects the quantity and
+        // clicks again would land with the OLD message next to an incremented
+        // mini cart. A wrong message is worse than the silence C-3c was meant
+        // to fix.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -690,10 +686,10 @@ class AddToCartControllerTest extends TestCase
 
     public function testDerGrundStehtGenauEinmalInDerAdresse(): void
     {
-        // Drei Ablehnungen hintereinander hängten den Parameter dreimal an.
-        // PHP liest den letzten, die Anzeige stimmte also — aber jede Länge
-        // ist ein eigener Eintrag im geteilten Cache, und genau das sollte
-        // dieser Entwurf nicht kosten.
+        // Three rejections in a row appended the parameter three times. PHP
+        // reads the last one, so the display was right — but every length is
+        // an entry of its own in the shared cache, and that is exactly what
+        // this design was not supposed to cost.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -715,9 +711,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testEinVorhandenerAbfrageteilBleibtErhalten(): void
     {
-        // Eine Produktseite mit gewählter Variante trägt ihre eigenen
-        // Parameter. Die dürfen nicht verschwinden, sonst führt die Ablehnung
-        // auf eine andere Variante als die angeklickte.
+        // A product page with a chosen variant carries its own parameters.
+        // They must not disappear, otherwise the rejection leads to a different
+        // variant than the one clicked.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -734,9 +730,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testEinAnkerVerschlucktDenGrundNicht(): void
     {
-        // „seite.html#top" plus „?consho_notice=…" ergäbe
-        // „seite.html#top?consho_notice=…" — der Parameter stünde im Anker
-        // und käme nie am Server an.
+        // "seite.html#top" plus "?consho_notice=…" would give
+        // "seite.html#top?consho_notice=…" — the parameter would sit in the
+        // anchor and never reach the server.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -753,10 +749,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testOhneBrauchbarenVerweisFuehrtDieAblehnungZurSeiteDesKaufknopfs(): void
     {
-        // Kein Referer derselben Herkunft: Dann bleibt die Seite, die das
-        // Formular genannt hat. Für eine Produktseite ist das die Seite ohne
-        // Produkt — immer noch besser als der Warenkorb, der den Grund gar
-        // nicht mehr rendert.
+        // No referrer of the same origin: then the page the form named stays.
+        // For a product page that is the page without a product — still better
+        // than the cart, which no longer renders the reason at all.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -773,9 +768,9 @@ class AddToCartControllerTest extends TestCase
 
     public function testEinErfolgImModusZurueckZurSeiteSetztKeineNotiz(): void
     {
-        // Befund 6b: Die Rückmeldung ist hier die Zahl im Mini-Warenkorb, die
-        // hochgeht. Eine Notiz hat keine Frist — sie stünde sonst noch Tage
-        // später da, wenn der Besucher irgendwann die Warenkorbseite öffnet.
+        // The feedback here is the number in the mini cart that goes up. A
+        // notice has no expiry — otherwise it would still be there days later,
+        // whenever the visitor opens the cart page.
         $this->publishArticle();
         $this->afterAddToCart = 'page';
 
@@ -788,8 +783,8 @@ class AddToCartControllerTest extends TestCase
 
     public function testImModusZumWarenkorbBleibtDieErfolgsmeldung(): void
     {
-        // Dort führt der Weg ohnehin auf die Seite, die sie zeigt, und zwar
-        // sofort — die Frage nach der Frist stellt sich nicht.
+        // There the path leads to the page that shows it anyway, and
+        // immediately — the question of expiry does not arise.
         $this->publishArticle();
         $this->afterAddToCart = 'cart';
 
@@ -801,15 +796,15 @@ class AddToCartControllerTest extends TestCase
 
     public function testOhneWarenkorbseiteGehtEsZurueckZurSeite(): void
     {
-        // Eine tote Adresse hülfe dem Besucher nicht; C-6 mahnt die fehlende
-        // Warenkorbseite im Backend an.
+        // A dead address would not help the visitor; C-6 flags the missing
+        // cart page in the back end.
         $this->publishArticle();
         $this->cartPageId = 0;
 
         self::assertSame(self::CATALOGUE_URL, $this->controller()($this->post())->headers->get('Location'));
     }
 
-    // ── Hilfen ──────────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────────
 
     private function publishArticle(): void
     {
@@ -852,7 +847,7 @@ class AddToCartControllerTest extends TestCase
     }
 
     /**
-     * @param list<int> $offered die Modelle, die jedem angeboten werden
+     * @param list<int> $offered the models offered to everyone
      */
     private function offersOf(array $offered): SubscriptionOffers
     {
@@ -890,8 +885,8 @@ class AddToCartControllerTest extends TestCase
             $shops,
             new ShopLanguages($this->cartConnection),
             $urls,
-            // Seit Task 10 liest nur noch ShopPageUrls das Feld consho_cartPage
-            // — der Mini-Warenkorb verweist auf dieselbe Seite.
+            // Only ShopPageUrls reads the field consho_cartPage — the mini cart
+            // links to the same page.
             new ShopPageUrls($framework, $shops, $urls),
             new PriceAudienceResolver($this->tokenStorage($memberId), $this->cartConnection),
             new Availability($this->cartConnection),
@@ -910,10 +905,10 @@ class AddToCartControllerTest extends TestCase
     }
 
     /**
-     * Ein echter `Contao\FrontendUser` lässt sich ohne laufendes Framework
-     * nicht über `new` bauen — der Konstruktor ist protected. Per Reflection
-     * `newInstanceWithoutConstructor()` geht es ganz ohne Container und ohne
-     * Datenbank (siehe CartResolverTest).
+     * A real `Contao\FrontendUser` cannot be built with `new` without a
+     * running framework — the constructor is protected. Via reflection,
+     * `newInstanceWithoutConstructor()` works entirely without a container and
+     * without a database (see CartResolverTest).
      */
     private function frontendUser(int $memberId): FrontendUser
     {
@@ -961,7 +956,7 @@ class AddToCartControllerTest extends TestCase
     }
 
     /**
-     * @param array<int, string> $addresses nach spl_object_id der Seite
+     * @param array<int, string> $addresses by spl_object_id of the page
      */
     private function urlGenerator(array $addresses): ContentUrlGenerator
     {
@@ -978,17 +973,16 @@ class AddToCartControllerTest extends TestCase
     }
 
     /**
-     * ⚠️ `rootId` gibt dieses Doppel erst heraus, **nachdem** loadDetails()
-     * gerufen wurde — genau wie das echte PageModel. `rootId` ist keine Spalte
-     * von tl_page, sondern eine Eigenschaft, die PageModel beim Hochlaufen des
-     * Baums setzt.
+     * ⚠️ This double only hands out `rootId` **after** loadDetails() has been
+     * called — just like the real PageModel. `rootId` is not a column of
+     * tl_page but a property PageModel sets while walking up the tree.
      *
-     * Vorher antwortete das Doppel ungefragt mit ROOT_PAGE. Die Suite war
-     * damit blind für einen Aufrufer, der loadDetails() vergisst: Auf c5 ging
-     * am 2026-09-20 jedes „in den Warenkorb" von einer Unterseite mit 400 aus,
-     * während hier alles grün lief. Seit dieser Fassung fällt derselbe Fehler
-     * in **jedem** Test dieser Klasse auf, statt in gar keinem — eine eigene
-     * Prüfung dafür wäre die schwächere Absicherung.
+     * Before, the double answered with ROOT_PAGE unasked. The suite was thus
+     * blind to a caller that forgets loadDetails(): on a real installation
+     * every "add to cart" from a subpage ended with a 400, while everything
+     * was green here. Since this version the same error shows up in **every**
+     * test of this class instead of in none — a dedicated check for it would
+     * be the weaker safeguard.
      *
      * @param array<string, int> $row
      */
@@ -1005,8 +999,8 @@ class AddToCartControllerTest extends TestCase
             },
         );
 
-        // Eine echte Closure mit `&$detailsLoaded`, keine Pfeilfunktion: die
-        // bindet nur Kopien, und das Flag bliebe für immer false.
+        // A real closure with `&$detailsLoaded`, not an arrow function: that one
+        // binds only copies, and the flag would stay false forever.
         $page->method('__get')->willReturnCallback(
             static function (string $key) use ($id, &$detailsLoaded): int|string|null {
                 return match ($key) {

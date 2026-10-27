@@ -117,7 +117,7 @@ class ValueCompensation
         // also where it takes a renewal's licence over). Read there, not at
         // the entitlement: an accepted withdrawal of a renewal hands that
         // back to the old order (P78), and the mask asks again after it
-        // (review Abo-8, S2).
+        // (Abo-8).
         $released = $this->connection->fetchOne(
             'SELECT MIN(d.shippedAt) FROM tl_consho_delivery d
                JOIN tl_consho_delivery_item di ON di.pid = d.id

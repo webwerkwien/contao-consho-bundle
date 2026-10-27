@@ -59,7 +59,7 @@ class DbalOrderPageRepository
     }
 
     /**
-     * The payments as they stand (acceptance WG-7): what the customer paid,
+     * The payments as they stand (WG-7): what the customer paid,
      * how, and what went back — the invoice states it as it was when issued,
      * the page as it is now. `method` as the payment row names it; `refund`
      * is the one name Consho writes itself.

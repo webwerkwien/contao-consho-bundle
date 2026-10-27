@@ -24,7 +24,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
  *     tl_page.19.error_404    ANY   https   /{_url_fragment}
  *
  * Any unmatched path therefore MATCHES that route, ErrorPageController renders
- * it, and nothing is thrown. Measured on the test server on 2026-09-11: the first
+ * it, and nothing is thrown. The first
  * version of this class listened on kernel.exception, was correctly registered
  * at priority 64 — debug:event-dispatcher listed it — and was never invoked
  * once.
@@ -79,7 +79,7 @@ class ProductRedirectListener
         }
 
         /*
-         * 🔴 In the startpoint's language, not the default one. Found 2026-09-14:
+         * 🔴 In the startpoint's language, not the default one. Before:
          * asked without a language, a product lacking its French translation
          * counted as visible, and an old French address was sent to a French
          * product address that answers 404 — the redirect onto a dead end this

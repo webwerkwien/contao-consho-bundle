@@ -73,8 +73,7 @@ class CancellationDecision
     }
 
     /**
-     * "Entscheidung erneut senden" (E10; Michael, 2026-10-08: "E-Punkte
-     * passen"): the decision mail once more, for a decision whose mail did
+     * "Entscheidung erneut senden" (E10): the decision mail once more, for a decision whose mail did
      * not leave (`decisionSentAt` NULL, finding DecisionNotSent). Changes
      * nothing but `decisionSentAt`; the decision itself was applied once.
      *
@@ -160,10 +159,9 @@ class CancellationDecision
             $this->connection->update('tl_consho_subscription', ['endsAt' => $effectiveAt, 'tstamp' => $now], ['id' => (int) $pid]);
         }
 
-        // The end the contract really has (review Abo-7, L3): an earlier one it
+        // The end the contract really has (Abo-7): an earlier one it
         // already had, or the one it ended at. Written back to the
-        // cancellation too, so that mail, result page and back end agree
-        // (second review, L-2).
+        // cancellation too, so that mail, result page and back end agree.
         $realEnd = $endsAt > 0 && ($ended || $endsAt < $effectiveAt) ? $endsAt : $effectiveAt;
 
         if ($accepted && $realEnd !== $effectiveAt) {

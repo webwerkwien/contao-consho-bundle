@@ -23,7 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Model\ShopModel;
  *
  * So the whitelist stands, and incompleteFor() reports what is missing instead
  * of absorbing it. TaxResolver still throws, so nothing is ever mispriced.
- * Changed on 2026-09-09 on Michael's challenge; see specification section 7.
+ * See Block A, section 7.
  */
 final class DeliveryCountryProvider
 {
@@ -69,8 +69,8 @@ final class DeliveryCountryProvider
      * Only countries whose rate is ever asked for: with "Steuer im
      * Bestimmungsland" off, an EU consumer is taxed at the shop's rate
      * (TaxPlace::forDistanceSale(), the rule checkout, order and catalogue
-     * use), so that country needs no rate of its own. Found on the sales shop
-     * (Nachlese Stufe 2): 26 warnings "Bestellung scheitert" for orders that
+     * use), so that country needs no rate of its own. Before Nachlese Stufe 2
+     * a shop showed 26 warnings "Bestellung scheitert" for orders that
      * would have gone through.
      *
      * @return array<string, list<int>> ISO code => tax class ids without a rate

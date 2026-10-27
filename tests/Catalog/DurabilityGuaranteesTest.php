@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\PublicFiles;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block GARAN: vom Hauptprodukt, nur für Waren, nur ganz.
- * Typ 1 körperlich, 2 digital.
+ * Block GARAN: from the main product, only for goods, only whole.
+ * Type 1 physical, 2 digital.
  */
 class DurabilityGuaranteesTest extends TestCase
 {
@@ -32,7 +32,7 @@ class DurabilityGuaranteesTest extends TestCase
     public function testDieVarianteErbtVomHauptprodukt(): void
     {
         $this->connection->insert('tl_consho_product', ['id' => 1, 'productType' => 1, 'durabilityYears' => 5, 'durabilityLabel' => self::LABEL]);
-        // Eigene Werte an der Variante zählen nicht (GA2) — die Maske zeigt sie dort nicht.
+        // Own values on the variant do not count (GA2) — the mask does not show them there.
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 1, 'durabilityYears' => 9]);
 
         $label = StringUtil::binToUuid(self::LABEL);
@@ -41,15 +41,15 @@ class DurabilityGuaranteesTest extends TestCase
     }
 
     /**
-     * GA8: das geschachtelte Label kommt vom Hauptprodukt mit, nur neben einem
-     * vollen Label und nur aus einem öffentlichen Ordner.
+     * GA8: the nested label comes along from the main product, only next to a
+     * full label and only from a public folder.
      */
     public function testDasGeschachtelteLabelKommtMit(): void
     {
         $nested = "\xfe\xdc\xba\x98\x76\x54\x32\x10\xfe\xdc\xba\x98\x76\x54\x32\x10";
         $this->connection->insert('tl_consho_product', ['id' => 1, 'productType' => 1, 'durabilityYears' => 5, 'durabilityLabel' => self::LABEL, 'durabilityNested' => $nested]);
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 1]);
-        // Ohne volles Label nichts — auch nicht das geschachtelte.
+        // Without a full label nothing — not the nested one either.
         $this->connection->insert('tl_consho_product', ['id' => 3, 'productType' => 1, 'durabilityYears' => 5, 'durabilityNested' => $nested]);
 
         $files = $this->createMock(PublicFiles::class);
@@ -69,16 +69,16 @@ class DurabilityGuaranteesTest extends TestCase
         $this->connection->insert('tl_consho_product', ['id' => 2, 'productType' => 1, 'durabilityLabel' => self::LABEL]);
         $this->connection->insert('tl_consho_product', ['id' => 3, 'productType' => 2, 'durabilityYears' => 5, 'durabilityLabel' => self::LABEL]);
         $this->connection->insert('tl_consho_product', ['id' => 4, 'productType' => 1, 'durabilityYears' => 2, 'durabilityLabel' => self::LABEL]);
-        // Ohne Typ ist es eine Ware.
+        // Without a type it is goods.
         $this->connection->insert('tl_consho_product', ['id' => 5, 'durabilityYears' => 3, 'durabilityLabel' => self::LABEL]);
 
         self::assertSame([5], array_keys($this->of([1, 2, 3, 4, 5])));
     }
 
     /**
-     * GA9: 2,5 Jahre sind mehr als zwei; „5.0", wie MySQL eine Dezimalspalte
-     * liefert, kommt als „5" an; eine Kommastelle, die das Label nicht kennt,
-     * ist keine Dauer.
+     * GA9: 2.5 years are more than two; "5.0", as MySQL returns a decimal
+     * column, arrives as "5"; a decimal place the label does not know
+     * is not a duration.
      */
     public function testHalbeJahre(): void
     {
@@ -90,9 +90,9 @@ class DurabilityGuaranteesTest extends TestCase
     }
 
     /**
-     * Review GARAN, 1: die Regel von DbalArticleShippingData — Typ des
-     * Hauptprodukts, sonst der eigene. Unter einem Hauptprodukt ohne Typ ist
-     * eine digitale Variante keine Ware.
+     * GARAN: the rule of DbalArticleShippingData — type of the
+     * main product, otherwise its own. Under a main product without a type
+     * a digital variant is not goods.
      */
     public function testEineDigitaleVarianteUnterEinemHauptproduktOhneTyp(): void
     {
@@ -103,8 +103,8 @@ class DurabilityGuaranteesTest extends TestCase
     }
 
     /**
-     * Abnahme c5: ein Label in einem geschützten Ordner ist überall weg —
-     * Seite, Kasse und Einfrieren sehen dieselbe Antwort.
+     * A label in a protected folder is gone everywhere —
+     * page, checkout and freezing see the same answer.
      */
     public function testEinNichtOeffentlichesLabelGiltNicht(): void
     {

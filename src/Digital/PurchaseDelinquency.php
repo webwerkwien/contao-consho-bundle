@@ -10,8 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
 
 /**
- * The digital goods of an unpaid one-time purchase rest (Nachlese E5a;
- * Michael, 2026-10-09: "E5 Weg C").
+ * The digital goods of an unpaid one-time purchase rest (Nachlese E5a).
  *
  * "Auf Rechnung" releases digital goods with the order (F10): the goods go
  * first, the money after. Until now nothing followed when the money never
@@ -29,7 +28,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
  *
  * What was downloaded stays downloaded; resting stops further downloads, key
  * deliveries and what a module reads through EntitlementQuery. The customer is
- * told both ways (Michael, 2026-10-09: "E5 Infomail umsetzen"), by
+ * told both ways, by
  * SubscriptionDelinquencyRun, which already mails for subscriptions; this
  * class only says what changed.
  */
@@ -97,7 +96,7 @@ class PurchaseDelinquency
     /**
      * An entitlement released into an order that already rests rests too —
      * without deciding anything: the order's state does not change, so there
-     * is nothing to mail (DigitalRelease, second review S-1).
+     * is nothing to mail (DigitalRelease).
      */
     public function joinRest(int $orderId, int $now): void
     {

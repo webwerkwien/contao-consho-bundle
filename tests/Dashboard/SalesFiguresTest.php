@@ -9,24 +9,23 @@ use Webwerkwien\ContaoConshoBundle\Dashboard\SalesFigures;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Dashboard DB5: Bestellungen und Bestellwert heute, 7 Tage, laufender Monat.
+ * Dashboard DB5: orders and order value today, 7 days, current month.
  *
- * Die Grenzen stehen als feste Zeitpunkte da (UTC), nicht nachgerechnet —
- * sonst stünde ein Fehler der Rechnung auf beiden Seiten (Prüfungsnotiz
- * Punkt 55).
+ * The boundaries are written down as fixed points in time (UTC), not
+ * computed — otherwise an error in the calculation would sit on both sides.
  */
 final class SalesFiguresTest extends TestCase
 {
     /** 2026-10-20 12:00 UTC. */
     private const NOW = 1_792_497_600;
 
-    /** 2026-10-20 00:00 UTC — heute. */
+    /** 2026-10-20 00:00 UTC — today. */
     private const TODAY = 1_792_454_400;
 
-    /** 2026-10-14 00:00 UTC — der erste der sieben Tage. */
+    /** 2026-10-14 00:00 UTC — the first of the seven days. */
     private const WEEK = 1_791_936_000;
 
-    /** 2026-10-01 00:00 UTC — der Monat. */
+    /** 2026-10-01 00:00 UTC — the month. */
     private const MONTH = 1_790_812_800;
 
     private Connection $connection;
@@ -75,12 +74,12 @@ final class SalesFiguresTest extends TestCase
     }
 
     /**
-     * Am Monatsanfang reichen die sieben Tage in den Vormonat — die Abfrage
-     * muss ab dem früheren der beiden Zeitpunkte lesen.
+     * At the start of a month the seven days reach into the previous month —
+     * the query has to read from the earlier of the two points in time.
      */
     public function testDieWocheReichtInDenVormonat(): void
     {
-        // 2026-10-03 12:00 UTC; die Woche beginnt am 2026-09-27.
+        // 2026-10-03 12:00 UTC; the week starts on 2026-09-27.
         $now = 1_791_028_800;
         $this->order(1, 1_790_726_400, '4.0000', 'EUR', '2026-09-30 00:00');
 

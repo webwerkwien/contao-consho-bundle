@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SubscriptionOrderButtonListener;
 
 /**
- * Abo-8, P80: der Link „Kaufbestellung" in der Abo-Liste.
+ * Abo-8, P80: the "Purchase order" link in the subscription list.
  */
 final class SubscriptionOrderButtonListenerTest extends TestCase
 {

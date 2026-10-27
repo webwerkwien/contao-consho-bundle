@@ -36,22 +36,20 @@ final class ProductTile
          */
         public readonly string $formattedPrice = '',
         /**
-         * Ob dieses Produkt aus der Liste heraus gekauft werden kann
-         * (Michael, 2026-09-22: „kein Knopf, Kachel verlinkt").
+         * Whether this product can be bought straight from the list — no button
+         * otherwise, the tile links to the product.
          *
-         * Falsch für ein Hauptprodukt MIT Varianten: Dort gibt es keinen
-         * kaufbaren Artikel, solange niemand eine Variante gewählt hat, und
-         * eine Ersatzregel („welche nehmen wir?") würde irgendwann jemanden
-         * mit der falschen Flasche überraschen. Nicht dasselbe wie `isFrom` —
-         * das sagt nur, ob die Varianten sich im PREIS unterscheiden, und
-         * zwei gleich teure Varianten sind immer noch zwei Varianten.
+         * False for a main product WITH variants: there is no buyable article as
+         * long as nobody has chosen a variant, and a fallback rule ("which one do we
+         * take?") would one day surprise somebody with the wrong bottle. Not the same
+         * as `isFrom` — that only says whether the variants differ in PRICE, and two
+         * variants at the same price are still two variants.
          */
         public readonly bool $isBuyable = false,
         /**
-         * Die Menge, die der Knopf in den Warenkorb legt: die Mindestmenge
-         * des Produkts, sonst 1. Ohne Nachkommastellen, wo keine nötig sind —
-         * `minPurchase` ist `decimal(10,4)`, und „1,0000" in einem Formular
-         * war schon einmal ein Befund (2026-09-21).
+         * The quantity the button puts into the basket: the product's minimum
+         * quantity, otherwise 1. Without decimals where none are needed —
+         * `minPurchase` is `decimal(10,4)`, and "1,0000" in a form is wrong.
          */
         public readonly string $purchaseQuantity = '1',
         /**

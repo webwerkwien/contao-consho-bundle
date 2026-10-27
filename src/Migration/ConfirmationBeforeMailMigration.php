@@ -33,10 +33,10 @@ use Doctrine\DBAL\Connection;
  * pass either.
  *
  * ⚠️ It relies on `contao:migrate` in one call, migrations → schema →
- * migrations (MigrateCommand, measured 2026-09-25). A run with
+ * migrations (MigrateCommand). A run with
  * `--migrations-only` that is never followed by the schema step would leave
- * the guard open, and a later run would clear warnings it must keep
- * (review 2026-09-25, F1). docs/rollout.md says so.
+ * the guard open, and a later run would clear warnings it must keep.
+ * docs/rollout.md says so.
  */
 final class ConfirmationBeforeMailMigration extends AbstractMigration
 {

@@ -26,8 +26,8 @@ class DbalTranslationGapIssueSourceTest extends TestCase
 
     protected function setUp(): void
     {
-        // Mitgeschrieben wird jede Abfrage — nur so lässt sich belegen, dass
-        // ein einsprachiger Shop keine einzige Abfrage auf Produkte auslöst.
+        // Every query is recorded — only that way can it be shown that a
+        // single-language shop triggers not a single query on products.
         $this->queries = new \ArrayObject();
         $logger = new class($this->queries) extends AbstractLogger {
             /** @param \ArrayObject<int, string> $queries */
@@ -48,8 +48,8 @@ class DbalTranslationGapIssueSourceTest extends TestCase
             (new Configuration())->setMiddlewares([new Middleware($logger)]),
         );
 
-        // Aus der DCA, also so streng wie die Datenbank: Die Sicherheitsfelder
-        // dürfen NULL sein, die Zuordnung und die Übersetzung sind eindeutig.
+        // From the DCA, so as strict as the database: the safety fields may be
+        // NULL, the assignment and the translation are unique.
         DcaSchema::create($this->connection, 'tl_consho_product');
         DcaSchema::create($this->connection, 'tl_consho_product_shop');
         DcaSchema::create($this->connection, 'tl_consho_translation');
@@ -69,7 +69,7 @@ class DbalTranslationGapIssueSourceTest extends TestCase
         $this->shop(1, 'Kräuterhaus', 'de', ['de', 'en']);
     }
 
-    // ── Was gemeldet wird ────────────────────────────────────────────────
+    // ── What is reported ─────────────────────────────────────────────────
 
     public function testAProductWithoutATranslationIsReportedAsMissing(): void
     {
@@ -93,10 +93,10 @@ class DbalTranslationGapIssueSourceTest extends TestCase
     public function testATranslationRowWithoutAnAliasCountsAsMissing(): void
     {
         /*
-         * Eine Zeile ohne Alias entsteht etwa beim Zurückholen einer Version,
-         * wenn der Alias inzwischen vergeben ist (M-5). Das Produkt hat dann
-         * keine Adresse in dieser Sprache — es fehlt dort. Eine Meldung über
-         * Sicherheitshinweise schickte den Betreiber an die falsche Stelle.
+         * A row without an alias comes about, for instance, when restoring a
+         * version whose alias has been taken in the meantime (M-5). The product
+         * then has no address in that language — it is missing there. A message
+         * about safety notices would send the operator to the wrong place.
          */
         $this->product(1);
         $this->translate(1, 'en', alias: null);
@@ -111,8 +111,8 @@ class DbalTranslationGapIssueSourceTest extends TestCase
 
     public function testMissingSafetyWarningsAreAWarning(): void
     {
-        // Der Befund, für den es diesen Bericht gibt: veröffentlicht, übersetzt
-        // — und trotzdem unsichtbar.
+        // The finding this report exists for: published, translated
+        // — and invisible all the same.
         $this->product(1, safetyWarnings: 'Enthält Alkohol');
         $this->translate(1, 'en', alias: 'herbal-bitters');
 
@@ -160,8 +160,8 @@ class DbalTranslationGapIssueSourceTest extends TestCase
 
     public function testEachTranslationLanguageIsReportedOnItsOwn(): void
     {
-        // Die Standardsprache steht absichtlich nicht vorn im Alphabet: Sie
-        // darf nie gemeldet werden, gleich wo sie in der Liste steht.
+        // The default language is deliberately not at the front of the
+        // alphabet: it must never be reported, wherever it is in the list.
         $this->connection->executeStatement('DELETE FROM tl_page');
         $this->connection->executeStatement('DELETE FROM tl_consho_shop');
         $this->shop(1, 'Kräuterhaus', 'en', ['de', 'en', 'fr']);
@@ -195,12 +195,12 @@ class DbalTranslationGapIssueSourceTest extends TestCase
         );
     }
 
-    // ── Was nicht gemeldet wird ──────────────────────────────────────────
+    // ── What is not reported ─────────────────────────────────────────────
 
     public function testAnUnpublishedProductIsNotReported(): void
     {
-        // Ein Entwurf ist keine Lücke. Sonst ertrinkt der Bericht in Rauschen,
-        // und niemand liest ihn mehr — womit auch die Warnung untergeht.
+        // A draft is not a gap. Otherwise the report drowns in noise, and
+        // nobody reads it any more — and the warning goes under with it.
         $this->product(1, published: false);
 
         self::assertSame([], $this->report());
@@ -208,7 +208,7 @@ class DbalTranslationGapIssueSourceTest extends TestCase
 
     public function testAProductOutsideItsPublicationWindowIsNotReported(): void
     {
-        // Absichtlich unsichtbar, in jeder Sprache — dieselbe Ausnahme wie B-8.
+        // Deliberately invisible, in every language — the same exception as B-8.
         $this->product(1, stop: self::NOW - 1);
         $this->product(2, start: self::NOW + 100);
 
@@ -225,15 +225,15 @@ class DbalTranslationGapIssueSourceTest extends TestCase
     public function testVariantsAreNotCountedOnTheirOwn(): void
     {
         /*
-         * Varianten erben die Texte des Hauptprodukts und haben keine eigene
-         * Übersetzungszeile. Gezählt wird das Hauptprodukt — einmal, nicht
-         * einmal je Größe. Sonst meldete jeder Shop mit Varianten ein
-         * Vielfaches dessen, was zu übersetzen ist.
+         * Variants inherit the texts of the main product and have no translation
+         * row of their own. The main product is counted — once, not once per
+         * size. Otherwise every shop with variants would report a multiple of
+         * what there is to translate.
          */
         $this->product(1);
-        // Mit eigener Shop-Auswahl, wie sie eine eingrenzende Variante trägt:
-        // Ohne sie fiele eine mitgezählte Variante schon an der Zuordnung
-        // heraus, und der Test merkte nicht, wenn sie mitgezählt würde.
+        // With a shop selection of its own, as a restricting variant carries:
+        // without it, a variant counted along would already drop out at the
+        // assignment, and the test would not notice if it were counted.
         $this->product(2, pid: 1, shops: [1]);
         $this->product(3, pid: 1, shops: [1]);
 
@@ -249,8 +249,8 @@ class DbalTranslationGapIssueSourceTest extends TestCase
 
     public function testAMainProductWithOnlyInactiveVariantsIsNotReported(): void
     {
-        // Schon in der Standardsprache unsichtbar — keine Übersetzung macht es
-        // sichtbar, also ist die fehlende Übersetzung auch nicht der Grund.
+        // Already invisible in the default language — no translation makes it
+        // visible, so the missing translation is not the reason either.
         $this->product(1);
         $this->product(2, pid: 1, published: false, shops: []);
 
@@ -259,9 +259,9 @@ class DbalTranslationGapIssueSourceTest extends TestCase
 
     public function testAMonolingualShopReportsNothingAndReadsNoProduct(): void
     {
-        // Die Prüfbedingung der ganzen Spezifikation: Für einen einsprachigen
-        // Shop ändert sich nichts — auch nicht auf der Backend-Startseite, die
-        // das bei jedem Aufruf ausführt.
+        // The criterion of the whole specification: for a
+        // single-language shop nothing changes — not even on the backend start
+        // page, which runs this on every request.
         $this->connection->executeStatement("DELETE FROM tl_page WHERE language = 'en'");
         $this->product(1, safetyWarnings: 'Enthält Alkohol');
 
@@ -274,48 +274,48 @@ class DbalTranslationGapIssueSourceTest extends TestCase
         )));
     }
 
-    // ── Übereinstimmung mit der Sichtbarkeit ─────────────────────────────
+    // ── Agreement with visibility ────────────────────────────────────────
 
     public function testTheReportAgreesWithWhatTheFrontEndHides(): void
     {
         /*
-         * 🔴 Ein Bericht, der „fehlt" sagt, wo das Frontend das Produkt zeigt —
-         * oder schweigt, wo es fehlt —, ist schlimmer als keiner. Deshalb hier
-         * jeder Fall, den VisibilityCriteria kennt, und als Maßstab die
-         * Kriterien selbst: gemeldet wird genau, was in der Standardsprache
-         * sichtbar und in der Übersetzungssprache unsichtbar ist.
+         * 🔴 A report that says "missing" where the frontend shows the product —
+         * or stays silent where it is missing — is worse than none. Hence every
+         * case VisibilityCriteria knows is here, and the yardstick is the
+         * criteria themselves: reported is exactly what is visible in the default
+         * language and invisible in the translation language.
          */
-        $this->product(1);                                                          // keine Zeile
+        $this->product(1);                                                          // no row
         $this->product(2);
-        $this->translate(2, 'en', alias: 'two');                                    // übersetzt
+        $this->translate(2, 'en', alias: 'two');                                    // translated
         $this->product(3);
-        $this->translate(3, 'en', alias: null);                                     // Zeile ohne Alias
+        $this->translate(3, 'en', alias: null);                                     // row without alias
         $this->product(4, safetyWarnings: 'W');
-        $this->translate(4, 'en', alias: 'four');                                   // Warnhinweis fehlt
+        $this->translate(4, 'en', alias: 'four');                                   // warning notice missing
         $this->product(5, safetyInformation: 'I');
-        $this->translate(5, 'en', alias: 'five', safetyWarnings: 'x');              // Information fehlt
+        $this->translate(5, 'en', alias: 'five', safetyWarnings: 'x');              // information missing
         $this->product(6, safetyWarnings: 'W', safetyInformation: 'I');
-        $this->translate(6, 'en', alias: 'six', safetyWarnings: 'w', safetyInformation: 'i'); // vollständig
-        $this->product(7, safetyWarnings: 'W');                                     // keine Zeile, Warnhinweis
-        $this->product(8, published: false);                                        // Entwurf
-        $this->product(9, stop: self::NOW - 1);                                     // abgelaufen
-        $this->product(10, shops: [2]);                                             // anderer Shop
+        $this->translate(6, 'en', alias: 'six', safetyWarnings: 'w', safetyInformation: 'i'); // complete
+        $this->product(7, safetyWarnings: 'W');                                     // no row, warning notice
+        $this->product(8, published: false);                                        // draft
+        $this->product(9, stop: self::NOW - 1);                                     // expired
+        $this->product(10, shops: [2]);                                             // other shop
         $this->product(11);
-        $this->product(12, pid: 11, published: false, shops: []);                  // nur inaktive Varianten
+        $this->product(12, pid: 11, published: false, shops: []);                  // only inactive variants
         $this->product(13);
-        $this->product(14, pid: 13, shops: [1]);                                    // Variante mit eigener Auswahl, Hauptprodukt fehlt
+        $this->product(14, pid: 13, shops: [1]);                                    // variant with a selection of its own, main product missing
         $this->product(15, safetyWarnings: 'W');
         $this->translate(15, 'en', alias: 'fifteen', safetyWarnings: 'w');
-        $this->product(16, pid: 15, shops: []);                                     // Variante, alles übersetzt
+        $this->product(16, pid: 15, shops: []);                                     // variant, everything translated
         $this->product(17, safetyWarnings: 'W');
-        $this->translate(17, 'en', alias: '');                                      // leerer Alias
+        $this->translate(17, 'en', alias: '');                                      // empty alias
 
         $hidden = array_values(array_diff($this->visible('de'), $this->visible('en')));
         $withAddress = array_map(intval(...), $this->connection->fetchFirstColumn(
             "SELECT pid FROM tl_consho_translation WHERE language = 'en' AND alias IS NOT NULL AND alias != ''",
         ));
 
-        // Der Maßstab darf nicht leer sein, sonst stimmt jeder Bericht mit ihm überein.
+        // The yardstick must not be empty, otherwise every report agrees with it.
         self::assertSame([1, 3, 4, 5, 7, 13, 17], $hidden);
 
         $counts = [];
@@ -333,7 +333,7 @@ class DbalTranslationGapIssueSourceTest extends TestCase
         );
     }
 
-    // ── Helfer ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
      * @return list<array{string, array<string, string>}>
@@ -396,8 +396,8 @@ class DbalTranslationGapIssueSourceTest extends TestCase
             'pid' => $pid,
             'title' => 'Produkt '.$id,
             'published' => $published ? 1 : 0,
-            // 0 bleibt der Testparameter für "nicht gesetzt", die Spalte
-            // speichert dafür aber '' — genau wie die echte DB.
+            // 0 remains the test parameter for "not set", but the column stores
+            // '' for it — just like the real DB.
             'start' => $start > 0 ? (string) $start : '',
             'stop' => $stop > 0 ? (string) $stop : '',
             'safetyWarnings' => $safetyWarnings,

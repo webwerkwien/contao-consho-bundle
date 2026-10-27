@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-6 (A3, A8, P42–P49): Erinnerung vor dem Ende der Mindestlaufzeit und
- * was danach kommt.
+ * Abo-6 (A3, A8, P42–P49): reminder before the end of the minimum term and
+ * what comes after it.
  */
 final class SubscriptionLifecycleTest extends TestCase
 {
@@ -29,7 +29,7 @@ final class SubscriptionLifecycleTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_subscription_rule');
         $this->connection->insert('tl_consho_subscription_rule', ['id' => 1, 'title' => 'Monatsabo']);
 
-        // Jahresabo, eine Zahlung, danach unbefristet; Kündigungsfrist 14, Erinnerung 30 Tage.
+        // Yearly subscription, one payment, open-ended afterwards; notice period 14, reminder 30 days.
         $this->connection->insert('tl_consho_subscription', [
             'id' => 1, 'subscriptionNumber' => 'WEB-00090-1', 'product' => 4, 'member' => 7, 'shop' => 1, 'quantity' => '2.0000',
             'rule' => 2, 'ruleTitle' => 'Jahresabo', 'termLength' => 1, 'termUnit' => 'year', 'billingInterval' => 0, 'renewal' => 'indefinite',
@@ -41,7 +41,7 @@ final class SubscriptionLifecycleTest extends TestCase
 
     public function testDieErinnerungKommtErstMitDemVorlauf(): void
     {
-        // 31.01.2027 − 30 Tage = 01.01.2027 10:15.
+        // 31.01.2027 − 30 days = 01.01.2027 10:15.
         self::assertNull($this->lifecycle()->remind(1, $this->at('2027-01-01 10:14')));
 
         $due = $this->lifecycle()->remind(1, $this->at('2027-01-01 10:16'));
@@ -61,9 +61,9 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * Variante A (2026-10-08): Ein „jederzeit kündbar" ohne monatliche Zahlung
-     * gibt es nur noch als Altregel — die Erinnerung sagt, dass es endet; ein
-     * Monatsabo läuft weiter.
+     * Variant A: a "cancellable at any time" without monthly payment
+     * exists only as a legacy rule — the reminder says that it ends; a
+     * monthly subscription continues.
      */
     public function testDieErinnerungEinerAltregelSagtDasEnde(): void
     {
@@ -88,7 +88,7 @@ final class SubscriptionLifecycleTest extends TestCase
 
     public function testKeineErinnerungAnEinVerlaengertesAbo(): void
     {
-        // Abo-7b, Review S4: früh verlängert — „endet, jetzt verlängern" wäre falsch.
+        // Abo-7b: renewed early — "ends, renew now" would be wrong.
         $this->connection->update('tl_consho_subscription', ['renewedBy' => 9], ['id' => 1]);
         self::assertNull($this->lifecycle()->remind(1, $this->at('2027-01-02 00:00')));
 
@@ -102,7 +102,7 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * P44: Endet — vorbei, mit dem Ende der Mindestlaufzeit.
+     * P44: ends — over, with the end of the minimum term.
      */
     public function testEndetIstVorbei(): void
     {
@@ -110,14 +110,14 @@ final class SubscriptionLifecycleTest extends TestCase
 
         self::assertSame(LifecycleChange::Ended, $this->lifecycle()->transition(1, $this->at('2027-01-31 11:00')));
         self::assertSame(['ended', '2027-01-31 10:15'], [$this->row()['state'], $this->local($this->row()['endsAt'])]);
-        // Michael, 2026-10-03: „ja, beim Ende leeren" (Abo-4b, P98).
+        // The mandate is cleared at the end (Abo-4b, P98).
         self::assertSame(['', 0], [$this->row()['mandate'], (int) $this->row()['mandateMethod']]);
         self::assertNull($this->lifecycle()->transition(1, $this->at('2027-02-01 11:00')), 'einmal');
     }
 
     /**
-     * P45: Gleiche Laufzeit — die Mindestlaufzeit rückt vom Beginn aus weiter,
-     * die Erinnerung ist für die neue Runde wieder fällig.
+     * P45: same term — the minimum term moves on from the start,
+     * the reminder is due again for the new round.
      */
     public function testGleicheLaufzeitVerlaengert(): void
     {
@@ -130,9 +130,9 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * P17 für die Verlängerung: vom Beginn aus, nicht vom alten Ende. Mit einem
-     * Jahr ab 31.01. liefern beide Wege dasselbe (Prüfungsnotiz Punkt 37) — mit
-     * einem Monat nicht: 31.01. + 2 Monate = 31.03., 28.02. + 1 Monat = 28.03.
+     * P17 for the renewal: from the start, not from the old end. With a
+     * year from 31.01. both ways give the same result, so that value could not
+     * tell them apart — with a month they do not: 31.01. + 2 months = 31.03., 28.02. + 1 month = 28.03.
      */
     public function testDieVerlaengerungRechnetVomBeginn(): void
     {
@@ -147,7 +147,7 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * P46: Ein Monatsabo geht in Unbefristet über und behält seinen Preis.
+     * P46: a monthly subscription becomes open-ended and keeps its price.
      */
     public function testEinMonatsaboWirdUnbefristet(): void
     {
@@ -158,10 +158,10 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * Variante A (2026-10-08): keine Umwandlung mehr in den Monatspreis. Eine
-     * Altregel „jederzeit kündbar" mit einer Zahlung je Laufzeit endet — auch
-     * wenn es ein Monatsabo desselben Produkts gäbe; Preis, Regel und Titel
-     * bleiben, wie sie waren.
+     * Variant A: no more conversion into the monthly price. A
+     * legacy rule "cancellable at any time" with one payment per term ends — even
+     * if there were a monthly subscription of the same product; price, rule and title
+     * stay as they were.
      */
     public function testEineAltregelOhneMonatlicheZahlungEndet(): void
     {
@@ -173,8 +173,8 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * P49: Ein bekanntes Ende beendet — auch ein ruhendes Abo, auch in
-     * Unbefristet.
+     * P49: a known end ends it — a suspended subscription too, in
+     * open-ended too.
      */
     public function testEinBekanntesEndeBeendet(): void
     {
@@ -186,8 +186,8 @@ final class SubscriptionLifecycleTest extends TestCase
     }
 
     /**
-     * Ist eine Periode der Mindestlaufzeit noch nicht abgerechnet, wartet der
-     * Übergang — sonst bekäme sie den neuen Preis.
+     * If a period of the minimum term has not been billed yet, the
+     * transition waits — otherwise it would get the new price.
      */
     public function testDerUebergangWartetAufDieAbrechnung(): void
     {

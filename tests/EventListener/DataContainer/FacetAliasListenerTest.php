@@ -56,9 +56,9 @@ class FacetAliasListenerTest extends TestCase
     }
 
     /**
-     * Contao's rgxp „alias" lässt Großbuchstaben, Unterstrich und Punkt durch
-     * (Validator::isAlias: [\w.-]). Die Filteradresse nicht — dieselbe Form wie
-     * FilterStateCodec::ALIAS, damit Seiten- und Filteradressen gleich aussehen.
+     * Contao's rgxp "alias" lets uppercase letters, underscore and point
+     * through (Validator::isAlias: [\w.-]). The filter URL does not — the same
+     * form as FilterStateCodec::ALIAS, so that page and filter URLs look alike.
      */
     #[DataProvider('malformed')]
     public function testRefusesAnAliasOfAnotherForm(string $alias): void
@@ -82,7 +82,7 @@ class FacetAliasListenerTest extends TestCase
 
     public function testRefusesAnAliasAnotherLandingPageOnThePageHolds(): void
     {
-        // Sonst antwortet der UNIQUE-Index pid,alias — mit einem 500.
+        // Otherwise the UNIQUE index pid,alias answers — with a 500.
         $this->facet(id: 3, page: self::PAGE, alias: 'schwedenbitter-250-ml');
 
         $this->expectExceptionMessage('duplicate: schwedenbitter-250-ml 3');
@@ -107,10 +107,10 @@ class FacetAliasListenerTest extends TestCase
     public function testRefusesAnAliasASubpageWithFolderUrlsAlreadyAnswersTo(): void
     {
         /*
-         * ⚠️ Der unauffällige Fall. Mit Ordner-URLs hat die Unterseite zwei
-         * Pfadsegmente, die Kategorie eins; bei gleicher Priorität gewinnt die
-         * längere Route (AbstractPageRouteProvider::compareRoutes()). Die
-         * Landingpage wäre gespeichert und nie erreichbar.
+         * ⚠️ The inconspicuous case. With folder URLs the subpage has two path
+         * segments, the category one; with equal priority the longer route wins
+         * (AbstractPageRouteProvider::compareRoutes()). The landing page would
+         * be saved and never reachable.
          */
         $this->page(30, 'Schwedenbitter klein', 'kraeuter/schwedenbitter-250-ml');
 
@@ -121,7 +121,7 @@ class FacetAliasListenerTest extends TestCase
 
     public function testASubpageUnderAnotherDomainShadowsNothing(): void
     {
-        // Gleicher Alias, andere Adresse: eigene Domain, eigene Route.
+        // Same alias, different URL: own domain, own route.
         $this->page(30, 'Schwedenbitter klein', 'kraeuter/schwedenbitter-250-ml', domain: 'example.org');
 
         self::assertSame('schwedenbitter-250-ml', $this->save('schwedenbitter-250-ml'));
@@ -137,13 +137,13 @@ class FacetAliasListenerTest extends TestCase
     public function testAListingWithoutADomainCanBeShadowedByAPageWithADomain(): void
     {
         /*
-         * Ein Startpunkt mit leerem dns antwortet auf jeder Domain
-         * (PageModel::loadDetails() vererbt $objParentPage->dns nach unten).
-         * Nach AbstractPageRouteProvider::compareRoutes() (core-bundle, Z.
-         * 104-111) schlägt eine Route MIT Host eine Route OHNE Host, noch vor
-         * der Segmentzahl. Die Landingpage unter der domain-losen Listenseite
-         * hätte also gar keine eigene Route mit Host — die Unterseite mit
-         * Domain gewinnt auf ihrer Domain in jedem Fall.
+         * A root page with an empty dns answers on every domain
+         * (PageModel::loadDetails() passes $objParentPage->dns down). According
+         * to AbstractPageRouteProvider::compareRoutes() (core-bundle, lines
+         * 104-111) a route WITH host beats a route WITHOUT host, even before
+         * the number of segments. So the landing page under the domain-less
+         * list page would not have a route of its own with a host at all — the
+         * subpage with a domain wins on its domain in any case.
          */
         $this->pages[self::PAGE] = $this->pageModel(self::PAGE, 'Kräuterbitter', 'kraeuter', domain: '', urlPrefix: '', urlSuffix: '.html');
         $this->page(30, 'Schwedenbitter klein', 'kraeuter/schwedenbitter-250-ml', domain: 'example.org');
@@ -155,9 +155,9 @@ class FacetAliasListenerTest extends TestCase
 
     public function testAListingWithADomainIsNotShadowedByAPageWithoutADomain(): void
     {
-        // Umgekehrt: die Listenseite selbst hat eine Domain, die Unterseite
-        // nicht. Die Route MIT Host gewinnt — das ist die der Listenseite,
-        // die Unterseite ohne Domain verdeckt hier nichts.
+        // The other way round: the list page itself has a domain, the subpage
+        // does not. The route WITH host wins — that is the list page's, so the
+        // subpage without a domain hides nothing here.
         $this->page(30, 'Schwedenbitter klein', 'kraeuter/schwedenbitter-250-ml', domain: '');
 
         self::assertSame('schwedenbitter-250-ml', $this->save('schwedenbitter-250-ml'));
@@ -165,7 +165,7 @@ class FacetAliasListenerTest extends TestCase
 
     public function testChecksOnlyTheFormBeforeAPageIsChosen(): void
     {
-        // pid ist Pflichtfeld und meldet sich selbst.
+        // pid is mandatory and reports itself.
         self::assertSame('schwedenbitter-250-ml', $this->save('schwedenbitter-250-ml', pid: 0));
     }
 

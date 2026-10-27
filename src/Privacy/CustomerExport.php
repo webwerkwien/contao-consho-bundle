@@ -149,7 +149,7 @@ class CustomerExport
                 ),
             ),
             'subscriptions' => $this->subscriptions(array_column($this->directory->orders($shopId, $key), 'id')),
-            // Fable review D-5: what else Consho keeps about the person.
+            // D-5: what else Consho keeps about the person.
             'baskets' => $this->baskets($customer->memberId, $email),
             // Block G (G12): the wishes to hear when an article is back.
             'stockNotices' => null === $customer->memberId ? [] : array_map(
@@ -316,7 +316,7 @@ class CustomerExport
 
             if (\in_array($field, self::MOMENTS, true) && is_numeric($value)) {
                 // 0 is "never" — no moment, so no information either
-                // (acceptance Abo-DSGVO: "reminderSentAt": 0).
+                // (Abo-DSGVO: "reminderSentAt": 0).
                 if ((int) $value > 0) {
                     $clean[$field] = date(\DATE_ATOM, (int) $value);
                 }
@@ -325,7 +325,7 @@ class CustomerExport
             }
 
             // Contao keeps input encoded ("&#40;Datei-Abo&#41;"); the copy is
-            // read as data, not as HTML (acceptance Abo-DSGVO).
+            // read as data, not as HTML (Abo-DSGVO).
             $clean[$field] = \is_string($value) ? html_entity_decode($value, \ENT_QUOTES | \ENT_HTML5, 'UTF-8') : $value;
         }
 

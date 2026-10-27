@@ -15,7 +15,7 @@ class ShippingQuoteTest extends TestCase
 
     public function testEinNegativerVersandbetragIstUngueltig(): void
     {
-        // Ein Nachlass gehört nicht in den Versand (H), sondern wäre ein eigener Betrag.
+        // A discount does not belong in the shipping (H), it would be an amount of its own.
         $this->expectException(\InvalidArgumentException::class);
 
         new ShippingQuote('-1');

@@ -18,12 +18,12 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
 
 /**
- * Der automatische Statuswechsel — hier nur, was eine Stornierung auslöst.
+ * The automatic status change — here only what a cancellation triggers.
  *
- * Bis WG-6 ohne eigenen Test: Abo, Bestand und Rabattcode hingen an dieser
- * Stelle und an der Backend-Maske (OrderStatusListener), geprüft war nur die
- * Maske. Ein vergessener Anschluss hier fiele nur bei einem Storno durch eine
- * Zahlungsmeldung auf.
+ * Without a test of its own until WG-6: subscription, stock and discount
+ * code hung on this place and on the backend form (OrderStatusListener), and
+ * only the form was checked. A connection forgotten here would only show up
+ * on a cancellation through a payment notification.
  */
 class ContaoOrderStatusWriterTest extends TestCase
 {

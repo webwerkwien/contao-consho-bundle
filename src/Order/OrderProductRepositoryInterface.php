@@ -22,7 +22,7 @@ interface OrderProductRepositoryInterface
      * manufacturer's durability guarantee and its label (binary UUID), as the
      * customer saw them before the button. Absent or 0/null: none.
      *
-     * @return array{name: string, sku: string, taxClass: int, mainProduct: int, kind: string, voucherValue?: string, durabilityYears?: string, durabilityLabel?: string|null}|null
+     * @return array{name: string, sku: string, taxClass: int, mainProduct: int, kind: string, singlePurpose?: bool, voucherValue?: string, durabilityYears?: string, durabilityLabel?: string|null}|null
      *                                                                               null when the product is gone
      */
     public function snapshot(int $productId, string $language = '', string $fallback = ''): array|null;

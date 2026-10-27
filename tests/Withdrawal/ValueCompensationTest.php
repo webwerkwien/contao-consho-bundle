@@ -9,11 +9,11 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\ValueCompensation;
 
 /**
- * Abo-8, P79: der Vorschlag für den Wertersatz einer widerrufenen
- * Dienstleistung — Zeilenbetrag × genutzte Tage / Tage der Periode.
+ * Abo-8, P79: the proposal for the compensation for value of a withdrawn
+ * service — line amount × days used / days of the period.
  *
- * Bestellung 7, Abo-Zeile 1 (30,00 € brutto, Dienstleistung), freigegeben am
- * Tag 0, Periode 30 Tage, Widerruf am Tag 6 + eine Stunde: 7 begonnene Tage.
+ * Order 7, subscription line 1 (€ 30.00 gross, service), released on
+ * day 0, period 30 days, withdrawal on day 6 + one hour: 7 days begun.
  */
 final class ValueCompensationTest extends TestCase
 {
@@ -46,7 +46,7 @@ final class ValueCompensationTest extends TestCase
     {
         $proposal = (new ValueCompensation($this->connection))->proposal(9);
 
-        // 30,00 × 7 / 30
+        // 30.00 × 7 / 30
         self::assertSame('7.00', $proposal['amount']);
         self::assertSame([['item' => 1, 'name' => 'Fitness', 'gross' => '30.00', 'days' => 7, 'periodDays' => 30, 'amount' => '7.00', 'reason' => '']], $proposal['lines']);
     }
@@ -72,7 +72,7 @@ final class ValueCompensationTest extends TestCase
     }
 
     /**
-     * § 357a Abs. 3 BGB: bei digitalen Inhalten kein Wertersatz.
+     * § 357a Abs. 3 BGB: no compensation for value for digital content.
      */
     public function testDigitalerInhaltOhneWertersatz(): void
     {
@@ -82,9 +82,9 @@ final class ValueCompensationTest extends TestCase
     }
 
     /**
-     * Eine Verlängerung beginnt erst am Ende der bezahlten Periode des alten
-     * Abos: bis dahin ist von ihr nichts erbracht, auch wenn die übernommene
-     * Lizenz ein älteres Freigabedatum trägt.
+     * A renewal only begins at the end of the old subscription's paid period:
+     * until then nothing of it has been performed, even if the licence taken
+     * over carries an older release date.
      */
     public function testEineSpaeterBeginnendeVerlaengerungIstNochUngenutzt(): void
     {
@@ -97,9 +97,9 @@ final class ValueCompensationTest extends TestCase
     }
 
     /**
-     * Review Abo-8, S2: Nach der Annahme einer widerrufenen Verlängerung hängt
-     * die Berechtigung wieder an der alten Bestellung (P78). Die Maske rechnet
-     * dann erneut — und muss dasselbe sagen wie bei der Annahme.
+     * Abo-8: After the acceptance of a withdrawn renewal the entitlement hangs
+     * on the old order again (P78). The form then computes again — and must
+     * say the same as at the acceptance.
      */
     public function testNachDerRueckgabeDerLizenzBleibtDieRechnung(): void
     {

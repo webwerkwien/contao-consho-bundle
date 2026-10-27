@@ -8,9 +8,9 @@ use Twig\Loader\ArrayLoader;
 use Twig\TwigFilter;
 
 /**
- * Abnahme WG-7: der nicht steuerbare Gutschein und die Zahlungen auf der
- * Bestellseite — an den echten Abschnitten der Vorlagen, mit den echten
- * deutschen Texten gerendert (Prüfungsnotiz, Punkt 47).
+ * WG-7: the non-taxable voucher and the payments on the order page —
+ * rendered on the real sections of the templates, with the real German
+ * texts.
  */
 class NotTaxableTemplateTest extends TestCase
 {
@@ -75,7 +75,7 @@ class NotTaxableTemplateTest extends TestCase
         self::assertStringNotContainsString('0,00 €', $html);
         self::assertStringNotContainsString('Nettosumme', $html);
 
-        // Teildeckung: Gutschein, Rest offen; eine Rückbuchung nennt den Gutschein.
+        // Partial cover: voucher, rest open; a chargeback names the voucher.
         $mixed = ['taxes' => [['notTaxable' => false]]] + $order;
         $html = $this->render($part, ['order' => $mixed, 'payments' => [
             ['label' => 'Gutschein …ZZ3P', 'refund' => false, 'amount' => '16,00 €'],

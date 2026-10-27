@@ -27,7 +27,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Shop 1 mit Standardsprache de; Produkt 10 in Shop 1.
+ * Shop 1 with default language de; product 10 in shop 1.
  */
 class ProductRedirectListenerTest extends TestCase
 {
@@ -87,9 +87,9 @@ class ProductRedirectListenerTest extends TestCase
     public function testDoesNotRedirectIntoALanguageWhereTheProductIsNotTranslated(): void
     {
         /*
-         * 2026-09-14: Ohne Sprache gefragt, galt das Produkt auf dem französischen
-         * Startpunkt als sichtbar — die 301 führte auf eine französische Adresse,
-         * die 404 liefert (VisibilityCriteria, Regel 4).
+         * Asked without a language, the product counted as visible on the
+         * French root page — the 301 led to a French URL that returns 404
+         * (VisibilityCriteria, rule 4).
          */
         $event = $this->event('/produit/amer-suedois.html');
 

@@ -145,8 +145,7 @@ abstract class CoupledPriceInputListener
 
     /**
      * The amount is not stored: the mask shows it from net, with the rate at
-     * the price's start, today at the earliest (decision 2026-09-15,
-     * conversionTime()). So it shows the gross the front end shows while the
+     * the price's start, today at the earliest (conversionTime()). So it shows the gross the front end shows while the
      * price is valid — also after a rate change.
      *
      * With the back end's decimal separator, like every other decimal of the
@@ -222,13 +221,13 @@ abstract class CoupledPriceInputListener
         $auto = 'auto' === $request?->request->get('SUBMIT_TYPE');
         $record = $dc->getCurrentRecord() ?? [];
 
-        // No field in this mask auto-submits since 2026-09-15 (a saved price
+        // No field in this mask auto-submits (a saved price
         // must not go live from a bare currency change) — this guard stays for
         // a field that might get submitOnChange later, or another bundle's DCA
         // change. submit() has set tstamp = time() already: with tstamp 0
         // "back" still carries `revise` and reviseTable() deletes it,
         // loadAmount() still shows an empty amount, and the price readers skip
-        // it (docs/block-c-warenkorb-checkout.md section 5.3).
+        // it (Block C, section 5.3).
         if ($auto && 0 === (int) ($record['tstamp'] ?? 0)) {
             $values['tstamp'] = 0;
         }
@@ -263,7 +262,7 @@ abstract class CoupledPriceInputListener
         $amount = trim((string) $values['amount']);
         unset($values['amount']);
 
-        // No auto-submit reaches here since 2026-09-15 — kept for a field that
+        // No auto-submit reaches here — kept for a field that
         // might get submitOnChange later.
         if ('' === $amount || $auto) {
             return $values;

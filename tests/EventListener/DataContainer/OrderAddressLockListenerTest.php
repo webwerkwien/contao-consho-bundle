@@ -14,7 +14,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\OrderAddressLockL
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Connect-2, E2: Kunde und Adressen sind korrigierbar, bis ein Beleg sie trägt.
+ * Connect-2, E2: customer and addresses can be corrected until a document
+ * carries them.
  */
 final class OrderAddressLockListenerTest extends TestCase
 {
@@ -86,8 +87,8 @@ final class OrderAddressLockListenerTest extends TestCase
 
     public function testEineGutschriftAlleinFriertNichts(): void
     {
-        // Nur eine Rechnung trägt Kunde und Rechnungsadresse zuerst; eine Korrektur ohne sie gibt es nicht,
-        // aber die Regel hängt an der Belegart, nicht an „irgendein Beleg".
+        // Only an invoice carries customer and billing address first; there is no correction without one,
+        // but the rule hangs on the document type, not on "any document".
         $this->connection->insert('tl_consho_document', ['pid' => 5, 'type' => 'creditNote', 'documentNumber' => 'K-1']);
 
         $this->listener()($this->dc(5));
@@ -96,10 +97,10 @@ final class OrderAddressLockListenerTest extends TestCase
     }
 
     /**
-     * „Mehrere bearbeiten" und „Überschreiben" bauen eigene Widgets, das
-     * Schreibschutz-Merkmal erreicht sie nicht (Review CW-6, K2). Deshalb lehnt
-     * das Speichern selbst ein eingefrorenes Feld ab — DC_Table reicht nur
-     * geänderte Felder weiter, unverändertes Mitspeichern stört nicht.
+     * "Edit multiple" and "Override" build their own widgets; the read-only
+     * marker does not reach them (CW-6). Hence saving itself rejects a frozen field —
+     * DC_Table passes on only changed fields, so saving unchanged ones along
+     * does no harm.
      */
     public function testDasSpeichernLehntEingefroreneFelderAb(): void
     {
@@ -129,8 +130,9 @@ final class OrderAddressLockListenerTest extends TestCase
     }
 
     /**
-     * Die Listen decken genau die erzeugten Kunden- und Adressfelder der echten DCA —
-     * ein neu dazukommendes Adressfeld fällt hier auf, statt still bearbeitbar zu bleiben.
+     * The lists cover exactly the generated customer and address fields of the
+     * real DCA — a newly added address field shows up here instead of silently
+     * staying editable.
      */
     public function testDieListenDeckenDieAdressfelderDerDca(): void
     {

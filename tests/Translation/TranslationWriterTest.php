@@ -16,9 +16,10 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationWriter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Connect Stufe 2, CW-2: einen Sprachblock setzen ohne Maske — dieselben
- * Regeln wie dort (Spezifikation Mehrsprachigkeit 7.3), aber jede Sprache und
- * jedes Feld ausdrücklich geprüft, weil kein Formular sie vorgibt.
+ * Connect stage 2, CW-2: setting a language block without a form — the
+ * same rules as there (specification multilingual support 7.3), but every
+ * language and every field checked explicitly, because no form dictates
+ * them.
  */
 class TranslationWriterTest extends TestCase
 {
@@ -86,7 +87,7 @@ class TranslationWriterTest extends TestCase
 
     public function testEineSpracheOhneShopWirdAbgelehnt(): void
     {
-        // Produkt 5 ist nur im Shop 7 (de, en) — Italienisch verkauft er nicht.
+        // Product 5 is only in shop 7 (de, en) — it does not sell Italian.
         $this->expectException(TranslationRefused::class);
         $this->expectExceptionMessage('"it"');
 
@@ -152,8 +153,8 @@ class TranslationWriterTest extends TestCase
     }
 
     /**
-     * Spezifikation 7.3: Pflicht, sobald in der Sprache etwas ausgefüllt ist
-     * und es keinen Titel gibt, aus dem er entstehen könnte.
+     * Specification 7.3: required as soon as something is filled in for the
+     * language and there is no title it could be created from.
      */
     public function testOhneTitelUndAliasWirdAbgelehnt(): void
     {
@@ -163,8 +164,8 @@ class TranslationWriterTest extends TestCase
     }
 
     /**
-     * Ein Hersteller bietet jede Sprache an — ohne die Prüfung entstünde eine
-     * Übersetzungszeile mit pid 0.
+     * A manufacturer offers every language — without the check a translation
+     * row with pid 0 would come about.
      */
     public function testOhneDatensatzWirdAbgelehnt(): void
     {

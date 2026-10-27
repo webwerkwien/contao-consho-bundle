@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 use Webwerkwien\ContaoConshoBundle\Controller\Page\ProductPageController;
 
 /**
- * A start point whose first page is a product page (acceptance GARAN on c5,
- * `/shop2/` → 500; Michael, 2026-10-09: "ja").
+ * A start point whose first page is a product page (GARAN:
+ * the start point answered 500).
  *
  * Contao's RootPageController forwards a start point to its first published
  * page — PageModel::findFirstPublishedByPid(): sorted, not a root, not a type
@@ -50,7 +50,7 @@ final class StartPointProductPageIssueSource implements ConfigurationIssueSource
         foreach ($roots as $root) {
             // A page with the alias "index" or "/" answers for the start
             // point's address itself (RouteProvider: "root" routes for it) —
-            // then nothing is forwarded (c5: "Contao Official Demo" has one).
+            // then nothing is forwarded (the Contao demo has one).
             if (isset($served[(int) $root['id']])) {
                 continue;
             }

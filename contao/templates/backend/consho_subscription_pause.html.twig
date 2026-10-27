@@ -11,7 +11,7 @@
 {{ messages|raw }}
 
 {% if announced and not announced.withdrawable %}
-    {# Cancelled since (review S1): it takes place, but cannot be taken back. #}
+    {# Cancelled since: it takes place, but cannot be taken back. #}
     <div class="tl_formbody_edit">
         <fieldset class="tl_box">
             <legend>{{ lang.pauseLegend|default('Pause') }}: {{ number }}</legend>

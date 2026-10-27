@@ -32,7 +32,7 @@ class GuestOrderConfirmation
     }
 
     /**
-     * Without a name (Fable review D-4, S1): the account's name is whatever
+     * Without a name (D-4): the account's name is whatever
      * its holder typed, and the addressee may be somebody else — exactly the
      * case this confirmation guards against. A salutation carrying a
      * stranger's text is a message from the shop that the shop never wrote.

@@ -19,8 +19,7 @@ final class OpenWork
 
     /**
      * The earliest refund deadline, per tile — each names its own records'
-     * deadline, 0 for none. One shared value named the other tile's date
-     * (acceptance on c5, 2026-10-07).
+     * deadline, 0 for none. One shared value named the other tile's date.
      */
     public int $undecidedDue = 0;
 

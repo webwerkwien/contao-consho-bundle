@@ -75,9 +75,9 @@ class AliasBatchListenerTest extends TestCase
     public function testARegeneratedProductAliasIsRecordedBeforeItIsWritten(): void
     {
         /*
-         * 2026-09-14: Der Knopf schreibt per UPDATE am save_callback vorbei —
-         * ohne das hier ginge die alte Produktadresse verloren. Die Reihenfolge
-         * zählt: Der Recorder baut die alte Adresse aus der Datenbank.
+         * The button writes via UPDATE, past the save_callback — without this
+         * the old product URL would be lost. The order matters: the recorder
+         * builds the old URL from the database.
          */
         $log = [];
 
@@ -89,10 +89,10 @@ class AliasBatchListenerTest extends TestCase
     public function testEinNeuGenerierterHerstellerAliasWirdVorDemSchreibenAufgezeichnet(): void
     {
         /*
-         * Der Hersteller-Alias steckt in der Adresse jedes seiner Produkte, wenn
-         * die Vorlage {manufacturer} enthält. Gerade „Aliase generieren" trifft
-         * Hersteller aus der Zeit vor B-1 — deren Produkte hatten bis dahin eine
-         * Adresse ohne dieses Segment.
+         * The manufacturer alias is part of the URL of each of its products if
+         * the template contains {manufacturer}. "Generate aliases" in particular
+         * hits manufacturers from before B-1 — until then their products had a
+         * URL without this segment.
          */
         $log = [];
 
@@ -112,7 +112,7 @@ class AliasBatchListenerTest extends TestCase
 
     public function testEineEigenschaftsgruppeWirdNichtAlsProduktadresseAufgezeichnet(): void
     {
-        // Filteraliase sind keine Produktadressen.
+        // Filter aliases are not product URLs.
         $log = [];
 
         $this->runBatch('tl_consho_property_group', $log);

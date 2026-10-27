@@ -25,16 +25,16 @@ use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-4: eine Periode eines Abos abrechnen (P24–P29, P31).
+ * Abo-4: billing one period of a subscription (P24–P29, P31).
  *
- * Abo 1 `WEB-00090-1`: Monatsabo, gekauft 31.01.2026 10:15 Wien in Bestellung
- * 90, 2 Lizenzen zu 4,1667 netto, Reverse Charge, Mindestlaufzeit bis
- * 31.01.2027. Nach dem Kauf läuft Periode 1 bis 28.02. 10:15.
+ * Subscription 1 `WEB-00090-1`: monthly subscription, bought 31.01.2026 10:15 Vienna in order
+ * 90, 2 licences at 4.1667 net, reverse charge, minimum term until
+ * 31.01.2027. After the purchase, period 1 runs until 28.02. 10:15.
  *
- * Die Tabellen kommen aus den DCAs. Gedoppelt sind nur der Zeilen-Lock (SQLite
- * hat kein FOR UPDATE), die Bestellfabrik (ihre eingefrorene Zeile prüft
- * OrderFactoryTest) und die Lieferungsmeldung (DeliveryReportedTest) — hier
- * zählt, WAS sie bekommen.
+ * The tables come from the DCAs. Doubled are only the row lock (SQLite
+ * has no FOR UPDATE), the order factory (its frozen line is checked by
+ * OrderFactoryTest) and the delivery report (DeliveryReportedTest) — here
+ * what counts is WHAT they receive.
  */
 class SubscriptionBillerTest extends TestCase
 {
@@ -89,7 +89,7 @@ class SubscriptionBillerTest extends TestCase
         ]);
 
         $this->connection->insert('tl_consho_entitlement', ['id' => 30, 'pid' => 90, 'orderItem' => 2, 'subscription' => 1, 'validUntil' => $this->at('2026-02-28 10:15')]);
-        // Gegenprobe: die Berechtigung eines anderen Abos.
+        // Counter-check: the entitlement of another subscription.
         $this->connection->insert('tl_consho_entitlement', ['id' => 31, 'pid' => 80, 'orderItem' => 9, 'subscription' => 2, 'validUntil' => 123]);
     }
 
@@ -103,23 +103,23 @@ class SubscriptionBillerTest extends TestCase
 
         self::assertSame($this->at('2026-02-28 11:00'), $timestamp);
         self::assertSame([1, 7, 1, 'EUR', 'de', 'de'], [$draft->subscriptionId, $draft->memberId, $draft->shopId, $draft->currency, $draft->language, $draft->fallbackLanguage]);
-        // P24: die Rechnungsart, obwohl zuerst mit Vorkasse gezahlt wurde.
+        // P24: the invoice payment method, although the first payment was by prepayment.
         self::assertSame([6, 'Auf Rechnung', 'Zahlbar in 14 Tagen'], [$draft->paymentMethod, $draft->paymentMethodTitle, $draft->paymentInstructions]);
-        // P26, P29: eingefroren bzw. aus der letzten Bestellung.
+        // P26, P29: frozen, or taken from the last order.
         self::assertTrue($draft->frozenReverseCharge);
         self::assertTrue($draft->businessCustomer);
         self::assertSame(['DE123456789', 'AT', 'ATU12345678'], [$draft->customerVatId, $draft->shopCountry, $draft->shopVatId]);
         self::assertSame(['Muster GmbH', 'John', 'Muster', 'Hauptstraße 1', 'Wien', 'AT', 'kunde@example.org'], [$draft->billing->company, $draft->billing->firstname, $draft->billing->lastname, $draft->billing->street, $draft->billing->city, $draft->billing->country, $draft->billing->email]);
         self::assertSame('DE', $draft->shipping->country);
-        // A12: kein neues Widerrufsfenster, keine neue Zustimmung.
+        // A12: no new withdrawal window, no new consent.
         self::assertNull($draft->digitalConsentAt);
         self::assertNull($draft->termsAcceptedAt);
 
-        // P25: die eingefrorene Zeile.
+        // P25: the frozen line.
         self::assertCount(1, $lines);
         $line = $lines[0];
         self::assertTrue($line->frozen);
-        // Als Zahlen verglichen: SQLite gibt NUMERIC ohne Nachkommastellen zurück, MariaDB mit.
+        // Compared as numbers: SQLite returns NUMERIC without decimals, MariaDB with them.
         self::assertSame([4, 2.0, 4.1667, 3, 1], [$line->productId, (float) $line->quantity, (float) $line->net, $line->taxClassId, $line->subscriptionRule]);
         self::assertSame(['E-Book Kräuterkunde', 'EB-001', '4,17 € / Monat · Laufzeit 1 Jahr', 'digital'], [$line->title, $line->sku, $line->terms, $line->kind]);
 
@@ -130,10 +130,10 @@ class SubscriptionBillerTest extends TestCase
     {
         $billed = $this->biller()->billDue(1, $this->at('2026-02-28 11:00'));
 
-        // Vom Start 31.01. aus gerechnet: 28.02. → 31.03., nicht 28.03.
+        // Counted from the start on 31.01.: 28.02. → 31.03., not 28.03.
         self::assertSame(['2026-02-28 10:15', '2026-03-31 10:15'], [$this->local($billed?->periodFrom), $this->local($billed?->periodUntil)]);
 
-        // Die Bestellung trägt ihren eigenen Zeitraum — das Abo schaltet weiter (P31).
+        // The order carries its own period — the subscription moves on (P31).
         [$draft] = $this->created[0];
         self::assertSame(['2026-02-28 10:15', '2026-03-31 10:15'], [$this->local($draft->servicePeriodFrom), $this->local($draft->servicePeriodUntil)]);
 
@@ -142,8 +142,8 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * P32: In der Abnahme wird `nextBillingAt` von Hand vorgezogen. Die
-     * Periode darf das nicht übernehmen — sie kommt aus dem Kalender.
+     * P32: `nextBillingAt` can be brought forward by hand. The
+     * period must not take that over — it comes from the calendar.
      */
     public function testEineVorgezogeneFaelligkeitVerschiebtDiePeriodeNicht(): void
     {
@@ -155,9 +155,9 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * P27, A6: keine neue Berechtigung, kein Schlüssel — die Folgezeile gilt
-     * als geliefert (das stellt über DeliveryReported die Rechnung aus), und
-     * die Berechtigung des Abos reicht bis zum neuen Periodenende.
+     * P27, A6: no new entitlement, no key — the follow-up line counts
+     * as delivered (which, via DeliveryReported, issues the invoice), and
+     * the subscription's entitlement extends to the new end of the period.
      */
     public function testLieferungGemeldetUndBerechtigungVerlaengert(): void
     {
@@ -170,9 +170,9 @@ class SubscriptionBillerTest extends TestCase
             [['orderItem' => 191, 'quantity' => 2.0]],
             array_map(static fn (array $r): array => ['orderItem' => (int) $r['orderItem'], 'quantity' => (float) $r['quantity']], $this->connection->fetchAllAssociative('SELECT orderItem, quantity FROM tl_consho_delivery_item')),
         );
-        // Gemeldet ohne die „Versendet"-Mail — die Rechnung geht mit einer eigenen (P30).
+        // Reported without the "shipped" mail — the invoice goes with a mail of its own (P30).
         self::assertSame([[(int) $delivery['id'], $this->at('2026-02-28 11:00'), false]], $this->reported);
-        // Review S2: die Rechnung als PDF erst nach dem Commit.
+        // The invoice as a PDF only after the commit.
         self::assertSame([[55, 0]], $this->archived);
 
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_entitlement'), 'keine neue Berechtigung');
@@ -181,8 +181,8 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * P29: Eine Korrektur des Betreibers an einer Folgebestellung trägt weiter —
-     * die Adresse kommt aus der LETZTEN Bestellung des Abos.
+     * P29: a correction by the operator on a follow-up order carries forward —
+     * the address comes from the subscription's LAST order.
      */
     public function testDieAdresseKommtAusDerLetztenBestellung(): void
     {
@@ -191,7 +191,7 @@ class SubscriptionBillerTest extends TestCase
             'createdAt' => $this->at('2026-02-01 00:00'), 'lastname' => 'Muster', 'billingStreet' => 'Neue Gasse 2', 'billingCity' => 'Graz', 'billingCountry' => 'AT',
             'email' => 'neu@example.org', 'businessCustomer' => 1,
         ]);
-        // Eine Folgebestellung eines ANDEREN Abos ist nicht die letzte dieses Abos.
+        // A follow-up order of ANOTHER subscription is not the last one of this subscription.
         $this->connection->insert('tl_consho_order', ['id' => 96, 'orderNumber' => 'WEB-00096', 'shop' => 1, 'subscription' => 2, 'createdAt' => $this->at('2026-02-20 00:00'), 'billingCity' => 'Linz']);
 
         $this->biller()->billDue(1, $this->at('2026-02-28 11:00'));
@@ -201,9 +201,9 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Abo-Nachlese, P74 — Michael: „für jede neue Rechnung wird die aktuell
-     * eingetragene Rechnungsadresse genommen". Anrede, Sprache, UID und
-     * Lieferland bleiben die der letzten Bestellung.
+     * Abo-Nachlese, P74: every new invoice takes the billing address currently
+     * on file in the account. Salutation, language, VAT id and
+     * delivery country stay those of the last order.
      */
     public function testDieRechnungsadresseKommtAusDemKonto(): void
     {
@@ -220,9 +220,9 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Review Abo-Nachlese, S2: eine im Konto geänderte, nicht bestätigte
-     * E-Mail bekommt keine Rechnung — die der letzten Bestellung bleibt,
-     * die Anschrift kommt trotzdem aus dem Konto.
+     * Abo-Nachlese: an e-mail address changed in the account but not confirmed
+     * gets no invoice — that of the last order stays,
+     * the postal address still comes from the account.
      */
     public function testEineUnbestaetigteKontoEMailBekommtKeineRechnung(): void
     {
@@ -233,8 +233,8 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Review Abo-Nachlese, S1: anderes Land im Konto — die bisherige
-     * Anschrift bleibt (Steuerland), das Log sagt es, der Befund zeigt es.
+     * Abo-Nachlese: a different country in the account — the previous
+     * address stays (tax country), the log says so, the finding shows it.
      */
     public function testEinAnderesLandImKontoLaesstDieBisherigeAnschrift(): void
     {
@@ -246,10 +246,10 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * DL4: Ein Dienstleistungs-Abo ist im Land des Shops steuerpflichtig —
-     * ein Umzug ändert daran nichts. Die neue Anschrift aus dem Konto gilt,
-     * kein Log, und die Folgezeile bleibt eine Dienstleistung (das Steuerland
-     * setzt OrderFactory daraus, siehe OrderFactoryTest).
+     * DL4: a service subscription is taxable in the shop's country —
+     * a move changes nothing about that. The new address from the account applies,
+     * no log, and the follow-up line stays a service (OrderFactory sets the tax country
+     * from it, see OrderFactoryTest).
      */
     public function testEinDienstleistungsAboNimmtDieNeueAnschriftAuchAusDemAusland(): void
     {
@@ -264,9 +264,9 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Block R (R3): Die Folgebestellung liest „Steuer im Bestimmungsland"
-     * am Shop, wie er heute steht — nicht wie beim Kauf. Über der Schwelle
-     * ist jeder spätere Umsatz im Bestimmungsland zu versteuern.
+     * Block R (R3): the follow-up order reads "tax in the country of destination"
+     * from the shop as it stands today — not as at the purchase. Above the threshold
+     * every later sale is taxable in the country of destination.
      */
     public function testDieFolgebestellungLiestDenSchalterAmShopNeu(): void
     {
@@ -279,7 +279,7 @@ class SubscriptionBillerTest extends TestCase
 
     public function testEinUnvollstaendigesKontoLaesstDieLetzteBestellung(): void
     {
-        // Wie j.doe auf c5: Name und E-Mail im Konto, keine Straße.
+        // As with many real accounts: name and e-mail in the account, no street.
         $this->biller($this->members(''))->billDue(1, $this->at('2026-02-28 11:00'));
 
         [$draft] = $this->created[0];
@@ -287,9 +287,9 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Review Abo-5, S1 (P36): Ein ruhendes Abo wird weiter abgerechnet — sonst
-     * kämen mit der Zahlung alle versäumten Perioden auf einmal. Die ruhende
-     * Berechtigung bekommt das neue Ende und ruht weiter.
+     * Abo-5 (P36): a suspended subscription keeps being billed — otherwise
+     * all missed periods would arrive at once with the payment. The suspended
+     * entitlement gets the new end and stays suspended.
      */
     public function testEinRuhendesAboWirdWeiterAbgerechnet(): void
     {
@@ -303,8 +303,8 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Abo-6 (P46): Unbefristet wird über die Mindestlaufzeit hinaus monatlich
-     * abgerechnet, die Grenzen vom Beginn aus.
+     * Abo-6 (P46): open-ended is billed monthly beyond the minimum term,
+     * the boundaries counted from the start.
      */
     public function testUnbefristetGehtUeberDieMindestlaufzeitHinaus(): void
     {
@@ -319,7 +319,7 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * P49: Ein bekanntes Ende stoppt die Abrechnung — auch in Unbefristet.
+     * P49: a known end stops billing — in open-ended too.
      */
     public function testEinBekanntesEndeStopptDieAbrechnung(): void
     {
@@ -332,8 +332,8 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * P45: Eine Zahlung je Laufzeit (Intervall 0) — nach der Verlängerung um
-     * dieselbe Laufzeit wird die ganze neue Laufzeit abgerechnet.
+     * P45: one payment per term (interval 0) — after the renewal by
+     * the same term, the whole new term is billed.
      */
     public function testEineZahlungJeLaufzeitNachDerVerlaengerung(): void
     {
@@ -354,11 +354,11 @@ class SubscriptionBillerTest extends TestCase
     public static function notDue(): iterable
     {
         yield 'noch nicht fällig' => [[], '2026-02-28 10:14'];
-        // P28: das Ende der Mindestlaufzeit ist Abo-6.
+        // P28: the end of the minimum term is Abo-6.
         yield 'Ende der Mindestlaufzeit' => [['nextBillingAt' => '2027-01-31 10:15', 'periodUntil' => '2027-01-31 10:15'], '2027-02-01 00:00'];
         yield 'nicht aktiv' => [['state' => 'cancelled'], '2026-02-28 11:00'];
-        // Wie der Recorder sie schreibt: nächste Abrechnung = Ende der Laufzeit.
-        // Erst eine Verlängerung um dieselbe Laufzeit macht sie fällig (Abo-6, P45).
+        // As the recorder writes it: next billing = end of the term.
+        // Only a renewal by the same term makes it due (Abo-6, P45).
         yield 'eine Zahlung für die ganze Laufzeit' => [['billingInterval' => 0, 'nextBillingAt' => '2027-01-31 10:15', 'periodUntil' => '2027-01-31 10:15'], '2027-02-01 00:00'];
     }
 
@@ -370,7 +370,7 @@ class SubscriptionBillerTest extends TestCase
     public function testNichtFaelligHeisstNichts(array $change, string $now): void
     {
         if ([] !== $change) {
-            // Zeitpunkte stehen im Provider als Wiener Ortszeit.
+            // Points in time are given in the provider as Vienna local time.
             $change = array_map(fn (mixed $v): mixed => \is_string($v) && str_contains($v, ':') ? $this->at($v) : $v, $change);
             $this->connection->update('tl_consho_subscription', $change, ['id' => 1]);
         }
@@ -385,7 +385,7 @@ class SubscriptionBillerTest extends TestCase
         $biller = $this->biller();
 
         self::assertNotNull($biller->billDue(1, $this->at('2026-02-28 11:00')));
-        // Die Fälligkeit wird unter der Sperre neu gelesen: die Periode ist weiter.
+        // Being due is re-read under the lock: the period has moved on.
         self::assertNull($biller->billDue(1, $this->at('2026-02-28 11:00')));
         self::assertCount(1, $this->created);
     }
@@ -395,7 +395,7 @@ class SubscriptionBillerTest extends TestCase
         $this->connection->update('tl_consho_shop', ['paymentMethods' => serialize(['2'])], ['id' => 1]);
 
         self::assertNull($this->biller()->billDue(1, $this->at('2026-02-28 11:00')));
-        // Review L4: nicht nur der Befund, auch das Log sagt es.
+        // Not only the finding, the log says so as well.
         self::assertStringContainsString('WEB-00090-1 was not billed', implode("\n", $this->warnings));
         self::assertSame([], $this->created);
         self::assertSame('2026-02-28 10:15', $this->local($this->subscription()['nextBillingAt']), 'Periode unverändert');
@@ -452,7 +452,7 @@ class SubscriptionBillerTest extends TestCase
         $deliveries->method('report')->willReturnCallback(function (int $deliveryId, int $now, bool $mail): DeliveryReport {
             $this->reported[] = [$deliveryId, $now, $mail];
 
-            // Inside the biller's transaction the report hands the invoice back (review S2).
+            // Inside the biller's transaction the report hands the invoice back.
             return 'reported' === $this->reportOutcome ? DeliveryReport::reported(false, 55) : DeliveryReport::tooMuch(['E-Book']);
         });
 
@@ -497,7 +497,7 @@ class SubscriptionBillerTest extends TestCase
     }
 
     /**
-     * Konto 7 mit einer Adresse; `street` leer heißt: unvollständig.
+     * Account 7 with an address; an empty `street` means: incomplete.
      */
     private function members(string $street, string $country = 'AT', string $confirmed = 'konto@example.org'): MemberCheckoutDefaults
     {

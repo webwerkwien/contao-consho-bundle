@@ -9,10 +9,10 @@ use Doctrine\DBAL\Connection;
 /**
  * Who is a customer (D-4, K2) — computed, never stored.
  *
- * Michael, 2026-09-25: „Kunde ergibt sich aus den Bestellungen". Members
+ * A customer follows from the orders. Members
  * serve Contao for much else (internal pages, say), so tl_member is not the
- * customer list; of 15 orders on c5 then, 10 were guests, and a list from
- * tl_member would have missed them all. Three sources, per shop:
+ * customer list; most orders may come from guests, and a list from
+ * tl_member would miss them all. Three sources, per shop:
  *
  *  1. Members with at least one order in the shop.
  *  2. Guests, one per address — without regard to case, because the checkout

@@ -7,7 +7,7 @@ use Doctrine\DBAL\Connection;
 
 /**
  * The guest price over time, and the price struck through next to a
- * promotion (block H, H-2; docs/block-h-preise.md, 6.2).
+ * promotion (Block H, H-2; 6.2).
  *
  * § 9a Abs. 1 PrAG: "den vorherigen niedrigsten Preis …, der zumindest einmal
  * innerhalb eines Zeitraums von 30 Tagen vor der Anwendung der
@@ -80,8 +80,7 @@ class PriceHistory
      * the price before its first step (§ 9a Abs. 1 Satz 2 PrAG, § 11 Abs. 2
      * PAngV: "schrittweisen, ohne Unterbrechung ansteigenden
      * Preisermäßigung"). A step dearer than the one before is a new
-     * reduction under the general rule (review H, S3; Michael, 2026-10-05:
-     * "wie empfohlen"): 100 → 70 → 80 compares 80 with 70, and shows no
+     * reduction under the general rule (H): 100 → 70 → 80 compares 80 with 70, and shows no
      * strike-through price at all (B).
      *
      * @return array{string, string}|null net and gross of that price

@@ -11,7 +11,7 @@
  * Required by Regulation (EU) 2023/988 (GPSR), Art. 19, in force since
  * 2024-12-13: every online offer of a physical product has to name the
  * manufacturer with a postal AND an electronic address.
- * See docs/block-a-fundament.md, section 8.
+ * See Block A, section 8.
  */
 $GLOBALS['TL_DCA']['tl_consho_manufacturer'] = [
     'config' => [

@@ -7,10 +7,10 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Probe für Task 3: Der Trait muss die drei Abweichungen abbilden, die am
- * 2026-09-13 einen echten Fehler verdeckt haben — NULL statt leerer
- * Zeichenkette bei den Warnhinweisen, `start`/`stop` als Zeichenkette, und der
- * echte Unique-Index auf der Übersetzungstabelle.
+ * A check of the trait: it must model the three deviations that once hid a
+ * real bug — NULL instead of an empty string for the warnings,
+ * `start`/`stop` as a string, and the real unique index on the translation
+ * table.
  */
 class CatalogSchemaTest extends TestCase
 {
@@ -58,10 +58,10 @@ class CatalogSchemaTest extends TestCase
 
     public function testDieselbeSpracheInZweiWaehrungenSindZweiZeilen(): void
     {
-        // Seit C-1c Aufgabe 5b trägt der Schlüssel die Währung: Der DACH-Fall
-        // (example.de in Euro, example.ch in Franken, beide auf Deutsch) sind
-        // zwei Zeilen. Wäre das Testschema hier großzügiger als die Tabelle,
-        // verbärge es genau den Fall, um den es geht.
+        // Since C-1c, task 5b, the key carries the currency: the DACH case
+        // (example.de in euros, example.ch in francs, both in German) is
+        // two rows. If the test schema here were more lenient than the table,
+        // it would hide exactly the case this is about.
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'shop' => 1, 'language' => 'de', 'currency' => 'EUR', 'gross' => '12.0000', 'net' => '10.0000']);
         $this->insertVisibility(['pid' => 1, 'main' => 1, 'shop' => 1, 'language' => 'de', 'currency' => 'CHF', 'gross' => '15.0000', 'net' => '12.5000']);
 
@@ -89,8 +89,8 @@ class CatalogSchemaTest extends TestCase
 
     private function fetchColumn(string $table, string $column, int $id): mixed
     {
-        // Der Trait hält die Connection als eigene Property; da diese Klasse
-        // ihn nutzt, ist der Zugriff hier derselbe wie in jedem Einfüger.
+        // The trait holds the connection as its own property; since this class
+        // uses it, access here is the same as in every inserter.
         return $this->catalogConnection->fetchOne(\sprintf('SELECT %s FROM %s WHERE id = ?', $column, $table), [$id]);
     }
 }

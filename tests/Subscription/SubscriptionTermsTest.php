@@ -12,9 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Notification\ContaoLikeTranslator;
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * Gegen die echten Sprachdateien: Die Sätze sind hier das Ergebnis, nicht ein
- * Nebenprodukt — ein Schlüssel, der fehlt, stünde sonst als
- * „CONSHO.subscription.ends" beim Kunden.
+ * Against the real language files: the sentences are the result here, not a
+ * by-product — a missing key would otherwise appear as
+ * "CONSHO.subscription.ends" to the customer.
  */
 class SubscriptionTermsTest extends TestCase
 {
@@ -43,7 +43,7 @@ class SubscriptionTermsTest extends TestCase
             '27,00 €',
             '27,00 € / 3 Monate · Laufzeit 2 Jahre · verlängert sich um jeweils 2 Jahre, Kündigungsfrist 30 Tage',
         ];
-        // Variante A (2026-10-08): keine Umwandlung mehr; eine Altregel endet.
+        // Variant A: no more conversion; a legacy rule ends.
         yield 'Altregel jederzeit kündbar ohne monatliche Zahlung endet' => [
             self::rule(1, 'year', 0, RenewalKind::Indefinite, 14),
             '10,00 €',
@@ -80,7 +80,7 @@ class SubscriptionTermsTest extends TestCase
         );
     }
 
-    /** Abo-2b, P88: die Kachel nimmt nur den ersten Teil — Betrag und Rhythmus. */
+    /** Abo-2b, P88: the tile takes only the first part — amount and rhythm. */
     public function testNurDerBetragJeZeitraum(): void
     {
         $terms = new SubscriptionTerms(new ContaoLikeTranslator());

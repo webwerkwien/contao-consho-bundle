@@ -6,46 +6,46 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Cart\CartNotice;
 
 /**
- * Reine Textprüfungen an der Twig-**Datei**, kein Rendering — aus demselben
- * Grund wie in ProductDetailPurchaseTest: für ein `@Contao`-Fragment mit
- * Blöcken, `attrs()` und domänenspezifischem `trans` gibt es in diesem Projekt
- * keinen Twig-Umgebungsaufbau.
+ * Pure text checks on the Twig **file**, no rendering — for the same reason
+ * as in ProductDetailPurchaseTest: for an `@Contao` fragment with blocks,
+ * `attrs()` and a domain-specific `trans`, this project has no Twig
+ * environment setup.
  *
- * Was diese Tests NICHT zeigen:
+ * What these tests do NOT show:
  *
- * - dass die Datei fehlerfrei rendert;
- * - dass der erzeugte HTML-Baum tatsächlich gültig ist — geprüft wird, dass
- *   jedes `<form>` im Quelltext zwischen `<td>` und `</td>` steht, nicht das
- *   Ergebnis eines HTML-Parsers;
- * - dass ein Browser beim Klick auf „Übernehmen" wirklich nur die Felder
- *   **einer** Zeile schickt (das ist die Begründung der Bauform, nicht ihr
- *   Beleg);
- * - dass zwei Warenkorb-Elemente auf einer Seite im tatsächlichen DOM
- *   verschiedene Ids tragen;
- * - dass Contaos Übersetzer die Schlüssel **zur Laufzeit** auflöst — geprüft
- *   wird, dass sie in `contao/languages/{de,en}/default.php` stehen, nicht die
- *   Auflösung selbst.
+ * - that the file renders without errors;
+ * - that the generated HTML tree is actually valid — what is checked is that
+ *   every `<form>` in the source stands between `<td>` and `</td>`, not the
+ *   result of an HTML parser;
+ * - that a browser, on a click on "Übernehmen" (apply), really sends only
+ *   the fields of **one** line (that is the reasoning behind the design,
+ *   not its proof);
+ * - that two cart elements on one page carry different ids in the actual
+ *   DOM;
+ * - that Contao's translator resolves the keys **at runtime** — what is
+ *   checked is that they are in `contao/languages/{de,en}/default.php`, not
+ *   the resolution itself.
  *
- * Was sie über bloße Zeichenkettensuche hinaus leisten:
+ * What they achieve beyond a plain string search:
  *
- * - Die `<form>`-Blöcke werden einzeln herausgeschnitten und je Block gezählt
- *   (ein `item`, höchstens eine `quantity`, ein Anfrage-Token). Genau der
- *   Fehler aus dem Planentwurf — ein Formular über die ganze Tabelle mit je
- *   einem `item` pro Zeile — fiele damit auf, weil ein einziger Block dann
- *   mehrere `name="item"` enthielte.
- * - Die Sprachdateien werden wirklich geladen, und jeder in der Vorlage
- *   stehende `CONSHO.…`-Schlüssel muss in **beiden** einen Eintrag haben; für
- *   die Notiz zusätzlich jeder der fünf `CartNotice`-Fälle.
+ * - The `<form>` blocks are cut out one by one and counted per block (one
+ *   `item`, at most one `quantity`, one request token). Exactly the error of
+ *   an early draft — one form across the whole table with one `item` per
+ *   line — would thus stand out, because a single block would then contain
+ *   several `name="item"`.
+ * - The language files are really loaded, and every `CONSHO.…` key in the
+ *   template must have an entry in **both**; for the notice, additionally
+ *   each of the five `CartNotice` cases.
  */
 class CartTemplateTest extends TestCase
 {
     private const TEMPLATE = __DIR__.'/../../../contao/templates/content_element/consho_cart.html.twig';
 
     /**
-     * Der Fehler, den der Plan an dieser Stelle ausdrücklich markiert: Ein
-     * Browser schickt **alle** Felder des Formulars, zu dem der Knopf gehört.
-     * Ein Formular über die ganze Tabelle lieferte die Positions-Id jeder
-     * Zeile, und der Server läse die letzte.
+     * The error this design deliberately avoids: a browser sends **all**
+     * fields of the form the button belongs to. A form across the whole table
+     * would deliver the line id of every line, and the server would read the
+     * last one.
      */
     public function testJedesFormularTraegtGenauEinePositionsId(): void
     {
@@ -63,9 +63,10 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Dasselbe für die Menge: Die Positions-Id am Knopf allein hätte das
-     * Problem nur halb gelöst — die Mengenfelder aller übrigen Zeilen führen
-     * sonst weiterhin mit, und beim Server käme wieder das letzte an.
+     * The same for the quantity: the line id on the button alone would have
+     * solved only half the problem — otherwise the quantity fields of all
+     * other lines still travel along, and the server would again receive the
+     * last one.
      */
     public function testKeinFormularTraegtMehrAlsEinMengenfeld(): void
     {
@@ -79,10 +80,10 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Ein `<form>` als Kind von `<table>`, `<tbody>` oder `<tr>` ist ungültiges
-     * HTML; der Parser schiebt es vor die Tabelle und die Felder stehen danach
-     * in gar keinem Formular. `<td>` nimmt Fließinhalt, also gehört jedes
-     * Formular vollständig in eine Zelle.
+     * A `<form>` as a child of `<table>`, `<tbody>` or `<tr>` is invalid HTML;
+     * the parser moves it in front of the table and the fields then stand in
+     * no form at all. `<td>` takes flow content, so every form belongs
+     * entirely inside one cell.
      */
     public function testJedesFormularStehtInEinerTabellenzelle(): void
     {
@@ -105,8 +106,8 @@ class CartTemplateTest extends TestCase
 
     public function testJedesFormularTraegtDasAnfrageToken(): void
     {
-        // Anders als die Route „in den Warenkorb" (C11): Die Warenkorbseite ist
-        // ohnehin privat, das Token darin gehört dem Besucher, der sie liest.
+        // Unlike the route "in den Warenkorb" (add to cart, C11): the cart page is
+        // private anyway, the token in it belongs to the visitor who reads it.
         foreach ($this->allForms() as $index => $form) {
             self::assertStringContainsString(
                 'name="REQUEST_TOKEN"',
@@ -118,8 +119,8 @@ class CartTemplateTest extends TestCase
 
     public function testDasTokenKommtAusDerNichtVeraltetenVariablen(): void
     {
-        // Die Twig-Variable `request_token` ist seit Contao 5.3 veraltet und
-        // meldet das bei jedem Aufruf; `contao.request_token` ist der Nachfolger.
+        // The Twig variable `request_token` is deprecated since Contao 5.3 and
+        // reports that on every call; `contao.request_token` is its successor.
         $template = $this->template();
 
         self::assertStringContainsString('{{ contao.request_token }}', $template);
@@ -127,10 +128,10 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Mehrere Mengenfelder auf einer Seite, und das Element kann zweimal auf
-     * derselben Seite stehen. Die Id braucht deshalb **beides**: die Id des
-     * Inhaltselements (`data.id`) gegen die zweite Instanz und die Positions-Id
-     * gegen die Nachbarzeile. Die Artikel-Id wäre beides nicht.
+     * Several quantity fields on one page, and the element can stand twice on
+     * the same page. The id therefore needs **both**: the id of the content
+     * element (`data.id`) against the second instance and the line id against
+     * the neighbouring line. The article id would be neither.
      */
     public function testDieMengenfeldIdTraegtElementUndPosition(): void
     {
@@ -158,9 +159,8 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * 0 entfernt die Position (Plan, Schritt 9.3). Ein `type="number"` mit
-     * `min` verböte dem Browser genau die Eingabe, auf die der Server
-     * reagieren soll.
+     * 0 removes the line. A `type="number"` with `min` would forbid the
+     * browser exactly the input the server is supposed to react to.
      */
     public function testDasMengenfeldVerbietetDieNullNicht(): void
     {
@@ -173,10 +173,10 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * `CartView::isEmpty()` ist **falsch**, wenn nur unbepreisbare Zeilen übrig
-     * sind. Die Leermeldung muss deshalb an `is_empty` hängen und nicht an
-     * `lines`, sonst verschwindet eine Position, die der Besucher entfernen
-     * muss, um weiterzukommen.
+     * `CartView::isEmpty()` is **false** when only lines without a price are
+     * left. The empty message must therefore hang on `is_empty` and not on
+     * `lines`, otherwise a line the visitor has to remove to get any further
+     * disappears.
      */
     public function testDieLeermeldungHaengtAnIsEmptyNichtAnDenBepreistenZeilen(): void
     {
@@ -187,8 +187,8 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Eine Zeile ohne Preis muss mit Titel dastehen und sich entfernen lassen —
-     * ohne Titel weiß der Besucher nicht, welchen Knopf er drücken soll.
+     * A line without a price must stand there with its title and be removable —
+     * without a title the visitor does not know which button to press.
      */
     public function testUnbepreisbareZeilenWerdenMitTitelUndEntfernenGezeigt(): void
     {
@@ -204,8 +204,8 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Ein Titel, der leer bleibt (das Produkt ist gelöscht), darf keine leere
-     * Zelle hinterlassen — dann stünde ein „Entfernen" ohne Bezug da.
+     * A title that stays empty (the product is deleted) must not leave an empty
+     * cell — then a "Entfernen" (remove) would stand there without reference.
      */
     public function testEinFehlenderTitelWirdErsetzt(): void
     {
@@ -219,11 +219,11 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Der Befund aus der Durchsicht: Der Titel allein benennt keine Zeile.
-     * CartTitles liefert absichtlich den Titel des Hauptprodukts, zwei
-     * Varianten heißen dort also gleich — und zwei Zeilen ganz ohne Titel
-     * fallen beide auf denselben Ersatztext. Jede Zeile braucht deshalb ein
-     * eigenes Merkmal: die Artikelnummer, sonst die Position im Warenkorb.
+     * The title alone does not name a line. CartTitles deliberately returns the
+     * title of the main product, so two variants have the same name there —
+     * and two lines without any title both fall back to the same replacement
+     * text. Every line therefore needs a feature of its own: the article
+     * number, otherwise the position in the cart.
      */
     public function testJedeZeileTraegtEinEigenesMerkmal(): void
     {
@@ -243,10 +243,10 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Das Merkmal steht sichtbar in der Zeile, nicht nur im zugänglichen
-     * Namen: Zwei gleich benannte Zeilen sind auch mit den Augen nicht
-     * auseinanderzuhalten, und die Produktseite zeigt die Artikelnummer
-     * ebenfalls offen (`consho_product_detail.html.twig`, `<dl>`).
+     * The feature stands visibly in the line, not only in the accessible
+     * name: two lines with the same name cannot be told apart by eye either,
+     * and the product page shows the article number openly as well
+     * (`consho_product_detail.html.twig`, `<dl>`).
      */
     public function testDasMerkmalStehtSichtbarInDerZeile(): void
     {
@@ -259,7 +259,7 @@ class CartTemplateTest extends TestCase
 
     public function testDieAbobedingungenStehenInDerArtikelzelle(): void
     {
-        // Abo-2 (A10): sichtbar in der Zeile, bei den bepreisten Zeilen.
+        // Abo-2 (A10): visible in the line, for the priced lines.
         $markup = $this->markup();
 
         $cell = strpos($markup, '<td data-cellheadline="{{ head_article }}">');
@@ -275,7 +275,7 @@ class CartTemplateTest extends TestCase
 
     public function testDerKontohinweisStehtVorDemWegZurKasse(): void
     {
-        // P12: vor dem Klick, nicht danach.
+        // P12: before the click, not after it.
         $markup = $this->markup();
 
         $hint = strpos($markup, '{% if account_required|default(false) %}');
@@ -287,10 +287,9 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Beschriftung und Knöpfe werden außerhalb ihrer Zeile vorgelesen —
-     * „Entfernen Wanderstock" zweimal ist für einen Screenreader derselbe
-     * Name. Die Feld-Id ist zwar je Zeile eindeutig, eine Id ist aber kein
-     * Name.
+     * Labels and buttons are read out outside their line — "Entfernen
+     * Wanderstock" (remove hiking pole) twice is the same name for a screen
+     * reader. The field id is unique per line, but an id is not a name.
      */
     public function testDerZugaenglicheNameTraegtDasMerkmalMit(): void
     {
@@ -308,16 +307,16 @@ class CartTemplateTest extends TestCase
             'Alle drei Knöpfe (übernehmen, entfernen, entfernen ohne Preis) brauchen den Namen mit Merkmal.',
         );
 
-        // Der nackte Titel darf in keinem zugänglichen Namen mehr stehen —
-        // sonst bliebe genau die Stelle zurück, um die es geht.
+        // The bare title must no longer stand in any accessible name —
+        // otherwise exactly the spot this is about would remain.
         self::assertDoesNotMatchRegularExpression('/<span class="invisible"> \{\{ line_title \}\}<\/span>/', $template);
         self::assertDoesNotMatchRegularExpression('/"CONSHO\.cart\.quantityOf"\|trans\(\[line_title\]/', $template);
     }
 
     /**
-     * Beträge kommen fertig formatiert aus MoneyFormatter. Eine Währung, die
-     * die Vorlage selbst anhängt, stünde bei jeder Sprache an derselben Stelle
-     * — im Englischen gehört sie davor.
+     * Amounts come fully formatted from MoneyFormatter. A currency the template
+     * appends itself would stand in the same place in every language — in
+     * English it belongs in front.
      */
     public function testDieVorlageHaengtKeineWaehrungSelbstAn(): void
     {
@@ -347,10 +346,10 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Vier Fälle, seit `other_shop` mit C-3b weggefallen ist. Der Schlüssel wird in der
-     * Vorlage aus `notice.value` zusammengesetzt, steht also nirgends
-     * ausgeschrieben — ein fehlender Fall fiele sonst erst dem Besucher auf,
-     * dem der rohe Schlüssel angezeigt wird.
+     * Four cases, since `other_shop` was dropped with C-3b. The key is composed
+     * in the template from `notice.value`, so it is not spelled out anywhere —
+     * a missing case would otherwise only be noticed by the visitor who is
+     * shown the raw key.
      */
     public function testJedeNotizHatInBeidenSprachenEinenSatz(): void
     {
@@ -372,8 +371,8 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Die Sprachdatei in ein Array, ohne ein laufendes $GLOBALS['TL_LANG']
-     * anderer Tests zu beschädigen.
+     * The language file into an array, without damaging a running
+     * $GLOBALS['TL_LANG'] of other tests.
      *
      * @return array<string, mixed>
      */
@@ -399,8 +398,8 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Wie Contaos MessageCatalogue: den Punkt-Schlüssel Stufe für Stufe
-     * hinuntergehen. Ein Zwischenknoten (ein Array) ist keine Beschriftung.
+     * Like Contao's MessageCatalogue: walk down the dot key level by level. An
+     * intermediate node (an array) is not a label.
      *
      * @param array<string, mixed> $labels
      */
@@ -420,20 +419,20 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * Die Vorlage **ohne** ihre Twig-Kommentare.
+     * The template **without** its Twig comments.
      *
-     * ⚠️ Das ist keine Kosmetik. Der Kommentarblock am Kopf erklärt die
-     * Bauform und schreibt dabei `<form>` und `<td>` aus. An der rohen Datei
-     * gemessen begann das erste `<form …>…</form>` deshalb **im Kommentar** und
-     * lief bis zum ersten echten `</form>` — die Zählung je Formular betraf
-     * einen Bereich, den es im Markup gar nicht gibt. Die Tests waren grün und
-     * maßen etwas anderes als behauptet; aufgefallen ist es erst, als eine
-     * Mutation (ein `<form>` als Kind von `<tr>`) sie nicht rot bekam.
+     * ⚠️ This is not cosmetic. The comment block at the top explains the design
+     * and in doing so spells out `<form>` and `<td>`. Measured on the raw file,
+     * the first `<form …>…</form>` therefore began **in the comment** and ran
+     * to the first real `</form>` — the count per form concerned a range that
+     * does not exist in the markup at all. The tests were green and measured
+     * something other than claimed; it only showed when a mutation (a `<form>`
+     * as a child of `<tr>`) did not turn them red.
      *
-     * Bewusst offen: Stünde `#}` in einer Zeichenkette **außerhalb** eines
-     * Kommentars, schnitte der Ausdruck an der falschen Stelle. In dieser Datei
-     * kommt das nicht vor, und ein Twig-Parser nur dafür wäre mehr Maschinerie
-     * als Nutzen.
+     * Deliberately open: if `#}` stood in a string **outside** a comment, the
+     * expression would cut at the wrong place. That does not occur in this
+     * file, and a Twig parser just for this would be more machinery than
+     * benefit.
      */
     private function markup(): string
     {
@@ -490,7 +489,7 @@ class CartTemplateTest extends TestCase
     }
 
     /**
-     * @return array{0: string, 1: string} [for-Ausdruck, id-Ausdruck]
+     * @return array{0: string, 1: string} [for expression, id expression]
      */
     private function labelForAndFieldId(string $template): array
     {

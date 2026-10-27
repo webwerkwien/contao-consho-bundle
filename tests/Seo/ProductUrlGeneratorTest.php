@@ -26,7 +26,7 @@ class ProductUrlGeneratorTest extends TestCase
          * four values go in, because ContentUrlResolverInterface says unused
          * parameters are ignored. That promise covers a resolver's
          * getParametersForContent(), not values handed straight to generate().
-         * Measured live on 2026-09-11, where it produced
+         * On a live site it produced
          *
          *     /produkt/…/schwedenbitter.html?sku=SB-250&type=
          *
@@ -64,9 +64,9 @@ class ProductUrlGeneratorTest extends TestCase
 
     public function testAVariantIsPreselectedByItsIdOnTheProductsAddress(): void
     {
-        // Eine Variante hat keine eigene Adresse — sie wird auf der Seite des
-        // Hauptprodukts über die ID vorgewählt. Die Werte der Vorlage bleiben
-        // dabei beschränkt: kein sku, kein type.
+        // A variant has no address of its own — it is preselected by its ID on the
+        // page of the main product. The values of the template stay
+        // restricted: no sku, no type.
         $page = $this->pageWithTemplate('{alias}');
 
         $urls = $this->createMock(ContentUrlGenerator::class);
@@ -179,7 +179,7 @@ class ProductUrlGeneratorTest extends TestCase
     public function testPassesTheRootPagesLanguageAndTheShopsFallbackToTheRepository(): void
     {
         /*
-         * The point of Aufgabe 3: the generator must ask the repository for
+         * The point of task 3: the generator must ask the repository for
          * the SAME language/fallback pair the address lookup would use, or
          * the two diverge and a generated address 404s in translation.
          *

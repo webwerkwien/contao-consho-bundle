@@ -12,7 +12,7 @@ use Symfony\Component\Uid\Uuid;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceLogo;
 
 /**
- * Refuses a CMYK logo when the shop is saved (C-8, 2026-09-24).
+ * Refuses a CMYK logo when the shop is saved (C-8).
  *
  * dompdf cannot put a CMYK image into a PDF/A invoice — it throws. Caught
  * here, the operator reads why at the field and can save the logo as RGB;

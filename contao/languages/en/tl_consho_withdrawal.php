@@ -121,15 +121,15 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
     // WA, A4: "Assign to an order".
     'assigned' => 'Withdrawal %s is assigned to order %s and can be processed now.',
     'assignedLate' => 'Withdrawal %s is assigned to order %s. It arrived after the end of that order\'s withdrawal window — whether it was in time is your decision.',
-    // Review WA, K4: one message for "does not exist" and "not yours".
+    // WA: one message for "does not exist" and "not yours".
     'assignNotFound' => 'There is no order with this number in this shop that you may edit.',
     'assignAlready' => 'This withdrawal is already assigned to an order.',
-    // Review WA, S2: "Dismiss without an order".
+    // WA: "Dismiss without an order".
     'dismissed' => 'Withdrawal %s dismissed without an order. The customer was not notified.',
     'dismissReasonMissing' => 'Please give a reason — it stays internal.',
 ];
 
-// WA (2026-10-22): a withdrawal without an order, and the late receipt.
+// WA: a withdrawal without an order, and the late receipt.
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassigned'] = 'not assigned';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedTitle'] = 'Withdrawal %s — not assigned to an order';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedHelp'] = 'The order number and e-mail address from the withdrawal form match no order of this shop — or one that cannot be withdrawn from through the form (for instance without a right of withdrawal, or cancelled before shipping). The withdrawal has nevertheless been received and confirmed to the address given. Assign it to the order it is about — then you can accept it or reject it with a reason. The declaration itself does not change.';

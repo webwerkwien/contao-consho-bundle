@@ -67,7 +67,7 @@ class ArticleShippingRatesTest extends TestCase
             new ShippingMethod(3, 'weight_rate', 'Nach Gewicht', ShippingTaxMode::Fixed, 1, ['rates' => [['maxWeight' => '1.0000', 'net' => '4.0000'], ['maxWeight' => '5.0000', 'net' => '7.0000']]]),
         ];
 
-        // 0.4 kg a piece: one fits the first step, three (1.2 kg) do not (review Connect-1, H2).
+        // 0.4 kg a piece: one fits the first step, three (1.2 kg) do not (Connect-1).
         $one = $this->rates($methods, weight: '0.4000')->cheapest($this->context(), 'AT', self::ARTICLE, '10.0000');
         $three = $this->rates($methods, weight: '0.4000')->cheapest($this->context(), 'AT', self::ARTICLE, '30.0000', 0, '3');
 

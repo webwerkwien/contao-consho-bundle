@@ -30,13 +30,13 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingTaxMode;
  * Changing the payment method of a placed order (7.5, C23, C-10).
  *
  * Possible while nothing is paid and the operator's status does not hold the
- * order still (Michael, 2026-09-25, E3). An invoice never changes, so one that
+ * order still (E3). An invoice never changes, so one that
  * stands is CANCELLED from its own snapshot and the new method gets a new one
  * where it issues on order — lückenlos in both sequences.
  *
  * ONCE per order (`paymentChangedAt`). 7.5 left it unlimited, as harmless in
- * the books; at the acceptance a customer's back and forth turned out to fill
- * two number ranges for nothing (Michael, 2026-09-25: „nur einmal").
+ * the books; but a customer's back and forth would fill
+ * two number ranges for nothing.
  *
  * ── What is recomputed, and from what ────────────────────────────────────
  *
@@ -45,7 +45,7 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingTaxMode;
  * the member's groups and the goods plus shipping), and does it bring an
  * amount. An amount is split over the tax classes of the goods by the same
  * splitter the checkout uses — which is why the order lines carry their tax
- * class since C-10 (Michael, 2026-09-25: „Steuerklasse jetzt nachrüsten").
+ * class since C-10.
  * The RATE is not resolved again: each class takes the rate its goods were
  * frozen at, so the new line agrees with the lines beside it. Orders placed
  * before C-10 have no classes; there a method with an amount is not offered.
@@ -57,7 +57,7 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingTaxMode;
  *
  * A follow-up order of a subscription (Abo-4) is offered every method, and
  * none with its amount: fee and discount alike would move the frozen price
- * (A9; Michael, 2026-09-30: "zulassen ohne Gebühr").
+ * (A9: allowed, without a fee).
  *
  * ── What happens after the commit ────────────────────────────────────────
  *
@@ -159,14 +159,13 @@ class PaymentChange
                 'netTotal' => $totals->net(),
                 'taxTotal' => $totals->tax(),
                 'grandTotal' => $totals->gross(),
-                // The old invoice's term goes with it (Fable review E, S1): a
+                // The old invoice's term goes with it (E): a
                 // new one writes its own, a method that issues later none —
                 // otherwise a cancelled invoice would turn up as overdue.
                 'paymentDueAt' => 0,
             ];
 
-            // An order of a subscription keeps its term (Fable review Abo-5,
-            // S2): without it, it could never fall overdue, and a switch to
+            // An order of a subscription keeps its term (Abo-5): without it, it could never fall overdue, and a switch to
             // prepayment would lift the rest without a payment (P39). A new
             // invoice still writes its own term below.
             if ($keepsTerm) {
@@ -189,8 +188,7 @@ class PaymentChange
             // The new invoice writes its own term — 0 for one without a term,
             // a prepayment invoice among them. An order of a subscription
             // then gets its old term back: otherwise the switch to prepayment
-            // would still lift the rest without a payment (second review
-            // Abo-5, S2). A new invoice WITH a term keeps it.
+            // would still lift the rest without a payment (Abo-5). A new invoice WITH a term keeps it.
             $oldDueAt = (int) ($order['paymentDueAt'] ?? 0);
 
             if ($keepsTerm && $oldDueAt > 0 && 0 === (int) ($this->orders->order($orderId)['paymentDueAt'] ?? 0)) {
@@ -277,8 +275,7 @@ class PaymentChange
             }
 
             // A follow-up order of a subscription keeps its frozen price (A9):
-            // the new method comes without its fee or discount (Michael,
-            // 2026-09-30: "zulassen ohne Gebühr"). Its first order paid the
+            // the new method comes without its fee or discount. Its first order paid the
             // price of the contract, not of a payment method.
             $adjustment = $followUp ? null : $handler->adjustment($context, $method->config);
 
@@ -304,7 +301,7 @@ class PaymentChange
     /**
      * Whether the order keeps its term through a switch and is not switched
      * once overdue: an order of a subscription (Abo-5, P39), and since the
-     * Nachlese (review B1) one whose digital goods can rest
+     * Nachlese one whose digital goods can rest
      * (PurchaseDelinquency) — a switch to prepayment would otherwise lift
      * the rest without a payment.
      */
@@ -335,7 +332,7 @@ class PaymentChange
             return PaymentChangeBlock::NotOpen;
         }
 
-        // Once per order (acceptance C-10). Before the status: it is the
+        // Once per order (C-10). Before the status: it is the
         // reason the customer can act on least, and the more specific one.
         if ((int) ($order['paymentChangedAt'] ?? 0) > 0) {
             return PaymentChangeBlock::AlreadyChanged;
@@ -369,13 +366,13 @@ class PaymentChange
     private function discountLines(PaymentMethod $method, string $net, array $goods, int $digits, string $deliveryCountry = ''): array|null
     {
         /*
-         * Review H, S1: a discount reduces each supply at its own rate, so
+         * Block H: a discount reduces each supply at its own rate, so
          * it is split per class AND country of the goods (DL4: a service
          * carries the shop's country, goods the delivery's), and each line
          * takes the rate those goods carry — no resolver needed. Until then
          * it was taxed in the delivery country like shipping, with the open
          * point of a class held only by another country's lines
-         * (docs/block-dienstleistung.md); that point is gone with it. The
+         * (Block DL); that point is gone with it. The
          * per-class rates below remain the fallback for a line without a
          * country (an order from before DL4).
          */
@@ -408,7 +405,7 @@ class PaymentChange
             $reverseCharge = $reverseCharge || PriceSource::ReverseCharge->value === ($item['priceSource'] ?? '');
             $lineNet = (string) BigDecimal::of($item['lineTotal'])->minus($item['taxAmount']);
             $cartLines[] = new CartLine(0, 0, 0, (string) $item['quantity'], (string) $item['unitPrice'], $lineNet, (string) $item['lineTotal'], $class, taxCountry: '' !== $country ? $country : $deliveryCountry);
-            // Review H, S1: the rate of this class in this country, as the goods carry it.
+            // Block H: the rate of this class in this country, as the goods carry it.
             $countryRates[$class.'|'.('' !== $country ? $country : $deliveryCountry)] ??= (string) $item['taxRate'];
         }
 

@@ -14,7 +14,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxRateNotFound;
  * What the shipping costs page shows (E-6, V5) — from the DATA, so the costs
  * stand in one place and not a second time, by hand, on a page. Not a legal
  * text: which statements a shop owes about shipping is the operator's to
- * judge (Michael, 2026-09-22: Consho sets no legal texts).
+ * judge: Consho sets no legal texts.
  *
  * Gross as every price is shown before a delivery country is known: with the
  * rate of the shop's own country (C25), for the method's tax class. Where the
@@ -95,7 +95,7 @@ final class ShippingCostsView
                 'calculated' => !$stored,
                 'proportional' => ShippingTaxMode::Proportional === $method->taxMode,
                 // Only where the shop also offers cash on delivery as a
-                // payment method (Fable review E, K4).
+                // payment method (E).
                 'cashOnDelivery' => $cod['offered'] && $this->types->get($method->type)->capabilities($method->config)->cashOnDelivery,
                 'limits' => [
                     'length' => $this->limit($method->limits->maxLength, $language),

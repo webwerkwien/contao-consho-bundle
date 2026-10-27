@@ -22,9 +22,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\TestPaymentHandler;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
 
 /**
- * 7.4 und Abschnitt 12 mit dem echten Test-Anbieter: doppelt → eine Zahlung,
- * falsche Unterschrift → nichts, unbekannt → 404, Zahlung nach Abbruch wird
- * gebucht (Z3).
+ * 7.4 and section 12 with the real test provider: twice → one payment,
+ * wrong signature → nothing, unknown → 404, a payment after cancellation
+ * is booked (Z3).
  */
 class NotificationProcessorTest extends TestCase
 {
@@ -64,8 +64,8 @@ class NotificationProcessorTest extends TestCase
     }
 
     /**
-     * Wenn Sperre und Frühausstieg doch beide passiert würden: Der eindeutige
-     * Schlüssel verweigert die zweite Zeile, und die Antwort bleibt 200.
+     * If the lock and the early exit were both passed after all: the unique
+     * key refuses the second row, and the answer stays 200.
      */
     public function testDerEindeutigeSchluesselHaeltAuchOhneFruehausstieg(): void
     {
@@ -132,8 +132,8 @@ class NotificationProcessorTest extends TestCase
     }
 
     /**
-     * D-1: Rechnung, Status und Mail laufen nach der Buchung — einmal, auch
-     * wenn der Anbieter die Meldung zweimal schickt.
+     * D-1: invoice, status and mail run after the booking — once, even when
+     * the provider sends the notification twice.
      */
     public function testDieFolgenLaufenGenauEinmalNachDerBuchung(): void
     {
@@ -153,8 +153,8 @@ class NotificationProcessorTest extends TestCase
     }
 
     /**
-     * Das Geld ist gebucht. Eine 500 jetzt ließe den Anbieter eine Zahlung
-     * erneut schicken, die längst drin ist.
+     * The money is booked. A 500 now would make the provider resend a payment
+     * that is long in.
      */
     public function testScheiternDieFolgenBleibtEs200(): void
     {
@@ -167,8 +167,8 @@ class NotificationProcessorTest extends TestCase
     }
 
     /**
-     * P93: Das Mandat aus der Zahlungsmeldung kommt ans Abo — mit der
-     * Zahlungsart des Versuchs, in derselben Transaktion wie das Geld.
+     * P93: the mandate from the payment notification goes to the subscription —
+     * with the attempt's payment method, in the same transaction as the money.
      */
     public function testDasMandatEinesFolgezahlungsModulsKommtAnsAbo(): void
     {

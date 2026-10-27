@@ -171,8 +171,8 @@
 })();
 
 /*
- * Consho — the dashboard's warnings and notes open as a dialog (Michael,
- * 2026-10-09, DB2). In this file because Consho loads it on every back end
+ * Consho — the dashboard's warnings and notes open as a dialog (DB2).
+ * In this file because Consho loads it on every back end
  * page already (ContaoConshoBundle, custom_js).
  *
  * One listener on the document, not one per button: Turbo replaces the body

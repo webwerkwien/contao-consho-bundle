@@ -44,7 +44,7 @@ final class WeightBracketListener
     }
 
     /**
-     * The row in the list, formatted (Fable review E, K2): the columns are
+     * The row in the list, formatted (E): the columns are
      * decimal(…,4), and MariaDB hands them out as "2.0000" (case 30).
      *
      * @param array<string, mixed> $row

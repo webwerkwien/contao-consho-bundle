@@ -26,8 +26,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * E8 (Review S2): die Seite „Zahlungsziel verschieben" — echte Vorlage,
- * echte PaymentDeferral.
+ * E8: the page "Zahlungsziel verschieben" (defer due date) — real template,
+ * real PaymentDeferral.
  */
 final class PaymentDeferralBackendControllerTest extends TestCase
 {

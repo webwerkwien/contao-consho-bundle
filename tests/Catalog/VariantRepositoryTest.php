@@ -9,19 +9,19 @@ use Webwerkwien\ContaoConshoBundle\Catalog\VariantRow;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityCriteria;
 
 /**
- * Gegen SQLite mit dem gemeinsamen Testschema (Task 3) — die Klasse ist eine
- * Abfrage, und über die Sichtbarkeit entscheidet VisibilityCriteria, nicht ein
- * Mock.
+ * Against SQLite with the shared test schema — the class is a
+ * query, and VisibilityCriteria decides visibility, not a
+ * mock.
  *
- * Grundbestand wie auf dem Testserver: Produkt 1 (Schwedenbitter) mit den
- * Varianten 3 (250 ml) und 6 (750 ml), Shop 1.
+ * Base data: product 1 (Schwedenbitter) with the
+ * variants 3 (250 ml) and 6 (750 ml), shop 1.
  */
 class VariantRepositoryTest extends TestCase
 {
     use CatalogSchema;
 
-    // Zehnstellig wie ein echter Zeitstempel — start/stop sind varchar(10),
-    // siehe VisibilityCriteria::published().
+    // Ten digits like a real timestamp — start/stop are varchar(10),
+    // see VisibilityCriteria::published().
     private const NOW = 1_700_000_000;
 
     private const VOLUME = 1;
@@ -41,8 +41,8 @@ class VariantRepositoryTest extends TestCase
 
         $this->insertShop(['id' => 1, 'title' => 'Shop']);
 
-        // Eine nie filterbare Gruppe als Achse — Achsen sind nicht an
-        // `filterable` gebunden (Entscheidung 6).
+        // A group that is never filterable as an axis — axes are not bound to
+        // `filterable`.
         $this->insertPropertyGroup(['id' => self::VOLUME, 'title' => 'Füllmenge', 'filterable' => 0]);
         $this->insertPropertyOption(['id' => self::ML_250, 'pid' => self::VOLUME, 'title' => '250 ml', 'sorting' => 64]);
         $this->insertPropertyOption(['id' => self::ML_750, 'pid' => self::VOLUME, 'title' => '750 ml', 'sorting' => 128]);
@@ -55,7 +55,7 @@ class VariantRepositoryTest extends TestCase
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);
     }
 
-    // ── Sichtbare Varianten ──────────────────────────────────────────────
+    // ── Visible variants ─────────────────────────────────────────────────
 
     public function testVisibleVariantsComeWithTheirOptionPerGroup(): void
     {
@@ -73,8 +73,8 @@ class VariantRepositoryTest extends TestCase
     {
         $this->variant(3, [self::ML_250, self::RED]);
 
-        // Die Reihenfolge der Gruppen innerhalb einer Zeile trägt keine
-        // Bedeutung — die Achsen ordnet axes().
+        // The order of the groups within a row carries no
+        // meaning — axes() orders the axes.
         $options = $this->repository->visibleVariants(1, 1, self::NOW)[0]->options;
         ksort($options);
 
@@ -129,7 +129,7 @@ class VariantRepositoryTest extends TestCase
 
     public function testTheOrderIsSortingThenId(): void
     {
-        // sorting kollidiert nach dem Kopieren — dann entscheidet id.
+        // sorting collides after copying — then id decides.
         $this->variant(7, [self::ML_250], ['sorting' => 64]);
         $this->variant(5, [self::ML_750], ['sorting' => 128]);
         $this->variant(6, [self::ML_1000], ['sorting' => 64]);
@@ -139,8 +139,8 @@ class VariantRepositoryTest extends TestCase
 
     public function testAVariantWithoutOptionsIsStillAVariant(): void
     {
-        // Unfertig gepflegt, aber veröffentlicht: Die Matrix erreicht sie über
-        // keine Achse, der Controller aber über ?variant=.
+        // Maintained incompletely, but published: the matrix reaches it through
+        // no axis, the controller does through ?variant=.
         $this->variant(3, []);
 
         $rows = $this->repository->visibleVariants(1, 1, self::NOW);
@@ -158,7 +158,8 @@ class VariantRepositoryTest extends TestCase
 
     public function testAVariantWithOwnWarningsIsLeftOutInALanguageWithoutTheirTranslation(): void
     {
-        // Michael, 2026-09-13, Frage 3 — über VisibilityCriteria::variant().
+        // Own warnings without a French row: invisible in French — through
+        // VisibilityCriteria::variant().
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'title' => 'Bitter suédois', 'alias' => 'bitter-suedois']);
         $this->variant(3, [self::ML_250]);
         $this->variant(6, [self::ML_750], ['safetyWarnings' => 'Enthält 40 % Alkohol']);
@@ -167,7 +168,7 @@ class VariantRepositoryTest extends TestCase
         self::assertSame([3], $this->ids($this->repository->visibleVariants(1, 1, self::NOW, 'fr', 'de')));
     }
 
-    // ── Achsen ───────────────────────────────────────────────────────────
+    // ── Axes ─────────────────────────────────────────────────────────────
 
     public function testAxesComeWithGroupAndOptionLabels(): void
     {
@@ -185,9 +186,9 @@ class VariantRepositoryTest extends TestCase
 
     public function testAxesAreTranslatedOrFallBack(): void
     {
-        // In fr steht „Contenance" vor „Couleur" — die Gruppen folgen der
-        // Beschriftung, die der Besucher liest. „750 ml" hat keine Übersetzung
-        // und bleibt, wie es ist.
+        // In fr "Contenance" comes before "Couleur" — the groups follow the
+        // label the visitor reads. "750 ml" has no translation
+        // and stays as it is.
         $this->variant(3, [self::ML_250, self::RED]);
         $this->variant(6, [self::ML_750, self::RED]);
         $this->insertTranslation(['pid' => self::VOLUME, 'ptable' => 'tl_consho_property_group', 'language' => 'fr', 'title' => 'Contenance']);
@@ -217,8 +218,8 @@ class VariantRepositoryTest extends TestCase
 
     public function testAxesIncludeOptionsOfVariantsThatAreNotVisible(): void
     {
-        // „1 l" gibt es nur als unveröffentlichte Variante. Die Option steht da,
-        // damit nichts verrutscht — VariantMatrix gibt ihr keinen Link.
+        // "1 l" only exists as an unpublished variant. The option is there
+        // so that nothing shifts — VariantMatrix gives it no link.
         $this->variant(3, [self::ML_250]);
         $this->variant(7, [self::ML_1000], ['published' => 0]);
 
@@ -259,7 +260,7 @@ class VariantRepositoryTest extends TestCase
         self::assertNull($matrix->withSelection(1), 'das Hauptprodukt selbst');
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
      * @param list<int>            $optionIds

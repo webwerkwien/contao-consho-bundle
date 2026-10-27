@@ -62,7 +62,7 @@ class SitemapCacheTagListener
      * 🔴 Restoring from the recycle bin collects no tags for the restored
      * record: DC_Table::undo() calls invalidateCacheTags() on tl_undo itself,
      * so the oninvalidate_cache_tags callbacks above never run (Contao 5.7,
-     * DC_Table.php). Seen on the test server on 2026-09-13: a price restored from
+     * DC_Table.php). A price restored from
      * the recycle bin left the cached sitemap without its product.
      *
      * onundo runs once per restored row instead — the sitemaps are invalidated

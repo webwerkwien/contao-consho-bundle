@@ -18,8 +18,8 @@ class ListingAddressResolverTest extends TestCase
 {
     public function testThePlainCategoryIsValidWithoutAnyFilter(): void
     {
-        // /kraeuter.html — kein Segment, kein cq. Die Datenbank wird nicht
-        // gefragt: Ohne Segment gibt es keine Landingpage nachzuschlagen.
+        // /kraeuter.html — no segment, no cq. The database is not
+        // asked: without a segment there is no landing page to look up.
         $repository = $this->createMock(FacetPageRepositoryInterface::class);
         $repository->expects(self::never())->method('findByAlias');
 
@@ -42,8 +42,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testTheSegmentOfAReleasedCombinationIsItsLandingPage(): void
     {
-        // Die Filter kommen aus der gespeicherten Kombination, nicht aus der
-        // Adresse — /kraeuter/schwedenbitter-250-ml.html trägt kein cq.
+        // The filters come from the stored combination, not from the
+        // address — /kraeuter/schwedenbitter-250-ml.html carries no cq.
         $address = $this->resolver('schwedenbitter-250-ml')->resolve(
             $this->page(12),
             Request::create('/kraeuter/schwedenbitter-250-ml.html'),
@@ -57,8 +57,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testASortOrderKeepsTheVisitorOnTheLandingPage(): void
     {
-        // Sortieren erzeugt keine neue Menge. Verließe der Besucher dabei die
-        // Landingpage, verschwänden ihre Überschrift und ihr Einleitungstext.
+        // Sorting creates no new set. If the visitor left the
+        // landing page doing so, its heading and introduction would disappear.
         $address = $this->resolver('schwedenbitter-250-ml')->resolve(
             $this->page(12),
             Request::create('/kraeuter/schwedenbitter-250-ml.html?cq=sort_by:price_asc'),
@@ -72,8 +72,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testNurVerfuegbareBleibtAufDerLandingpage(): void
     {
-        // Block Verfügbarkeit, V5: wie die Sortierung — eine Sicht nach Lager,
-        // keine neue Kombination.
+        // Block Verfügbarkeit (availability), V5: like sorting — a view by stock,
+        // not a new combination.
         $address = $this->resolver('schwedenbitter-250-ml')->resolve(
             $this->page(12),
             Request::create('/kraeuter/schwedenbitter-250-ml.html?cq=only_available:1'),
@@ -86,9 +86,9 @@ class ListingAddressResolverTest extends TestCase
 
     public function testFiltersOnTopOfALandingPageAreNoAddress(): void
     {
-        // Consho verlinkt so eine Adresse nie: rot + 250 ml hat genau eine
-        // Adresse, und das ist die Kategorie mit cq. Nähme die Landingpage cq
-        // zusätzlich an, gäbe es für denselben Inhalt beliebig viele Adressen.
+        // Consho never links such an address: red + 250 ml has exactly one
+        // address, and that is the category with cq. If the landing page also
+        // accepted cq, the same content would have any number of addresses.
         $address = $this->resolver('schwedenbitter-250-ml')->resolve(
             $this->page(12),
             Request::create('/kraeuter/schwedenbitter-250-ml.html?cq=colour:red'),
@@ -108,8 +108,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testTheLandingPageOfAnotherPageIsNoAddress(): void
     {
-        // "tee-250-ml" ist unter Seite 13 freigegeben. Unter Seite 12 ist es
-        // ein unbekanntes Segment — die Freigabe gehört der Seite.
+        // "tee-250-ml" is released under page 13. Under page 12 it is
+        // an unknown segment — the release belongs to the page.
         $address = $this->resolver('tee-250-ml')->resolve($this->page(12), Request::create('/kraeuter/tee-250-ml.html'));
 
         self::assertFalse($address->valid);
@@ -117,8 +117,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testAnArrayInTheFilterParameterIsIgnoredNotRefused(): void
     {
-        // Spezifikation 10: FilterStateCodec::decode() wirft nie — der Weg
-        // dorthin darf es auch nicht. ?cq[]=x ist eine leere Kategorie, keine
+        // Specification 10: FilterStateCodec::decode() never throws — the way
+        // there must not either. ?cq[]=x is an empty category, not a
         // 400.
         $request = Request::create('/kraeuter.html', 'GET', ['cq' => ['x']]);
 
@@ -130,8 +130,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testAParameterThatDecodesToNothingIsTheBareCategory(): void
     {
-        // Übergabe aus Task 4, entschieden in Task 7: ?cq=Foo ist wie gar kein
-        // cq — 200, Canonical ohne Parameter, keine Filterlinks mit Rest.
+        // ?cq=Foo is like no
+        // cq at all — 200, canonical without parameters, no filter links with leftovers.
         $address = $this->resolver(null)->resolve($this->page(12), Request::create('/kraeuter.html?cq=Foo'));
 
         self::assertTrue($address->valid);
@@ -152,10 +152,10 @@ class ListingAddressResolverTest extends TestCase
 
     public function testAnUnknownSortOrderIsNoSortOrder(): void
     {
-        // Dieselbe Entscheidung für den Sortierschlüssel: Die Liste sortiert
-        // bei sort_by:gibtsnicht nach ihrer Vorgabe. Bliebe der Wert im Zustand,
-        // verlöre der Canonical die Seitenzahl, und Filterlinks trügen den
-        // Müll weiter.
+        // The same treatment for the sort key: with sort_by:gibtsnicht the list
+        // sorts by its default. If the value stayed in the state,
+        // the canonical would lose the page number, and filter links would carry
+        // the garbage along.
         $address = $this->resolver(null)->resolve($this->page(12), Request::create('/kraeuter.html?cq=colour:red;sort_by:gibtsnicht'));
 
         self::assertTrue($address->valid);
@@ -176,9 +176,9 @@ class ListingAddressResolverTest extends TestCase
 
     public function testTheQueryBagItselfWouldRefuseThatArray(): void
     {
-        // Beleg für den Umweg über query->all(): InputBag::get() wirft bei
-        // einem nicht-skalaren Wert. Ändert Symfony das, darf der Umweg
-        // bleiben — er ist dann nur nicht mehr nötig.
+        // Evidence for the detour via query->all(): InputBag::get() throws for
+        // a non-scalar value. If Symfony changes that, the detour may
+        // stay — it is then just no longer needed.
         $request = Request::create('/kraeuter.html', 'GET', ['cq' => ['x']]);
 
         $this->expectException(BadRequestException::class);
@@ -188,12 +188,12 @@ class ListingAddressResolverTest extends TestCase
 
     public function testTheSegmentIsReadThroughInputGetSoContaoCountsItAsUsed(): void
     {
-        // Contao merkt sich jedes Pfadsegment als unbenutzt und antwortet 404,
-        // wenn es niemand über Input::get() liest (LegacyRouteParametersListener).
-        // Das Request-Attribut trägt denselben Wert, markiert ihn aber nicht —
-        // deshalb steht es hier mit drin: Wer es liest statt Input, fällt auf.
-        // Und genau ['auto_item'], ohne den dritten Parameter true, der das
-        // Markieren ausdrücklich unterlässt.
+        // Contao remembers every path segment as unused and answers 404
+        // if nobody reads it via Input::get() (LegacyRouteParametersListener).
+        // The request attribute carries the same value but does not mark it —
+        // that is why it is in here too: whoever reads it instead of Input stands out.
+        // And exactly ['auto_item'], without the third parameter true, which
+        // explicitly skips the marking.
         $input = $this->createMock(Adapter::class);
         $input
             ->expects(self::once())
@@ -212,8 +212,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testTheAddressIsReadOncePerPageWithinARequest(): void
     {
-        // Liste, Filter und Seitenkopf fragen dasselbe. Nur einer soll die
-        // Datenbank fragen — aber je Seite, nicht einmal für alle.
+        // List, filter and page head ask the same thing. Only one should ask the
+        // database — but per page, not once for all.
         $input = $this->createMock(Adapter::class);
         $input->expects(self::exactly(2))->method('__call')->willReturn('schwedenbitter-250-ml');
 
@@ -235,8 +235,8 @@ class ListingAddressResolverTest extends TestCase
 
     public function testResetForgetsWhatTheLastRequestAsked(): void
     {
-        // Wird der Kernel wiederverwendet, darf die Adresse der vorigen
-        // Anfrage nicht in die nächste durchsickern.
+        // If the kernel is reused, the address of the previous
+        // request must not leak into the next one.
         $repository = $this->createMock(FacetPageRepositoryInterface::class);
         $repository
             ->expects(self::exactly(2))
@@ -272,7 +272,7 @@ class ListingAddressResolverTest extends TestCase
     }
 
     /**
-     * Seite 12 (Kräuter) hat "schwedenbitter-250-ml" freigegeben, Seite 13
+     * Page 12 (Kräuter) has released "schwedenbitter-250-ml", page 13
      * (Tees) "tee-250-ml".
      */
     private function repository(): FacetPageRepositoryInterface

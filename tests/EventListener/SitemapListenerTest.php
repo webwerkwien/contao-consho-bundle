@@ -35,14 +35,14 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Der Listener mit echter ProductQuery, echtem ProductUrlGenerator und echtem
- * FilterUrlGenerator gegen SQLite. Gedoppelt sind nur Contaos Rahmen: Seiten-
- * und Shopmodell, ContentUrlGenerator.
+ * The listener with a real ProductQuery, a real ProductUrlGenerator and a
+ * real FilterUrlGenerator against SQLite. Only Contao's framework is
+ * doubled: page and shop model, ContentUrlGenerator.
  *
- * Grundbestand: Startpunkt 1 (de, Shop 1, EUR) mit Produktseite 123 und den
- * Listenseiten 12 „kraeuter" und 13 „tees". Startpunkt 2 ohne Shop mit der
- * Listenseite 14. Contao hat in seine Sitemap die Startseite und Seite 12
- * geschrieben, Seite 13 nicht (etwa weil sie noindex ist).
+ * Base data: root page 1 (de, shop 1, EUR) with product page 123 and the
+ * list pages 12 "kraeuter" and 13 "tees". Root page 2 without a shop with
+ * list page 14. Contao has written the start page and page 12 into its
+ * sitemap, page 13 not (say, because it is noindex).
  */
 class SitemapListenerTest extends TestCase
 {
@@ -56,10 +56,10 @@ class SitemapListenerTest extends TestCase
     private bool $hasProductPage = true;
 
     /**
-     * Die Währung, die das Seitenmodell von Startpunkt 1 herausgibt. Sie steht
-     * seit C-1c am Startpunkt und nicht mehr am Shop; wer sie umstellt, stellt
-     * sie in tl_page gleich mit um, sonst rechnet die Projektion gegen eine
-     * andere als der Listener.
+     * The currency that the page model of root page 1 returns. Since C-1c it
+     * sits on the root page and no longer on the shop; whoever changes it
+     * changes it in tl_page as well, or the projection calculates against a
+     * different one than the listener.
      */
     private string $currencyOfRootPage = 'EUR';
 
@@ -73,7 +73,7 @@ class SitemapListenerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        // ShopLanguages liest die Sprachen aus den Startpunkten.
+        // ShopLanguages reads the languages from the root pages.
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (
                 id INTEGER PRIMARY KEY,
@@ -90,14 +90,15 @@ class SitemapListenerTest extends TestCase
         $this->product(2, 'ohne-preis', priced: false);
         $this->product(3, 'entwurf', published: false);
 
-        // Eine Variante hat keine eigene Adresse — auch mit eigenem Preis nicht.
+        // A variant has no URL of its own — not even with a price of its own.
         $this->insertProduct(['id' => 10, 'pid' => 1, 'title' => 'Variante', 'alias' => 'variante', 'published' => 1]);
         $this->insertListPrice(['pid' => 10, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000']);
 
         /*
-         * B-8: Eine Landingpage kommt nur mit Treffern in die Sitemap. Seite 12
-         * trägt dafür eine Liste ohne Vorgabe (Artikel 120, Element 50), die
-         * Kombination „volume:250ml" löst gegen Gruppe 1 auf, Produkt 1 hat sie.
+         * B-8: a landing page only goes into the sitemap with hits. For that,
+         * page 12 carries a list without a preset (article 120, element 50),
+         * the combination "volume:250ml" resolves against group 1, product 1
+         * has it.
          */
         $this->connection->executeStatement(
             "CREATE TABLE tl_article (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, sorting INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 0, start TEXT NOT NULL DEFAULT '', stop TEXT NOT NULL DEFAULT '')",
@@ -134,15 +135,14 @@ class SitemapListenerTest extends TestCase
             new FacetPageRecord(3, 14, 'fremd', 'volume:1l', 'Fremd', ''),
         ];
 
-        // ProductQuery liest seit B-10 die Projektion der Sichtbarkeit.
+        // Since B-10, ProductQuery reads the visibility projection.
         $this->rebuildProjection();
     }
 
     /**
-     * Die Projektion ist seit C-1c auf die Währung geschlüsselt und liest sie
-     * aus tl_page. Wer an den Startpunkten dreht, baut sie danach neu auf —
-     * mit einer frischen ShopLanguages, weil die ihre Antworten im Speicher
-     * behält.
+     * Since C-1c the projection is keyed by currency and reads it from tl_page.
+     * Whoever changes the root pages rebuilds it afterwards — with a fresh
+     * ShopLanguages, because that keeps its answers in memory.
      */
     private function rebuildProjection(): void
     {
@@ -171,15 +171,15 @@ class SitemapListenerTest extends TestCase
     public function testDieSitemapFolgtDerWaehrungDesStartpunktsNichtDerDesShops(): void
     {
         /*
-         * Spec 4.0: Der Shop bleibt auf EUR und in Österreich stehen, der
-         * Startpunkt wechselt auf GBP. Damit dreht sich der Grundbestand um —
-         * „schwedenbitter" hat nur einen Euro-Preis und fällt heraus,
-         * „ohne-preis" bekommt hier seinen Pfund-Preis und kommt herein.
+         * Spec 4.0: the shop stays on EUR and in Austria, the root page
+         * switches to GBP. That turns the base data around —
+         * "schwedenbitter" only has a euro price and drops out, "ohne-preis"
+         * gets its pound price here and comes in.
          *
-         * Die Umkehr ist der Punkt: Nähme der Listener wieder die Währung des
-         * Shops, stünde genau die alte Liste da, und ein bloßes „ist noch
-         * drin" hätte nichts gesagt. Das Land der Preiszeile bleibt AT — es
-         * kommt weiterhin vom Shop.
+         * The reversal is the point: if the listener took the shop's
+         * currency again, exactly the old list would be there, and a mere
+         * "is still in" would have said nothing. The country of the price
+         * row stays AT — it still comes from the shop.
          */
         $this->currencyOfRootPage = 'GBP';
         $this->connection->update('tl_page', ['consho_currency' => 'GBP'], ['id' => 1]);
@@ -207,7 +207,7 @@ class SitemapListenerTest extends TestCase
 
     public function testAStartPointWithoutAShopAddsNothing(): void
     {
-        // Eine Installation mit mehreren Websites: Seiten ohne Consho bleiben unberührt.
+        // An installation with several websites: pages without Consho stay untouched.
         $event = $this->event([2]);
 
         $this->listener()($event);
@@ -240,7 +240,7 @@ class SitemapListenerTest extends TestCase
 
     public function testALandingPageWithoutHitsIsLeftOut(): void
     {
-        // B-8: 500 ml hat gerade kein Produkt — die Landingpage antwortet 404.
+        // B-8: 500 ml has no product right now — the landing page answers 404.
         $this->landingPages[] = new FacetPageRecord(4, 12, 'tee-500-ml', 'volume:500ml', 'Tee 500 ml', '');
         $event = $this->event([1]);
 
@@ -252,7 +252,7 @@ class SitemapListenerTest extends TestCase
 
     public function testALandingPageWhoseOptionIsGoneIsLeftOut(): void
     {
-        // Löst nur teilweise auf → 404 wie in ListingVerdict, keine breitere Liste.
+        // Resolves only partly → 404 as in ListingVerdict, no broader list.
         $this->landingPages[] = new FacetPageRecord(5, 12, 'ein-liter', 'volume:1l', 'Ein Liter', '');
         $event = $this->event([1]);
 
@@ -263,7 +263,7 @@ class SitemapListenerTest extends TestCase
 
     public function testAPinThatMatchesKeepsALandingPageOtherwiseEmpty(): void
     {
-        // Vorgabe „bitter" trägt Produkt 1 nicht; angeheftet und 250 ml steht es trotzdem oben (B-7, Regel 5).
+        // Product 1 does not carry the preset "bitter"; pinned and 250 ml, it still stands on top (B-7, rule 5).
         $this->connection->update('tl_content', ['conshoFilter' => serialize(['21'])], ['id' => 50]);
 
         $event = $this->event([1]);
@@ -279,7 +279,7 @@ class SitemapListenerTest extends TestCase
 
     public function testALandingPageOnAPageWithoutAListingIsLeftOut(): void
     {
-        // Niemand liest das Pfadsegment — Contao antwortet selbst mit 404.
+        // Nobody reads the path segment — Contao answers with 404 itself.
         $this->connection->delete('tl_content', ['id' => 50]);
         $event = $this->event([1]);
 
@@ -352,16 +352,15 @@ class SitemapListenerTest extends TestCase
     {
         $pages = [
             /*
-             * Die beiden Startpunkte **ohne** `rootId`: Der Listener holt sie
-             * über findById(), also ohne Baumlauf, und eine so geladene Seite
-             * hat die Eigenschaft nicht. Dass sie ihr eigener Startpunkt sind,
-             * sagt `type` — die echte Spalte. Ein Doppel, das hier `rootId`
-             * herausgäbe, wäre fähiger als seine Herkunft; genau daran ist der
-             * Fehler vom 20.09. unbemerkt geblieben.
+             * The two root pages **without** `rootId`: the listener fetches them
+             * via findById(), i.e. without walking the tree, and a page loaded
+             * that way does not have the property. That they are their own root
+             * page is said by `type` — the real column. A double that returned
+             * `rootId` here would be more capable than its origin; exactly that is
+             * how an earlier bug went unnoticed.
              *
-             * Die Seiten 12/13/14/123 kommen über findWithDetails() und
-             * behalten ihre `rootId` zu Recht — der Listener liest sie dort
-             * auch wirklich.
+             * Pages 12/13/14/123 come via findWithDetails() and rightly keep
+             * their `rootId` — the listener really reads it there.
              */
             1 => $this->page(['id' => 1, 'type' => 'root', 'language' => 'de', 'alias' => 'index'], ['consho_shop' => 1, 'consho_currency' => $this->currencyOfRootPage]),
             2 => $this->page(['id' => 2, 'type' => 'root', 'language' => 'en', 'alias' => 'other'], ['consho_shop' => 0]),
@@ -389,8 +388,8 @@ class SitemapListenerTest extends TestCase
             static fn (string $class): Adapter => ShopModel::class === $class ? $shopAdapter : $pageAdapter,
         );
 
-        // Wie Contaos Generator: die Produktseite mit {alias}, jede andere Seite
-        // über ihren Alias, das Pfadsegment einer Landingpage als „parameters".
+        // Like Contao's generator: the product page with {alias}, every other
+        // page via its alias, the path segment of a landing page as "parameters".
         $contentUrls = $this->createMock(ContentUrlGenerator::class);
         $contentUrls->method('generate')->willReturnCallback(
             static function (object $content, array $values, int $referenceType): string {

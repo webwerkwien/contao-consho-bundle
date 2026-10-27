@@ -5,10 +5,10 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Controller\ContentElement;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Textprüfung an der Vorlage „Versandkosten" (E-6), wie CartTemplateTest: kein
- * Rendering — dafür gibt es in diesem Projekt keine Twig-Umgebung —, aber
- * jeder Schlüssel, den die Vorlage übersetzt, steht in beiden Sprachen, und
- * mit genau so vielen `%s`, wie sie Werte übergibt.
+ * Text check on the template "Versandkosten" (shipping costs, E-6), like
+ * CartTemplateTest: no rendering — this project has no Twig environment for
+ * it — but every key the template translates exists in both languages, and
+ * with exactly as many `%s` as it passes values.
  */
 class ShippingCostsTemplateTest extends TestCase
 {
@@ -44,9 +44,9 @@ class ShippingCostsTemplateTest extends TestCase
     }
 
     /**
-     * Wie „Meine Bestellungen" (D-4): Themes, die Tabellen auf schmalen
-     * Bildschirmen stapeln, beschriften jede Zelle mit `data-cellheadline`.
-     * Ohne es stand bei der Abnahme ein leeres „:" vor jeder Zelle.
+     * Like "Meine Bestellungen" (my orders, D-4): themes that stack tables on
+     * narrow screens label every cell with `data-cellheadline`. Without it an
+     * empty ":" stood in front of every cell.
      */
     public function testJedeZelleTraegtIhreSpaltenueberschrift(): void
     {
@@ -57,8 +57,9 @@ class ShippingCostsTemplateTest extends TestCase
 
     public function testKeinRohesDezimalInDerVorlage(): void
     {
-        // Gewichte und Beträge kommen formatiert aus ShippingCostsView
-        // (MoneyFormatter) — „2.0000 kg" wäre Fall 30 der Prüfungsnotiz.
+        // Weights and amounts come formatted from ShippingCostsView
+        // (MoneyFormatter) — "2.0000 kg" would be the trailing zeros MySQL/MariaDB
+        // returns for a decimal column and SQLite does not.
         self::assertStringNotContainsString('|number_format', (string) file_get_contents(self::TEMPLATE));
     }
 }

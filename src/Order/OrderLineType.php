@@ -31,7 +31,7 @@ enum OrderLineType: string
      *
      * Taxed the way the operator chose at the method (E-1, Z3): split over
      * the goods like shipping, or at one fixed class — Consho does not decide
-     * which (docs/block-e-versand-zahlung.md, section 3). Until E-1 a fee was
+     * which (Block E, section 3). Until E-1 a fee was
      * refused.
      */
     case PaymentFee = 'paymentFee';

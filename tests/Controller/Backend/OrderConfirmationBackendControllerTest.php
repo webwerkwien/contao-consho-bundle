@@ -29,8 +29,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Token\TokenRepositoryInterface;
 
 /**
- * „Erneut senden" an der Bestellung (C-9) — Befund F4 des Reviews vom
- * 2026-09-25: Bis dahin rief kein Test resend() auf.
+ * "Erneut senden" (resend) on the order (C-9), through resend() itself.
  */
 class OrderConfirmationBackendControllerTest extends TestCase
 {
@@ -75,8 +74,8 @@ class OrderConfirmationBackendControllerTest extends TestCase
         self::assertFalse($copyOperator);
         self::assertSame([['addConfirmation', 'Bestätigung WEB-7 an kundin@example.org']], $this->messages);
 
-        // C-10: Der Link geht per Mail hinaus, also bestätigt ein Klick darüber
-        // die Adresse.
+        // C-10: the link goes out by mail, so a click on it confirms the
+        // address.
         self::assertSame([true], $this->confirming);
     }
 
@@ -94,9 +93,9 @@ class OrderConfirmationBackendControllerTest extends TestCase
     }
 
     /**
-     * Wie Contaos eigenes erneutes Senden (tl_opt_in): Ein GET ohne gültiges
-     * Request-Token löst nichts aus — sonst könnte jede Seite, die ein
-     * Redakteur öffnet, einem Kunden eine Mail schicken.
+     * Like Contao's own resending (tl_opt_in): a GET without a valid request
+     * token triggers nothing — otherwise any page an editor opens could send
+     * a customer a mail.
      */
     public function testEinGetOhneGueltigesTokenSendetNichts(): void
     {
@@ -133,7 +132,7 @@ class OrderConfirmationBackendControllerTest extends TestCase
         self::assertSame([['addError', 'Keine Bestellseite WEB-7']], $this->messages);
     }
 
-    /** D-5: Nach der Anonymisierung keine Mail und kein neuer Link. */
+    /** D-5: after anonymisation no mail and no new link. */
     public function testEineAnonymisierteBestellungBekommtKeineMail(): void
     {
         $GLOBALS['TL_LANG']['tl_consho_order']['resendAnonymized'] = 'Anonymisiert %s';
@@ -146,8 +145,8 @@ class OrderConfirmationBackendControllerTest extends TestCase
     }
 
     /**
-     * Review 2026-09-25: Die Adresse hat der Kunde im Checkout getippt, und
-     * Contao gibt Meldungen ungefiltert als HTML aus.
+     * The customer typed the address in the checkout, and Contao outputs
+     * messages unfiltered as HTML.
      */
     public function testDieKundenadresseWirdInDerMeldungEscaped(): void
     {

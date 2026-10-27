@@ -70,7 +70,7 @@ class OrderPageDownloads
             $entitlement = Entitlement::fromRow($row);
             $active = $entitlement->isActive($now) && !isset($ended[$entitlement->orderItemId]);
 
-            // Resting is not "no longer valid" (acceptance Abo-5): only the
+            // Resting is not "no longer valid" (Abo-5): only the
             // payment is missing. Said only where nothing else ended it.
             $resting = !$active && null !== $entitlement->suspendedAt && !$entitlement->revoked
                 && (null === $entitlement->validUntil || $now <= $entitlement->validUntil)
@@ -146,8 +146,8 @@ class OrderPageDownloads
         $this->connection->insert('tl_consho_download', ['pid' => $entitlement->id, 'tstamp' => $now, 'downloadedAt' => $now]);
 
         // `public: false` — BinaryFileResponse makes itself public by
-        // default and overrode the header given here (acceptance on c5,
-        // 2026-09-29: "no-store, public").
+        // default and overrode the header given here ("no-store,
+        // public").
         $response = new BinaryFileResponse($file['absolute'], 200, [
             'Cache-Control' => 'private, no-store',
             'X-Robots-Tag' => 'noindex, nofollow',

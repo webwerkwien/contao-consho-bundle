@@ -11,8 +11,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionTerms;
  * for a product listed with a plan "1,20 € / Monat" — the same figure the
  * product page puts up top.
  *
- * A class of its own rather than a few lines in ProductListController (Fable
- * review Abo-2b, S3): there the "/ Monat" hung on two optional dependencies,
+ * A class of its own rather than a few lines in ProductListController (Abo-2b): there the "/ Monat" hung on two optional dependencies,
  * and a listing without them would have printed a monthly amount as if it
  * were a price — silently, and no test built the controller. Required here,
  * and the rules of a whole page are read at once.

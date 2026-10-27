@@ -18,6 +18,8 @@ final class AppliedVoucher
         public readonly string $balance,
         public readonly string $applied,
         public readonly string $after,
+        // EZ-1: pays only for articles of its tax class.
+        public readonly bool $singlePurpose = false,
     ) {
     }
 

@@ -15,7 +15,7 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopCurrencies;
  * that one. Since C-1c the shop says which currencies it CAN accept and each
  * root page says which one applies there — the currency is a property of the
  * audience, like the language, not a business rule of the seller. See
- * docs/block-a-fundament.md, section 4.0.
+ * Block A, section 4.0.
  *
  * This migration makes an existing installation behave exactly as before:
  * every shop keeps its one currency as its only allowed one, and every root
@@ -39,8 +39,8 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopCurrencies;
  * configuration", which switches the shop functions off (block A, section 7).
  * Written down so the silence stays a decision rather than an oversight.
  *
- * It also leaves `tl_consho_shop.currency` in place. The column drops after
- * the acceptance run on c5, the same course `gross` took in C-1b: first show
+ * It also leaves `tl_consho_shop.currency` in place. The column drops once
+ * the values are shown to have arrived, the same course `gross` took in C-1b: first show
  * that the values arrived, then remove where they came from.
  */
 final class RootCurrencyMigration extends AbstractMigration

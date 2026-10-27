@@ -6,9 +6,9 @@ use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
- * "Details" of a subscription (Abo-3). Found at the acceptance on c5
- * (2026-09-29): the view showed quantity and net as "1.0000" — a raw
- * decimal(10,4), the trap of Fall 30. The quantity as a person writes it, the
+ * "Details" of a subscription (Abo-3). The view showed quantity and net
+ * as "1.0000" — a raw decimal(10,4), which MySQL returns with its trailing
+ * zeros. The quantity as a person writes it, the
  * net as an amount in the subscription's currency.
  *
  * Contao keys the rows by "Label <small>field</small>", so the field is found

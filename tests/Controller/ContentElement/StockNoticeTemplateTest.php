@@ -10,11 +10,12 @@ use Twig\TwigFunction;
 use Webwerkwien\ContaoConshoBundle\Controller\StockNoticeResult;
 
 /**
- * Abnahme G-8: Direkt nach dem Anmelden standen zwei fast gleiche Sätze
- * untereinander — die Meldung des Knopfs und der Dauerhinweis.
+ * G-8: right after logging in, two almost identical sentences stood one
+ * below the other — the button's message and the permanent notice.
  *
- * Gerendert wird der Abschnitt der echten Vorlage (vom Ergebnis bis vor das
- * Kaufformular), mit `trans` als Schlüssel-Echo und `path` als Routenname.
+ * What is rendered is the section of the real template (from the result to
+ * just before the purchase form), with `trans` as a key echo and `path` as
+ * the route name.
  */
 class StockNoticeTemplateTest extends TestCase
 {

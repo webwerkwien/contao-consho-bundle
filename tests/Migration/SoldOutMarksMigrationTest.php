@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block Verfügbarkeit, V1: einmal nach dem Eintreffen der Tabelle — am
- * Merker, nicht an der leeren Tabelle.
+ * Block availability, V1: once after the table arrives — by the
+ * marker, not by the empty table.
  */
 class SoldOutMarksMigrationTest extends TestCase
 {

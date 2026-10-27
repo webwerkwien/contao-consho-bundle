@@ -9,7 +9,7 @@ use Contao\DataContainer;
 
 /**
  * The coupled mask of shipping amounts (spec 5.1, 5.3): the same chain as
- * product prices, with the method's reference tax class (decision 2026-09-15).
+ * product prices, with the method's reference tax class (as decided for prices).
  *
  * One saved amount per method and currency. Not a UNIQUE index: a row the mask
  * creates on "new" already carries the preset currency, and a second "new"
@@ -130,11 +130,11 @@ class ShippingPriceInputListener extends CoupledPriceInputListener
      * The weight is part of the key since E-4: a weight rate has one row per
      * bracket and currency, and two rows "bis 5 kg" in euro would make the
      * price a matter of chance, exactly what the rule prevents for the flat
-     * rate, whose rows all carry 0. Found at the acceptance of block E: the
-     * second bracket could not be saved.
+     * rate, whose rows all carry 0. Before, the second bracket
+     * could not be saved.
      *
      * tstamp > 0: a row opened and never saved is no amount (C-1b;
-     * docs/block-c-warenkorb-checkout.md section 5.3).
+     * Block C, section 5.3).
      */
     private function takenCurrency(int $pid, string $currency, string $maxWeight, int $excludeId): bool
     {

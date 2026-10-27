@@ -10,8 +10,9 @@ use Twig\TwigFunction;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductTile;
 
 /**
- * Abnahme DL, Fund 2: „zzgl. Versandkosten" nur, wo etwas versandt wird —
- * an der echten Kachelvorlage gerendert, nicht am Quelltext gesucht.
+ * DL: "zzgl. Versandkosten" (plus shipping) only where something is
+ * shipped — rendered on the real tile template, not searched for in the
+ * source.
  */
 class TaxNoticeTemplateTest extends TestCase
 {
@@ -23,12 +24,12 @@ class TaxNoticeTemplateTest extends TestCase
         self::assertStringContainsString('CONSHO.priceTaxNotice<', $this->tile(null, false), 'ohne Angabe wie bisher');
     }
 
-    /** Abo-2b, P89: „auch im Abo" unter einem Einmalkauf-Preis, sonst nicht. */
+    /** Abo-2b, P89: "auch im Abo" (also as a subscription) under a one-time purchase price, otherwise not. */
     public function testAuchImAbo(): void
     {
         $html = $this->tile(true, false, new ProductTile(7, 'E-Book', '', '', '9.0000', formattedPrice: '9,00 €', alsoSubscription: true));
         self::assertStringContainsString('CONSHO.tile.alsoSubscription', $html);
-        self::assertLessThan(strpos($html, 'CONSHO.tile.alsoSubscription'), strpos($html, 'CONSHO.priceTaxNotice'), 'der Steuerhinweis gehört direkt zum Preis (Abnahme Abo-2b)');
+        self::assertLessThan(strpos($html, 'CONSHO.tile.alsoSubscription'), strpos($html, 'CONSHO.priceTaxNotice'), 'der Steuerhinweis gehört direkt zum Preis (Abo-2b)');
         self::assertStringNotContainsString('CONSHO.tile.alsoSubscription', $this->tile(true, false));
     }
 

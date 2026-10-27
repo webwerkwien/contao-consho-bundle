@@ -24,7 +24,7 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testOrdinaryPriceSetsAreNoTie(): void
     {
-        // Staffel, Kundengruppe, andere Währung: jeweils ein anderer Rang.
+        // Scale, customer group, other currency: each a different rank.
         $this->price(1);
         $this->price(1, minQuantity: '10');
         $this->price(1, customerGroup: 3);
@@ -35,7 +35,7 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testZeilenVerschiedenerAboregelnSindKeinGleichstand(): void
     {
-        // Abo-1 (A2): Einmalkauf, Monats- und Jahresabo sind drei Verträge.
+        // Abo-1 (A2): one-off purchase, monthly and yearly subscription are three contracts.
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR']);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'subscriptionRule' => 5]);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'subscriptionRule' => 9]);
@@ -61,9 +61,9 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testEinBefristeterPreisNebenDemRegulaerenIstSeitBlockHKeinGleichstand(): void
     {
-        // Der Fall aus der B-5-Recherche: „Aktionspreis" als befristete
-        // Listenpreis-Zeile. Bis Block H ein Gleichstand, seit H2 entscheidet
-        // PriceCalculator ihn (mit Zeitraum vor ohne).
+        // The case from the B-5 research: "promotional price" as a time-limited
+        // list price row. A tie until Block H; since H2
+        // PriceCalculator decides it (with a period before without).
         $this->price(1);
         $this->price(1, validFrom: 1000, validTo: 2000);
 
@@ -72,7 +72,7 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testZweiBefristeteZeilenMitVerschiedenemBeginnSindKeinGleichstand(): void
     {
-        // H2: die später beginnende gewinnt.
+        // H2: the one starting later wins.
         $this->price(1, validFrom: 500, validTo: 1500);
         $this->price(1, validFrom: 1000, validTo: 2000);
 
@@ -89,7 +89,7 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testZweiZeilenNurMitEndeBleibenEinGleichstand(): void
     {
-        // Beide befristet, keine mit Beginn: Der spätere Beginn entscheidet nichts.
+        // Both time-limited, neither with a start: the later start decides nothing.
         $this->price(1, validTo: 2000);
         $this->price(1, validTo: 3000);
 
@@ -98,7 +98,7 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testConsecutiveWindowsDoNotOverlap(): void
     {
-        // Bis ausschließlich, ab einschließlich — wie DbalPriceRepository.
+        // Until exclusive, from inclusive — like DbalPriceRepository.
         $this->price(1, validTo: 1000);
         $this->price(1, validFrom: 1000, validTo: 2000);
         $this->price(1, validFrom: 2000);
@@ -108,8 +108,8 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testConsecutiveWindowsDoNotOverlapInEitherOrder(): void
     {
-        // Die spätere Zeile zuerst angelegt: Dann prüft die erste Hälfte der
-        // Bedingung die Grenze (a.validFrom < b.validTo), nicht die zweite.
+        // The later row created first: then the first half of the
+        // condition checks the bound (a.validFrom < b.validTo), not the second.
         $this->price(1, validFrom: 2000);
         $this->price(1, validFrom: 1000, validTo: 2000);
 
@@ -129,14 +129,14 @@ class DbalPriceTieIssueSourceTest extends TestCase
 
     public function testItIsANote(): void
     {
-        // Die Regel kommt mit Block H; bis dahin kann ein Betreiber es wissen und hinnehmen.
+        // The rule comes with Block H; until then an operator can know it and accept it.
         self::assertFalse(ConfigurationFinding::PriceTie->isWarning());
     }
 
     public function testEineNieGespeichertePreiszeileIstKeinGleichstand(): void
     {
-        // Die zweite Zeile wurde geöffnet, aber nie gespeichert (tstamp 0) —
-        // anders als testTwoOpenRowsOfEqualRankAreATie, wo beide gespeichert sind.
+        // The second row was opened but never saved (tstamp 0) —
+        // unlike testTwoOpenRowsOfEqualRankAreATie, where both are saved.
         $this->price(1);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'customerGroup' => 0, 'minQuantity' => '1', 'tstamp' => 0]);
 

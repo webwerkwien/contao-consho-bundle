@@ -134,7 +134,7 @@ class CatalogReaderTest extends TestCase
 
     /**
      * Contao's rule: published while stop > now — so stop = now is over
-     * (second Fable review, H-A: the data set above asks at the real time).
+     * (H-A: the data set above asks at the real time).
      */
     public function testDieStopGrenzeIstExklusiv(): void
     {
@@ -357,7 +357,7 @@ class CatalogReaderTest extends TestCase
         self::assertSame([null, null, false, 'Download'], [$b->stock, $b->availableFrom, $b->physical, $b->productType]);
     }
 
-    // ── Preis (CN-3, K1, K2) ──────────────────────────────────────────────
+    // ── Price (CN-3, K1, K2) ──────────────────────────────────────────────
 
     public function testDerPreisIstDerEinmaligeImHeimatland(): void
     {
@@ -416,7 +416,7 @@ class CatalogReaderTest extends TestCase
         self::assertSame([1, null], [$article->articleId, $article->price]);
     }
 
-    // ── Mindestmenge (Review Connect-1, H2) ───────────────────────────────
+    // ── Minimum quantity (Connect-1) ───────────────────────────
 
     public function testDieMindestmengeKostetWasDerWarenkorbVerlangt(): void
     {

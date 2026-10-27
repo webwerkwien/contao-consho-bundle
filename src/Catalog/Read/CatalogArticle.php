@@ -70,7 +70,7 @@ final class CatalogArticle
         /*
          * The smallest quantity the shop sells, without trailing zeros — and,
          * where it is more than one and there is a price, what that many cost
-         * together, as the basket would charge it (review Connect-1, H2). A
+         * together, as the basket would charge it (Connect-1). A
          * channel that lists the price of what can actually be bought needs
          * the line, not the unit price at quantity one.
          */

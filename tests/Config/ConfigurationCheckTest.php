@@ -31,18 +31,17 @@ class ConfigurationCheckTest extends TestCase
     }
 
     /**
-     * 🔴 **Der Befund sagt, welcher Shop gemeint ist** — seit 2026-09-23.
+     * 🔴 **The finding says which shop is meant.**
      *
-     * Davor nannte er nur Land und Warengruppe, als einziger der drei hier.
-     * Auf einer Installation mit zwei Shops, die beide in dasselbe Land
-     * liefern und beide keinen Satz dafür haben, standen **zwei wortgleiche
-     * Zeilen** auf der Startseite — nebeneinander mit Versandart-Befunden,
-     * die den Shop sehr wohl nennen.
+     * Before, it only named country and product group, as the only one of the
+     * three here. On an installation with two shops that both deliver to the
+     * same country and both lack a rate for it, **two identical lines** stood
+     * on the start page — next to shipping method findings that do name the
+     * shop.
      *
-     * Auf c5 trat es nie auf: Nur ein Shop liefert nach Dänemark. **Das ist
-     * der Grund, warum es niemandem auffiel**, und derselbe Grund, aus dem
-     * `termsRequired` am selben Tag einen Blocker verdeckte — die Umgebung
-     * stellt den unbequemen Fall nicht.
+     * An installation on which only one shop delivers to Denmark never shows
+     * it. **That is why nobody noticed** — the environment does not set up the
+     * uncomfortable case.
      */
     public function testDerBefundNenntDenShop(): void
     {
@@ -53,9 +52,9 @@ class ConfigurationCheckTest extends TestCase
     }
 
     /**
-     * Zwei Shops, dasselbe Land, derselbe fehlende Satz: zwei Befunde, die
-     * sich unterscheiden lassen. Genau der Fall, der vorher zweimal denselben
-     * Satz ergab.
+     * Two shops, the same country, the same missing rate: two findings that
+     * can be told apart. Exactly the case that used to produce the same
+     * sentence twice.
      */
     public function testZweiShopsErgebenZweiUnterscheidbareBefunde(): void
     {
@@ -71,8 +70,8 @@ class ConfigurationCheckTest extends TestCase
 
     public function testAShopWithoutAHomeCountryIsAWarning(): void
     {
-        // Ohne Heimatland kein Brutto, ohne Brutto keine Preise im Shop (C25).
-        // Eine Warnung, nicht bestätigbar: Der Shop verkauft nichts, bis es gesetzt ist.
+        // No home country, no gross price; no gross price, no prices in the shop (C25).
+        // A warning, not confirmable: the shop sells nothing until it is set.
         $issues = $this->check->homeCountry('', 'Kräuterhaus');
 
         self::assertCount(1, $issues);

@@ -7,7 +7,7 @@
  * (C3). jsonData is declared below although the flat rate has no such field.
  *
  * A method that occurs in an order cannot be deleted (ShippingMethodDeleteVoter).
- * See docs/block-c-warenkorb-checkout.md, sections 5.1 and 6.1. "select multiple"
+ * See Block C, sections 5.1 and 6.1. "select multiple"
  * → delete skips a method in use silently: DC_Table::deleteAll() catches the
  * AccessDeniedException per id and continues with the next one.
  */
@@ -123,7 +123,7 @@ $GLOBALS['TL_DCA']['tl_consho_shipping_method'] = [
             'sql' => ['type' => 'string', 'length' => 16, 'default' => 'proportional'],
         ],
         /*
-         * Mandatory in both modes (decision 2026-09-15). Fixed: shipping is
+         * Mandatory in both modes. Fixed: shipping is
          * taxed with it. Proportional: the tax follows the goods, and this
          * class only turns a gross amount typed in the price rows into net —
          * a cart taxed at another rate then pays another gross than typed:

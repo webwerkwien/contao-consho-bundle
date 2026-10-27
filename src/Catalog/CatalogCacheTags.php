@@ -8,8 +8,7 @@ use Doctrine\DBAL\Connection;
 /**
  * The cache tags of Consho's catalogue pages (plan B-7b).
  *
- * Measured on the test server on 2026-09-13, right after the page cache was
- * switched on: a product title changed in the back end, the sitemap came back
+ * Right after the page cache was switched on: a product title changed in the back end, the sitemap came back
  * fresh, the listing and the product page kept the old title. No Consho page
  * tagged its response.
  *
@@ -19,7 +18,7 @@ use Doctrine\DBAL\Connection;
  * | CATALOG                   | + product page     | manufacturer, type, property, shop |
  * | contao.db.tl_consho_product.<main> | product page | the product, a variant, a price |
  *
- * A listing is invalidated by EVERY catalogue change (Michael, E1). Only that
+ * A listing is invalidated by EVERY catalogue change (E1). Only that
  * brings in a product just published: a page cannot carry the tag of a product
  * it does not show yet.
  *

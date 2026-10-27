@@ -55,7 +55,7 @@ final class SubscriptionRuleValidator
         }
 
         /*
-         * Variant A (Michael, 2026-10-08: „passt so"): "läuft weiter,
+         * Variant A: "läuft weiter,
          * jederzeit kündbar" only with monthly payment. Paid for a year ahead
          * and cancellable within 28 days, every notice after the minimum term
          * would owe a refund — the conversion into the monthly plan's price

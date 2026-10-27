@@ -77,12 +77,12 @@ class MiniCartController extends AbstractContentElementController
         private readonly ShopPageUrls $cartPage,
         private readonly PriceAudienceResolver $audiences,
         /*
-         * The kind of the article (DL1; acceptance DL, find 2): "zzgl.
+         * The kind of the article (DL1): "zzgl.
          * Versandkosten" only where something is shipped. Optional for the
          * tests built by hand — without it the sentence stays as it was.
          */
         private readonly ArticleShippingDataInterface|null $articles = null,
-        // Block Wertgutscheine (acceptance WG-7): the tax sentence.
+        // Block Wertgutscheine (WG-7): the tax sentence.
         private readonly NotTaxableArticles|null $notTaxable = null,
     ) {
     }
@@ -155,7 +155,7 @@ class MiniCartController extends AbstractContentElementController
     }
 
     /**
-     * Whether any of these articles is shipped (acceptance DL, find 2): the
+     * Whether any of these articles is shipped (DL): the
      * basket says "zzgl. Versandkosten" only then. Without the reader, or
      * with an empty basket, as it always did.
      *

@@ -12,10 +12,10 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SaleModes;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-1 (A4): Die Preiszeile bietet nur an, was das Produkt verkauft.
+ * Abo-1 (A4): the price row only offers what the product sells.
  *
- * Produkt 1: digital, nur im Abo mit Regeln 5 und 9 (9 gelöscht).
- * Produkt 2: Variante von 1. Produkt 3: digital, Einmalkauf und Regel 5.
+ * Product 1: digital, subscription only, with rules 5 and 9 (9 deleted).
+ * Product 2: variant of 1. Product 3: digital, one-off purchase and rule 5.
  */
 class PriceSubscriptionRuleListenerTest extends TestCase
 {
@@ -35,7 +35,7 @@ class PriceSubscriptionRuleListenerTest extends TestCase
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 1]);
         $this->connection->insert('tl_consho_product', ['id' => 3, 'productType' => 1, 'saleOnce' => 1, 'saleSubscription' => 1, 'subscriptionRules' => serialize(['5'])]);
 
-        // Preiszeile 10 an Produkt 1, 20 an der Variante 2, 30 an Produkt 3.
+        // Price row 10 on product 1, 20 on variant 2, 30 on product 3.
         $this->connection->insert('tl_consho_price', ['id' => 10, 'pid' => 1]);
         $this->connection->insert('tl_consho_price', ['id' => 20, 'pid' => 2]);
         $this->connection->insert('tl_consho_price', ['id' => 30, 'pid' => 3]);
@@ -51,7 +51,7 @@ class PriceSubscriptionRuleListenerTest extends TestCase
 
     public function testNurImAbo(): void
     {
-        // Ohne Einmalkauf, die gelöschte Regel 9 fällt heraus.
+        // Without one-off purchase, the deleted rule 9 drops out.
         self::assertSame([5 => 'Monatsabo'], $this->listener()->options($this->dc(10)));
     }
 
@@ -70,16 +70,16 @@ class PriceSubscriptionRuleListenerTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('nicht angeboten');
 
-        // Einmalkauf an einem Produkt, das nur im Abo verkauft wird.
+        // One-off purchase on a product that is only sold by subscription.
         $this->listener()->refuseNotOffered('0', $this->dc(10));
     }
 
     public function testEineBeschriftungAlsWertWirdNichtZumEinmalkauf(): void
     {
         /*
-         * Der Fund der Abnahme: Die Maske schickte „Monatsabo" statt 5, und
-         * (int) machte daraus 0 — an Produkt 3 ist der Einmalkauf angeboten,
-         * also wurde ein Abopreis als Einmalkauf gespeichert.
+         * The case this guards: the form sent „Monatsabo" instead of 5, and
+         * (int) turned that into 0 — product 3 offers the one-off purchase,
+         * so a subscription price was saved as a one-off purchase.
          */
         $this->expectException(\RuntimeException::class);
 
@@ -101,8 +101,8 @@ class PriceSubscriptionRuleListenerTest extends TestCase
     }
 
     /**
-     * Spec Wertgutscheine, offene Punkte (Fall 30): Die Preisliste zeigte
-     * „EUR 25.0000 netto ab 1.0000" — decimal(10,4) roh aus der Datenbank.
+     * WG: the price list showed „EUR 25.0000 netto ab 1.0000" —
+     * decimal(10,4) raw from the database.
      */
     public function testBetragUndMengeSindFormatiert(): void
     {

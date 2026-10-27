@@ -19,7 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
  *   properties (the article's own or its main product's), one of the
  *   visitor's groups.
  * - Not on a price that is already a promotion, unless the rule says so
- *   (`reduced`, Michael 2026-10-05). Then it works on the promotion price.
+ *   (`reduced`). Then it works on the promotion price.
  * - Several rules: the cheapest result, no sum (C2).
  * - Only ever cheaper: a result not below the price leaves it as it is.
  *
@@ -73,7 +73,7 @@ class CatalogPriceRules implements ResetInterface
                 $applied = true;
 
                 /*
-                 * Review H, P4: a rule for some groups is a group price, even
+                 * Block H, P4: a rule for some groups is a group price, even
                  * on the guests' list price — it carries the group, so no
                  * strike-through price reaches it (§ 11 Abs. 4 Nr. 1 PAngV:
                  * individual reductions; ComparePrices asks for no group).

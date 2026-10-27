@@ -14,8 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Customer\RegistrationActivation;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Nachlese KA1/KA3: „Konten sofort freischalten" am Registrierungsmodul —
- * Konto aktiv, Kundengruppe des Shops dazu, Gruppen des Moduls bleiben.
+ * Nachlese KA1/KA3: "activate accounts immediately" on the registration
+ * module — account active, the shop's customer group added, the module's
+ * groups stay.
  */
 final class RegistrationActivationTest extends TestCase
 {
@@ -32,7 +33,7 @@ final class RegistrationActivationTest extends TestCase
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'title' => 'Shop', 'consho_shop' => 1]);
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'title' => 'Blog']);
 
-        // So, wie Contao das Mitglied vor dem Hook gespeichert hat: gesperrt, mit reg_groups.
+        // As Contao saved the member before the hook: disabled, with reg_groups.
         $this->connection->insert('tl_member', ['id' => 5, 'username' => 'kunde', 'disable' => 1, '"groups"' => serialize(['3'])]);
     }
 
@@ -80,7 +81,7 @@ final class RegistrationActivationTest extends TestCase
 
     private function member5(): string
     {
-        // Contao übergibt die ID als Zahl oder Zeichenkette, je nach Treiber.
+        // Contao passes the ID as a number or a string, depending on the driver.
         return '5';
     }
 

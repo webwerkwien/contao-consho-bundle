@@ -87,6 +87,7 @@ final class DbalDocumentSource implements DocumentSourceInterface
             'shipment' => $this->shipment($order, $shop),
             'subscription' => $this->subscription($order),
             'payments' => $this->payments((int) ($order['id'] ?? 0)),
+            'prepaid' => $this->prepaid((int) ($order['id'] ?? 0)),
             // Block R (R10): the shop's switch; whether THIS invoice carries
             // the XML the payload builder decides (business customers only).
             'eInvoice' => (bool) ($shop['eInvoice'] ?? false),
@@ -109,9 +110,67 @@ final class DbalDocumentSource implements DocumentSourceInterface
         $rows = $this->connection->fetchAllAssociative('SELECT method, amount FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', [$orderId]);
 
         // Four places whatever the database returns: MySQL hands back
-        // "-1.0000", SQLite "-1" (Prüfungsnotiz, Fall 30) — the snapshot
+        // "-1.0000", SQLite "-1" — the snapshot
         // keeps one shape.
         return array_map(static fn (array $row): array => ['method' => (string) $row['method'], 'amount' => (string) BigDecimal::of((string) $row['amount'])->toScale(4)], $rows);
+    }
+
+    /**
+     * What single-purpose vouchers paid on the order (EZ-4): per voucher, its
+     * payments less what went back to it, with the tax their sale already
+     * carried. Named as the payment names it ("Gutschein …MDSN"), never by
+     * the whole code. A voucher with nothing left paid drops out.
+     *
+     * @return list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}>
+     */
+    private function prepaid(int $orderId): array
+    {
+        if ($orderId < 1) {
+            return [];
+        }
+
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT id, reference, method, amount, prepaidTaxRate, prepaidTaxCountry, prepaidTax FROM tl_consho_payment WHERE pid = ? AND prepaidTaxRate > 0 ORDER BY receivedAt, id',
+            [$orderId],
+        );
+
+        $vouchers = [];
+
+        foreach ($rows as $row) {
+            // The anonymisation empties the reference: such a payment stands on
+            // its own rather than merging vouchers, rates and countries.
+            $key = '' !== (string) $row['reference'] ? (string) $row['reference'] : 'payment:'.$row['id'];
+            $amount = BigDecimal::of((string) $row['amount']);
+
+            // The redemption names the voucher; a refund to it is a counter-entry.
+            $vouchers[$key] ??= ['label' => '', 'country' => strtoupper((string) $row['prepaidTaxCountry']), 'rate' => (string) BigDecimal::of((string) $row['prepaidTaxRate'])->toScale(4), 'gross' => BigDecimal::zero(), 'tax' => BigDecimal::zero()];
+
+            if ($amount->isPositive() && '' === $vouchers[$key]['label']) {
+                $vouchers[$key]['label'] = (string) $row['method'];
+            }
+
+            $vouchers[$key]['gross'] = $vouchers[$key]['gross']->plus($amount);
+            $vouchers[$key]['tax'] = $vouchers[$key]['tax']->plus((string) $row['prepaidTax']);
+        }
+
+        $prepaid = [];
+
+        foreach ($vouchers as $voucher) {
+            if (!$voucher['gross']->isPositive()) {
+                continue;
+            }
+
+            $prepaid[] = [
+                'label' => $voucher['label'],
+                'country' => $voucher['country'],
+                'rate' => $voucher['rate'],
+                'net' => (string) $voucher['gross']->minus($voucher['tax'])->toScale(4),
+                'tax' => (string) $voucher['tax']->toScale(4),
+                'gross' => (string) $voucher['gross']->toScale(4),
+            ];
+        }
+
+        return $prepaid;
     }
 
     /**
@@ -183,7 +242,7 @@ final class DbalDocumentSource implements DocumentSourceInterface
     }
 
     /**
-     * UUID AND hash (Michael, 2026-09-24). The UUID alone does not notice a
+     * UUID AND hash. The UUID alone does not notice a
      * replaced logo: Contao keeps it when a file is overwritten under the
      * same name and only updates the hash. A logo set but not (or no longer)
      * in the file system counts as none — there is nothing to freeze.
@@ -223,7 +282,10 @@ final class DbalDocumentSource implements DocumentSourceInterface
             : false;
 
         if (false === $row) {
-            return ['instructions' => '', 'details' => [], 'giroCode' => false, 'dueDays' => null, 'meansCode' => self::meansCode('', [])];
+            // Without a method the order was paid in full by vouchers at the
+            // purchase (WG-5, E1): before anything went out. A method that
+            // no longer exists says nothing either way.
+            return ['instructions' => '', 'details' => [], 'giroCode' => false, 'dueDays' => null, 'meansCode' => self::meansCode('', []), 'advance' => 0 === $methodId];
         }
 
         $settings = MethodSettings::decode($row['jsonData'] ?? null);
@@ -248,6 +310,10 @@ final class DbalDocumentSource implements DocumentSourceInterface
             // is paid before the goods go out and names no term.
             'dueDays' => InvoicePaymentHandler::getType() === (string) ($row['type'] ?? '') ? InvoicePaymentHandler::dueDays($settings) : null,
             'meansCode' => self::meansCode((string) ($row['type'] ?? ''), $details),
+            // L-1: paid before the goods go out — every method but a purchase
+            // on account and cash on delivery. An invoice issued before
+            // shipping then covers an advance payment (UStR 2000 Rz 1524).
+            'advance' => !\in_array((string) ($row['type'] ?? ''), [InvoicePaymentHandler::getType(), CashOnDeliveryHandler::getType()], true),
         ];
     }
 
@@ -264,7 +330,7 @@ final class DbalDocumentSource implements DocumentSourceInterface
     public static function meansCode(string $type, array $details): string
     {
         return match ($type) {
-            // 30 and 58 both need the account (BR-61, review R F6): without an
+            // 30 and 58 both need the account (BR-61, R): without an
             // IBAN nothing on the invoice says where to transfer to.
             PrepaymentHandler::getType(), InvoicePaymentHandler::getType() => '' !== ($details['iban'] ?? '') ? '58' : 'ZZZ',
             CashOnDeliveryHandler::getType() => '10',
@@ -278,8 +344,8 @@ final class DbalDocumentSource implements DocumentSourceInterface
      * 🔴 Contao stores text input ENCODED — `( ) & " ' < > # \ =` become
      * entities (C-9 met the same with a password). The invoice template
      * escapes, as it must, so the encoded form printed literally: the reverse
-     * charge note came out as "&#40;Binnenmarktregelung&#41;" at the C-12
-     * acceptance, and "Müller & Söhne" as "Müller &amp; Söhne" — on the
+     * charge note came out as "&#40;Binnenmarktregelung&#41;" (C-12),
+     * and "Müller & Söhne" as "Müller &amp; Söhne" — on the
      * invoice and in the Giro-Code's beneficiary name alike.
      *
      * Decoded here, where the text leaves Contao and becomes the snapshot:

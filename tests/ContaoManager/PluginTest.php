@@ -15,21 +15,21 @@ class PluginTest extends TestCase
 {
     public function testDasPluginLiefertRouten(): void
     {
-        // Ohne das lädt eine Managed Edition die Attribut-Routen des Bundles
-        // gar nicht — die Route antwortet dann mit 404 statt zu arbeiten.
+        // Without this a Managed Edition does not load the bundle's attribute
+        // routes at all — the route then answers with 404 instead of working.
         //
-        // Über class_implements() und nicht assertInstanceOf(): der Typ steht
-        // in der Klassendeklaration, PHPStan verengt ihn und meldet die
-        // Behauptung als immer wahr. Die Liste der Schnittstellen zur Laufzeit
-        // zu lesen prüft dasselbe, ohne dass die Prüfung verschwindet.
+        // Via class_implements() and not assertInstanceOf(): the type is in
+        // the class declaration, PHPStan narrows it and reports the assertion
+        // as always true. Reading the list of interfaces at runtime checks the
+        // same thing without the check disappearing.
         self::assertContains(RoutingPluginInterface::class, class_implements(new Plugin()) ?: []);
     }
 
     public function testDieRoutenKommenAusSrcControllerUeberDenAttributLader(): void
     {
-        // Der Ladepfad ist der Ordner der Controller, der Ladertyp „attribute".
-        // Beides zeigt auf denselben Ordner: resolve() sucht den Lader anhand
-        // des Typs, load() wendet ihn dann an.
+        // The resource is the controllers' folder, the loader type "attribute".
+        // Both point to the same folder: resolve() finds the loader by the
+        // type, load() then applies it.
         $collection = new RouteCollection();
         $collection->add('consho_cart_add', new Route('/_consho/cart/add'));
 
@@ -60,10 +60,10 @@ class PluginTest extends TestCase
 
     public function testKeinLaderGefundenLiefertNull(): void
     {
-        // resolve() liefert false, wenn kein Lader den Typ "attribute"
-        // handhaben kann. Ohne diesen Zweig würde load() auf false aufgerufen
-        // und die Route mit einem Fatal Error sterben, statt die Sammlung
-        // einfach leer zu lassen.
+        // resolve() returns false if no loader can handle the type "attribute".
+        // Without this branch load() would be called on false and the route
+        // would die with a fatal error instead of simply leaving the collection
+        // empty.
         $resolver = $this->createMock(LoaderResolverInterface::class);
         $resolver->expects(self::once())->method('resolve')->willReturn(false);
 

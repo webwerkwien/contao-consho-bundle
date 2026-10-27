@@ -15,7 +15,7 @@ use Webwerkwien\ContaoConshoBundle\Controller\Backend\SetupBackendController;
  * an href would be appended to `do=consho_shop`.
  *
  * Hidden from a user who may edit shop configurations but not open the
- * dashboard: the click would end in "access denied" (review I, L10).
+ * dashboard: the click would end in "access denied" (I).
  */
 class SetupButtonListener
 {

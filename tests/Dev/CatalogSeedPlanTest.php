@@ -11,14 +11,14 @@ class CatalogSeedPlanTest extends TestCase
 
     public function testTheSameSeedWritesTheSameCatalogue(): void
     {
-        // B-9, Abnahme: zwei Läufe mit gleichem Startwert ergeben denselben Katalog.
+        // B-9: two runs with the same seed value produce the same catalogue.
         self::assertSame($this->plan()->rows(4711), $this->plan()->rows(4711));
         self::assertNotSame($this->plan(seed: 1)->rows(4711), $this->plan(seed: 2)->rows(4711));
     }
 
     public function testAProductIsTheSameInEveryCatalogueSize(): void
     {
-        // Sonst wären 5.000 und 100.000 zwei verschiedene Kataloge und nicht vergleichbar.
+        // Otherwise 5,000 and 100,000 would be two different catalogues and not comparable.
         self::assertSame($this->plan(products: 100)->rows(42), $this->plan(products: 100_000)->rows(42));
     }
 
@@ -71,7 +71,7 @@ class CatalogSeedPlanTest extends TestCase
         self::assertEqualsWithDelta(0.05, $unpublished / $main, 0.015);
         self::assertEqualsWithDelta(0.70, $translated / $main, 0.03);
 
-        // Zipf: Der häufigste Markenwert ist deutlich häufiger als der seltenste.
+        // Zipf: the most frequent brand value is clearly more frequent than the rarest.
         $brands = array_filter($byOption, static fn (int $id): bool => CatalogSeedPlan::groupIdOf($id) === CatalogSeedPlan::OPTION_OFFSET + 2, ARRAY_FILTER_USE_KEY);
         self::assertGreaterThan(10 * min($brands), max($brands));
 
@@ -94,22 +94,22 @@ class CatalogSeedPlanTest extends TestCase
 
     public function testDieZweiteWaehrungIstDieZweiteDesShops(): void
     {
-        // Seit C-1c kann ein Shop mehrere Währungen annehmen. Dann schreibt
-        // der Seed Preiszeilen in eine, die es wirklich gibt — vorher war die
-        // zweite fest verdrahtet und gehörte zu keinem Shop.
+        // Since C-1c a shop can accept several currencies. The seed then writes
+        // price rows in one that really exists — before, the second one was
+        // hard-wired and belonged to no shop.
         //
-        // ⚠️ Die Beispiele sind mit Bedacht gewählt: Bei ['EUR','CHF'] liefert
-        // die alte feste Wahl (EUR → CHF) DASSELBE, der Test wäre dort blind.
-        // GBP kommt im Rückfall nicht vor und trennt die beiden Fassungen.
+        // ⚠️ The examples are chosen with care: with ['EUR','CHF'] the old
+        // fixed choice (EUR → CHF) yields THE SAME, the test would be blind there.
+        // GBP does not occur in the fallback and separates the two versions.
         self::assertSame(['EUR', 'GBP'], CatalogSeedPlan::currenciesOf(['EUR', 'GBP']));
         self::assertSame(['CHF', 'GBP'], CatalogSeedPlan::currenciesOf(['CHF', 'GBP', 'USD']));
     }
 
     public function testBeiNurEinerWaehrungBleibtDieZweiteAbsichtlichFremd(): void
     {
-        // Der Seed braucht Zeilen, die eine Liste NICHT zeigen darf — sonst
-        // kann eine Messung „richtig gefiltert" nicht von „es gab ohnehin
-        // nichts anderes" unterscheiden.
+        // The seed needs rows that a list must NOT show — otherwise a
+        // measurement cannot tell "filtered correctly" from "there was nothing
+        // else anyway".
         self::assertSame(['EUR', 'CHF'], CatalogSeedPlan::currenciesOf(['EUR']));
         self::assertSame(['GBP', 'EUR'], CatalogSeedPlan::currenciesOf(['GBP']));
     }

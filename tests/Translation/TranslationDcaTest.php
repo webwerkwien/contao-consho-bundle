@@ -6,13 +6,14 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslatableFields;
 
 /**
- * Hält die DCA-Einstellungen fest, von denen DC_Table beim Löschen, Kopieren
- * und Aufräumen abhängt.
+ * Pins down the DCA settings DC_Table depends on when deleting, copying
+ * and cleaning up.
  *
- * Das Verhalten selbst lässt sich hier nicht prüfen — dafür bräuchte es
- * DC_Table mit Datenbank und Backend-Benutzer. Geprüft wird deshalb der
- * Schalter, an dem es im Core hängt (DC_Table::deleteChildren, copyChildren,
- * reviseTable). Ob er im Browser wirkt, gehört in die Abnahme auf dem Testserver.
+ * The behaviour itself cannot be tested here — that would need DC_Table
+ * with a database and a backend user. So what is checked is the switch it
+ * hangs on in the core (DC_Table::deleteChildren, copyChildren,
+ * reviseTable). Whether it takes effect in the browser has to be checked
+ * in a real backend.
  */
 class TranslationDcaTest extends TestCase
 {
@@ -23,16 +24,16 @@ class TranslationDcaTest extends TestCase
 
     public function testChildRowsAreAddressedByParentTableAndId(): void
     {
-        // Ohne dynamicPtable filtert Contao Kindzeilen nur nach pid: Wer
-        // Produkt 5 löscht, löscht auch die Übersetzungen von Hersteller 5.
+        // Without dynamicPtable Contao filters child rows by pid only: whoever
+        // deletes product 5 also deletes the translations of manufacturer 5.
         self::assertTrue($this->dca('tl_consho_translation')['config']['dynamicPtable'] ?? false);
     }
 
     public function testCopyingAParentDoesNotCopyTheTranslatedAlias(): void
     {
-        // copyChildren übernimmt jede Spalte, auch den Alias — die Kopie
-        // verletzte dann UNIQUE (ptable, language, alias). doNotCopy setzt ihn
-        // auf den Leerwert der Spalte, und der ist hier NULL, nicht ''.
+        // copyChildren takes over every column, the alias too — the copy then
+        // violated UNIQUE (ptable, language, alias). doNotCopy sets it to the
+        // column's empty value, and that is NULL here, not ''.
         $alias = $this->dca('tl_consho_translation')['fields']['alias'];
 
         self::assertTrue($alias['eval']['doNotCopy'] ?? false);
@@ -41,18 +42,18 @@ class TranslationDcaTest extends TestCase
 
     public function testEveryTranslatedTableDeclaresTheTranslationsAsItsChildren(): void
     {
-        // Nur als ctable wandern die Übersetzungen beim Löschen nach tl_undo,
-        // statt verwaist liegenzubleiben.
+        // Only as a ctable do the translations move to tl_undo on deletion,
+        // instead of being left behind orphaned.
         foreach (TranslatableFields::tables() as $table) {
             self::assertContains('tl_consho_translation', $this->dca($table)['config']['ctable'] ?? [], $table);
         }
     }
 
     /**
-     * 🔴 Gefunden in C-8: `invoiceFooter` stand in TranslatableFields, aber
-     * tl_consho_translation hat eine Spalte JE FELD — und die gab es nicht.
-     * Die ganze Suite blieb grün; auf c5 wäre das erste Speichern einer
-     * Übersetzung an „Unknown column" gescheitert.
+     * 🔴 In C-8, `invoiceFooter` stood in TranslatableFields, but
+     * tl_consho_translation has a column PER FIELD — and that one did not
+     * exist. The whole suite stayed green; on a real installation the first
+     * save of a translation would have failed with "Unknown column".
      */
     public function testEveryTranslatableFieldHasAColumnInTheTranslationTable(): void
     {
@@ -67,9 +68,9 @@ class TranslationDcaTest extends TestCase
 
     public function testEveryTranslatedTableIsVersioned(): void
     {
-        // Ohne enableVersioning kehrt Versions::create() sofort zurück — der
-        // oncreate-Callback, der die Übersetzungen in die Version legt, liefe
-        // nie.
+        // Without enableVersioning Versions::create() returns immediately — the
+        // oncreate callback that puts the translations into the version would
+        // never run.
         foreach (TranslatableFields::tables() as $table) {
             self::assertTrue($this->dca($table)['config']['enableVersioning'] ?? false, $table);
         }
@@ -77,8 +78,8 @@ class TranslationDcaTest extends TestCase
 
     public function testExistingChildTablesStayFirst(): void
     {
-        // Contaos Standard-Operation „Kindelemente" und der Brotkrumenpfad
-        // nehmen ctable[0].
+        // Contao's standard operation "child elements" and the breadcrumb
+        // take ctable[0].
         self::assertSame('tl_consho_price', $this->dca('tl_consho_product')['config']['ctable'][0]);
         self::assertSame('tl_consho_property_option', $this->dca('tl_consho_property_group')['config']['ctable'][0]);
         self::assertSame('tl_consho_shipping_price', $this->dca('tl_consho_shipping_method')['config']['ctable'][0]);
@@ -86,7 +87,7 @@ class TranslationDcaTest extends TestCase
 
     public function testEveryModuleThatReachesATranslatedTableMayReachTheTranslations(): void
     {
-        // Sonst bricht das Löschen mit „Table … is not allowed in module …" ab.
+        // Otherwise deleting aborts with "Table … is not allowed in module …".
         require __DIR__.'/../../contao/config/config.php';
 
         foreach (['consho_data' => ['consho_product', 'consho_manufacturer'], 'consho_setup' => ['consho_property', 'consho_product_type', 'consho_shipping', 'consho_payment']] as $group => $modules) {

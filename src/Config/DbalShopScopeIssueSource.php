@@ -63,8 +63,7 @@ final class DbalShopScopeIssueSource implements ConfigurationIssueSource
          * ⚠️ The `p.id` in the ORDER BY only ties the order of two start
          * points of the SAME title, and no test here can turn red on it:
          * SQLite's reverse_unordered_selects touches queries without an ORDER
-         * BY only, so the tie comes out in insertion order either way
-         * (measured 2026-09-21). It stays on the argument alone — MySQL may
+         * BY only, so the tie comes out in insertion order either way. It stays on the argument alone — MySQL may
          * answer a tie in any order, and a findings list that changes its
          * sequence between two calls of the start page reads as if something
          * had changed.
@@ -87,7 +86,7 @@ final class DbalShopScopeIssueSource implements ConfigurationIssueSource
 
             if ('' === $currency) {
                 // With the shop: since block I these two stop "ready" — of
-                // this shop, not of every shop (second review I, B1).
+                // this shop, not of every shop (I).
                 $issues[] = new ConfigurationIssue(
                     ConfigurationFinding::RootWithoutCurrency,
                     ['page' => $page, 'shop' => (string) $root['shop']],

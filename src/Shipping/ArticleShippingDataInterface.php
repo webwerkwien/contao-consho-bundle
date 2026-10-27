@@ -17,9 +17,12 @@ interface ArticleShippingDataInterface
      * counts as physical: calling something digital that is not would skip
      * shipping for a parcel.
      *
+     * `singlePurpose`: a voucher sold as single-purpose (spec Wertgutscheine,
+     * EZ-1) — the main product's switch; false for every other kind.
+     *
      * @param list<int> $articleIds
      *
-     * @return array<int, array{weight: string, length: string, width: string, height: string, kind: string}>
+     * @return array<int, array{weight: string, length: string, width: string, height: string, kind: string, singlePurpose?: bool}>
      */
     public function of(array $articleIds): array;
 }

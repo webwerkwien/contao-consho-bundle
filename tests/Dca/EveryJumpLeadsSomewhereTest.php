@@ -5,25 +5,25 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Jede Sprung-Operation muss in einem Modul landen, das ihre Tabelle führt.
+ * Every jump operation must land in a module that lists its table.
  *
- * ── Warum es diesen Test gibt ─────────────────────────────────────────────
+ * ── Why this test exists ─────────────────────────────────────────────────
  *
- * 🔴 Der Knopf „Rechtstexte" an jeder Bestellung antwortete mit **403**.
- * `tl_consho_order` zeigt seit C-7 auf `tl_consho_order_legal`, aber das
- * Backend-Modul `consho_order` führte die Tabelle nicht — und Contao lehnt
- * eine Tabelle ab, die ihr Modul nicht listet:
+ * 🔴 The "Legal texts" button on every order answered with **403**.
+ * `tl_consho_order` has pointed to `tl_consho_order_legal` since C-7, but
+ * the backend module `consho_order` did not list the table — and Contao
+ * rejects a table that its module does not list:
  *
  *     Table "tl_consho_order_legal" is not allowed in module "consho_order".
  *
- * Am 2026-09-23 auf c5 gefunden, beim Durchsehen aller Listen nach der
- * Umstellung der Operationen. **Nicht von ihr verursacht** — der Sprung war
- * von Anfang an kaputt. Er fiel nur nie auf, weil ihn niemand angeklickt
- * hatte; dasselbe Muster wie beim Löschen-Knopf ohne Dialog.
+ * It showed while going through all lists after the operations were
+ * switched. **Not caused by that switch** — the jump was broken from the
+ * start. It only never showed because nobody had clicked it; the same
+ * pattern as with the delete button without a dialog.
  *
- * Elf der zwölf Sprünge waren in Ordnung. Genau deshalb steht hier ein Test
- * und keine Notiz: Eine Sichtprüfung, die elfmal „passt" sagt, sagt es beim
- * zwölften Mal auch.
+ * Eleven of the twelve jumps were fine. That is exactly why there is a test
+ * here and not a note: a visual check that says "fine" eleven times says it
+ * the twelfth time too.
  */
 class EveryJumpLeadsSomewhereTest extends TestCase
 {
@@ -40,8 +40,8 @@ class EveryJumpLeadsSomewhereTest extends TestCase
 
         $jumps = self::jumps();
 
-        // Nie nichts: Findet die Suche keine Sprünge mehr, ist der Test
-        // stillgelegt statt erfüllt.
+        // Never nothing: if the search no longer finds any jumps, the test
+        // is disabled rather than satisfied.
         self::assertNotEmpty($jumps, 'No jump operations found at all — has the DCA syntax changed?');
 
         foreach ($jumps as [$source, $target]) {

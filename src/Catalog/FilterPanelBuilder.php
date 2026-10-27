@@ -15,7 +15,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
  * ── The numbers: self-exclusion ───────────────────────────────────────────
  *
  * A group is counted under every filter except its own
- * (docs/block-b-katalog-frontend.md, 5.2). With "rot" chosen, "blau" keeps its
+ * (Block B, 5.2). With "rot" chosen, "blau" keeps its
  * eight — otherwise the control a visitor would use to change their mind
  * looks dead. ProductQuery::countsFor() drops the whole group, the category's
  * part of it included; for the options of that part the number is the same,
@@ -43,9 +43,9 @@ use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
  * ── Without numbers: counted anyway, only not shown ───────────────────────
  *
  * conshoShowCounts off hides the numbers; it does not skip counting. Without
- * the numbers the panel cannot tell an empty option from a full one — until
- * 2026-09-14 it then linked every option, and a click on an empty one led to
- * a 404 (found 2026-09-13). Michael decided on 2026-09-14 to count always:
+ * the numbers the panel cannot tell an empty option from a full one — it once
+ * linked every option, and a click on an empty one led to a 404. So it
+ * counts always:
  * the rules above need the numbers, and a catalogue too large to count belongs
  * to a module behind FilterCountsInterface, not to this switch.
  *
@@ -65,7 +65,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
  *
  * From FilterCountsInterface, never from ProductQuery directly. The core's
  * implementation is ProductQuery; a module for large catalogues swaps it by
- * re-pointing the interface's service alias (decided 2026-09-14). Everything
+ * re-pointing the interface's service alias. Everything
  * above — self-exclusion, what the category lacks, the one-option rule —
  * stays here and applies to any implementation.
  */

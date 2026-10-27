@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Order\NumberAllocatorInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 
 /**
- * The delivery note of a parcel (dev#2, decisions Michael 2026-10-21).
+ * The delivery note of a parcel (dev#2).
  *
  * `DocumentType::DeliveryNote` and its number range existed since A-7, but
  * nothing issued one: block R listed delivery notes under "not in this block",

@@ -13,11 +13,11 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingMethod;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-4, P24: Folgebestellungen gehen „Auf Rechnung" — über die erste
- * Rechnungs-Zahlungsart des Shops, ohne ihre Kassenregeln. Fehlt sie, sagt
- * es ein Befund. Die Auswahl des Shops liest das echte Repository.
+ * Abo-4, P24: follow-up orders go "on invoice" — via the shop's first
+ * invoice payment method, without its checkout rules. If it is missing, a
+ * finding says so. The shop's selection is read by the real repository.
  *
- * Shop 1 listet 2 Vorkasse, 5 Rechnung nur für Gruppe 9, 6 Rechnung.
+ * Shop 1 lists 2 prepayment, 5 invoice only for group 9, 6 invoice.
  */
 class SubscriptionBillingTest extends TestCase
 {
@@ -33,7 +33,7 @@ class SubscriptionBillingTest extends TestCase
 
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop', 'paymentMethods' => serialize(['2', '5', '6'])]);
         $this->method(2, 'prepayment', 'Vorkasse');
-        // Gruppen- und Betragsgrenze: gilt der Kasse, nicht dem geschlossenen Vertrag.
+        // Group and amount limits: they apply to the checkout, not to the concluded contract.
         $this->method(5, 'invoice', 'Auf Rechnung (Firmen)', ['allowedGroups' => ['9'], 'maxNet' => '1', 'maxNetCurrency' => 'EUR']);
         $this->method(6, 'invoice', 'Auf Rechnung');
     }
@@ -72,8 +72,8 @@ class SubscriptionBillingTest extends TestCase
     }
 
     /**
-     * Zweites Review Abo-5: Ein ruhendes Abo wird weiter abgerechnet (P36)
-     * und braucht die Rechnungsart ebenso.
+     * Abo-5: a suspended subscription keeps being billed (P36)
+     * and needs the invoice payment method just as well.
      */
     public function testAuchEinRuhendesAboBrauchtDieRechnungsart(): void
     {
@@ -84,8 +84,8 @@ class SubscriptionBillingTest extends TestCase
     }
 
     /**
-     * Abo pausieren (P106): ein pausiertes Abo kommt danach wieder und
-     * braucht die Rechnungsart ebenso.
+     * Pausing a subscription (P106): a paused subscription comes back afterwards and
+     * needs the invoice payment method just as well.
      */
     public function testAuchEinPausiertesAboBrauchtDieRechnungsart(): void
     {
@@ -96,9 +96,9 @@ class SubscriptionBillingTest extends TestCase
     }
 
     /**
-     * Abnahme Abo-5: Ein Hauptprodukt ohne Shop-Zuordnung wird nirgends
-     * verkauft (VisibilityCriteria) — auf c5 war es eine 404. Der Test hielt
-     * vorher das Gegenteil fest: „gilt für jeden Shop".
+     * Abo-5: a main product without a shop assignment is sold
+     * nowhere (VisibilityCriteria) — on a real installation it was a 404. The test
+     * previously pinned the opposite: "applies to every shop".
      */
     public function testEinAboProduktZaehltNurImZugeordnetenShop(): void
     {
@@ -125,7 +125,7 @@ class SubscriptionBillingTest extends TestCase
     public function testEinShopOhneAbosBrauchtKeineRechnungsart(): void
     {
         $this->connection->update('tl_consho_shop', ['paymentMethods' => serialize(['2'])], ['id' => 1]);
-        // Einmalkauf-Produkt, beendetes Abo: beides kein Grund.
+        // One-off product, ended subscription: neither is a reason.
         $this->connection->insert('tl_consho_product', ['id' => 4, 'title' => 'E-Book', 'published' => 1, 'saleSubscription' => 0]);
         $this->connection->insert('tl_consho_subscription', ['subscriptionNumber' => 'WEB-00090-1', 'shop' => 1, 'state' => 'ended']);
 

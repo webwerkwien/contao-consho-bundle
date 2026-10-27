@@ -22,7 +22,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundAmount'] = ['Erstattet', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundedAt'] = ['Erstattet am', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['process'] = ['Bearbeiten', 'Widerruf ID %s bearbeiten: annehmen oder ablehnen, Rücksendung, Erstattung'];
 
-// Die Seite „Widerruf bearbeiten" (D-3).
+// The page "Widerruf bearbeiten" (D-3).
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['back'] = 'Zurück';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['labelDue'] = 'Erstattung fällig bis %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['pid'] = ['Bestellung', ''];
@@ -88,7 +88,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundDocumentLabel'] = 'Beleg';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['subscriptionLabel'] = 'Abo';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['compensationHelp'] = 'Vorschlag für den Wertersatz einer Dienstleistung (§ 357a Abs. 2 BGB): Zeilenbetrag × genutzte Tage / Tage der bezahlten Periode; genutzt ist jede angefangene 24-Stunden-Spanne von der Freigabe bis zum Eingang des Widerrufs. Sie entscheiden über den Betrag; er wird von der Erstattung abgezogen, die Rechnung dann korrigiert statt storniert.';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['compensationLine'] = '%1$s × %2$d / %3$d Tage = %4$s';
-// WG-6: die Erstattung zuerst auf Gutscheine (WG11).
+// WG-6: the refund goes to vouchers first (WG11).
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundVouchers'] = ['Davon auf Gutscheine', 'Mit Gutschein bezahlt: %s. Die Erstattung geht zuerst dorthin zurück (dasselbe Zahlungsmittel, § 14 Abs. 1 FAGG, § 357 Abs. 3 BGB), höchstens so viel, wie diese Erstattung auszahlt; der Rest an die Zahlungsart. Ein abgelaufener Gutschein wird dadurch wieder unbefristet gültig; ein gesperrter bekommt nichts zurück, sein Anteil geht an die Zahlungsart.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['compensationReasons'] = [
     'noConsent' => 'ohne Zustimmung zum Beginn vor Fristende — kein Wertersatz',
@@ -119,18 +119,18 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
     'voucherChangedByHand' => 'Bei widerrufenen Gutscheinen wurde der Saldo von Hand geändert: %s. Ob und wie viel zurückgeht, entscheiden Sie. Nichts wurde gebucht.',
     'numberRangeMissing' => 'Es fehlt der Nummernkreis „%s" in der Shop-Konfiguration. Nichts wurde gebucht.',
     'unknown' => 'Diesen Widerruf gibt es nicht (mehr).',
-    // WA, A4: „Bestellung zuordnen".
+    // WA, A4: "Bestellung zuordnen".
     'assigned' => 'Widerruf %s ist der Bestellung %s zugeordnet und kann jetzt bearbeitet werden.',
     'assignedLate' => 'Widerruf %s ist der Bestellung %s zugeordnet. Er ging nach dem Ende ihres Widerrufsfensters ein — ob er rechtzeitig war, entscheiden Sie.',
-    // Review WA, K4: eine Meldung für „gibt es nicht" und „dürfen Sie nicht".
+    // WA: one message for "does not exist" and "not yours".
     'assignNotFound' => 'Zu dieser Bestellnummer gibt es in diesem Shop keine Bestellung, die Sie bearbeiten dürfen.',
     'assignAlready' => 'Dieser Widerruf ist schon einer Bestellung zugeordnet.',
-    // Review WA, S2: „Ohne Bestellung abweisen".
+    // WA: "Ohne Bestellung abweisen".
     'dismissed' => 'Widerruf %s ohne Bestellung abgewiesen. Der Kunde wurde nicht benachrichtigt.',
     'dismissReasonMissing' => 'Bitte geben Sie eine Begründung an — sie bleibt intern.',
 ];
 
-// WA (2026-10-22): ein Widerruf ohne Bestellung und der späte Eingang.
+// WA: a withdrawal without an order, and the late receipt.
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassigned'] = 'nicht zugeordnet';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedTitle'] = 'Widerruf %s — keiner Bestellung zugeordnet';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['unassignedHelp'] = 'Bestellnummer und E-Mail-Adresse aus dem Widerrufsformular passen zu keiner Bestellung dieses Shops — oder zu einer, die über das Formular nicht widerrufbar ist (etwa ohne Widerrufsrecht oder storniert ohne Versand). Der Widerruf ist trotzdem eingegangen und an die angegebene Adresse bestätigt. Ordnen Sie ihn der Bestellung zu, um die es geht — danach können Sie ihn annehmen oder mit Begründung ablehnen. Die Erklärung selbst ändert sich dabei nicht.';

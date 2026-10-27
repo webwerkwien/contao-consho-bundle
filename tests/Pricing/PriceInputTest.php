@@ -14,9 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\PriceInputRefused;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Connect Stufe 2, CW-2: die Regeln der gekoppelten Preismaske (C22) ohne
- * Maske — Betrag, Eingabeart, Währung und Land hinein, Netto oder ein
- * benannter Grund heraus.
+ * Connect Stufe 2, CW-2: the rules of the linked price form (C22) without
+ * the form — amount, input mode, currency and country in, net or a
+ * named reason out.
  */
 class PriceInputTest extends TestCase
 {
@@ -50,7 +50,7 @@ class PriceInputTest extends TestCase
     }
 
     /**
-     * Netto braucht kein Land; ohne eindeutiges bleibt es leer.
+     * Net needs no country; without an unambiguous one it stays empty.
      */
     public function testNettoOhneEindeutigesLand(): void
     {
@@ -86,7 +86,7 @@ class PriceInputTest extends TestCase
     }
 
     /**
-     * Umgerechnet wird zum Beginn des Preises, frühestens heute.
+     * Conversion happens at the start of the price, today at the earliest.
      */
     public function testUmgerechnetWirdZumBeginnFruehestensHeute(): void
     {
@@ -108,7 +108,7 @@ class PriceInputTest extends TestCase
     }
 
     /**
-     * net ist decimal(12,4) — geprüft am Netto, nicht am Eingegebenen.
+     * net is decimal(12,4) — checked on the net amount, not on the input.
      */
     public function testZuGrossWirdAbgelehnt(): void
     {

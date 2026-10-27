@@ -11,9 +11,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
 
 /**
- * Nachlese K6: Was ein Storno zurückbaut, steht an einer Stelle. Vorher
- * führten der automatische Statuswechsel und die Backend-Maske je eine eigene
- * Liste, und jeder neue Rückbau musste an beide.
+ * Nachlese K6: what a cancellation rolls back is listed in one place.
+ * Before, the automatic status change and the backend form each kept their
+ * own list, and every new rollback had to go into both.
  */
 final class OrderCancellationTest extends TestCase
 {
@@ -41,7 +41,7 @@ final class OrderCancellationTest extends TestCase
     }
 
     /**
-     * Der Wächter: Außer OrderCancellation ruft niemand einen Rückbau auf.
+     * The guard: nobody but OrderCancellation calls a rollback.
      */
     public function testNurEineStelleRuftDieRueckbauten(): void
     {

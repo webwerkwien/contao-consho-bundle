@@ -35,7 +35,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
  *
  * ── The number ───────────────────────────────────────────────────────────
  *
- * The subscription number and a count, "WEB-00084-1-K1" (P59). Counted under
+ * The subscription number and a count, "SHOP-00001-1-K1" (P59). Counted under
  * the subscription's lock, so two declarations at once get two numbers; the
  * unique key (pid, number) stands behind it.
  */

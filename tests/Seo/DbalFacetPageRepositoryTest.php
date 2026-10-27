@@ -16,8 +16,8 @@ class DbalFacetPageRepositoryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // So streng wie die DCA: filterState und alias sind nullable, beide
-        // hängen an einem UNIQUE-Index mit pid.
+        // As strict as the DCA: filterState and alias are nullable, both
+        // are part of a UNIQUE index with pid.
         DcaSchema::create($this->connection, 'tl_consho_facet_page');
     }
 
@@ -35,7 +35,7 @@ class DbalFacetPageRepositoryTest extends TestCase
 
     public function testTheSameStateOnAnotherPageIsNotFound(): void
     {
-        // Zwei Kategorien, zwei verschiedene Mengen — die Freigabe gehört der Seite.
+        // Two categories, two different sets — the release belongs to the page.
         $this->facet(page: 12, state: 'volume:250ml', alias: 'schwedenbitter-250-ml');
 
         self::assertNull($this->repository()->findByState(13, 'volume:250ml'));
@@ -51,8 +51,8 @@ class DbalFacetPageRepositoryTest extends TestCase
 
     public function testAnUnfinishedRecordIsNoLandingPage(): void
     {
-        // Contao legt beim Anlegen erst eine leere Zeile an. Mit Alias, aber ohne
-        // Kombination, darf sie keine Adresse bekommen — sie zeigte die ganze Kategorie.
+        // On create Contao first inserts an empty row. With an alias but without
+        // a combination it must not get an address — it would show the whole category.
         $this->connection->insert('tl_consho_facet_page', ['pid' => 12, 'alias' => 'halb-fertig']);
 
         self::assertNull($this->repository()->findByAlias(12, 'halb-fertig'));
@@ -60,8 +60,8 @@ class DbalFacetPageRepositoryTest extends TestCase
 
     public function testARecordWithoutAliasHasNoLandingPageForItsState(): void
     {
-        // Die Gegenrichtung: Kombination gespeichert, Alias noch leer. Ohne Alias
-        // gibt es kein Pfadsegment — ein Link darauf wäre /kraeuter/.html.
+        // The other direction: combination saved, alias still empty. Without an alias
+        // there is no path segment — a link to it would be /kraeuter/.html.
         $this->connection->insert('tl_consho_facet_page', ['pid' => 12, 'filterState' => 'volume:250ml', 'alias' => '']);
 
         self::assertNull($this->repository()->findByState(12, 'volume:250ml'));
@@ -69,8 +69,8 @@ class DbalFacetPageRepositoryTest extends TestCase
 
     public function testAMissingDescriptionIsAnEmptyString(): void
     {
-        // description ist nullable. Der Seitenkopf fällt bei leerer Beschreibung
-        // auf die der Seite zurück — dafür reicht ein Vergleich mit ''.
+        // description is nullable. The page head falls back to the page's
+        // description when it is empty — a comparison with '' is enough for that.
         $this->facet(page: 12, state: 'volume:250ml', alias: 'schwedenbitter-250-ml');
 
         self::assertSame('', $this->repository()->findByState(12, 'volume:250ml')?->description);
@@ -78,8 +78,8 @@ class DbalFacetPageRepositoryTest extends TestCase
 
     public function testFindAllListsEveryCompleteLandingPageByPageAndAlias(): void
     {
-        // Für die Sitemap: alle Seiten auf einmal, in fester Reihenfolge — eine
-        // Sitemap, deren Zeilen bei jedem Abruf wandern, sieht aus wie ständig geändert.
+        // For the sitemap: all pages at once, in a fixed order — a
+        // sitemap whose rows move on every request looks constantly changed.
         $this->facet(page: 13, state: 'volume:500ml', alias: 'tee-500-ml');
         $this->facet(page: 12, state: 'volume:250ml', alias: 'schwedenbitter-250-ml');
         $this->facet(page: 12, state: 'colour:red', alias: 'rote-kraeuter');
@@ -92,7 +92,7 @@ class DbalFacetPageRepositoryTest extends TestCase
 
     public function testFindAllSkipsUnfinishedRecords(): void
     {
-        // Dieselbe Regel wie die Einzelsuche: ohne Kombination oder Alias keine Adresse.
+        // The same rule as the single lookup: without a combination or alias, no address.
         $this->facet(page: 12, state: 'volume:250ml', alias: 'schwedenbitter-250-ml');
         $this->connection->insert('tl_consho_facet_page', ['pid' => 12, 'alias' => 'halb-fertig']);
         $this->connection->insert('tl_consho_facet_page', ['pid' => 13, 'filterState' => 'volume:500ml', 'alias' => '']);

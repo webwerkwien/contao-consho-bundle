@@ -28,7 +28,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
  * added by hand, a jail cannot see it.
  *
  * Every situation is printed the moment it is done, and --max-seconds caps
- * every statement: on c5 a run without either held a shared MariaDB for ten
+ * every statement: a run without either once held a shared MariaDB for ten
  * minutes and printed nothing (see CatalogBenchmark).
  *
  * A scan that grows with the catalogue is marked TARGET MISSED: the visibility

@@ -34,22 +34,22 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Sitemap, Detailseite und JSON-LD melden dieselben Produkte (Plan B-6,
- * Entscheidung 5; Spezifikation 6.6).
+ * Sitemap, detail page and JSON-LD report the same products (B-6;
+ * specification 6.6).
  *
- * Verglichen werden drei VERSCHIEDENE Wege, nicht derselbe zweimal:
+ * Three DIFFERENT paths are compared, not the same one twice:
  *
- * | A | ProductQuery::find() — SQL gegen die Projektion der Sichtbarkeit, genau das, was SitemapListener aufruft (SitemapListenerTest belegt den Aufruf) |
- * | B | ProductAddressLookup::isVisible() — die Detailseite antwortet 200 — und ein Preis aus ArticlePriceResolver gegen die Preistabelle, bei Varianten über VariantRepository |
- * | C | B, aber gefragt, ob ProductJsonLd daraus ein Angebot baut — so, wie ProductDetailController es aufruft |
+ * | A | ProductQuery::find() — SQL against the visibility projection, exactly what SitemapListener calls (SitemapListenerTest proves the call) |
+ * | B | ProductAddressLookup::isVisible() — the detail page answers 200 — and a price from ArticlePriceResolver against the price table, for variants via VariantRepository |
+ * | C | B, but asked whether ProductJsonLd builds an offer from it — the way ProductDetailController calls it |
  *
- * Geprüft wird nicht gegen eine erwartete Liste. Eine Liste müsste jemand
- * pflegen und würde beim nächsten Grenzfall vergessen; ein Vergleich schlägt
- * fehl, sobald ein Weg abweicht — auch bei einem Fall, an den beim Schreiben
- * niemand gedacht hat, sobald er im Katalog steht.
+ * There is no check against an expected list. Someone would have to maintain
+ * a list, and it would be forgotten at the next edge case; a comparison fails
+ * as soon as one path deviates — also for a case nobody thought of when
+ * writing it, as soon as it is in the catalogue.
  *
- * Die Listenpreis-Projektion schreibt der echte Projektor aus tl_consho_price,
- * die Projektion der Sichtbarkeit (B-10) der echte Projektor daraus.
+ * The real projector writes the list price projection from tl_consho_price,
+ * and the real projector writes the visibility projection (B-10) from that.
  */
 class VisibilityConsistencyTest extends TestCase
 {
@@ -67,12 +67,12 @@ class VisibilityConsistencyTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        // ShopLanguages liest die Sprachen aus den Startpunkten.
+        // ShopLanguages reads the languages from the start points.
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '')",
         );
-        // Seit C-1c hängt der Markt (EUR, AT) an diesen Startpunkten, nicht mehr
-        // an der Währungsspalte des Shops.
+        // Since C-1c the market (EUR, AT) hangs on these start points, no longer
+        // on the shop's currency column.
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'language' => 'de', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR']);
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'language' => 'fr', 'consho_shop' => self::SHOP, 'consho_currency' => 'EUR']);
         $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
@@ -107,7 +107,7 @@ class VisibilityConsistencyTest extends TestCase
         $page = $this->pageWithPrice($language);
         $jsonLd = $this->jsonLd($language);
 
-        // Der Vergleich misst nur etwas, wenn der Katalog beide Seiten hat.
+        // The comparison only measures something if the catalogue has both sides.
         self::assertNotEmpty($sitemap, 'Kein einziges Produkt sichtbar — der Aufbau ist kaputt, nicht die Regel.');
         self::assertLessThan(\count($this->mainProducts()), \count($sitemap), 'Kein Produkt ausgeschlossen — die Grenzfälle greifen nicht.');
 
@@ -117,56 +117,56 @@ class VisibilityConsistencyTest extends TestCase
 
     public function testTheTranslationLanguageReallyHidesMore(): void
     {
-        // Sonst prüfte der fr-Fall dieselbe Menge wie de, und die Sprachregeln stünden ungeprüft da.
+        // Otherwise the fr case would check the same set as de, and the language rules would go unchecked.
         self::assertLessThan(\count($this->sitemap('de')), \count($this->sitemap('fr')));
     }
 
     /**
-     * Die Grenzfälle, alle in Shop 1.
+     * The edge cases, all in shop 1.
      */
     private function catalogue(): void
     {
-        // 1: ohne Varianten, sichtbar, übersetzt
+        // 1: without variants, visible, translated
         $this->main(1, price: '12.0000', fr: true);
 
-        // 2: unveröffentlicht
+        // 2: unpublished
         $this->main(2, price: '12.0000', fr: true, overrides: ['published' => 0]);
 
-        // 3: eine aktive Variante mit Preis, eine inaktive günstigere
+        // 3: one active variant with a price, one inactive cheaper one
         $this->main(3, fr: true);
         $this->variant(31, of: 3, price: '15.0000');
         $this->variant(32, of: 3, price: '5.0000', overrides: ['published' => 0]);
 
-        // 4: nur inaktive Varianten — auch mit Preis unsichtbar (Regel 3)
+        // 4: only inactive variants — invisible even with a price (rule 3)
         $this->main(4, price: '9.0000', fr: true);
         $this->variant(41, of: 4, price: '9.0000', overrides: ['published' => 0]);
 
-        // 5: die einzige Variante ist auf einen fremden Shop eingeschränkt (Regel 1)
+        // 5: the only variant is restricted to another shop (rule 1)
         $this->main(5, price: '9.0000', fr: true);
         $this->variant(51, of: 5, price: '9.0000');
         $this->insertProductShop(['pid' => 51, 'shop' => self::OTHER_SHOP]);
 
-        // 6: sichtbar, aber ohne Preis — die Seite antwortet 200, gemeldet wird es nicht (E1, E3)
+        // 6: visible but without a price — the page answers 200, it is not reported (E1, E3)
         $this->main(6, fr: true);
 
-        // 7: Zeitfenster beginnt erst
+        // 7: time window has not started yet
         $this->main(7, price: '12.0000', fr: true, overrides: ['start' => (string) (self::NOW + 3600)]);
 
-        // 8: Variante ohne eigenen Preis erbt den des Hauptprodukts (A-4b)
+        // 8: variant without its own price inherits that of the main product (A-4b)
         $this->main(8, price: '13.0000', fr: true);
         $this->variant(81, of: 8);
 
-        // 9: nur im anderen Shop
+        // 9: only in the other shop
         $this->main(9, price: '12.0000', fr: true, shop: self::OTHER_SHOP);
 
-        // 10: Warnhinweis in de, Übersetzung ohne Warnhinweis — in fr unsichtbar (Regel 4)
+        // 10: warning in de, translation without warning — invisible in fr (rule 4)
         $this->main(10, price: '12.0000', overrides: ['safetyWarnings' => '<p>Enthält Alkohol.</p>']);
         $this->insertTranslation(['ptable' => 'tl_consho_product', 'pid' => 10, 'language' => 'fr', 'title' => 'Dix', 'alias' => 'dix']);
 
-        // 11: nicht übersetzt — in fr unsichtbar
+        // 11: not translated — invisible in fr
         $this->main(11, price: '12.0000');
 
-        // 12: eine Variante mit eigenem, unübersetztem Warnhinweis, eine ohne — in fr bleibt die zweite
+        // 12: one variant with its own untranslated warning, one without — in fr the second one stays
         $this->main(12, fr: true);
         $this->variant(121, of: 12, price: '20.0000', overrides: ['safetyWarnings' => '<p>Eigener Hinweis.</p>']);
         $this->variant(122, of: 12, price: '25.0000');
@@ -202,7 +202,7 @@ class VisibilityConsistencyTest extends TestCase
     }
 
     /**
-     * A: was die Sitemap meldet.
+     * A: what the sitemap reports.
      *
      * @return list<int>
      */
@@ -218,7 +218,7 @@ class VisibilityConsistencyTest extends TestCase
     }
 
     /**
-     * B: die Detailseite antwortet 200 und hat einen Preis.
+     * B: the detail page answers 200 and has a price.
      *
      * @return list<int>
      */
@@ -231,8 +231,8 @@ class VisibilityConsistencyTest extends TestCase
     }
 
     /**
-     * C: die Detailseite antwortet 200, und ProductJsonLd baut ein Angebot —
-     * mit denselben Eingaben wie ProductDetailController.
+     * C: the detail page answers 200, and ProductJsonLd builds an offer —
+     * with the same inputs as ProductDetailController.
      *
      * @return list<int>
      */
@@ -272,8 +272,8 @@ class VisibilityConsistencyTest extends TestCase
     }
 
     /**
-     * Die Preise der Artikel, die auf der Seite gekauft werden könnten: der
-     * sichtbaren Varianten, ohne Varianten des Produkts selbst.
+     * The prices of the items that could be bought on the page: those of the
+     * visible variants, without variants that of the product itself.
      *
      * @return list<ArticlePrice>
      */

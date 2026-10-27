@@ -125,7 +125,7 @@ class DbalProductPageRepositoryTest extends TestCase
         self::assertSame([], $this->repository()->urlValues(999));
     }
 
-    // ── Language (M-3, Aufgabe 3) ───────────────────────────────────────
+    // ── Language (M-3, task 3) ──────────────────────────────────────────
 
     public function testTheTranslatedAliasIsUsed(): void
     {
@@ -154,8 +154,8 @@ class DbalProductPageRepositoryTest extends TestCase
 
     public function testWithoutALanguageNothingChanges(): void
     {
-        // Der Prüfstein: ohne Sprachangabe exakt das Verhalten von vorher, auch
-        // wenn eine Übersetzung existiert.
+        // The touchstone: without a language exactly the previous behaviour, even
+        // if a translation exists.
         $this->connection->insert('tl_consho_product', ['id' => 1, 'alias' => 'kraeuterbitter']);
         $this->translate(1, 'en', alias: 'herbal-bitters');
 
@@ -166,10 +166,10 @@ class DbalProductPageRepositoryTest extends TestCase
     }
 
     /**
-     * Der Rundlauf: was der Erzeuger in eine Adresse schreibt, muss die Suche
-     * wiederfinden. Mit einem Hersteller, der übersetzt ist (Produkt 1), und
-     * einem zweiten, der es nicht ist (Produkt 2) — Produkt 2 ist der Fall,
-     * der bei abweichenden Ausdrücken zwischen Erzeuger und Suche bricht.
+     * The round trip: what the generator writes into an address, the lookup
+     * must find again. With a manufacturer that is translated (product 1) and
+     * a second one that is not (product 2) — product 2 is the case that
+     * breaks when generator and lookup use different expressions.
      */
     public function testAGeneratedAddressIsFoundAgain(): void
     {
@@ -182,7 +182,7 @@ class DbalProductPageRepositoryTest extends TestCase
 
         $this->product(2, alias: 'schwedenbitter', manufacturer: 8);
         $this->translate(2, 'en', alias: 'swedish-bitters');
-        // Herstellerübersetzung für Produkt 2 fehlt absichtlich.
+        // The manufacturer translation for product 2 is missing on purpose.
 
         $repository = $this->repository();
         $lookup = new ProductAddressLookup($this->connection, new VisibilityCriteria());

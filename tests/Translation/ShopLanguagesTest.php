@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen eine echte Datenbank, nicht gegen einen Mock: Die Frage ist, welche
- * Zeilen die Abfrage auswählt, und das beantwortet kein erwarteter Aufruf.
+ * Against a real database, not against a mock: the question is which rows
+ * the query selects, and no expected call answers that.
  */
 class ShopLanguagesTest extends TestCase
 {
@@ -35,9 +35,8 @@ class ShopLanguagesTest extends TestCase
 
     public function testItListsTheLanguagesOfTheRootPagesOfThatShop(): void
     {
-        // Absichtlich in umgekehrter Reihenfolge angelegt: Die Liste ist
-        // sortiert, weil die Abfrage sortiert — nicht, weil sie hier schon
-        // stimmte.
+        // Deliberately created in reverse order: the list is sorted because
+        // the query sorts — not because it already happened to be right here.
         $this->root(1, 'en', shop: 7);
         $this->root(2, 'de', shop: 7);
         $this->root(3, 'fr', shop: 8);
@@ -75,9 +74,9 @@ class ShopLanguagesTest extends TestCase
 
     public function testWithoutAStoredDefaultTheFirstLanguageIsUsed(): void
     {
-        // Ein frisch angelegter Shop kann keine Standardsprache tragen: Die
-        // Auswahl ist leer, solange kein Startpunkt auf ihn zeigt. Statt einer
-        // Klemme beim Speichern greift hier die erste Sprache.
+        // A freshly created shop cannot carry a default language: the
+        // selection is empty as long as no root page points to it. Instead of
+        // a block on saving, the first language applies here.
         $this->root(1, 'de', shop: 7);
         $this->root(2, 'en', shop: 7);
         $this->shop(7, '');
@@ -94,8 +93,8 @@ class ShopLanguagesTest extends TestCase
 
     public function testAShopWithoutRootsHasNoFallbackLanguage(): void
     {
-        // Der Zustand, für den es den Rückfall gibt: frisch angelegter Shop,
-        // noch kein Startpunkt. Es gibt nichts, worauf zurückzufallen wäre.
+        // The state the fallback exists for: freshly created shop, no root
+        // page yet. There is nothing to fall back on.
         $this->shop(7, '');
 
         self::assertSame('', $this->languages()->fallbackOf(7));
@@ -119,8 +118,8 @@ class ShopLanguagesTest extends TestCase
 
     public function testAShopWithOneLanguageIsMonolingual(): void
     {
-        // Der Prüfstein der ganzen Mehrsprachigkeit: Für einen einsprachigen
-        // Shop darf sich nichts ändern.
+        // The touchstone of the whole multilingual support: for a
+        // single-language shop nothing may change.
         $this->root(1, 'de', shop: 7);
         $this->shop(7, 'de');
 
@@ -138,8 +137,8 @@ class ShopLanguagesTest extends TestCase
 
     public function testAShopWithoutRootsCountsAsMonolingual(): void
     {
-        // Kein Widerspruch, sondern die schlüssige Lesart: Ein Shop ohne zweite
-        // Sprache braucht keine Übersetzung — auch wenn er gar keine hat.
+        // Not a contradiction but the consistent reading: a shop without a
+        // second language needs no translation — even if it has none at all.
         $this->shop(7, '');
 
         self::assertTrue($this->languages()->isMonolingual(7));
@@ -153,15 +152,14 @@ class ShopLanguagesTest extends TestCase
         $this->shop(7, 'de');
         $this->shop(8, 'fr');
 
-        // fr ist Standardsprache von Shop 8, also dort keine Übersetzungssprache.
+        // fr is the default language of shop 8, so not a translation language there.
         self::assertSame(['en'], $this->languages()->allTranslated());
     }
 
     public function testResetForgetsTheCachedDefaultLanguage(): void
     {
-        // Befund 3 aus B-10: Nach dem Speichern eines Shops rechnet die
-        // Projektion im selben Request — mit dem Cache sähe sie die alte
-        // Standardsprache.
+        // B-10: After a shop is saved, the projection computes within the
+        // same request — with the cache it would see the old default language.
         $this->root(1, 'de', shop: 7);
         $this->root(2, 'en', shop: 7);
         $this->shop(7, 'de');
@@ -195,14 +193,14 @@ class ShopLanguagesTest extends TestCase
         self::assertSame(['de', 'it'], $languages->of(7));
     }
 
-    // ── Das Publikum: Sprache und Währung je Startpunkt (C-1c) ──────────
+    // ── The audience: language and currency per root page (C-1c) ────────
 
     public function testEsNenntJeStartpunktSpracheUndWaehrung(): void
     {
-        // Beides sind Eigenschaften desselben Zugangswegs und stehen in
-        // derselben Zeile (Spezifikation 4.0) — eine Abfrage, ein Feld mehr.
-        // Der englische Startpunkt steht zuerst im Seitenbaum — die Liste ist
-        // trotzdem nach Sprache sortiert.
+        // Both are properties of the same access route and stand in the same
+        // row (specification 4.0) — one query, one more field.
+        // The English root page comes first in the page tree — the list is
+        // sorted by language all the same.
         $this->root(1, 'en', shop: 7, currency: 'GBP');
         $this->root(2, 'de', shop: 7, currency: 'EUR');
         $this->root(3, 'fr', shop: 8, currency: 'EUR');
@@ -216,7 +214,7 @@ class ShopLanguagesTest extends TestCase
 
     public function testEsZaehltDenselbenZugangswegEinmal(): void
     {
-        // Zwei deutsche Euro-Startpunkte (zwei Domains) sind ein Publikum.
+        // Two German euro root pages (two domains) are one audience.
         $this->root(1, 'de', shop: 7, currency: 'EUR');
         $this->root(2, 'de', shop: 7, currency: 'EUR');
         $this->shop(7, 'de');
@@ -238,15 +236,15 @@ class ShopLanguagesTest extends TestCase
 
     public function testEinStartpunktOhneWaehrungWirdMitLeererWaehrungGenannt(): void
     {
-        // Nicht weggefiltert. Wer rechnen will, übergeht sie selbst, so wie
-        // of() die leere Sprache.
+        // Not filtered out. Whoever wants to compute skips them themselves,
+        // just as of() skips the empty language.
         //
-        // ⚠️ Die Begründung dafür war einmal „wer die Lücke meldet, braucht
-        // die Zeile". Seit Aufgabe 7 gibt es den Melder — RootWithoutCurrency
-        // in DbalShopScopeIssueSource —, und er liest tl_page selbst, weil er
-        // Titel und ID der Seite nennen muss. Die Zeile bleibt trotzdem: Ihr
-        // Wegfiltern änderte das Verhalten einer getesteten Methode, ohne dass
-        // ein Aufrufer etwas davon hätte. Siehe den Kommentar an audiencesOf().
+        // ⚠️ The reason for this once was "whoever reports the gap needs the
+        // row". Meanwhile the reporter exists — RootWithoutCurrency in
+        // DbalShopScopeIssueSource —, and it reads tl_page itself, because it
+        // has to name the page's title and ID. The row stays anyway: filtering
+        // it out would change the behaviour of a tested method without any
+        // caller gaining from it. See the comment on audiencesOf().
         $this->root(1, 'de', shop: 7, currency: '');
         $this->shop(7, 'de');
 
@@ -288,10 +286,10 @@ class ShopLanguagesTest extends TestCase
 
     public function testDieSprachlisteAendertSichDadurchNicht(): void
     {
-        // of() ist die Zusicherung, auf der die Übersetzungsseite steht: eine
-        // Währung mehr oder weniger darf dort nichts bewegen. Startpunkt 4 ist
-        // der Fall, den es vorher nicht gab — dieselbe Sprache in zwei
-        // Währungen sind zwei Zeilen und trotzdem eine Sprache.
+        // of() is the guarantee the translation page rests on: a currency more
+        // or less must not move anything there. Root page 4 is the case that
+        // did not exist before — the same language in two currencies is two
+        // rows and still one language.
         $this->root(1, 'de', shop: 7, currency: 'EUR');
         $this->root(2, 'en', shop: 7, currency: '');
         $this->root(3, '', shop: 7, currency: 'CHF');

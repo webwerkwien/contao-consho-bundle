@@ -73,60 +73,60 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalRecorder;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSource;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 
-// Übersetzer, Spion-Transport und Fehler-Logger der Bestätigungsmail.
+// Translator, spy transport and error logger of the confirmation mail.
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * Nach dem Kauf, gegen die Bestellung (Spec D, Abschnitt 11; Entscheidung M1,
- * Michael 2026-09-28: „Integrationstest je Ereignis wie
- * CheckoutAgreesWithOrderTest: echte Dienste, SQLite, kein Doppel, das die
- * Frage vorwegnimmt").
+ * After the purchase, against the order (Spec D, section 11; decision M1:
+ * an integration test per event like CheckoutAgreesWithOrderTest — real
+ * services, SQLite, no double that anticipates the question).
  *
- * Bis hierher ersetzte jeder Ereignis-Test genau die Mitspieler, die die
- * Frage entscheiden: Ob wirklich eine Rechnung entsteht, beantwortete ein
- * Stub von DocumentIssuerInterface, ob der Status wechselt, ein Spion am
- * Advancer, ob die Mail hinausgeht, ein Double von OrderEventMail. Hier
- * laufen die ECHTEN Dienste gegeneinander — Ereignis, Saldo, Nummernkreis,
- * Beleg samt Schnappschuss, Statuswechsel, Widerruf, Mail mit den echten
- * Vorlagen und Sprachdateien — und geprüft wird der ENDSTAND: was in der
- * Datenbank steht und welche Mails der Transport gesehen hat.
+ * Until now every event test replaced exactly the collaborators that
+ * decide the question: whether an invoice really is created was answered
+ * by a stub of DocumentIssuerInterface, whether the status changes by a
+ * spy on the advancer, whether the mail goes out by a double of
+ * OrderEventMail. Here the REAL services run against each other — event,
+ * balance, number range, document with snapshot, status change,
+ * withdrawal, mail with the real templates and language files — and what
+ * is checked is the FINAL STATE: what is in the database and which mails
+ * the transport has seen.
  *
- * ── Was ein Double bleibt, und warum es nichts entscheidet ───────────────
+ * ── What stays a double, and why it decides nothing ──────────────────────
  *
- *  - Das PDF (DocumentPdfInterface, DocumentArchiverInterface): ein fester
- *    Text statt Dompdf. Der Dateiname kommt wie im Original aus der
- *    Belegnummer — gelesen aus der Datenbank, nicht mitgegeben.
- *  - Der Link zur Bestellseite (OrderPageLink): eine feste Adresse. Das
- *    Original braucht Contaos Framework und die Seitenstruktur.
- *  - Der Status-SCHREIBER: schreibt nur tl_consho_order.orderStatus.
- *    ContaoOrderStatusWriter braucht Contaos Framework und `Versions` (die
- *    DCA von tl_consho_order, tl_version) — WELCHER Status gesetzt wird,
- *    entscheidet der echte OrderStatusAdvancer davor. Weniger als das
- *    Original: keine Version, kein cancelledAt (kein Fall hier storniert).
- *  - Die Mail-Verbindung (MailTransportFactoryInterface): der Spion.
- *  - Kein Zahlungs-Handler mehr: „Rechnung bei Versand" läuft seit E-2 über
- *    die echte Zahlungsart „Auf Rechnung" (InvoicePaymentHandler). Bis dahin
- *    stand hier ein Ersatz, weil keine Kern-Zahlungsart bei Versand
- *    ausstellte (D-7, M2).
+ *  - The PDF (DocumentPdfInterface, DocumentArchiverInterface): a fixed
+ *    text instead of Dompdf. The file name comes from the document number
+ *    as in the original — read from the database, not passed along.
+ *  - The link to the order page (OrderPageLink): a fixed address. The
+ *    original needs Contao's framework and the page structure.
+ *  - The status WRITER: writes only tl_consho_order.orderStatus.
+ *    ContaoOrderStatusWriter needs Contao's framework and `Versions` (the
+ *    DCA of tl_consho_order, tl_version) — WHICH status is set is decided
+ *    by the real OrderStatusAdvancer before it. Less than the original: no
+ *    version, no cancelledAt (no case here cancels).
+ *  - The mail connection (MailTransportFactoryInterface): the spy.
+ *  - No payment handler any more: "invoice on shipping" runs through the
+ *    real payment method "on invoice" (InvoicePaymentHandler) since E-2.
+ *    Until then a stand-in was here, because no core payment method issued
+ *    on shipping (D-7, M2).
  *
  * ── FOR UPDATE ─────────────────────────────────────────────────────────────
  *
- * SQLite kennt kein `FOR UPDATE`; lockOrder() und der Nummernkreis schreiben
- * es aus. Statt beide wegzudoubeln (wie die bisherigen Tests) streicht eine
- * DBAL-Middleware genau diese zwei Wörter am Ende einer Anweisung und merkt
- * sich die Anweisung — alles andere geht unverändert an die Datenbank. So
- * laufen die echten Abfragen, und der Test sieht, DASS gesperrt wurde.
+ * SQLite has no `FOR UPDATE`; lockOrder() and the number range write it
+ * out. Instead of doubling both away (as the earlier tests did), a DBAL
+ * middleware strips exactly these two words at the end of a statement and
+ * remembers the statement — everything else goes to the database
+ * unchanged. So the real queries run, and the test sees THAT a lock was
+ * taken.
  *
- * ── Das Schema ─────────────────────────────────────────────────────────────
+ * ── The schema ─────────────────────────────────────────────────────────────
  *
- * Spaltennamen, NULL-barkeit und Vorgaben wie in contao/dca/*.php (gelesen
- * 2026-09-28; Prüfungsnotiz, Fall 31). decimal-Spalten als TEXT: MySQL gibt
- * `2.0000` zurück, eine NUMERIC-Spalte in SQLite `2` — und genau dieser
- * Unterschied hat „2.0000 × Wanderstock" in eine Mail gebracht, ohne dass
- * ein Test es sah (Fall 30). Die Widerrufstabellen aus WithdrawalSchema.
+ * Column names, nullability and defaults as in contao/dca/*.php. decimal
+ * columns as TEXT: MySQL returns `2.0000`, a NUMERIC column in SQLite `2`
+ * — and exactly this difference put "2.0000 × Wanderstock" into a mail
+ * without any test seeing it. The withdrawal tables from WithdrawalSchema.
  *
- * Bestellung: 2 × Wanderstock (60,00), 1 × Rucksack (35,00), Versand 5,00 —
- * zusammen 100,00 € brutto, 20 % USt.
+ * Order: 2 × hiking pole (60.00), 1 × backpack (35.00), shipping 5.00 —
+ * together €100.00 gross, 20 % VAT.
  */
 final class AfterSaleAgreesWithOrderTest extends TestCase
 {
@@ -148,7 +148,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
 
     private const VIEW_URL = 'https://shop.test/bestellung?consho_order=abc';
 
-    /** @var list<string> Anweisungen, die mit FOR UPDATE an die Datenbank gingen */
+    /** @var list<string> statements that went to the database with FOR UPDATE */
     private static array $rowLocks = [];
 
     private Connection $connection;
@@ -157,7 +157,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
 
     private ErrorSpyLogger $logger;
 
-    /** @var \ArrayObject<int, int> was ins Archiv sollte — die Belege, die ein Ereignis ausgestellt hat */
+    /** @var \ArrayObject<int, int> what was to go into the archive — the documents an event issued */
     private \ArrayObject $archived;
 
     private string $zone;
@@ -189,8 +189,8 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
 
     protected function setUp(): void
     {
-        // Die Frist endet „am Ende des Tages … in der Zeitzone der
-        // Installation" (WithdrawalWindow). Die Installation ist Wien.
+        // The period ends "at the end of the day … in the time zone of the
+        // installation" (WithdrawalWindow). The installation is Vienna.
         $this->zone = date_default_timezone_get();
         date_default_timezone_set('Europe/Vienna');
 
@@ -239,7 +239,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         date_default_timezone_set($this->zone);
     }
 
-    // ── 1. Vorkasse: Rechnung beim Kauf, Zahlung im Backend ───────────────
+    // ── 1. Prepayment: invoice at purchase, payment in the backend ────────
 
     public function testVorkasseImBackendBezahltSperrtDieZahlungSetztDenStatusUndStelltKeineZweiteRechnungAus(): void
     {
@@ -248,15 +248,15 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
 
         self::assertSame('RE-00001', $this->documentNumber($invoice));
 
-        // Wie das Backend: DC_Table speichert die Zeile, der Callback ruft
-        // PaymentRecorded (PaymentRecordListener) — ohne Kopie, der Betreiber
-        // hat sie selbst erfasst (Z3).
+        // As the backend does: DC_Table saves the row, the callback calls
+        // PaymentRecorded (PaymentRecordListener) — without a copy, the operator
+        // recorded it himself (Z3).
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'tstamp' => 1, 'receivedAt' => self::at('2026-10-01 09:00:00'), 'amount' => '100.0000', 'method' => 'Überweisung', 'reference' => 'WEB-00071']);
         $now = self::at('2026-10-01 09:05:00');
 
         $this->payments->handle(self::ORDER, false, $now);
 
-        // Saldo erledigt (A1), Zahlung gesperrt (A2), Status nach Zahlung (5.3).
+        // Balance settled (A1), payment locked (A2), status after payment (5.3).
         $balance = $this->balance();
         self::assertSame(PaymentState::Paid, $balance->paymentState);
         self::assertTrue($balance->paymentSettled());
@@ -264,12 +264,12 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame([$now], array_map(intval(...), $this->connection->fetchFirstColumn('SELECT lockedAt FROM tl_consho_payment')));
         self::assertSame(self::PAID, (int) $this->orderRow()['orderStatus'], '„Status nach vollständiger Zahlung" — nicht „wenn alles erledigt": geliefert ist nichts');
 
-        // Keine zweite Rechnung: dieselbe Zeile, der Nummernkreis unberührt.
+        // No second invoice: the same row, the number range untouched.
         self::assertSame([$invoice], $this->documentIds(DocumentType::Invoice));
         self::assertSame(1, $this->rangeCurrent('invoice'));
         self::assertSame([], $this->archived->getArrayCopy(), 'nichts Neues zu archivieren');
 
-        // Genau eine Mail, an die Kundin; ohne Anhang, denn die Rechnung hat sie seit dem Kauf.
+        // Exactly one mail, to the customer; without an attachment, because she has had the invoice since the purchase.
         self::assertCount(1, $this->transport->sent);
         $mail = $this->transport->sent[0];
         self::assertSame('erika@example.org', $mail->getTo()[0]->getAddress());
@@ -279,10 +279,10 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertStringContainsString(self::VIEW_URL, (string) $mail->getHtmlBody());
         $this->assertCleanMail($mail);
 
-        // Die Bestellung wurde gesperrt (5.4, Nebenläufigkeit).
+        // The order was locked (5.4, concurrency).
         self::assertNotEmpty(array_filter(self::$rowLocks, static fn (string $sql): bool => str_contains($sql, 'FROM tl_consho_order WHERE')));
 
-        // Ein zweiter Aufruf (Callback erneut, Version wiederhergestellt …) ändert nichts.
+        // A second call (callback again, version restored …) changes nothing.
         $this->payments->handle(self::ORDER, false, $now + 60);
 
         self::assertCount(1, $this->transport->sent);
@@ -290,17 +290,17 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame([], $this->logger->errors);
     }
 
-    // ── 2. Online bezahlt: Rechnung bei Zahlung ───────────────────────────
+    // ── 2. Paid online: invoice on payment ────────────────────────────────
 
     public function testOnlineBezahltStelltGenauEineRechnungMitDerNaechstenNummerAus(): void
     {
         $this->order('WEB-00072', self::ONLINE);
 
-        // Vorher schon zwei Rechnungen dieses Shops: die nächste ist RE-00003.
+        // Two invoices of this shop already exist: the next one is RE-00003.
         $this->connection->update('tl_consho_number_range', ['current' => 2], ['pid' => self::SHOP, 'type' => 'invoice']);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_document'), 'bei Zahlung: vor der Zahlung keine Rechnung');
 
-        // Wie NotificationProcessor: die Zeile des Versuchs, dann die Folgen (online).
+        // As NotificationProcessor does: the attempt's row, then the consequences (online).
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'tstamp' => 1, 'receivedAt' => self::at('2026-10-01 09:00:00'), 'amount' => '100.0000', 'method' => 'test', 'reference' => 'TEST-1', 'attempt' => 1]);
         $now = self::at('2026-10-01 09:00:05');
 
@@ -312,7 +312,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame(3, $this->rangeCurrent('invoice'));
         self::assertSame($invoices, $this->archived->getArrayCopy());
 
-        // Der Schnappschuss ist geschrieben — aus der Bestellung, nicht aus einer Vorlage im Test.
+        // The snapshot is written — from the order, not from a template in the test.
         $payload = $this->payload($invoices[0]);
         self::assertSame('WEB-00072', $payload['order']['orderNumber']);
         self::assertTrue(BigDecimal::of('100')->isEqualTo($payload['order']['grandTotal']));
@@ -322,7 +322,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame(self::PAID, (int) $this->orderRow()['orderStatus']);
         self::assertSame($now, (int) $this->connection->fetchOne('SELECT lockedAt FROM tl_consho_payment'));
 
-        // Kundin mit der Rechnung im Anhang, Betreiber mit Kopie (Z3: online).
+        // Customer with the invoice attached, operator with a copy (Z3: online).
         self::assertCount(2, $this->transport->sent);
         [$customer, $operator] = $this->transport->sent;
         self::assertSame('Zahlung erhalten: Bestellung WEB-00072', $customer->getSubject());
@@ -333,7 +333,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         $this->assertCleanMail($customer);
         $this->assertCleanMail($operator);
 
-        // Die Meldung kommt noch einmal: keine zweite Rechnung, keine Nummer verbraucht, keine Mail.
+        // The notification comes once more: no second invoice, no number used up, no mail.
         $this->payments->handle(self::ORDER, true, $now + 30);
 
         self::assertCount(1, $this->documentIds(DocumentType::Invoice));
@@ -342,7 +342,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame([], $this->logger->errors);
     }
 
-    // ── 3. Rechnung bei Versand ───────────────────────────────────────────
+    // ── 3. Invoice on shipping ────────────────────────────────────────────
 
     public function testRechnungBeiVersandEntstehtMitDerMeldungUndGehtMitDerVersandmail(): void
     {
@@ -357,27 +357,27 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame('reported', $report->outcome);
         self::assertTrue($report->mailSent);
 
-        // Genau eine Rechnung, über die ganze Bestellung (Z2).
+        // Exactly one invoice, over the whole order (Z2).
         $invoices = $this->documentIds(DocumentType::Invoice);
         self::assertCount(1, $invoices);
         self::assertSame('RE-00001', $this->documentNumber($invoices[0]));
         self::assertCount(3, $this->payload($invoices[0])['items']);
         self::assertSame($invoices, $this->archived->getArrayCopy());
 
-        // E-2: Die Rechnung nennt „Zahlbar bis" — 14 Tage ab ihrem Datum —,
-        // und die Bestellung merkt sich das Ende für den Hinweis „überfällig".
+        // E-2: the invoice names "payable by" — 14 days from its date —,
+        // and the order remembers the end for the "overdue" notice.
         $issuedAt = (int) $this->connection->fetchOne('SELECT issuedAt FROM tl_consho_document WHERE id = ?', [$invoices[0]]);
         $due = (new \DateTimeImmutable('@'.$issuedAt))->setTimezone(new \DateTimeZone(date_default_timezone_get()))->modify('+14 days');
         self::assertSame($due->format('Y-m-d'), $this->payload($invoices[0])['payment']['dueDate']);
         self::assertSame($due->setTime(23, 59, 59)->getTimestamp(), (int) $this->orderRow()['paymentDueAt']);
         self::assertSame('AT611904300234573201', $this->payload($invoices[0])['payment']['details']['iban'], 'die Bankverbindung für die Überweisung');
 
-        // E-6b: Beim Versand ist der Tag der Lieferung bekannt — alles in
-        // einem Paket, also „geliefert" am Versandtag.
+        // E-6b: at shipping the day of delivery is known — everything in
+        // one parcel, so "delivered" on the shipping day.
         $shipped = date('Y-m-d', self::at('2026-10-01 10:00:00'));
         self::assertSame(['from' => $shipped, 'to' => $shipped, 'kind' => 'delivered'], $this->payload($invoices[0])['delivery']);
 
-        // Lieferung gemeldet und gesperrt (A2), Lieferstand vollständig, Status nach Lieferung.
+        // Delivery reported and locked (A2), delivery state complete, status after delivery.
         $delivery = $this->connection->fetchAssociative('SELECT reportedAt, lockedAt FROM tl_consho_delivery WHERE id = ?', [$parcel]);
         self::assertSame([$now, $now], array_map(intval(...), array_values((array) $delivery)));
         $balance = $this->balance();
@@ -386,7 +386,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame(PaymentState::Open, $balance->paymentState);
         self::assertSame(self::SHIPPED, (int) $this->orderRow()['orderStatus'], '„nach vollständiger Lieferung" — nicht „erledigt": bezahlt ist nichts');
 
-        // Die Versandmail nennt, was im Paket ist, und bringt die Rechnung mit (Z4).
+        // The shipping mail names what is in the parcel and brings the invoice along (Z4).
         self::assertCount(1, $this->transport->sent, 'keine Kopie: der Betreiber hat gemeldet');
         $mail = $this->transport->sent[0];
         $html = (string) $mail->getHtmlBody();
@@ -400,7 +400,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame(['RE-00001.pdf'], $this->attachmentNames($mail));
         $this->assertCleanMail($mail);
 
-        // Ein zweites Melden derselben Lieferung: abgewiesen, keine zweite Rechnung.
+        // A second report of the same delivery: refused, no second invoice.
         self::assertSame('alreadyReported', $this->deliveries->report($parcel, $now + 60)->outcome);
         self::assertCount(1, $this->documentIds(DocumentType::Invoice));
         self::assertSame(1, $this->rangeCurrent('invoice'));
@@ -408,18 +408,18 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame([], $this->logger->errors);
     }
 
-    // ── 4. Widerruf: erklärt, angenommen, zurück, erstattet ───────────────
+    // ── 4. Withdrawal: declared, accepted, returned, refunded ─────────────
 
     public function testTeilwiderrufVonDerErklaerungBisZurErstattung(): void
     {
-        // Der Shop, wie er vor D-1 verkaufte: ohne „Status, wenn alles
-        // erledigt ist" (das Feld kam mit D-1). Mit dem Feld von Anfang an
-        // stünde die Bestellung nach Zahlung und Versand schon auf
-        // „Abgeschlossen" — und aus einem Status mit isCompleted führt kein
-        // automatischer Wechsel (StatusFlags::holds()); F10 wäre nicht zu sehen.
+        // The shop as it sold before D-1: without "status when everything
+        // is done" (the field came with D-1). With the field from the start
+        // the order would already be at "completed" after payment and
+        // shipping — and no automatic change leads out of a status with
+        // isCompleted (StatusFlags::holds()); F10 would not be visible.
         $this->connection->update('tl_consho_shop', ['statusWhenSettled' => 0], ['id' => self::SHOP]);
 
-        // ── Ausgangslage über die echten Ereignisse: Vorkasse, bezahlt, versandt.
+        // ── Starting point through the real events: prepayment, paid, shipped.
         $this->order('WEB-00074', self::PREPAYMENT);
         $invoice = $this->purchaseInvoice();
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'tstamp' => 1, 'receivedAt' => self::at('2026-09-30 09:00:00'), 'amount' => '100.0000', 'method' => 'Überweisung']);
@@ -430,11 +430,11 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertTrue($this->balance()->settled(), 'bezahlt und versandt');
         self::assertSame(self::SHIPPED, (int) $this->orderRow()['orderStatus']);
 
-        // Jetzt stellt der Betreiber das Feld ein.
+        // Now the operator sets the field.
         $this->connection->update('tl_consho_shop', ['statusWhenSettled' => self::DONE], ['id' => self::SHOP]);
         $this->transport->sent = [];
 
-        // ── Die Erklärung: 1 von 2 Wanderstöcken, über die Bestellseite (W3).
+        // ── The declaration: 1 of 2 hiking poles, through the order page (W3).
         $received = self::at('2026-10-05 14:03:05');
         $result = $this->recorder->record(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::OrderPage, 'Erika Muster', [self::WANDERSTOCK => '1']), $received);
 
@@ -446,7 +446,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame($received, (int) $this->withdrawalRow($withdrawal)['receivedAt']);
         self::assertNotNull($this->withdrawalRow($withdrawal)['confirmationSentAt']);
 
-        // Eingangsbestätigung mit Datum UND Uhrzeit (Spec D 2, Punkt 4), Kopie an den Betreiber.
+        // Acknowledgement of receipt with date AND time (Spec D 2, point 4), copy to the operator.
         $sent = $this->transport->sent();
         self::assertCount(2, $sent);
         [$confirmation, $copy] = $sent;
@@ -461,7 +461,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         $this->assertCleanMail($copy);
         $this->transport->sent = [];
 
-        // ── Annehmen: Die Forderung sinkt um die Ware (F7), die Zahlung steht noch.
+        // ── Accept: the claim drops by the goods (F7), the payment still stands.
         $accepted = $this->processing->accept($withdrawal, [self::WANDERSTOCK => '1'], self::at('2026-10-06 08:00:00'));
 
         self::assertTrue($accepted->done, $accepted->key);
@@ -473,21 +473,21 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertFalse($balance->settled());
         self::assertSame(self::SHIPPED, (int) $this->orderRow()['orderStatus']);
 
-        // ── Rücksendung (F8).
+        // ── Return shipment (F8).
         $row = (int) $this->connection->fetchOne('SELECT id FROM tl_consho_withdrawal_item WHERE pid = ?', [$withdrawal]);
         self::assertTrue($this->processing->recordReturn($withdrawal, self::at('2026-10-09 11:00:00'), [$row => '1'], self::at('2026-10-09 11:05:00'))->done);
         self::assertSame(self::at('2026-10-09 11:00:00'), (int) $this->withdrawalRow($withdrawal)['returnReceivedAt']);
         self::assertTrue(BigDecimal::one()->isEqualTo((string) $this->connection->fetchOne('SELECT returnedQuantity FROM tl_consho_withdrawal_item WHERE id = ?', [$row])));
         self::assertSame([], $this->transport->sent, 'Annehmen und Rücksendung schreiben keine Mail');
 
-        // ── Erstattung buchen (F3, F4).
+        // ── Book the refund (F3, F4).
         $refundedAt = self::at('2026-10-09 11:10:00');
         $refund = $this->processing->refund($withdrawal, '0', $refundedAt);
 
         self::assertTrue($refund->done, $refund->key);
         self::assertSame('refunded', $refund->key);
 
-        // Die negative Zahlung, sofort gesperrt.
+        // The negative payment, locked at once.
         $payment = $this->connection->fetchAssociative('SELECT id, amount, method, reference, lockedAt FROM tl_consho_payment WHERE pid = ? AND id != (SELECT MIN(id) FROM tl_consho_payment)', [self::ORDER]);
         self::assertIsArray($payment);
         self::assertTrue(BigDecimal::of('-30')->isEqualTo((string) $payment['amount']));
@@ -495,8 +495,8 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame('WEB-00074-W1', $payment['reference']);
         self::assertSame($refundedAt, (int) $payment['lockedAt']);
 
-        // Die Rechnungskorrektur (F2, intern CreditNote): eigener Nummernkreis,
-        // bezogen auf die Rechnung, mit der widerrufenen Ware negativ (F3).
+        // The invoice correction (F2, internally CreditNote): its own number range,
+        // referring to the invoice, negative with the withdrawn goods (F3).
         $corrections = $this->documentIds(DocumentType::CreditNote);
         self::assertCount(1, $corrections);
         $correction = $this->connection->fetchAssociative('SELECT documentNumber, relatedDocument, shop FROM tl_consho_document WHERE id = ?', [$corrections[0]]);
@@ -514,28 +514,28 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertSame('-25.0000', $payload['items'][0]['unitPrice']);
         self::assertTrue(BigDecimal::of('-30')->isEqualTo($payload['order']['grandTotal']));
 
-        // Kein Storno (nicht alles erstattet, F3), keine zweite Rechnung.
+        // No cancellation (not everything refunded, F3), no second invoice.
         self::assertSame([], $this->documentIds(DocumentType::Cancellation));
         self::assertSame([$invoice], $this->documentIds(DocumentType::Invoice));
 
-        // Der Widerruf trägt, was gebucht wurde.
+        // The withdrawal carries what was booked.
         $booked = $this->withdrawalRow($withdrawal);
         self::assertTrue(BigDecimal::of('30')->isEqualTo((string) $booked['refundAmount']));
         self::assertSame($refundedAt, (int) $booked['refundedAt']);
         self::assertSame((int) $payment['id'], (int) $booked['refundPayment']);
         self::assertSame($corrections[0], (int) $booked['refundDocument']);
 
-        // Danach ist alles erledigt: Forderung 70, bezahlt 70, nichts mehr zu liefern.
+        // After that everything is done: claim 70, paid 70, nothing left to deliver.
         $balance = $this->balance();
         self::assertTrue(BigDecimal::of('70')->isEqualTo($balance->claim));
         self::assertTrue(BigDecimal::of('70')->isEqualTo($balance->paid));
         self::assertSame(PaymentState::Paid, $balance->paymentState);
         self::assertTrue($balance->settled());
 
-        // … und es greift „Status, wenn alles erledigt ist" (F10).
+        // … and "status when everything is done" applies (F10).
         self::assertSame(self::DONE, (int) $this->orderRow()['orderStatus']);
 
-        // Die Erstattungsmail, mit der Korrektur im Anhang.
+        // The refund mail, with the correction attached.
         $sent = $this->transport->sent();
         self::assertCount(1, $sent);
         $mail = $sent[0];
@@ -548,24 +548,24 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertContains($corrections[0], $this->archived->getArrayCopy());
         $this->assertCleanMail($mail);
 
-        // Noch einmal buchen geht nicht.
+        // Booking again is not possible.
         self::assertSame('alreadyRefunded', $this->processing->refund($withdrawal, '0', $refundedAt + 60)->key);
         self::assertCount(1, $this->documentIds(DocumentType::CreditNote));
         self::assertSame([], $this->logger->errors);
     }
 
-    // ── 5. Die Frist an ihren Grenzen ─────────────────────────────────────
+    // ── 5. The period at its limits ───────────────────────────────────────
 
     /**
-     * Frist 14 Tage, Puffer 7 Tage (die Vorgaben, W4 / Spec D 6.2), versandt
-     * am 1. Oktober 2026 um 10:00 in Wien.
+     * Period 14 days, buffer 7 days (the defaults, W4 / Spec D 6.2), shipped
+     * on 1 October 2026 at 10:00 in Vienna.
      *
-     * Die Erwartungen stehen als Kalenderdaten da, nicht als Formel: Der
-     * letzte Tag der Frist ist der 15. Oktober, die Funktion schließt
-     * „frühestens nach letztem Versand + Frist + Puffer" (6.2) — am Ende des
-     * 22. Oktober, 23:59:59 Wiener Zeit (noch Sommerzeit). Rechnete die
-     * Produktion in UTC, stünde das Ende zwei Stunden später, und die
-     * Erklärung um Mitternacht ginge durch.
+     * The expectations are written as calendar dates, not as a formula: the
+     * last day of the period is 15 October, the function closes "at the
+     * earliest after last shipment + period + buffer" (6.2) — at the end of
+     * 22 October, 23:59:59 Vienna time (still summer time). If production
+     * computed in UTC, the end would be two hours later, and a declaration at
+     * midnight would go through.
      */
     public function testDieFristIstBisZumLetztenPuffertagOffenUndDanachZu(): void
     {
@@ -578,18 +578,18 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         self::assertNotNull($window);
         self::assertSame(self::at('2026-10-22 23:59:59'), $window->closesAt);
 
-        // Der letzte Tag der Frist: offen.
+        // The last day of the period: open.
         $lastDay = $this->recorder->record($this->wholeOrder(), self::at('2026-10-15 23:59:59'));
         self::assertSame(WithdrawalOutcome::Recorded, $lastDay->outcome);
 
-        // Die letzte Sekunde des Puffers: offen — ein Tag zu spät kostet den
-        // Betreiber nichts, ein Tag zu früh ist ein Verstoß (WithdrawalWindow).
+        // The last second of the buffer: open — a day too late costs the
+        // operator nothing, a day too early is a violation (WithdrawalWindow).
         $lastSecond = $this->recorder->record($this->wholeOrder(), self::at('2026-10-22 23:59:59'));
         self::assertSame(WithdrawalOutcome::Recorded, $lastSecond->outcome);
 
-        // Die erste Sekunde danach: seit WA (B1, 2026-10-22) nicht mehr zu,
-        // sondern gespeichert und markiert — das Fenster rechnet ab Versand,
-        // die Frist ab Erhalt; ob es rechtzeitig war, entscheidet der Betreiber.
+        // The first second after it: since WA no longer closed, but
+        // stored and flagged — the window counts from shipping, the period
+        // from receipt; whether it was in time, the operator decides.
         $late = $this->recorder->record($this->wholeOrder(), self::at('2026-10-23 00:00:00'));
         self::assertSame(WithdrawalOutcome::Recorded, $late->outcome);
         self::assertTrue($late->afterWindow);
@@ -626,11 +626,11 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
             $documentRows,
             new NumberRangeAllocator($this->connection),
             $payloads,
-            // Das Dateisystem fragt nur nach einem Logo; der Shop hat keins.
+            // The file system is only asked for a logo; the shop has none.
             new DbalDocumentSource($this->connection, new TranslationStorage($this->connection), new ShopLanguages($this->connection), $this->createStub(VirtualFilesystemInterface::class), $this->balances),
         );
 
-        // CONSHO_TEST_PAYMENT=1: ohne den Schalter kennt PaymentHandlers den Test-Anbieter nicht.
+        // CONSHO_TEST_PAYMENT=1: without the switch PaymentHandlers does not know the test provider.
         $handlers = new PaymentHandlers(new ServiceLocator([
             PrepaymentHandler::getType() => static fn (): PaymentHandlerInterface => new PrepaymentHandler(),
             TestPaymentHandler::getType() => fn (): PaymentHandlerInterface => new TestPaymentHandler($this->createStub(UrlGeneratorInterface::class)),
@@ -697,8 +697,8 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
             }
         };
 
-        // Wie DocumentDelivery: der Dateiname ist die Belegnummer. Gelesen,
-        // nicht erfunden — ein falscher Beleg im Anhang fiele so auf.
+        // As DocumentDelivery does: the file name is the document number. Read,
+        // not invented — a wrong document in the attachment would show this way.
         $pdfs = new class($this->connection) implements DocumentPdfInterface {
             public function __construct(private readonly Connection $connection)
             {
@@ -731,7 +731,8 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         $c = $this->connection;
 
         // From the DCA, keys included (unique orderNumber, number range per
-        // pid/type, document number per shop/type) — Fall 31/57/62.
+        // pid/type, document number per shop/type) — a hand-written schema goes
+        // stale with the next column.
         foreach ([
             'tl_consho_shop', 'tl_consho_mail_transport', 'tl_consho_order_status', 'tl_consho_number_range',
             'tl_consho_payment_method', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_payment',
@@ -833,9 +834,9 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Die Rechnung beim Kauf — wie OrderPlacer sie ausstellt, wenn der
-     * Handler der Zahlungsart OnOrder sagt. Ob er das sagt, fragt der Test
-     * das Original, statt es anzunehmen.
+     * The invoice at purchase — as OrderPlacer issues it when the payment
+     * method's handler says OnOrder. Whether it says so, the test asks the
+     * original instead of assuming it.
      */
     private function purchaseInvoice(): int
     {
@@ -845,8 +846,8 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Eine Lieferung, wie das Backend sie anlegt — gemeldet ist sie erst
-     * über DeliveryReported.
+     * A delivery as the backend creates it — it is only reported through
+     * DeliveryReported.
      *
      * @param array<int, string> $items order item id => quantity
      */
@@ -943,14 +944,14 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Kein unübersetzter Schlüssel, kein roher decimal-Wert.
+     * No untranslated key, no raw decimal value.
      */
     private function assertCleanMail(Email $mail): void
     {
         $html = (string) $mail->getHtmlBody();
 
         self::assertStringNotContainsString('CONSHO.', $html.$mail->getSubject());
-        // „2.0000" ja, das Datum „29.09.2026" nicht.
-        self::assertDoesNotMatchRegularExpression('/(?<![\d.])\d+\.\d{4}\b/', $html, 'ein decimal(…,4) roh in der Mail (Prüfungsnotiz, Fall 30)');
+        // "2.0000" yes, the date "29.09.2026" no.
+        self::assertDoesNotMatchRegularExpression('/(?<![\d.])\d+\.\d{4}\b/', $html, 'ein decimal(…,4) roh in der Mail');
     }
 }

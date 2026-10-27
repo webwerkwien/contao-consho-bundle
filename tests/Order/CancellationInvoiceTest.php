@@ -15,9 +15,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * dev#1: Ein Storno über den Status storniert die offene Rechnung mit
- * (Spec A: `isCancelled` → Stornobeleg). Bis dahin blieb eine Vorkasse-Rechnung
- * zu einer stornierten Bestellung stehen.
+ * dev#1: a cancellation through the status cancels the open invoice too
+ * (Spec A: `isCancelled` → cancellation document). Until then a prepayment
+ * invoice for a cancelled order stayed in place.
  */
 final class CancellationInvoiceTest extends TestCase
 {
@@ -57,7 +57,7 @@ final class CancellationInvoiceTest extends TestCase
 
     public function testEineSchonStornierteRechnungBleibtInRuhe(): void
     {
-        // Der Vollwiderruf hat sie schon storniert: findIdByOrderAndType findet keine offene.
+        // The full withdrawal has already cancelled it: findIdByOrderAndType finds no open one.
         $this->document(30, 'invoice');
         $this->document(31, 'cancellation', 30);
         $issuer = $this->createMock(DocumentIssuerInterface::class);
@@ -103,10 +103,10 @@ final class CancellationInvoiceTest extends TestCase
     }
 
     /**
-     * Review dev#1, Befund 1: In „Mehrere bearbeiten" (eine Transaktion um
-     * alles) nicht in der Transaktion ablegen, aber auch nicht nur auf
-     * `--retry` vormerken — das übergibt nicht an die Buchhaltung. Abgelegt
-     * wird am Ende der Anfrage, über den dekorierten Archivierer.
+     * dev#1: in "Edit multiple" (one transaction around everything) do not
+     * archive inside the transaction, but do not merely queue it for `--retry`
+     * either — that does not hand it over to accounting. Archiving happens at
+     * the end of the request, through the decorated archiver.
      */
     public function testInEinerFremdenTransaktionWirdErstAmEndeAbgelegt(): void
     {

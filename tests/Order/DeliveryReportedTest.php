@@ -33,7 +33,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * „Als versandt melden" (D-1, Spec D 5.4, Entscheidungen Z2, Z4, A2).
+ * "Report as shipped" (D-1, Spec D 5.4, decisions Z2, Z4, A2).
  */
 final class DeliveryReportedTest extends TestCase
 {
@@ -64,7 +64,7 @@ final class DeliveryReportedTest extends TestCase
         WithdrawalSchema::create($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -89,7 +89,7 @@ final class DeliveryReportedTest extends TestCase
 
         [$delivery, $invoiceId] = $this->mails[0];
         self::assertSame(55, $invoiceId);
-        // Außerhalb jeder Transaktion archiviert die Meldung selbst.
+        // Outside any transaction the report archives by itself.
         self::assertSame([55], $this->archived);
         self::assertNull($report->toArchive);
         self::assertSame([['quantity' => '2', 'name' => 'Wanderstock']], $delivery['items']);
@@ -101,9 +101,9 @@ final class DeliveryReportedTest extends TestCase
     }
 
     /**
-     * F-4: Die elektronische Freigabe meldet ohne „Versendet"-Mail — und
-     * innerhalb ihrer eigenen Transaktion, die DBAL zum Savepoint macht.
-     * Rechnung und Statuswechsel laufen wie beim Paket.
+     * F-4: the electronic release reports without a "shipped" mail — and
+     * inside its own transaction, which DBAL turns into a savepoint.
+     * Invoice and status change run as for a parcel.
      */
     public function testOhneMailInnerhalbEinerTransaktion(): void
     {
@@ -120,17 +120,17 @@ final class DeliveryReportedTest extends TestCase
         self::assertSame([OrderEvent::DeliveryReported], $this->advanced);
         self::assertSame(100, (int) $this->connection->fetchOne('SELECT reportedAt FROM tl_consho_delivery WHERE id = 1'));
 
-        // Review Abo-4, S2: innerhalb der Transaktion des Aufrufers kein PDF —
-        // ein späterer Rollback gäbe die Nummer frei, die Datei bliebe. Der
-        // Aufrufer archiviert nach SEINEM Commit.
+        // Abo-4: no PDF inside the caller's transaction —
+        // a later rollback would free the number, the file would stay. The
+        // caller archives after HIS commit.
         self::assertSame([], $this->archived);
         self::assertSame(55, $report->toArchive);
     }
 
     /**
-     * Zweites Review Abo-4: auch der Zweig MIT Mail gibt einem Aufrufer in
-     * einer Transaktion die Rechnung zurück — sonst ginge sie dort still
-     * ohne PDF durch.
+     * Abo-4: the branch WITH a mail also hands the invoice back to a caller in
+     * a transaction — otherwise it would go through there silently without a
+     * PDF.
      */
     public function testMitMailInnerhalbEinerTransaktionAuchZurueckgegeben(): void
     {
@@ -182,9 +182,9 @@ final class DeliveryReportedTest extends TestCase
     }
 
     /**
-     * Spec D, offene Punkte (Review 1, K1): Die Meldung schrieb keine Version
-     * der Lieferung, nur die Bestellung bekam eine. Jetzt wie dort: Contaos
-     * Versions mit dem Namen „Consho", der Stand vorher und nachher.
+     * Spec D, open points (1): the report wrote no version of the delivery,
+     * only the order got one. Now as there: Contao's Versions with the name
+     * "Consho", the state before and after.
      */
     public function testDieMeldungSchreibtEineVersionDerLieferung(): void
     {
@@ -231,8 +231,8 @@ final class DeliveryReportedTest extends TestCase
     }
 
     /**
-     * dev#2: Der Lieferschein entsteht in der Meldung, mit dem, was NACH
-     * diesem Paket offen ist, und wird nach dem Commit abgelegt.
+     * dev#2: the delivery note is created in the report, with what is open
+     * AFTER this parcel, and archived after the commit.
      */
     public function testDieMeldungStelltDenLieferscheinAusMitDemRest(): void
     {

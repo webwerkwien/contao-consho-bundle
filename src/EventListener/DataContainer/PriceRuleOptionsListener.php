@@ -14,8 +14,8 @@ use Doctrine\DBAL\Connection;
  *
  * Registered by attribute, not as `[self::class, 'method']` in the DCA: Contao
  * resolves such an array through the container, and this service is private
- * — the mask died with a 500 at the first new rule (acceptance of H on c5,
- * 2026-10-05). No test built the real container (rule 25);
+ * — the mask died with a 500 at the first new rule (H). No test
+ * built the real container;
  * DcaCallbackRegistrationTest now refuses the array form for bundle classes.
  */
 class PriceRuleOptionsListener

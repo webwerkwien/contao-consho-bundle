@@ -7,24 +7,24 @@ use Twig\Environment;
 use Twig\Loader\ArrayLoader;
 
 /**
- * Reine Textprüfungen an der Twig-**Datei**, kein Rendering: Für ein
- * `@Contao`-Fragment mit Blöcken, `attrs()`, `path()` und domänenspezifischem
- * `trans` gibt es in diesem Projekt keinen Twig-Umgebungsaufbau — aus
- * demselben Grund baut auch ProductDetailControllerTest sein FragmentTemplate
- * "ohne Twig und ohne Container" (siehe dessen Klassenkommentar).
+ * Pure text checks on the Twig **file**, no rendering: for an `@Contao`
+ * fragment with blocks, `attrs()`, `path()` and a domain-specific `trans`,
+ * this project has no Twig environment setup — for the same reason
+ * ProductDetailControllerTest builds its FragmentTemplate "without Twig and
+ * without a container" (see its class comment).
  *
- * Was diese Tests NICHT zeigen: dass die Datei fehlerfrei rendert, dass zwei
- * Kaufboxen für dasselbe Produkt im tatsächlichen DOM unterschiedliche Ids
- * tragen, oder dass die verwendeten Übersetzungsschlüssel existierende
- * Einträge treffen (bis auf `request_token`/`REQUEST_TOKEN`, wofür eine
- * Zeichenkettensuche genau richtig ist).
+ * What these tests do NOT show: that the file renders without errors, that
+ * two purchase boxes for the same product carry different ids in the actual
+ * DOM, or that the translation keys used hit existing entries (except for
+ * `request_token`/`REQUEST_TOKEN`, for which a string search is exactly
+ * right).
  *
- * Was sie über bloße Zeichenkettensuche hinaus leisten: für/id- und
- * aria-describedby/id-Paare werden als zusammengehörige Ausdrücke verglichen
- * (Regex-Erfassung beider Seiten, dann Gleichheit), nicht nur auf isoliertes
- * Vorkommen geprüft. Ein `for`, das ins Leere zeigt, oder zwei Instanzen mit
- * kollidierender Id fielen damit auf, sofern sie sich im Quelltext
- * ausdrücken (z. B. verschiedene Variablen für denselben Zweck).
+ * What they achieve beyond a plain string search: for/id and
+ * aria-describedby/id pairs are compared as expressions that belong together
+ * (regex capture of both sides, then equality), not just checked for
+ * isolated occurrence. A `for` that points nowhere, or two instances with a
+ * colliding id, would thus stand out, provided they show in the source
+ * (e.g. different variables for the same purpose).
  */
 class ProductDetailPurchaseTest extends TestCase
 {
@@ -32,9 +32,9 @@ class ProductDetailPurchaseTest extends TestCase
 
     public function testDasFormularTraegtKeinAnfrageToken(): void
     {
-        // C11: die Katalogseite ist geteilt gecacht. Ein Token darin wäre das
-        // eines fremden Besuchers — genau der Fall, für den die eigene Route da
-        // ist. {{ request_token }} und REQUEST_TOKEN dürfen hier nicht stehen.
+        // C11: the catalogue page is cached as shared. A token in it would be
+        // that of a foreign visitor — exactly the case the dedicated route exists
+        // for. {{ request_token }} and REQUEST_TOKEN must not appear here.
         $template = file_get_contents(self::TEMPLATE);
 
         self::assertStringNotContainsString('request_token', $template);
@@ -51,8 +51,8 @@ class ProductDetailPurchaseTest extends TestCase
 
     public function testOhneArtikelIdGibtEsKeinFormular(): void
     {
-        // Solange eine Variante zu wählen ist, ist purchase.articleId null —
-        // ein Knopf, der nichts tut, ist schlimmer als keiner.
+        // As long as a variant is still to be chosen, purchase.articleId is null —
+        // a button that does nothing is worse than none.
         $template = file_get_contents(self::TEMPLATE);
 
         self::assertMatchesRegularExpression('/{%\s*if\s+purchase\.articleId\s*%}/', $template);
@@ -60,19 +60,19 @@ class ProductDetailPurchaseTest extends TestCase
 
     public function testDieSeiteWirdMitgeschickt(): void
     {
-        // Aus ihr leitet die Route den Shop und den Rücksprung ab.
+        // From it the route derives the shop and the return address.
         $template = file_get_contents(self::TEMPLATE);
 
         self::assertStringContainsString('name="page"', $template);
     }
 
     /**
-     * Zwei Kaufboxen für dasselbe Produkt (Hauptbereich und Seitenleiste)
-     * hätten mit `purchase.articleId` als einzigem Bestandteil der Id
-     * dieselbe Id — die Beschriftung der zweiten Box zeigt dann ins Leere.
-     * Die Id muss deshalb dasselbe Muster tragen wie `safety_heading_id`
-     * weiter unten in derselben Datei: das Inhaltselement (`data.id`) macht
-     * sie je Instanz eindeutig, nicht das Produkt.
+     * Two purchase boxes for the same product (main area and sidebar) would
+     * have had the same id with `purchase.articleId` as the only part of the
+     * id — the label of the second box then points nowhere. The id must
+     * therefore follow the same pattern as `safety_heading_id` further down in
+     * the same file: the content element (`data.id`) makes it unique per
+     * instance, not the product.
      */
     public function testMengenfeldIdIstJeInhaltselementEindeutig(): void
     {
@@ -94,7 +94,7 @@ class ProductDetailPurchaseTest extends TestCase
             'Die Id-Variable muss wie safety_heading_id aus data.id gebildet werden, nicht aus purchase.articleId.',
         );
 
-        // Gegenprobe des Musters selbst: safety_heading_id folgt exakt derselben Form.
+        // Counter-check of the pattern itself: safety_heading_id follows exactly the same form.
         self::assertMatchesRegularExpression(
             '/\{%\s*set\s+safety_heading_id\s*=\s*[\'"]consho-safety-[\'"]\s*~\s*data\.id\|default\([\'"][\'"]\)\s*%\}/',
             $template,
@@ -102,10 +102,10 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * Mindestmenge oder Schrittweite über 1 sind eine echte Einschränkung, die
-     * per Tastatur/Screenreader sonst erst nach einem abgelehnten Absenden
-     * auffällt (13.2). Der Hinweistext muss deshalb per aria-describedby am
-     * Feld hängen, sobald einer der beiden Werte greift.
+     * A minimum quantity or a step above 1 is a real restriction which, via
+     * keyboard/screen reader, would otherwise only show after a rejected
+     * submission (13.2). The notice text must therefore be attached to the
+     * field via aria-describedby as soon as one of the two values applies.
      */
     public function testMengenhinweisIstUeberAriaDescribedbyVerknuepft(): void
     {
@@ -113,8 +113,8 @@ class ProductDetailPurchaseTest extends TestCase
 
         self::assertStringContainsString('CONSHO.cart.quantityHint', $template);
 
-        // Die Auslöseschwelle muss numerisch verglichen werden: Als Twig-Zeichenkette
-        // ist nur "0" falsch, "0.0000" wäre wahr und triggerte den Hinweis grundlos.
+        // The trigger threshold must be compared numerically: as a Twig string
+        // only "0" is false, "0.0000" would be true and trigger the notice for no reason.
         self::assertMatchesRegularExpression('/purchase\.minPurchase\|default\(0\)\s*>\s*1/', $template);
         self::assertMatchesRegularExpression('/purchase\.purchaseSteps\|default\(0\)\s*>\s*1/', $template);
 
@@ -128,9 +128,9 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * Befund 4: Nur die Zeichenkette "0" ist in Twig falsch — "0.0000" ist
-     * wahr und hätte step="0.0000" erzeugt, ungültiges HTML, auf das der
-     * Browser stillschweigend mit Schrittweite 1 reagiert.
+     * Only the string "0" is false in Twig — "0.0000" is true and would have
+     * produced step="0.0000", invalid HTML to which the browser silently
+     * reacts with a step of 1.
      */
     public function testSchrittweiteWirdNumerischGeprueft(): void
     {
@@ -148,13 +148,13 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * Befund 9: Dieselbe Sorgfalt zwei Zeilen weiter oben — und aus demselben
-     * Grund. `tl_consho_product.minPurchase` trägt `rgxp => 'digit'` und lässt
-     * `0` zu; `"0.0000"` ist in Twig **wahr** (nur die Zeichenkette "0" ist
-     * falsch), und `|default()` greift nur bei null, false oder leer. Heraus
-     * kam `value="0.0000" min="0.0000"` — ein Klick ohne Änderung landete in
-     * InvalidQuantity, mit der Meldung „Diese Menge ist nicht möglich" für
-     * eine Zahl, die der Shop selbst vorgegeben hatte.
+     * The same care two lines further up — and for the same reason.
+     * `tl_consho_product.minPurchase` carries `rgxp => 'digit'` and allows
+     * `0`; `"0.0000"` is **true** in Twig (only the string "0" is false), and
+     * `|default()` only applies to null, false or empty. What came out was
+     * `value="0.0000" min="0.0000"` — a click without a change ended in
+     * InvalidQuantity, with the message "Diese Menge ist nicht möglich" (this
+     * quantity is not possible) for a number the shop itself had set.
      */
     public function testDieMindestmengeWirdNumerischGeprueft(): void
     {
@@ -171,8 +171,8 @@ class ProductDetailPurchaseTest extends TestCase
             '|default() greift nicht bei "0.0000" — der Vorgabewert darf nicht daran hängen.',
         );
 
-        // Ein einziger numerischer Vergleich trägt beide Stellen, in der Form
-        // der Schwellen direkt darüber.
+        // A single numeric comparison carries both places, in the form of the
+        // thresholds directly above.
         self::assertMatchesRegularExpression(
             '/\{%\s*set\s+quantity_has_min\s*=\s*purchase\.minPurchase\|default\(0\)\s*>\s*0\s*%\}/',
             $markup,
@@ -188,27 +188,27 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * 🔴 Von Michael im Frontend gesehen (2026-09-21): Das Mengenfeld jedes
-     * Produkts stand auf „1,0000".
+     * 🔴 Seen in the front end: the quantity field of every product showed
+     * "1,0000".
      *
-     * `minPurchase` und `purchaseSteps` sind `decimal(10,4)` und kommen als
-     * „1.0000" aus der Datenbank. Die Kürzung gab es schon — sie lief aber nur
-     * über den Hinweistext, mit der ausdrücklichen Begründung, `value` sei
-     * „ein HTML-Attribut und kein Anzeigetext". Genau das ist der Irrtum:
-     * **Der Inhalt von `value` ist das, was im Feld steht.**
+     * `minPurchase` and `purchaseSteps` are `decimal(10,4)` and come out of the
+     * database as "1.0000". The shortening already existed — but it only ran
+     * over the notice text, with the explicit reasoning that `value` was "an
+     * HTML attribute and not display text". That is exactly the mistake:
+     * **the content of `value` is what is shown in the field.**
      *
-     * ⚠️ Und warum elf Tests darüber hinweggingen: Sie prüfen den QUELLTEXT
-     * der Vorlage per Regex, nie ihre Ausgabe. Dass `value="{{ … }}"` an der
-     * richtigen Stelle steht, sagt nichts darüber, was am Ende dort steht.
-     * Deshalb rechnet dieser Test die Kürzung wirklich aus — mit demselben
-     * Twig-Filter, den die Vorlage benutzt.
+     * ⚠️ And why eleven tests passed over it: they check the SOURCE of the
+     * template by regex, never its output. That `value="{{ … }}"` sits in the
+     * right place says nothing about what ends up there. That is why this test
+     * really computes the shortening — with the same Twig filter the template
+     * uses.
      *
      * @dataProvider mengen
      */
     public function testDieMengeStehtImFeldWieManSieSchreibt(string $gespeichert, string $erwartet): void
     {
         $twig = new Environment(new ArrayLoader([
-            // Wortgleich die Kette aus der Vorlage.
+            // Word for word the chain from the template.
             'q' => "{{ wert|trim(characterMask='0', side='right')|trim(characterMask='.', side='right') }}",
         ]));
 
@@ -220,10 +220,10 @@ class ProductDetailPurchaseTest extends TestCase
      */
     public static function mengen(): iterable
     {
-        yield 'die Eins, die Michael gesehen hat' => ['1.0000', '1'];
+        yield 'die Eins im Mengenfeld' => ['1.0000', '1'];
         yield 'Zehnerschritte' => ['10.0000', '10'];
-        // ⚠️ Der Grund, warum am Punkt gestoppt wird: „0" und „." zusammen zu
-        // trimmen fräße die Null von „100" mit.
+        // ⚠️ The reason for stopping at the dot: trimming "0" and "." together
+        // would eat the zeros of "100" as well.
         yield 'die Null am Ende bleibt' => ['100.0000', '100'];
         yield 'Meterware' => ['0.1000', '0.1'];
         yield 'halbe Kilo' => ['2.5000', '2.5'];
@@ -231,21 +231,21 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * Die Vorlage **ohne** ihre Twig-Kommentare — wie in CartTemplateTest und
+     * The template **without** its Twig comments — as in CartTemplateTest and
      * MiniCartControllerTest.
      *
-     * ⚠️ Nicht kosmetisch: Der Erklärkommentar über dem Mengenfeld zitiert die
-     * Regel und schreibt dabei genau die Formen aus, nach denen hier gesucht
-     * wird. An der rohen Datei gemessen läse eine „darf nicht vorkommen"-Suche
-     * die Erklärung mit und wäre grün, weil sie etwas anderes misst als
-     * behauptet (derselbe Fehler wie in Fall 21).
+     * ⚠️ Not cosmetic: the explanatory comment above the quantity field quotes
+     * the rule and in doing so spells out exactly the forms searched for here.
+     * Measured on the raw file, a "must not occur" search would also read the
+     * explanation and would be green because it measures something other than
+     * claimed.
      */
     public function testDerAbgelehnteKaufWirdAmKaufknopfGemeldet(): void
     {
-        // C-3c: Der Grund kommt aus der Adresse und wird hier gezeigt, nicht
-        // mehr auf der Warenkorbseite. Der Schlüssel wird aus `notice.value`
-        // zusammengesetzt, steht also nirgends ausgeschrieben — dieselbe
-        // Konvention wie im Warenkorb, damit beide dieselben Sätze nutzen.
+        // C-3c: the reason comes from the address and is shown here, no longer
+        // on the cart page. The key is composed from `notice.value`, so it is not
+        // spelled out anywhere — the same convention as in the cart, so that
+        // both use the same sentences.
         self::assertMatchesRegularExpression(
             '/\(\s*"CONSHO\.cart\.notice\."\s*~\s*notice\.value\s*\)\|trans/',
             $this->markup(),
@@ -254,11 +254,11 @@ class ProductDetailPurchaseTest extends TestCase
 
     public function testDieMeldungHaengtNichtAmVorhandenenKaufknopf(): void
     {
-        // Eine Variante, die noch zu wählen ist, hat keinen Kaufknopf
-        // (purchase.articleId ist null) — eine Ablehnung dazu muss trotzdem
-        // lesbar sein. Die Meldung steht deshalb VOR der Bedingung, nicht
-        // darin. Geprüft an den Positionen im Quelltext, weil genau das die
-        // Entwurfsentscheidung ist.
+        // A variant that is still to be chosen has no purchase button
+        // (purchase.articleId is null) — a rejection must still be readable.
+        // The message therefore stands BEFORE the condition, not inside it.
+        // Checked by the positions in the source, because that is exactly the
+        // design decision.
         $markup = $this->markup();
 
         $meldung = strpos($markup, '{% if notice %}');
@@ -270,9 +270,10 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * Block G (G7): Der Zustand steht vor der Kaufknopf-Bedingung — bei
-     * „derzeit nicht verfügbar" ist purchase.articleId null, der Satz muss
-     * trotzdem da sein. Der Schlüssel wird aus dem Zustand zusammengesetzt.
+     * Block G (G7): the state stands before the purchase button condition —
+     * with "derzeit nicht verfügbar" (currently unavailable) purchase.articleId
+     * is null, the sentence must still be there. The key is composed from the
+     * state.
      */
     public function testDerBestandStehtVorDemKaufknopf(): void
     {
@@ -289,9 +290,9 @@ class ProductDetailPurchaseTest extends TestCase
 
     public function testDieModellwahlStehtImKaufformularUnterDemNamenDerRoute(): void
     {
-        // Abo-2 (P10): AddToCartController liest `subscriptionRule`. Stünde die
-        // Wahl außerhalb des Formulars oder unter anderem Namen, käme jeder
-        // Klick als Einmalkauf an — genau der Fehler aus Abo-1, nur leiser.
+        // Abo-2 (P10): AddToCartController reads `subscriptionRule`. If the
+        // choice stood outside the form or under another name, every click would
+        // arrive as a one-time purchase — exactly the error from Abo-1, only quieter.
         $markup = $this->markup();
 
         $formStart = strpos($markup, '<form class="consho-purchase"');
@@ -313,13 +314,13 @@ class ProductDetailPurchaseTest extends TestCase
         $markup = $this->markup();
 
         self::assertMatchesRegularExpression('/<fieldset class="consho-purchase__plans">\s*<legend>/', $markup);
-        // for und id aus derselben Variable, die Bedingungen über
-        // aria-describedby an ihrem Knopf.
+        // for and id from the same variable, the conditions via
+        // aria-describedby on their button.
         self::assertStringContainsString('id="{{ plan_id }}"', $markup);
         self::assertStringContainsString('<label for="{{ plan_id }}">', $markup);
         self::assertStringContainsString('aria-describedby="{{ plan_id }}-terms"', $markup);
         self::assertStringContainsString('id="{{ plan_id }}-terms"', $markup);
-        // Je Inhaltselement eindeutig, wie das Mengenfeld.
+        // Unique per content element, like the quantity field.
         self::assertMatchesRegularExpression("/set plan_id = 'consho-plan-' ~ data\\.id/", $markup);
     }
 
@@ -333,9 +334,9 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * Befund 5: Die übrige Datei benennt mit einer Klasse immer das Element,
-     * das den Wert trägt (z. B. rich_text_component-Aufrufe). Die Klasse
-     * gehört deshalb auf das Eingabefeld, nicht auf die Beschriftung.
+     * The rest of the file always uses a class to name the element that
+     * carries the value (e.g. rich_text_component calls). The class therefore
+     * belongs on the input field, not on the label.
      */
     public function testMengenklasseSitztAufDemFeldNichtAufDerBeschriftung(): void
     {
@@ -349,7 +350,7 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * @return array{0: string, 1: string} [for-Ausdruck, id-Ausdruck]
+     * @return array{0: string, 1: string} [for expression, id expression]
      */
     private function extractLabelForAndFieldId(string $template): array
     {
@@ -379,14 +380,14 @@ class ProductDetailPurchaseTest extends TestCase
     }
 
     /**
-     * @return array{0: string, 1: string} [aria-describedby-Ausdruck, Hinweistext-Id-Ausdruck]
+     * @return array{0: string, 1: string} [aria-describedby expression, notice text id expression]
      */
     private function extractAriaDescribedbyAndHelpId(string $template): array
     {
-        // Das der Menge, nicht das erste der Datei: Seit Abo-2 steht davor die
-        // Modellwahl mit eigenem aria-describedby. (Das Eingabefeld selbst ist
-        // per Regex nicht sauber zu fassen — `> 0` in einer Bedingung beendet
-        // jedes `[^>]*`.)
+        // The one of the quantity, not the first of the file: since Abo-2 the
+        // model choice with its own aria-describedby stands before it. (The input
+        // field itself cannot be captured cleanly by regex — `> 0` in a condition
+        // ends every `[^>]*`.)
         self::assertMatchesRegularExpression('/aria-describedby="(\{\{\s*quantity[^"]*)"/', $template);
         preg_match('/aria-describedby="(\{\{\s*quantity[^"]*)"/', $template, $ariaMatch);
 

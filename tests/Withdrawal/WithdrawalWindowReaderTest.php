@@ -13,7 +13,7 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Das Fenster einer gespeicherten Bestellung, mit dem echten Saldo.
+ * The window of a stored order, with the real balance.
  */
 final class WithdrawalWindowReaderTest extends TestCase
 {
@@ -33,7 +33,7 @@ final class WithdrawalWindowReaderTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -51,7 +51,7 @@ final class WithdrawalWindowReaderTest extends TestCase
 
     public function testDieSpaeterGemeldeteLieferungSchiebtDasFensterHinaus(): void
     {
-        // Versendet am 01.10., erst am 03.10. gemeldet: es zählt der 03.10.
+        // Shipped on 01.10., only reported on 03.10.: the 03.10. counts.
         $this->deliver(1, '2026-10-01 10:00', '2026-10-03 09:00', '2');
 
         self::assertSame($this->at('2026-10-24 23:59:59'), $this->reader()->of(self::ORDER)?->closesAt);
@@ -69,9 +69,9 @@ final class WithdrawalWindowReaderTest extends TestCase
     }
 
     /**
-     * F, Abnahme 2026-09-29: Ist jede Warenzeile durch freigegebene digitale
-     * Inhalte aufgebraucht, gibt es nichts mehr zu widerrufen — die Funktion
-     * ist aus. Eine gemischte Bestellung behält ihr Fenster für das Paket.
+     * F: If every goods line is used up by released digital content, there is
+     * nothing left to withdraw — the function is off. A mixed order keeps its
+     * window for the parcel.
      */
     public function testFreigegebeneDigitaleInhalteSchliessenDieFunktion(): void
     {
@@ -82,7 +82,7 @@ final class WithdrawalWindowReaderTest extends TestCase
         self::assertNotNull($released);
         self::assertSame(WindowState::Off, $released->state);
 
-        // Dazu ein Buch, noch nicht versandt: das Fenster bleibt offen.
+        // Plus a book, not yet shipped: the window stays open.
         $this->connection->insert('tl_consho_order_item', ['id' => 2, 'pid' => self::ORDER, 'quantity' => '1.0000']);
         $mixed = $this->reader()->of(self::ORDER);
         self::assertNotNull($mixed);
@@ -90,10 +90,10 @@ final class WithdrawalWindowReaderTest extends TestCase
     }
 
     /**
-     * Review Abo-4, S1 (A12): Eine Folgebestellung öffnet kein Widerrufsfenster.
-     * Sie hat keine eigene Berechtigung (P27), also griff die Prüfung darüber
-     * nicht — die gemeldete Lieferung öffnete 14 neue Tage. Gegenprobe: dieselbe
-     * Lieferung an einem Kauf öffnet das Fenster.
+     * Abo-4 (A12): A follow-up order opens no withdrawal window. It has no
+     * entitlement of its own (P27), so the check based on that did not apply
+     * — the reported delivery opened 14 new days. Control case: the same
+     * delivery on a purchase opens the window.
      */
     public function testEineFolgebestellungOeffnetKeinFenster(): void
     {
@@ -111,10 +111,10 @@ final class WithdrawalWindowReaderTest extends TestCase
     }
 
     /**
-     * Abo-8, P76: Bei einer Dienstleistung läuft die Frist ab Vertragsschluss
-     * (§ 355 Abs. 2 BGB, § 11 Abs. 2 Z 1 FAGG), nicht ab einer Lieferung. Die
-     * Freigabe (eine gemeldete Lieferung, F-4) schiebt sie nicht hinaus und
-     * schließt sie nicht; vor der Freigabe ist sie nicht offen ohne Ende.
+     * Abo-8, P76: For a service the period runs from the conclusion of the
+     * contract (§ 355 Abs. 2 BGB, § 11 Abs. 2 Z 1 FAGG), not from a delivery.
+     * The release (a reported delivery, F-4) neither postpones nor closes it;
+     * before the release it is not open without end.
      */
     public function testDieDienstleistungZaehltAbKauf(): void
     {
@@ -131,20 +131,20 @@ final class WithdrawalWindowReaderTest extends TestCase
         self::assertSame(WindowState::Open, $released->state, 'die Freigabe schließt nicht');
         self::assertSame($this->at('2026-10-22 23:59:59'), $released->closesAt, 'und schiebt nicht hinaus');
 
-        // Dazu ein Buch, noch nicht versandt: das Paket hält das Fenster offen.
+        // Plus a book, not yet shipped: the parcel keeps the window open.
         $this->connection->insert('tl_consho_order_item', ['id' => 2, 'pid' => self::ORDER, 'quantity' => '1.0000']);
         self::assertNull($this->reader()->of(self::ORDER)?->closesAt);
 
-        // Versandt am 10.10.: es gilt das spätere Ende, das des Pakets.
+        // Shipped on 10.10.: the later end applies, that of the parcel.
         $this->connection->insert('tl_consho_delivery', ['id' => 3, 'pid' => self::ORDER, 'shippedAt' => $this->at('2026-10-10 10:00'), 'reportedAt' => $this->at('2026-10-10 10:00')]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 3, 'orderItem' => 2, 'quantity' => '1']);
         self::assertSame($this->at('2026-10-31 23:59:59'), $this->reader()->of(self::ORDER)?->closesAt);
     }
 
     /**
-     * DL3: „Leistung erbracht" mit Zustimmung schließt das Fenster, wenn
-     * sonst nichts mehr widerrufbar ist; ohne Zustimmung bleibt es offen.
-     * In einer gemischten Bestellung hält das Buch es offen.
+     * DL3: "Service performed" with consent closes the window when nothing
+     * else is withdrawable any more; without consent it stays open. In a
+     * mixed order the book keeps it open.
      */
     public function testDieErbrachteLeistungSchliesstMitZustimmung(): void
     {

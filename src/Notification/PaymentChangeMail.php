@@ -16,7 +16,7 @@ use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
 
 /**
  * The mail after a change of payment method (7.5 step 3, C-10), to the
- * customer and a copy to the operator (Michael, 2026-09-25, E4).
+ * customer and a copy to the operator (E4).
  *
  * The customer gets the new payment block, the cancellation and the new
  * invoice. The operator gets the copy because a transfer may still arrive

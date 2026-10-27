@@ -14,9 +14,10 @@ use Webwerkwien\ContaoConshoBundle\Shipping\DbalArticleShippingData;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block GARAN (GA2, GA5): Garantie und Label nur am Hauptprodukt einer Ware;
- * eine Dauer von 1 oder 2 Jahren ist keine Garantie im Sinne von Z 12a.
- * Typ 1 körperlich, 2 digital. Produkt 1 Ware, 2 deren Variante, 3 digital.
+ * Block GARAN (GA2, GA5): guarantee and label only on the main product of
+ * goods; a duration of 1 or 2 years is not a guarantee within the meaning of
+ * Z 12a. Type 1 physical, 2 digital. Product 1 goods, 2 its variant,
+ * 3 digital.
  */
 class DurabilityGuaranteeListenerTest extends TestCase
 {
@@ -50,8 +51,8 @@ class DurabilityGuaranteeListenerTest extends TestCase
     }
 
     /**
-     * GA8: Das geschachtelte Label folgt dem vollen in jeder Regel — dieselbe
-     * Speicherprüfung hängt an beiden Feldern, ein gefülltes bleibt sichtbar.
+     * GA8: the nested label follows the full one in every rule — the same save
+     * check hangs on both fields, a filled one stays visible.
      */
     public function testDasGeschachtelteLabelFolgtDemVollen(): void
     {
@@ -106,16 +107,16 @@ class DurabilityGuaranteeListenerTest extends TestCase
     }
 
     /**
-     * GA9 (Leitlinien 3.1 vi): halbe Jahre ja, mit Komma oder Punkt; andere
-     * Kommastellen nein. In der Maske steht der Wert so, wie das Label ihn schreibt.
+     * GA9 (guidelines 3.1 vi): half years yes, with comma or point; other
+     * decimals no. In the form the value stands the way the label writes it.
      */
     public function testHalbeJahreGehenAndereKommastellenNicht(): void
     {
         self::assertSame('2.5', $this->listener()->saveYears('2,5', $this->dc(1)));
         self::assertSame('4.5', $this->listener()->saveYears('4.5', $this->dc(1)));
         self::assertSame('5', $this->listener()->saveYears('5,0', $this->dc(1)));
-        // Geladen in genau der Form, die das Speichern liefert — sonst hält
-        // DC_Table jedes Speichern für eine Änderung (Review Teil 2, 1).
+        // Loaded in exactly the form the save delivers — otherwise DC_Table
+        // takes every save for a change (part 2).
         foreach (['2.5', '5.0', '0.0'] as $stored) {
             $loaded = $this->listener()->loadYears($stored);
             self::assertSame($loaded, $this->listener()->saveYears($loaded, $this->dc(1)), $stored);
@@ -149,8 +150,8 @@ class DurabilityGuaranteeListenerTest extends TestCase
     }
 
     /**
-     * Review GARAN, 2: an der Variante wirkt nichts — „Mehrere bearbeiten"
-     * zeigt die Felder dort trotzdem. Leeren geht.
+     * GARAN: nothing takes effect on the variant — "Edit multiple" shows the
+     * fields there anyway. Emptying works.
      */
     public function testAnDerVarianteAbgelehnt(): void
     {

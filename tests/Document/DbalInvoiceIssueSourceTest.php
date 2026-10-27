@@ -77,8 +77,8 @@ class DbalInvoiceIssueSourceTest extends TestCase
     }
 
     /**
-     * Öffentlich geworden NACH der Auswahl — über den Dateimanager, an der
-     * automatischen Sperre vorbei.
+     * Made public AFTER the selection — through the file manager, bypassing
+     * the automatic protection.
      */
     public function testEinOeffentlicherAblageordnerWirdGemeldet(): void
     {
@@ -96,8 +96,8 @@ class DbalInvoiceIssueSourceTest extends TestCase
     }
 
     /**
-     * Reverse Charge braucht UID UND Grenze. Wer nur ins Heimatland liefert,
-     * stellt nie eine solche Rechnung aus und braucht keinen Hinweis.
+     * Reverse charge needs a VAT ID AND a border. A shop that only delivers to
+     * its home country never issues such an invoice and needs no notice.
      */
     public function testDerReverseChargeHinweisFehltNurWoErGebrauchtWird(): void
     {
@@ -109,8 +109,9 @@ class DbalInvoiceIssueSourceTest extends TestCase
     }
 
     /**
-     * C-8, Liefertag: Wer die Rechnung beim Kauf ausstellt (Vorkasse), muss
-     * einen Lieferzeitraum nennen können — ohne Lieferzeit am Shop nicht.
+     * C-8, delivery date: a shop that issues the invoice at purchase (prepayment)
+     * must be able to state a delivery period — without a delivery time on the
+     * shop it cannot.
      */
     public function testVorkasseOhneLieferzeitWirdGemeldet(): void
     {

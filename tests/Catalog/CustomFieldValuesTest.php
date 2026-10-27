@@ -12,9 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\CustomFieldValues;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Zusatzfeld-Werte, ZW-1 (Z2; Michael, 2026-10-14: „ja, alles wie
- * empfohlen"): welche Felder ein Produkt hat, wie Werte geprüft und
- * gespeichert werden, und dass eine Variante erbt und einzeln überschreibt.
+ * Custom field values, ZW-1 (Z2): which fields a product has, how values are
+ * checked and stored, and that a variant inherits and overrides one by one.
  */
 class CustomFieldValuesTest extends TestCase
 {
@@ -34,12 +33,12 @@ class CustomFieldValuesTest extends TestCase
         $this->connection->insert('tl_consho_custom_field', ['id' => 4, 'alias' => 'abfuellung', 'title' => 'Abfüllung', 'type' => 'date']);
         $this->connection->insert('tl_consho_custom_field', ['id' => 5, 'alias' => 'glasform', 'title' => 'Glasform', 'type' => 'text']);
 
-        // Die Reihenfolge des Typs zählt, nicht die der Definitionen.
+        // The order of the type counts, not that of the definitions.
         $this->connection->insert('tl_consho_product_type', ['id' => 1, 'title' => 'Wein', 'customFields' => serialize(['2', '1', '3', '4'])]);
         $this->connection->insert('tl_consho_product_type', ['id' => 2, 'title' => 'Glas', 'customFields' => serialize(['5'])]);
 
         $this->connection->insert('tl_consho_product', ['id' => 10, 'pid' => 0, 'productType' => 1, 'customFieldValues' => '{"rebsorte":"Grüner Veltliner","jahrgang":"2021","bio":"1","glasform":"Tulpe"}']);
-        // Die Variante hat keinen eigenen Typ — sie gilt als Wein über ihr Hauptprodukt.
+        // The variant has no type of its own — it counts as wine through its main product.
         $this->connection->insert('tl_consho_product', ['id' => 11, 'pid' => 10, 'productType' => 0, 'customFieldValues' => '{"jahrgang":"2022"}']);
         $this->connection->insert('tl_consho_product', ['id' => 20, 'pid' => 0, 'productType' => 0]);
     }
@@ -53,7 +52,7 @@ class CustomFieldValuesTest extends TestCase
     }
 
     /**
-     * ZW-5: Ein Befehl prüft die Werte eines Produkts, das es noch nicht gibt.
+     * ZW-5: a command checks the values of a product that does not exist yet.
      */
     public function testFelderEinesTyps(): void
     {
@@ -70,8 +69,8 @@ class CustomFieldValuesTest extends TestCase
     }
 
     /**
-     * Z2: Die Variante erbt jeden Wert und überschreibt einzeln. Ein Wert
-     * eines Felds, das der Typ nicht (mehr) hat, zählt nicht.
+     * Z2: the variant inherits every value and overrides one by one. A value
+     * of a field the type does not have (any more) does not count.
      */
     public function testDieVarianteErbtUndUeberschreibt(): void
     {
@@ -131,8 +130,8 @@ class CustomFieldValuesTest extends TestCase
         yield 'kein Tag' => [CustomField::DATE, '2023-02-29', 'feld: "2023-02-29" is no date as YYYY-MM-DD.'];
         yield 'ja als Wort' => [CustomField::BOOLEAN, 'ja', 'feld: give 1 for yes or 0 for no, empty for none.'];
         yield 'Text zu lang' => [CustomField::TEXT, str_repeat('a', 256), 'feld: the text is longer than 255 characters.'];
-        // Review ZW-C, S2: Die Maske hat eine Zeile, der Befehl nicht — ein
-        // Zeilenumbruch bräche die Markdown-Liste.
+        // ZW-C: the mask has one line, the command does not — a
+        // line break would break the Markdown list.
         yield 'Zeilenumbruch' => [CustomField::TEXT, "Grüner\n\nVeltliner", 'feld: the text holds a line break or another control character.'];
         yield 'Tabulator' => [CustomField::TEXT, "Grüner\tVeltliner", 'feld: the text holds a line break or another control character.'];
     }

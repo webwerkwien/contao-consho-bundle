@@ -20,7 +20,7 @@ class CatalogSeedWriterTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        // Von Hand gepflegt, wie auf c5: darf nie angefasst werden.
+        // Maintained by hand, as on a real installation: must never be touched.
         $this->insertProduct(['id' => 1, 'title' => 'Schwedenbitter', 'published' => 1]);
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.8333']);

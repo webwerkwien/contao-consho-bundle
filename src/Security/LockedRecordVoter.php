@@ -27,7 +27,7 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
  * nothing, so saving that mask asks with nothing new either. What IS
  * refused: new values for a locked row, which is how "Mehrere bearbeiten"
  * (editAll, overrideAll) reached it — the read-only mask only covers
- * act=edit (Fable review of D-1, S2).
+ * act=edit (D-1).
  */
 abstract class LockedRecordVoter extends AbstractDataContainerVoter
 {
@@ -35,7 +35,7 @@ abstract class LockedRecordVoter extends AbstractDataContainerVoter
      * The multi-record modes. There a locked row is refused outright, so it
      * drops out of the mask (DC_Table checks each row before showing it)
      * instead of appearing editable and being skipped without a word on save
-     * (second Fable review of D-1, S-c).
+     * (D-1).
      */
     private const MULTI_EDIT = ['editAll', 'overrideAll'];
 

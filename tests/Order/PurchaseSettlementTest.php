@@ -19,9 +19,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * WG15: Eine Bestellung über 0 € galt nie als bezahlt — PaymentRecorded
- * verlangt einen positiven Anspruch, und eine Zahlung über 0 kommt nie. Ein
- * E-Book mit 100-%-Code wurde deshalb nie freigegeben.
+ * WG15: an order over €0 never counted as paid — PaymentRecorded demands a
+ * positive claim, and a payment of 0 never comes. An e-book with a 100 %
+ * code was therefore never released.
  */
 class PurchaseSettlementTest extends TestCase
 {
@@ -61,8 +61,8 @@ class PurchaseSettlementTest extends TestCase
     }
 
     /**
-     * Was beim Kaufklick schon bezahlt ist — später ein Gutschein (WG-5) —,
-     * zählt mit: gedeckt ist gedeckt, nicht nur „0 €".
+     * What is already paid at the purchase click — later a gift card (WG-5) —
+     * counts too: covered is covered, not only "€0".
      */
     public function testEineVollGedeckteBestellungIstBezahlt(): void
     {
@@ -108,9 +108,9 @@ class PurchaseSettlementTest extends TestCase
     }
 
     /**
-     * E1: „mit Gutschein" hat keinen Handler und keinen Auslöser — bezahlt
-     * ist mit dem Klick, also entsteht die Rechnung jetzt; sonst entstünde
-     * sie nie (kein Handler meldet je eine Zahlung).
+     * E1: "with gift card" has no handler and no trigger — it is paid with the
+     * click, so the invoice is created now; otherwise it would never be created
+     * (no handler ever reports a payment).
      */
     public function testMitGutscheinBezahltEntstehtDieRechnungMitDemKaufklick(): void
     {
@@ -121,7 +121,7 @@ class PurchaseSettlementTest extends TestCase
         $documents->method('hasDocument')->willReturn(false);
         $documents->expects(self::once())->method('issueOnce')->with(1, 3, DocumentType::Invoice)->willReturn(45);
 
-        // Auch neben einem Handler, der „bei Versand" sagen würde: Zahlungsart 0 hat keinen.
+        // Even next to a handler that would say "on shipping": payment method 0 has none.
         self::assertSame(45, $this->settlement($documents, trigger: DocumentTrigger::OnShipment)->settleIfNothingOpen(1, 3, new PaymentMethod(CheckoutCalculator::PAYMENT_BY_VOUCHER, 'voucher', 'Gutschein', []), 1_800_000_000));
     }
 

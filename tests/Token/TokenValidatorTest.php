@@ -72,9 +72,9 @@ class TokenValidatorTest extends TestCase
         self::assertNull($validator->validate($this->token('z'), TokenPurpose::ViewOrder));
         self::assertNull($validator->validate($this->token().'a', TokenPurpose::ViewOrder));
 
-        // PCRE lässt bei $ einen abschließenden Zeilenumbruch durch. 64 gültige
-        // Zeichen plus \n hätten die Vorprüfung bestanden und die Abfrage
-        // ausgelöst — genau das, was sie verhindern soll.
+        // PCRE lets a trailing line break through at $. 64 valid characters plus
+        // \n would have passed the pre-check and triggered the query — exactly
+        // what the pre-check is meant to prevent.
         self::assertNull($validator->validate($this->token()."\n", TokenPurpose::ViewOrder));
     }
 

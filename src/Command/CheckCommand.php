@@ -21,8 +21,7 @@ use Webwerkwien\ContaoConshoBundle\Setup\SetupGuide;
  * For deploy scripts and monitoring, not only for people: the exit code is 1
  * as soon as one shop does not sell — the same "ready" as the setup page,
  * the published start point included (I7). Without JSON: machine-readable
- * output is the API plugin's (Michael, 2026-10-08: "I6 ohne JSON in den
- * Kern").
+ * output is the API plugin's (I6).
  *
  * The same sources as the back end start page, all of them: the console has
  * no module rights and no "Zur Kenntnis genommen" — it shows everything.
@@ -68,7 +67,7 @@ final class CheckCommand extends Command
 
         // The sources name countries in TL_LANGUAGE (DbalConfigurationIssue-
         // Source), which nobody sets on the console — "Denmark" in a German
-        // sentence, measured on c5 (2026-10-08).
+        // sentence.
         $previous = $GLOBALS['TL_LANGUAGE'] ?? null;
         $GLOBALS['TL_LANGUAGE'] = $language;
 

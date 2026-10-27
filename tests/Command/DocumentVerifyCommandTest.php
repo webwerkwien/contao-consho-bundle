@@ -57,9 +57,9 @@ class DocumentVerifyCommandTest extends TestCase
     }
 
     /**
-     * 🔴 --retry legt NUR gescheiterte nach. Eine fehlende oder veränderte
-     * Originaldatei durch ein neu erzeugtes PDF zu ersetzen, gäbe ein neues
-     * Dokument als das Original aus — genau das, was die Ablage ausschließt.
+     * 🔴 --retry ONLY files the failed ones again. Replacing a missing or
+     * altered original file with a newly generated PDF would pass off a new
+     * document as the original — exactly what the archive rules out.
      */
     public function testRetryLegtNurGescheiterteNach(): void
     {

@@ -19,7 +19,7 @@ class SitemapCacheLifetimeListenerTest extends TestCase
 
     public function testTheSitemapLivesUntilTheNextProductStarts(): void
     {
-        // Wie Contao sie ausliefert: 30 Tage im gemeinsamen Cache.
+        // As Contao delivers it: 30 days in the shared cache.
         $response = $this->respond(SitemapController::class.'::__invoke', self::NOW + 600);
 
         self::assertSame(600, $response->getMaxAge());
@@ -27,7 +27,7 @@ class SitemapCacheLifetimeListenerTest extends TestCase
 
     public function testALaterChangeLeavesContaosLifetime(): void
     {
-        // Nur verkürzen, nie verlängern.
+        // Only shorten, never extend.
         self::assertSame(self::MONTH, $this->respond(SitemapController::class, self::NOW + 2 * self::MONTH)->getMaxAge());
     }
 
@@ -43,7 +43,7 @@ class SitemapCacheLifetimeListenerTest extends TestCase
 
     public function testAPrivateResponseStaysPrivate(): void
     {
-        // Angemeldet: MakeResponsePrivateListener hat s-maxage schon entfernt.
+        // Logged in: MakeResponsePrivateListener has already removed s-maxage.
         $response = $this->respond(SitemapController::class, self::NOW + 600, shared: false);
 
         self::assertNull($response->headers->getCacheControlDirective('s-maxage'));

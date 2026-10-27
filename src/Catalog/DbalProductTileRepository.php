@@ -79,10 +79,10 @@ final class DbalProductTileRepository
                      p.images AS images,
                      p.minPurchase AS minPurchase,
                      /*
-                      * Ob es überhaupt Varianten gibt — nicht, ob sie sich im
-                      * Preis unterscheiden. Zwei gleich teure Varianten machen
-                      * das Hauptprodukt genauso unkaufbar wie zwei verschieden
-                      * teure.
+                      * Whether there are variants at all — not whether their
+                      * prices differ. Two variants at the same price leave the
+                      * main product just as unbuyable as two at different
+                      * prices.
                       */
                      (SELECT COUNT(*) FROM tl_consho_product v WHERE v.pid = p.id) AS variants,
                      pv.%1$s AS price,
@@ -190,12 +190,12 @@ final class DbalProductTileRepository
      * binary UUIDs, and the order is a statement about the article (A-12).
      */
     /**
-     * Die Mindestmenge als Formularwert: ohne überflüssige Nullen, und 1 wo
-     * keine gesetzt ist.
+     * The minimum quantity as a form value: without needless zeros, and 1
+     * where none is set.
      *
-     * ⚠️ Gekürzt wird der WERT, nicht nur die Anzeige. `minPurchase` ist
-     * `decimal(10,4)`, und ein roh durchgereichtes „1,0000" stand am
-     * 2026-09-21 auf jeder Produktseite im Mengenfeld.
+     * ⚠️ The VALUE is shortened, not only the display. `minPurchase` is
+     * `decimal(10,4)`, and a raw "1,0000" once stood in the quantity field of
+     * every product page.
      */
     private static function quantityOf(string $minPurchase): string
     {

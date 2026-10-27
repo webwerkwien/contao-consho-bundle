@@ -161,7 +161,7 @@ class StockBooking
 
     /**
      * Four decimals, whatever the driver hands back — MySQL "12.0000",
-     * SQLite 12 or 12.5 (the trap of Prüfungsnotiz Fall 30).
+     * SQLite 12 or 12.5.
      */
     public static function scaled(mixed $value): string
     {

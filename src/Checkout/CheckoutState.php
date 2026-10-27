@@ -80,7 +80,7 @@ final class CheckoutState
         /** @var list<ShippingShare> */
         public readonly array $discountShares = [],
         public readonly CodeStatus $codeStatus = CodeStatus::None,
-        // What the order still lacks for the code's minimum (review H, S2), as a number; '' otherwise.
+        // What the order still lacks for the code's minimum (H), as a number; '' otherwise.
         public readonly string $codeMissing = '',
         /*
          * Block Wertgutscheine (WG-5): the basket's vouchers in the order
@@ -97,7 +97,7 @@ final class CheckoutState
          * (block R, O1). The order is written with the same one, never a rate
          * nobody was quoted. A switch turned between the review and the click
          * changes the amounts, so the click's CheckoutFingerprint no longer
-         * matches the review page's (review R, F12).
+         * matches the review page's (R).
          */
         public readonly bool $taxAtDestination = false,
     ) {
@@ -202,7 +202,7 @@ final class CheckoutState
             $this->payable,
             $this->coveredByVouchers,
             // Block R: missing here, the click wrote the order without the
-            // switch and the total check refused it (acceptance R-5).
+            // switch and the total check refused it (R-5).
             $this->taxAtDestination,
         );
     }

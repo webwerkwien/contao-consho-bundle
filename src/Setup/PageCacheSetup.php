@@ -76,7 +76,7 @@ final class PageCacheSetup
 
         /*
          * The page "/" serves: the one with the alias `index`, else the first.
-         * Found at the acceptance on c5: three pages under the start point
+         * Three pages under a start point once
          * shared `sorting = 0`, and "the first" was a product page, not Home.
          */
         $ids = array_map('intval', $this->connection->fetchFirstColumn(
@@ -113,7 +113,7 @@ final class PageCacheSetup
 
     /**
      * The first published page below this start point with a product list —
-     * searched in the start point's own tree (review I, L9: the first fifty
+     * searched in the start point's own tree (I: the first fifty
      * of the whole installation may all belong to other start points).
      */
     private function catalogue(int $rootId): int|null

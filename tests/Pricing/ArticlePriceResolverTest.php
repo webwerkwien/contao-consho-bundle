@@ -30,14 +30,14 @@ class ArticlePriceResolverTest extends TestCase
     private const NO_UNITS = ['unit' => '', 'purchaseUnit' => '0.0000', 'referenceUnit' => '0.0000'];
 
     /**
-     * Jeder Test legt hier seine Zeilen aus tl_consho_price ab.
+     * Each test puts its rows from tl_consho_price here.
      *
      * @var list<array{pid: int, net: string, currency?: string, group?: int|null, minQuantity?: string, validFrom?: int|null, validTo?: int|null, rule?: int}>
      */
     private array $rows = [];
 
     /**
-     * Welche Kundengruppen der Resolver beim Repository angefragt hat.
+     * Which customer groups the resolver asked the repository for.
      *
      * @var list<list<int>>
      */
@@ -72,7 +72,7 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testASingleThresholdIsNoScale(): void
     {
-        // Eine Tabelle mit einer Zeile ist keine Staffel.
+        // A table with one row is not a scale.
         $this->rows = [['pid' => 1, 'net' => '13.0000']];
 
         self::assertSame([], $this->resolve(1, 1)?->scale);
@@ -80,8 +80,8 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testAVariantWithoutOwnRowsInheritsTheWholePriceSetOfTheMainProduct(): void
     {
-        // Entschieden von Michael am 2026-09-13: „leer = wie Hauptprodukt",
-        // der ganze Satz samt Staffel.
+        // Empty means "as the main product": the whole set, scale prices
+        // included.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000'],
             ['pid' => 1, 'net' => '10.8000', 'minQuantity' => '10.0000'],
@@ -97,7 +97,7 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testAVariantWithAnOwnRowTakesNothingFromTheMainProduct(): void
     {
-        // Die Staffel des Hauptprodukts darf nicht in die Variante durchsickern.
+        // The main product's scale must not leak into the variant.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000'],
             ['pid' => 1, 'net' => '10.8000', 'minQuantity' => '10.0000'],
@@ -114,8 +114,8 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testOhneGruppenBleibtEsDerListenpreis(): void
     {
-        // Der Gast, und bis C-4 jeder: ohne Gruppen fragt der Resolver auch
-        // keine an, und die Gruppenzeile ist für ihn nicht da.
+        // The guest, and until C-4 everyone: without groups the resolver asks
+        // for none either, and the group row does not exist for them.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000'],
             ['pid' => 1, 'net' => '9.6000', 'group' => 5],
@@ -132,9 +132,9 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testOverlappingRowsAtOneThresholdAppearOnceWithTheCalculatorsValue(): void
     {
-        // Zwei gleichrangige Zeilen ab 1 — der Rechner nimmt die zuerst gelieferte
-        // (Nebenbefund in Plan-Entscheidung 4). Die Staffel muss dieselbe Antwort
-        // geben wie der Preis, sonst widersprechen sich zwei Zahlen auf der Seite.
+        // Two rows of equal rank from 1 — the calculator takes the one delivered
+        // first. The scale must give the same answer as the price, otherwise two
+        // numbers on the page contradict each other.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000', 'validFrom' => self::NOW - 100],
             ['pid' => 1, 'net' => '12.0000', 'minQuantity' => '1', 'validTo' => self::NOW + 100],
@@ -151,7 +151,7 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testReturnsNullWithoutAPriceInTheCurrency(): void
     {
-        // Keine Ausnahme: die Seite zeigt dann keinen Preis (Plan-Entscheidung 10).
+        // No exception: the page then shows no price.
         $this->rows = [['pid' => 1, 'net' => '13.0000', 'currency' => 'CHF']];
 
         self::assertNull($this->resolve(1, 1));
@@ -164,9 +164,9 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testCalculatesTheBasePriceFromTheGrossPrice(): void
     {
-        // Netto 10,8333 bei 20 % → Brutto 13,00 für 0,25 l → 52,00 je Liter. Mit
-        // einem Satz, nicht mit 0 %: Sonst bliebe der Test grün, wenn der
-        // Grundpreis aus Netto entstünde — nach PAngV muss er brutto sein.
+        // Net 10.8333 at 20 % → gross 13.00 for 0.25 l → 52.00 per litre. With
+        // a rate, not with 0 %: otherwise the test would stay green if the
+        // unit price were derived from net — under PAngV it must be gross.
         $this->rows = [['pid' => 1, 'net' => '10.8333']];
 
         $price = $this->resolver($this->repository(), ['AT' => '20.0000'])
@@ -233,7 +233,7 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testFromPriceIsNoFromPriceWhenAllVariantsCostTheSame(): void
     {
-        // '13' und '13.0000' sind derselbe Betrag.
+        // '13' and '13.0000' are the same amount.
         [$cheapest, $isFrom] = ArticlePriceResolver::fromPrice([
             $this->articlePrice(6, '13.0000'),
             $this->articlePrice(7, '13'),
@@ -250,9 +250,9 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testTheGrossUsesTheCountrysRateAndTheArticlesOwnTaxClass(): void
     {
-        // Variante 6 erbt die Preiszeile von Produkt 1, ist aber ermäßigt
-        // besteuert (Klasse 2). Versteuert wird mit ihrer eigenen Klasse — so,
-        // wie OrderFactory die Position versteuert.
+        // Variant 6 inherits the price row of product 1 but is taxed at the
+        // reduced rate (class 2). It is taxed with its own class — just as
+        // OrderFactory taxes the line item.
         $this->rows = [['pid' => 1, 'net' => '10.0000']];
 
         $rates = new class implements TaxRateRepositoryInterface {
@@ -319,7 +319,7 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testMitEinerGruppeKommtDerGruppenpreisAufDieDetailseite(): void
     {
-        // C-4: die eine Stelle, an der sich das Argument ändert.
+        // C-4: the one place where the argument changes.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000'],
             ['pid' => 1, 'net' => '9.6000', 'group' => 5],
@@ -337,9 +337,9 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testEineFremdeGruppeAendertNichts(): void
     {
-        // Die Zeile gehört Gruppe 5, gefragt wird für Gruppe 7: sie ist für
-        // diesen Besucher nicht da. Ohne diesen Test sähe ein Repository, das
-        // die Gruppe im WHERE vergisst, genauso grün aus.
+        // The row belongs to group 5, the question is asked for group 7: it does
+        // not exist for this visitor. Without this test a repository that
+        // forgets the group in the WHERE would look just as green.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000'],
             ['pid' => 1, 'net' => '9.6000', 'group' => 5],
@@ -355,10 +355,10 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testDieStaffelZeigtDieSchwellenDerEigenenGruppe(): void
     {
-        // ⚠️ Der Fall, den die alte Zeile `if (null !== $row->customerGroup)
-        // continue;` still verschluckt hätte: Die Gruppe kauft ab 5, alle
-        // anderen ab 10. Ohne die Gruppenzeile in den Schwellen zeigte die
-        // Tabelle 1 und 10 — und der Händler fände seine eigene Staffel nicht.
+        // ⚠️ The case the old line `if (null !== $row->customerGroup)
+        // continue;` would have silently swallowed: the group buys from 5, everyone
+        // else from 10. Without the group row in the thresholds the
+        // table would show 1 and 10 — and the merchant would not find their own scale.
         $this->rows = [
             ['pid' => 1, 'net' => '10.0000'],
             ['pid' => 1, 'net' => '9.0000', 'minQuantity' => '10.0000'],
@@ -370,9 +370,9 @@ class ArticlePriceResolverTest extends TestCase
         ;
 
         self::assertNotNull($price);
-        // Ab 10 steht keine eigene Stufe mehr: Der Gruppenpreis ab 5 gilt dort
-        // auch (Spezifität schlägt den kleineren Betrag), und eine Zeile
-        // „ab 10: 8,00" direkt unter „ab 5: 8,00" sagt nichts.
+        // From 10 there is no tier of its own any more: the group price from 5 applies
+        // there too (specificity beats the smaller amount), and a row
+        // "from 10: 8.00" directly under "from 5: 8.00" says nothing.
         self::assertSame(
             [['1.0000', '10.0000'], ['5.0000', '8.0000']],
             $this->stepsOf($price),
@@ -381,8 +381,8 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testEineStufeDieNichtsAendertFaelltWeg(): void
     {
-        // Derselbe Betrag auf zwei Schwellen — hier ohne Gruppen, damit die
-        // Regel als eigene sichtbar ist und nicht als Nebenwirkung von C-4.
+        // The same amount on two thresholds — here without groups, so that the
+        // rule is visible as a rule of its own and not as a side effect of C-4.
         $this->rows = [
             ['pid' => 1, 'net' => '10.0000'],
             ['pid' => 1, 'net' => '10.0000', 'minQuantity' => '10.0000'],
@@ -396,8 +396,8 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testEineAbozeileNimmtDenPreisIhrerRegel(): void
     {
-        // Abo-2: Einmalkauf 80, Monatsabo (Regel 5) 8 — die Zeile mit Regel 5
-        // kostet 8, auch als billigster Preis gewönne sonst nichts Falsches.
+        // Abo-2: one-off purchase 80, monthly subscription (rule 5) 8 — the row with rule 5
+        // costs 8; even as the cheapest price nothing wrong would win otherwise.
         $this->rows = [
             ['pid' => 1, 'net' => '80.0000'],
             ['pid' => 1, 'net' => '8.0000', 'rule' => 5],
@@ -413,9 +413,9 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testEineVarianteErbtDenAbopreisObwohlSieEinenEigenenEinmalkaufPreisHat(): void
     {
-        // Die Erbregel gilt je Vertrag: Die Variante hat einen eigenen
-        // Einmalkauf-Preis, aber keinen Abopreis — für das Abo gilt der des
-        // Grundprodukts, nicht ihr Einmalkauf-Preis und nicht „kein Preis".
+        // The inheritance rule applies per contract: the variant has its own
+        // one-off price but no subscription price — for the subscription the one of the
+        // base product applies, not its one-off price and not "no price".
         $this->rows = [
             ['pid' => 1, 'net' => '8.0000', 'rule' => 5],
             ['pid' => 6, 'net' => '99.0000'],
@@ -429,8 +429,8 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testDieStaffelEinesAbosBleibtInSeinerRegel(): void
     {
-        // Staffeln rechnet der Kalkulator je Schwelle neu nach — fragte er
-        // dabei ohne Regel, stünde der Einmalkauf-Preis in der Abo-Staffel.
+        // The calculator recomputes scales per threshold — if it asked
+        // without a rule, the one-off price would appear in the subscription scale.
         $this->rows = [
             ['pid' => 1, 'net' => '80.0000'],
             ['pid' => 1, 'net' => '8.0000', 'rule' => 5],
@@ -447,10 +447,10 @@ class ArticlePriceResolverTest extends TestCase
 
     public function testDieProjektionFragtNieNachEinerGruppe(): void
     {
-        // listPrice() füttert tl_consho_product_list_price, und die Projektion
-        // hat keine Gruppendimension („Kein Preis je Kundengruppe in der
-        // Materialisierung", Block A 3.6). Eine Gruppe hier hinein zu reichen
-        // schriebe einen persönlichen Preis in eine geteilte Zeile.
+        // listPrice() feeds tl_consho_product_list_price, and the projection
+        // has no group dimension ("no price per customer group in the
+        // materialisation", Block A 3.6). Passing a group in here
+        // would write a personal price into a shared row.
         $this->rows = [
             ['pid' => 1, 'net' => '13.0000'],
             ['pid' => 1, 'net' => '9.6000', 'group' => 5],
@@ -464,9 +464,9 @@ class ArticlePriceResolverTest extends TestCase
     }
 
     /**
-     * Abo-2b, P88: ein reines Abo-Produkt steht mit seinem ersten Modell, das
-     * einen Preis hat, in der Liste — nicht mit einer übrig gebliebenen
-     * Einmalkauf-Zeile (Review Abo-2, L4a).
+     * Abo-2b, P88: a subscription-only product is listed with its first model that
+     * has a price — not with a leftover
+     * one-off row (Abo-2).
      */
     public function testReinesAboZeigtDasErsteModellMitPreis(): void
     {
@@ -482,7 +482,7 @@ class ArticlePriceResolverTest extends TestCase
         self::assertSame(['10.0000', 2, false], [$price->net, $price->subscriptionRule, $price->alsoSubscription], 'Regel 3 hat keinen Preis, also Regel 2 — die Reihenfolge des Betreibers, nicht der billigste');
     }
 
-    /** Abo-2b, P89: Einmalkauf bleibt die Zahl, "auch im Abo" nur mit Preis. */
+    /** Abo-2b, P89: the one-off purchase stays the number, "also as a subscription" only with a price. */
     public function testEinmalkaufMitAbo(): void
     {
         $this->rows = [
@@ -497,7 +497,7 @@ class ArticlePriceResolverTest extends TestCase
         self::assertSame(['9.0000', 0, false], [$price?->net, $price?->subscriptionRule, $price?->alsoSubscription], 'ein Modell ohne Preis ist kein Angebot');
     }
 
-    /** Abo-2b, P91: nur Modelle für alle — gefragt wird als Gast, nicht als Geschäftskunde. */
+    /** Abo-2b, P91: only models for everyone — the question is asked as a guest, not as a business customer. */
     public function testNurModelleFuerAlle(): void
     {
         $this->rows = [['pid' => 1, 'net' => '1.0000', 'rule' => 2]];
@@ -506,8 +506,8 @@ class ArticlePriceResolverTest extends TestCase
     }
 
     /**
-     * Satz 0 %: Hier ist das Brutto das Netto — Thema dieser Tests ist, welche
-     * Zeilen gelten. Wie der Satz hinzukommt, prüfen die Tests weiter oben.
+     * Rate 0 %: here gross is net — the subject of these tests is which
+     * rows apply. How the rate is added is checked by the tests further up.
      */
     private function resolve(int $articleId, int $mainProductId, array $units = self::NO_UNITS): ArticlePrice|null
     {
@@ -540,13 +540,13 @@ class ArticlePriceResolverTest extends TestCase
             });
         }
 
-        // PriceCalculator ist final — also echt, mit demselben Repository wie der Resolver.
+        // PriceCalculator is final — so the real one, with the same repository as the resolver.
         return new ArticlePriceResolver(new PriceCalculator($repository), $repository, new BasePriceCalculator(), $this->grossCalculator($rates), $taxClasses, $offers);
     }
 
     /**
-     * Filtert wie das SQL in DbalPriceRepository: Artikel, Währung, Gruppe 0 oder
-     * die angefragte, Gültigkeit mit NULL als offener Grenze. Reihenfolge wie abgelegt.
+     * Filters like the SQL in DbalPriceRepository: article, currency, group 0 or
+     * the requested one, validity with NULL as an open bound. Order as stored.
      */
     private function repository(): PriceRepositoryInterface
     {

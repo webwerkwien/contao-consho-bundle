@@ -20,8 +20,7 @@ use Contao\StringUtil;
  * | robots      | never touched                                                |
  *
  * Both texts arrive in the language of the page, already fallen back to the
- * default language (ProductDetailRepository). Decided by Michael, 2026-09-14;
- * no excerpt of the long description.
+ * default language (ProductDetailRepository). No excerpt of the long description.
  *
  * ── Why there is no variant parameter ─────────────────────────────────────
  *
@@ -44,7 +43,7 @@ use Contao\StringUtil;
  * links on the page lead there, and opened with ?variant= the page marks up
  * that variant's Offer (plan B-6, ProductJsonLd — one Product with an
  * AggregateOffer otherwise, not a ProductGroup). Google advises against
- * noindex on top (docs/block-a-fundament.md, 2).
+ * noindex on top (Block A, 2).
  *
  * ── When it takes effect ──────────────────────────────────────────────────
  *
@@ -118,7 +117,7 @@ final class ProductHead
 
     /**
      * The product's own meta description, otherwise its teaser cut to
-     * TEASER_LENGTH, otherwise '' (Michael, 2026-09-14).
+     * TEASER_LENGTH, otherwise ''.
      */
     private function description(string $metaDescription, string $teaser): string
     {

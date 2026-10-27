@@ -10,7 +10,7 @@ namespace Webwerkwien\ContaoConshoBundle\Cancellation;
  *
  * `earliestAt`: the earliest possible end. Where the contract ends later (a
  * later date asked for), periods that begin before it are still billed in
- * full (P55) — the result page and the mail say so (review Abo-7, S1).
+ * full (P55) — the result page and the mail say so (Abo-7).
  */
 final readonly class CancellationDate
 {

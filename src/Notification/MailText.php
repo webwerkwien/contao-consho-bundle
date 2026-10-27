@@ -5,9 +5,9 @@ namespace Webwerkwien\ContaoConshoBundle\Notification;
 /**
  * The plain text part of a mail, made from its HTML (C-9).
  *
- * Symfony's DefaultHtmlToTextConverter only strips tags. On the first real
- * confirmation (2026-09-25) that glued table cells together ("Net
- * total€11.59", "Account holderMichael Morgenbesser") and — worse — dropped
+ * Symfony's DefaultHtmlToTextConverter only strips tags. On a real
+ * confirmation that glued table cells together ("Net
+ * total€11.59", "Account holderEva Example") and — worse — dropped
  * every link target: a reader without HTML got "View your order" and no
  * address to go to. The alternative, LeagueHtmlToMarkdownConverter, needs a
  * package Consho does not otherwise want.

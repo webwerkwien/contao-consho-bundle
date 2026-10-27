@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
  *
  * ── Why this test exists ─────────────────────────────────────────────────
  *
- * 🔴 On 2026-09-23, C-7 shipped `'rte' => false` on a textarea — an explicit
+ * 🔴 C-7 shipped `'rte' => false` on a textarea — an explicit
  * way of saying "no rich text editor here". Contao's
  * PrepareForOutputEncodingMigration does:
  *
@@ -93,8 +93,7 @@ class EveryDcaSurvivesContaoMigrationsTest extends TestCase
     }
 
     /**
-     * 🔴 **This test checks that the list above is still the whole list** —
-     * F7 of the review of 2026-09-23.
+     * 🔴 **This test checks that the list above is still the whole list.**
      *
      * The list started as `['rte', 'rgxp', 'inputType']`, and two of the three
      * checked nothing. Measured against the installed core:
@@ -150,8 +149,8 @@ class EveryDcaSurvivesContaoMigrationsTest extends TestCase
             }
         }
 
-        // Nicht `assertSame` auf die Reihenfolge: gesucht ist, ob ein
-        // Schlüssel fehlt, nicht wie die Liste sortiert ist.
+        // Not `assertSame` on the order: the question is whether a key is
+        // missing, not how the list is sorted.
         $found = array_keys($found);
         sort($found);
 

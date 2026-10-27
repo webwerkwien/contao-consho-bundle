@@ -5,9 +5,9 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Lieferadresse und UID-Nummer pflegt das Mitglied selbst, in Contaos
- * „Persönliche Daten" und bei der Registrierung — wie die Rechnungsadresse.
- * Was das System schreibt (Prüfergebnis, Nachweis), bleibt dort draußen.
+ * The member maintains the delivery address and VAT ID themselves, in
+ * Contao's "Personal data" and at registration — like the billing address.
+ * What the system writes (check result, proof) stays out of there.
  */
 class MemberDcaTest extends TestCase
 {

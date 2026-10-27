@@ -72,8 +72,7 @@ final class ProductUrlGenerator
          * from a superseded address). A 404 raised by Symfony's router happens
          * BEFORE Contao has initialized its framework — PageModel::findById()
          * then finds nothing, this method reports a missing product page, and
-         * the redirect silently does not happen. Measured on the test server on
-         * 2026-09-11: the row was there, the query returned it, and the address
+         * the redirect silently does not happen. The row was there, the query returned it, and the address
          * still answered 404.
          *
          * initialize() is idempotent, so paying for it here costs nothing when
@@ -142,7 +141,7 @@ final class ProductUrlGenerator
     /**
      * Only the values the page's pattern actually contains.
      *
-     * 🔴 Measured on the test server on 2026-09-11, and it cost a wrong canonical
+     * 🔴 It once cost a wrong canonical
      * address: handing all four values to the generator produced
      *
      *     /produkt/swiss-herbs-ag/schwedenbitter.html?sku=SB-250&type=

@@ -15,7 +15,7 @@ namespace Webwerkwien\ContaoConshoBundle\Mail;
  *
  * ── Without CONSHO_SECRET_KEY: derived from APP_SECRET (N2) ──────────────
  *
- * Michael, 2026-10-17: „ja, ableiten". An operator had to generate a key and
+ * An operator used to have to generate a key and
  * write it into `.env.local` — hardly possible without SSH, and learnt only at
  * the first SMTP password. APP_SECRET is written by Contao at installation and
  * also lives in the environment, never in the database, so the reason above

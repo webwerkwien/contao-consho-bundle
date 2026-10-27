@@ -15,10 +15,10 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block G, G4–G7: Verfügbarkeit und die Abbuchung beim Kaufklick.
+ * Block G, G4–G7: Availability and the deduction at the purchase click.
  *
- * Produkt 1 (körperlich, Bestand geführt, Schwelle 2) ohne Varianten;
- * Produkt 2 körperlich ohne Bestand; Produkt 3 digital.
+ * Product 1 (physical, stock managed, threshold 2) without variants;
+ * product 2 physical without stock; product 3 digital.
  */
 class StockAllocationTest extends TestCase
 {
@@ -94,8 +94,8 @@ class StockAllocationTest extends TestCase
     }
 
     /**
-     * Das letzte Stück: Der zweite Kauf scheitert an der Bedingung im UPDATE —
-     * nicht an einer Sperre, die SQLite gar nicht kennt.
+     * The last item: the second purchase fails on the condition in the UPDATE —
+     * not on a lock, which SQLite does not even know.
      */
     public function testZweiKaeufeUmDasLetzteStueck(): void
     {
@@ -166,10 +166,9 @@ class StockAllocationTest extends TestCase
     }
 
     /**
-     * Review Verfügbarkeit, 2: Zwei Artikel, die mit diesem Kauf ausverkaufen,
-     * werden nicht Zeile für Zeile in der Reihenfolge des Korbs markiert,
-     * sondern am Ende in EINEM Aufruf — refresh() sortiert aufsteigend, wie
-     * der stündliche Lauf.
+     * Block availability: Two articles that sell out with this purchase are
+     * not marked row by row in the order of the cart, but at the end in ONE
+     * call — refresh() sorts in ascending order, like the hourly run.
      */
     public function testDieMarkenAmEndeInEinemAufruf(): void
     {

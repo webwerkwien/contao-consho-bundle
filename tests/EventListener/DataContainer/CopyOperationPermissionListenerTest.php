@@ -11,12 +11,12 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CopyOperationPermissionListener;
 
 /**
- * Die Rechteprüfung, die die fünf Kindtabellen sich selbst holen.
+ * The permission check that the five child tables fetch themselves.
  *
- * Sie schreiben ihre Kopieren-Operation aus, weil Contaos Standard dort die
- * Zwischenablage wäre — und ein ausgeschriebenes Array bekommt nichts
- * dazu. Ohne diesen Callback würde der Voter erst in `DC_Table::copy()`
- * gefragt, also **nach** dem Klick.
+ * They write out their copy operation because Contao's default there would
+ * be the clipboard — and a written-out array gets nothing added. Without
+ * this callback the voter would only be asked in `DC_Table::copy()`, i.e.
+ * **after** the click.
  */
 class CopyOperationPermissionListenerTest extends TestCase
 {
@@ -36,17 +36,17 @@ class CopyOperationPermissionListenerTest extends TestCase
 
         $this->listener(false)($operation);
 
-        // `disable()` nimmt href und route weg und tauscht das Symbol.
+        // `disable()` removes href and route and swaps the icon.
         self::assertArrayNotHasKey('href', $operation);
         self::assertSame('copy--disabled.svg', $operation['icon']);
     }
 
     /**
-     * Der Voter bekommt genau das, was Contao für die `act=copy`-Fassung
-     * baut: die Zeile, wie sie dasteht.
+     * The voter gets exactly what Contao builds for the `act=copy` version:
+     * the row as it stands.
      *
-     * ⚠️ **Nicht** mit `'sorting' => null` überschrieben — das gehört zur
-     * Paste-Fassung, und die benutzen diese Tabellen gerade nicht.
+     * ⚠️ **Not** overwritten with `'sorting' => null` — that belongs to the
+     * paste version, and these tables do not use it.
      */
     public function testDerVoterBekommtTabelleUndZeile(): void
     {
@@ -74,9 +74,9 @@ class CopyOperationPermissionListenerTest extends TestCase
     }
 
     /**
-     * Ohne Zeile gibt es nichts zu beurteilen. Hier „nein" zu sagen hieße,
-     * einen Knopf über einem fehlenden Datensatz auszugrauen statt über
-     * einem verbotenen — und `DC_Table::copy()` fragt ohnehin noch.
+     * Without a row there is nothing to judge. Saying "no" here would mean
+     * greying out a button over a missing record instead of over a forbidden
+     * one — and `DC_Table::copy()` asks again anyway.
      */
     public function testOhneDatensatzWirdDerVoterGarNichtGefragt(): void
     {
@@ -91,8 +91,8 @@ class CopyOperationPermissionListenerTest extends TestCase
     }
 
     /**
-     * Die fünf Einträge sind kein Selbstzweck: Der DCA-Wächtertest hält sie
-     * gegen die Masken, dieser hier gegen sich selbst.
+     * The five entries are not an end in themselves: the DCA guard test holds
+     * them against the forms, this one against itself.
      */
     public function testDieTabellenlisteHatKeineDoppelten(): void
     {
@@ -115,9 +115,9 @@ class CopyOperationPermissionListenerTest extends TestCase
      */
     private static function operation(string $table, array|null $record): DataContainerOperation
     {
-        // DataContainer ist abstrakt und hat genau zwei abstrakte Methoden;
-        // den Konstruktor der Elternkette rufen wir bewusst nicht auf, sonst
-        // hinge der Test am Container. Gelesen wird nur `table`.
+        // DataContainer is abstract and has exactly two abstract methods; we
+        // deliberately do not call the constructor of the parent chain, or the
+        // test would depend on the container. Only `table` is read.
         $dc = new class($table) extends DataContainer {
             public function __construct(string $table)
             {

@@ -19,7 +19,7 @@ enum CheckoutBlock: string
     /**
      * The translation key for a step, built from the blocks IT contains.
      *
-     * 🔴 Found in the review of 2026-09-22. The first version numbered the
+     * 🔴 The first version numbered the
      * names — `step.1`, `step.2` — against a fixed list, so with three steps a
      * screen reader announced "Bestellung / Angaben / Versand und Zahlung"
      * while the third step was in fact "Prüfen und kaufen". Every name but the
@@ -36,8 +36,7 @@ enum CheckoutBlock: string
     }
 
     /**
-     * How the blocks are grouped for a given number of steps (Michael,
-     * 2026-09-22).
+     * How the blocks are grouped for a given number of steps .
      *
      * "Review stays on its own", from one step up: § 8 FAGG wants the
      * essential details directly above the button, and a step of its own gets

@@ -16,12 +16,12 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * Nachlese E5a (Michael, 2026-10-09: „E5 Weg C"): Ein Einmalkauf „Auf
- * Rechnung", dessen digitale Güter schon freigegeben sind und der über Ziel
- * und Nachfrist offen bleibt — die Berechtigungen ruhen, mit der Zahlung leben
- * sie wieder auf. Wie Abo-5, nur ohne Abo.
+ * Nachlese E5a: A one-off purchase "on account" whose digital goods have
+ * already been released and which stays open past due date and grace
+ * period — the entitlements are suspended, with the payment they revive.
+ * Like Abo-5, only without a subscription.
  *
- * Bestellung 7: 30 €, Ziel Tag 0, Nachfrist der Zahlungsart 10 Tage.
+ * Order 7: € 30, due on day 0, grace period of the payment method 10 days.
  */
 final class PurchaseDelinquencyTest extends TestCase
 {
@@ -45,14 +45,14 @@ final class PurchaseDelinquencyTest extends TestCase
         $this->connection->insert('tl_consho_order', ['id' => 7, 'orderNumber' => 'WEB-7', 'grandTotal' => '30.0000', 'paymentMethod' => 3, 'paymentDueAt' => self::DUE]);
         $this->connection->insert('tl_consho_order_item', ['id' => 1, 'pid' => 7, 'productName' => 'E-Book', 'quantity' => '1.0000', 'lineTotal' => '30.0000']);
         $this->connection->insert('tl_consho_entitlement', ['id' => 11, 'pid' => 7, 'orderItem' => 1]);
-        // Die Berechtigung eines Abos derselben Bestellung gehört dem Abo (Abo-5).
+        // The entitlement of a subscription in the same order belongs to the subscription (Abo-5).
         $this->connection->insert('tl_consho_entitlement', ['id' => 12, 'pid' => 7, 'orderItem' => 1, 'subscription' => 4]);
     }
 
     /**
-     * E5-Mail: Gezählt wird die Bestellung, nicht die Zeile. Eine spät
-     * freigegebene Berechtigung ruht mit, ohne dass die Bestellung neu "ruht"
-     * — sonst ginge die Mail ein zweites Mal hinaus.
+     * E5 mail: the order is counted, not the line. An entitlement released
+     * late is suspended along with it, without the order being "suspended"
+     * anew — otherwise the mail would go out a second time.
      */
     public function testEineSpaeteFreigabeIstKeineNeueRuhe(): void
     {
@@ -66,8 +66,8 @@ final class PurchaseDelinquencyTest extends TestCase
     }
 
     /**
-     * Zweites Review, S-1: Eine Freigabe schließt sich nur einer Ruhe an —
-     * sie beginnt keine und hebt keine auf, das bleibt dem Lauf mit seiner Mail.
+     * A release only joins a suspension — it neither starts one nor lifts
+     * one; that is left to the run with its mail.
      */
     public function testJoinRestNurWennDieBestellungSchonRuht(): void
     {

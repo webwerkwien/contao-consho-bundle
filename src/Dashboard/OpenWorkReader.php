@@ -128,7 +128,7 @@ final class OpenWorkReader implements ResetInterface
 
     /**
      * The orders are kept for the request; a long-running worker must not show
-     * the last request's numbers (review A5).
+     * the last request's numbers.
      */
     public function reset(): void
     {
@@ -227,7 +227,7 @@ final class OpenWorkReader implements ResetInterface
                                               WHERE di.orderItem = i.id AND d.reportedAt IS NOT NULL)))
               ORDER BY o.id",
             // Mirrors OrderLineType::stored(): an empty or unknown type counts
-            // as goods there, so it must not drop out here (review A2).
+            // as goods there, so it must not drop out here.
             ['notGoods' => array_values(array_map(
                 static fn (OrderLineType $type): string => $type->value,
                 array_filter(OrderLineType::cases(), static fn (OrderLineType $type): bool => !$type->isGoods()),

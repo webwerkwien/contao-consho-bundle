@@ -36,26 +36,26 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\FacetPageDeleteLi
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Löschen einer Seite nimmt ihre Landingpages mit — samt Papierkorb.
+ * Deleting a page takes its landing pages along — recycle bin included.
  *
- * Die Landingpages stehen nicht in der ctable von tl_page (warum: siehe
- * contao/dca/tl_page.php). Also sammelt der Listener sie ein und hängt sie an
- * den Undo-Eintrag, den DC_Table::delete() gerade geschrieben hat.
+ * The landing pages are not in the ctable of tl_page (why: see
+ * contao/dca/tl_page.php). So the listener collects them and appends them to
+ * the undo entry that DC_Table::delete() has just written.
  *
- * Reihenfolge in DC_Table::delete() (Contao 5.7.13, contao/drivers/DC_Table.php):
+ * Order in DC_Table::delete() (Contao 5.7.13, contao/drivers/DC_Table.php):
  *
- *   Seite + Unterseiten + Kindzeilen sammeln → INSERT tl_undo (serialize) →
- *   ondelete_callback($this, $undoId) → DELETE je Zeile
+ *   collect page + subpages + child rows → INSERT tl_undo (serialize) →
+ *   ondelete_callback($this, $undoId) → DELETE per row
  *
- * Die ersten Tests schreiben den Undo-Eintrag von Hand im Core-Format. Der
- * letzte lässt delete() und undo() aus vendor/contao/core-bundle selbst laufen —
- * das ist der Beleg, dass das Format stimmt.
+ * The first tests write the undo entry by hand in the core format. The
+ * last one lets delete() and undo() from vendor/contao/core-bundle run
+ * themselves — that is the proof that the format is right.
  *
- * Die Schemas folgen den DCAs, auch in der NULL-barkeit: tl_consho_facet_page
- * aus contao/dca/tl_consho_facet_page.php, tl_undo aus
- * vendor/contao/core-bundle/contao/dca/tl_undo.php. Von tl_page und tl_article
- * nur die Spalten, die hier gelesen werden — undo() fügt ohnehin nur ein, was
- * die Tabelle noch hat.
+ * The schemas follow the DCAs, nullability included: tl_consho_facet_page
+ * from contao/dca/tl_consho_facet_page.php, tl_undo from
+ * vendor/contao/core-bundle/contao/dca/tl_undo.php. Of tl_page and tl_article
+ * only the columns read here — undo() only inserts what the table still has
+ * anyway.
  */
 class FacetPageDeleteListenerTest extends TestCase
 {
@@ -63,10 +63,10 @@ class FacetPageDeleteListenerTest extends TestCase
 
     protected function setUp(): void
     {
-        // Contao hängt an jedes DELETE ein „LIMIT 1" (Statement::limit()), das
-        // SQLite ohne Sonderübersetzung nicht versteht. Alle diese DELETEs
-        // treffen per WHERE id=? genau eine Zeile; das LIMIT zu streichen ändert
-        // also nichts an ihrer Wirkung.
+        // Contao appends a "LIMIT 1" to every DELETE (Statement::limit()), which
+        // SQLite does not understand without special translation. All of these
+        // DELETEs hit exactly one row via WHERE id=?; dropping the LIMIT therefore
+        // changes nothing about their effect.
         $configuration = (new Configuration())->setMiddlewares([new class implements Middleware {
             public function wrap(Driver $driver): Driver
             {
@@ -116,7 +116,7 @@ class FacetPageDeleteListenerTest extends TestCase
             )",
         );
 
-        // Seite 10 mit Unterseite 11; Seite 20 daneben; Seite 30 ohne Landingpages.
+        // Page 10 with subpage 11; page 20 next to it; page 30 without landing pages.
         $this->connection->insert('tl_page', ['id' => 10, 'pid' => 0, 'sorting' => 128, 'tstamp' => 1, 'title' => 'Kräuterbitter']);
         $this->connection->insert('tl_page', ['id' => 11, 'pid' => 10, 'sorting' => 128, 'tstamp' => 1, 'title' => 'Schwedenbitter']);
         $this->connection->insert('tl_page', ['id' => 20, 'pid' => 0, 'sorting' => 256, 'tstamp' => 1, 'title' => 'Tees']);
@@ -131,8 +131,8 @@ class FacetPageDeleteListenerTest extends TestCase
         $security = $this->createMock(Security::class);
         $security->method('isGranted')->willReturn(true);
 
-        // DC_Table::getCurrentRecord() entpackt virtuelle JSON-Felder. Keine der
-        // Tabellen hier hat welche; die Zeile bleibt, wie sie ist.
+        // DC_Table::getCurrentRecord() unpacks virtual JSON fields. None of the
+        // tables here has any; the row stays as it is.
         $virtualFields = $this->createMock(VirtualFieldsHandler::class);
         $virtualFields->method('expandFields')->willReturnArgument(0);
 
@@ -167,9 +167,9 @@ class FacetPageDeleteListenerTest extends TestCase
             'dcaFiles' => array_fill_keys(array_keys($GLOBALS['TL_DCA']), true),
         ]);
 
-        // Database::listFields() fragt MySQL mit SHOW FULL COLUMNS. Gebraucht
-        // werden nur die Spaltennamen — für fieldExists() in delete() und
-        // getFieldNames() in undo(). Sie kommen aus dem SQLite-Schema selbst.
+        // Database::listFields() asks MySQL with SHOW FULL COLUMNS. Only the
+        // column names are needed — for fieldExists() in delete() and
+        // getFieldNames() in undo(). They come from the SQLite schema itself.
         $this->setStatic(Database::class, 'objInstance', null);
         $columns = [];
 
@@ -200,7 +200,7 @@ class FacetPageDeleteListenerTest extends TestCase
     }
 
     /**
-     * @internal nur für die Middleware in setUp()
+     * @internal only for the middleware in setUp()
      */
     public static function withoutDeleteLimit(string $sql): string
     {
@@ -221,8 +221,8 @@ class FacetPageDeleteListenerTest extends TestCase
         $undoId = $this->undoEntryFor([10, 11]);
         $before = $this->undoData($undoId);
 
-        // $dc->id ist nur die angeklickte Seite — die Unterseite 11 kennt nur der
-        // Undo-Eintrag.
+        // $dc->id is only the page that was clicked — only the undo entry knows
+        // subpage 11.
         (new FacetPageDeleteListener($this->connection))($this->pageContainer(10), $undoId);
 
         $data = $this->undoData($undoId);
@@ -263,8 +263,8 @@ class FacetPageDeleteListenerTest extends TestCase
 
         $GLOBALS['TL_DCA']['tl_page']['config']['ondelete_callback'] = [new FacetPageDeleteListener($this->connection)];
 
-        // Das echte delete(): sammelt Seite 10 mit Unterseite 11 und Artikel 1,
-        // schreibt tl_undo, ruft den Listener, löscht.
+        // The real delete(): collects page 10 with subpage 11 and article 1,
+        // writes tl_undo, calls the listener, deletes.
         $page = $this->pageContainer(10);
         $this->setProperty($page, 'ctable', ['tl_article']);
         $page->delete(true);
@@ -276,10 +276,10 @@ class FacetPageDeleteListenerTest extends TestCase
         self::assertIsArray($undo);
         self::assertSame('tl_page', $undo['fromTable']);
 
-        // 2 Seiten + 1 Artikel + 2 Landingpages.
+        // 2 pages + 1 article + 2 landing pages.
         self::assertSame(5, (int) $undo['affectedRows']);
 
-        // Das echte undo() auf den erweiterten Eintrag.
+        // The real undo() on the extended entry.
         $restore = (new \ReflectionClass(DC_Table::class))->newInstanceWithoutConstructor();
         $this->setProperty($restore, 'strTable', 'tl_undo');
         $this->setProperty($restore, 'intId', (int) $undo['id']);
@@ -293,7 +293,7 @@ class FacetPageDeleteListenerTest extends TestCase
         self::assertSame($landingPages, $this->connection->fetchAllAssociative('SELECT * FROM tl_consho_facet_page WHERE pid IN (10, 11) ORDER BY id'));
         self::assertSame($pages, $this->connection->fetchAllAssociative('SELECT * FROM tl_page WHERE id IN (10, 11) ORDER BY id'));
 
-        // Ohne Fehler beim Einfügen löscht undo() den Eintrag — sonst bliebe er.
+        // Without errors on insert, undo() deletes the entry — otherwise it would stay.
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_undo'));
         self::assertSame(3, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_facet_page'));
     }
@@ -306,10 +306,10 @@ class FacetPageDeleteListenerTest extends TestCase
     }
 
     /**
-     * Ein Undo-Eintrag so, wie DC_Table::delete() ihn schreibt: data je Tabelle
-     * eine Liste ganzer Zeilen, serialize(), affectedRows = Anzahl gesammelter IDs.
+     * An undo entry as DC_Table::delete() writes it: data per table a list of
+     * whole rows, serialize(), affectedRows = number of collected IDs.
      *
-     * @param list<int> $pageIds die gelöschte Seite zuerst, dann ihre Unterseiten
+     * @param list<int> $pageIds the deleted page first, then its subpages
      */
     private function undoEntryFor(array $pageIds): string
     {

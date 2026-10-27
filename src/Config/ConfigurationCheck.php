@@ -24,17 +24,17 @@ use Webwerkwien\ContaoConshoBundle\Tax\ShopVatId;
 final class ConfigurationCheck
 {
     /**
-     * 🔴 **`$shopTitle` und `$shopId` sind Pflicht, mit Absicht.**
+     * 🔴 **`$shopTitle` and `$shopId` are required, on purpose.**
      *
-     * Bis zum 2026-09-23 gab es sie nicht: Der Befund nannte Land und
-     * Warengruppe, aber nicht, welcher Shop gemeint ist — als einziger der
-     * drei hier. `mailTransport()` und `homeCountry()` nehmen beides seit
-     * jeher entgegen. Liefern zwei Shops in dasselbe Land und fehlt dort
-     * derselbe Satz, standen **zwei wortgleiche Zeilen** auf der Startseite.
+     * They did not exist at first: the finding named country and tax class,
+     * but not which shop was meant — the only one of the three here.
+     * `mailTransport()` and `homeCountry()` have always taken both. Where two
+     * shops deliver into the same country and the same rate is missing there,
+     * **two identical lines** stood on the start page.
      *
-     * Auf c5 trat das nie auf, weil nur ein Shop nach Dänemark liefert —
-     * genau deshalb fiel es niemandem auf, und genau deshalb hat der
-     * Parameter **keinen Vorgabewert**: Ein `= 0` wäre der Weg zurück.
+     * It never shows while only one shop delivers into a country — which is why
+     * nobody noticed, and why the parameter has **no default**: a `= 0` would be
+     * the way back.
      *
      * @param array<string, list<int>> $incomplete     ISO code => tax class ids without a rate, from
      *                                                 DeliveryCountryProvider::incompleteFor()
@@ -58,11 +58,11 @@ final class ConfigurationCheck
                     ConfigurationFinding::TaxRateMissing,
                     [
                         /*
-                         * Roh aus der Datenbank, nicht hier entschärft:
-                         * BackendSystemMessagesListener jagt jeden %key%-Wert
-                         * durch decodeEntities() und specialchars(). Das war
-                         * die C-6-Korrektur, und sie gilt zentral — ein
-                         * zweites Decodieren hier wäre eine zweite Wahrheit.
+                         * Raw from the database, not defused here:
+                         * BackendSystemMessagesListener runs every %key% value
+                         * through decodeEntities() and specialchars(). That was
+                         * the C-6 correction, and it applies centrally — decoding
+                         * a second time here would be a second truth.
                          */
                         'shop' => $shopTitle,
                         // The name where it is known, the code otherwise. The

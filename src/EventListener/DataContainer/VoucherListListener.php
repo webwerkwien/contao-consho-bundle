@@ -12,7 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherCode;
 /**
  * The lists of vouchers and their bookings (block Wertgutscheine, WG13), in
  * the shape a person reads: the code in groups, money as money — a raw
- * decimal(12,4) would read "50.0000" (Prüfungsnotiz, Fall 30).
+ * decimal(12,4) would read "50.0000" (MySQL returns the trailing zeros).
  */
 final class VoucherListListener
 {
@@ -67,7 +67,7 @@ final class VoucherListListener
 
     /**
      * The head of the bookings: Contao prints the parent's columns raw — the
-     * balance read "20.0000" at the acceptance of WG-2 (Fall 30 again).
+     * balance read "20.0000" before WG-2.
      *
      * @param array<string, string> $labels field label => value, as Contao built them
      *

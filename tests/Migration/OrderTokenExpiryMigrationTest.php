@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Migration\OrderTokenExpiryMigration;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
-/** D-6, T3: alte Tokens bekommen ein Ablaufdatum, tote Widerrufs-Tokens gehen. */
+/** D-6, T3: old tokens get an expiry date, dead withdrawal tokens go. */
 class OrderTokenExpiryMigrationTest extends TestCase
 {
     private Connection $connection;
@@ -17,7 +17,7 @@ class OrderTokenExpiryMigrationTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         // The table as it stands — expiresAt has been there since the table
-        // was created (2026-09-09), so this migration meets today's shape.
+        // was created, so this migration meets today's shape.
         DcaSchema::create($this->connection, 'tl_consho_order_token');
     }
 

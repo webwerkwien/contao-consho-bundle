@@ -12,9 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Privacy\OrderAnonymizer;
 use Webwerkwien\ContaoConshoBundle\Privacy\RetentionPolicy;
 
 /**
- * D-5, L3/L5/L7 — ein Löschantrag: abgelaufene Bestellungen sofort
- * anonymisiert, laufende vermerkt und am Fristende anonymisiert; was kein
- * Beleg ist, sofort weg.
+ * D-5, L3/L5/L7 — an erasure request: expired orders anonymised
+ * immediately, running ones noted and anonymised at the end of the
+ * period; whatever is not a record goes immediately.
  */
 final class CustomerErasureTest extends TestCase
 {
@@ -27,9 +27,9 @@ final class CustomerErasureTest extends TestCase
         $this->connection->insert('tl_member', ['id' => 5, 'firstname' => 'Erika', 'lastname' => 'Muster', 'email' => 'erika@example.org',
             'consho_shippingStreet' => 'Hauptstraße 1', 'consho_vatId' => 'ATU1', 'consho_confirmedEmail' => 'erika@example.org', 'consho_confirmedEmailAt' => 5]);
 
-        $this->order(1, 5, 'erika@example.org', '2015-03-01');   // Frist Ende 2022 → sofort
-        $this->order(2, 0, 'Erika@Example.org', '2024-03-01');   // Gast, gleiche Adresse, Frist läuft
-        $this->order(3, 0, 'fremd@example.org', '2015-03-01');   // fremd
+        $this->order(1, 5, 'erika@example.org', '2015-03-01');   // period ended 2022 → immediately
+        $this->order(2, 0, 'Erika@Example.org', '2024-03-01');   // Guest, same address, period running
+        $this->order(3, 0, 'fremd@example.org', '2015-03-01');   // someone else
         $this->connection->insert('tl_consho_complaint', ['pid' => 2, 'note' => 'Frau Muster rief an']);
         $this->connection->insert('tl_consho_complaint', ['pid' => 3, 'note' => 'fremd']);
 
@@ -48,7 +48,7 @@ final class CustomerErasureTest extends TestCase
 
     public function testDerAntrag(): void
     {
-        // Block G (G12): ihr Wunsch geht, der fremde bleibt.
+        // Block G (G12): her wish goes, someone else's stays.
         $this->connection->insert('tl_consho_stock_notice', ['article' => 40, 'member' => 5]);
         $this->connection->insert('tl_consho_stock_notice', ['article' => 40, 'member' => 6]);
 
@@ -61,11 +61,11 @@ final class CustomerErasureTest extends TestCase
         self::assertNotNull($this->connection->fetchOne('SELECT anonymizedAt FROM tl_consho_order WHERE id = 1'));
         self::assertSame('', $this->connection->fetchOne('SELECT email FROM tl_consho_order WHERE id = 1'));
 
-        // In der Frist: unverändert, aber vermerkt.
+        // Within the period: unchanged, but noted.
         self::assertSame(['Erika@Example.org', null], $this->connection->fetchNumeric('SELECT email, anonymizedAt FROM tl_consho_order WHERE id = 2') ?: []);
         self::assertSame(strtotime('2026-09-28'), (int) $this->connection->fetchOne('SELECT erasureRequestedAt FROM tl_consho_order WHERE id = 2'));
 
-        // Kein Beleg: sofort.
+        // No record: immediately.
         self::assertNull($this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE pid = 2'));
         self::assertSame([12], array_map('intval', $this->connection->fetchFirstColumn('SELECT id FROM tl_consho_cart ORDER BY id')), 'Konto- und Gastkorb weg, der fremde bleibt');
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart_item'));
@@ -82,14 +82,14 @@ final class CustomerErasureTest extends TestCase
         self::assertSame('erika@example.org', $member['email'], 'das Konto selbst löscht der Betreiber in Contao');
         self::assertSame(['tl_member:6'], array_map(static fn (array $r): string => $r['fromTable'].':'.$r['pid'], $this->connection->fetchAllAssociative('SELECT fromTable, pid FROM tl_version')), 'ihre Kontoversionen sind weg, fremde bleiben');
 
-        // Das Fremde bleibt.
+        // Someone else's stays.
         self::assertSame('fremd@example.org', $this->connection->fetchOne('SELECT email FROM tl_consho_order WHERE id = 3'));
         self::assertSame('fremd', $this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE pid = 3'));
     }
 
     /**
-     * Abo-DSGVO, P87: ein laufendes Abo hält den Antrag nicht auf, es wird
-     * genannt; ein beendetes geht mit seiner letzten Bestellung (P85).
+     * Abo-DSGVO, P87: a running subscription does not hold up the request, it
+     * is named; an ended one goes with its last order (P85).
      */
     public function testLaufendeAbosWerdenGenannt(): void
     {
@@ -105,7 +105,7 @@ final class CustomerErasureTest extends TestCase
         self::assertSame([0, 5, 6], array_map('intval', $this->connection->fetchFirstColumn('SELECT member FROM tl_consho_subscription ORDER BY id')));
     }
 
-    /** Der Cron holt den Vermerk ein, auch ohne Automatik im Shop. */
+    /** The cron catches up on the note, even without automation in the shop. */
     public function testDerCronHoltDenVermerkAmFristendeEin(): void
     {
         $this->erasure()->erase(1, 'm:5', strtotime('2026-09-28'));
@@ -119,10 +119,10 @@ final class CustomerErasureTest extends TestCase
     }
 
     /**
-     * Fable-Review Abo-DSGVO, S2: Das Abo der Gastbestellung 2 läuft noch,
-     * als der Cron die Bestellung am Fristende anonymisiert. Endet es danach,
-     * fragt keine Bestellung mehr — der tägliche Cron holt es ein, wie die
-     * Meldung zum Löschantrag es verspricht.
+     * Abo-DSGVO: The subscription of guest order 2 is still running when the
+     * cron anonymises the order at the end of the period. If it ends after
+     * that, no order asks any more — the daily cron catches up on it, as the
+     * message on the erasure request promises.
      */
     public function testEinAboDasNachSeinerLetztenBestellungEndetHoltDerCronEin(): void
     {
@@ -142,7 +142,7 @@ final class CustomerErasureTest extends TestCase
         self::assertSame(['', ''], $this->connection->fetchNumeric('SELECT name, email FROM tl_consho_cancellation WHERE pid = 41') ?: []);
     }
 
-    /** WA, A6: ohne Bestellung kein Beleg — der Cron leert sie auch ohne Automatik. */
+    /** WA, A6: without an order no record — the cron clears them even without automation. */
     public function testDerCronLeertNichtZugeordneteWiderrufe(): void
     {
         $this->connection->insert('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00001', 'receivedAt' => strtotime('2023-03-01'), 'name' => 'Erika Muster', 'email' => 'erika@example.org']);
@@ -174,8 +174,8 @@ final class CustomerErasureTest extends TestCase
     }
 
     /**
-     * Abnahme D-5: Ein Fehler im letzten Schritt ließ die ersten geschrieben.
-     * Jetzt: alles oder nichts — und keine Datei gelöscht.
+     * D-5: An error in the last step left the first ones written.
+     * Now: all or nothing — and no file deleted.
      */
     public function testEinFehlerLaesstNichtsHalbErledigtZurueck(): void
     {
@@ -202,7 +202,7 @@ final class CustomerErasureTest extends TestCase
         self::assertSame([], $deleted, 'keine Datei weg, deren Zeile zurückgerollt wurde');
     }
 
-    /** `_` und `%` in der Adresse sind im LIKE keine Platzhalter. */
+    /** `_` and `%` in the address are not wildcards in the LIKE. */
     public function testPlatzhalterInDerAdresseTreffenNichtsFremdes(): void
     {
         $this->order(4, 0, 'a_b@example.org', '2024-01-01');

@@ -67,7 +67,8 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'durabilityNestedUnused' => 'The nested GARAN label of product "%product%" does not show on the tiles. It needs a full label with a valid duration for the click to open, and a public folder. Add the full label, set the folder to "public" or remove the nested label.',
     'mailFooterEmpty' => 'The shop configuration "%shop%" has neither a company nor a footer — the mails to customers do not say who sends them. What business mails must state depends on legal form and country. Fill in the company and "Footer (invoice and mails)" under "Invoice sender".',
     'mailLogoTooLarge' => 'The logo of the shop configuration "%shop%" is %size% KB. It travels in every mail to customers; heavy mails end up in spam more often. Upload a smaller PNG or JPG (up to 100 KB).',
-    'voucherTaxed' => 'Gift voucher "%product%" has a tax class that is not marked "not taxable". It is taxed when sold, and what it buys is taxed again.',
+    'voucherTaxed' => 'Gift voucher "%product%" has a tax class that is not marked "not taxable". It is taxed when sold, and what it buys is taxed again. If it is a single-purpose voucher, switch on "Single-purpose voucher" at the product.',
+    'singlePurposeVoucherNotTaxed' => 'Single-purpose voucher "%product%" has a tax class marked "not taxable". It is sold without VAT and therefore issued as a multi-purpose voucher. Choose a tax class with a rate.',
     'notTaxableClassOnGoods' => 'Product "%product%" is not a gift voucher but has a "not taxable" tax class. It is sold without VAT.',
     'voucherValueMissing' => 'Gift voucher "%product%" has no value. A voucher bought is worth what was paid for it.',
     'ossThresholdNear' => 'Distance sales to consumers in other EU countries (%business%) reached 80 % of the 10,000 € threshold in %year%. Sales outside Consho count as well. Above the threshold the VAT of the customer\'s country applies — switch on "Tax at destination" in the shop configuration. Details under "Tax report".',
@@ -86,6 +87,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'registrationPathMissingNoGuests' => 'In shop "%shop%" "Ordering without an account" is off, so every purchase needs a customer account — but no registration module gives new accounts the customer group, opens them and allows the login. New customers then cannot order. On the registration module set "Allow login" and "Activate accounts at once", or "Account activation" with the shop\'s customer group among the default groups. If you create the customer accounts yourself, there is nothing to do.',
     'customerPageLocksOut' => 'The page "%page%" (shop "%shop%") shows customers their orders or subscriptions, but it is protected without admitting these groups: %groups%. Their members get "access denied", with no entry in the log. Add the groups under "Protect page" in the site structure — on the parent page if the protection comes from there.',
     'loginPageMissing' => 'Shop "%shop%": start points with protected customer pages but no published 401 page: %roots%. A visitor who is logged out sees Contao\'s generic error page instead of the login. Create a page of type "401 Not authenticated" with a login module directly below the start point and set "Redirect to last page visited" there — otherwise the customer lands on the module\'s redirect page after the login instead of their customer page.',
+    'accountPasswordPageMissing' => 'Shop "%shop%": start points without a "Lost password" page: %roots%. Guests therefore cannot create a customer account from their order on the order page. Create a published, unprotected page with Contao\'s "Lost password" module below the start point and select it on the start point under ""Lost password" page". A page below another start point does not count: the account would join the other shop\'s customer group.',
     'cancellationPageMissing' =>'Shop "%shop%" sells subscriptions, but these start points have no reachable page with "Cancel contracts here": %roots%. On the start point under "\'Cancel contracts here\' page" choose a published page without login that carries the element "Cancel contracts here". Whether § 312k BGB applies to the shop is for you to judge.',
     'mandateMethodUnavailable' => 'Subscriptions in the shop "%shop%" are charged through a payment method that is no longer available: %count% (%numbers%). Their follow-up orders go "on account". Once the method is published and assigned to the shop again, they are charged again.',
     'subscriptionsSuspended' => 'Subscriptions on hold in shop "%shop%": %count% (%numbers%). An invoice is open past its payment term and grace period, and the access is on hold. Consho neither cancels nor sends reminders; once the payment is recorded in the order, the subscription comes back by itself.',
@@ -434,7 +436,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['invoice'] = 'Invoice';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['cancellation'] = 'Cancellation invoice';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['creditNote'] = 'Invoice correction';
 // The number ranges as the mask names them — here, because findings appear on
-// the start page, where tl_consho_number_range is not loaded (Fable review D-3, S1).
+// the start page, where tl_consho_number_range is not loaded (D-3).
 $GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'] = [
     'order' => 'Order number',
     'invoice' => 'Invoice number',
@@ -470,6 +472,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryPeriod'] = 'Expected delivery'
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryDate'] = 'Delivery date';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryPartial'] = '%s (partial delivery)';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryRest'] = 'Remainder expected';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['advance'] = 'This invoice covers an advance payment; delivery follows receipt of payment.';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['dueDate'] = 'Payable by';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['billingAddress'] = 'Billing address';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['shippingAddress'] = 'Delivery address';
@@ -496,6 +499,10 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['refunded'] = 'Refunded';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['outstanding'] = 'Amount outstanding';
 // Wertgutscheine (WG3): the line of a voucher sold with a "nicht steuerbar" class.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['notTaxable'] = 'not taxable';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['singlePurposeVoucher'] = 'Single-purpose voucher';
+// Wertgutscheine (EZ-4): tax a single-purpose voucher already carried at its sale.
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['prepaidTax'] = 'of which already taxed with %1$s (%2$s)';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['taxDue'] = 'Remaining VAT';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['shippingMethod'] = 'Shipping method';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['paymentMethod'] = 'Payment method';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['payment'] = 'Payment';
@@ -504,7 +511,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['iban'] = 'IBAN';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['bic'] = 'BIC';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['bankName'] = 'Bank';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['reference'] = 'Payment reference';
-// The grey delete button of a shipping or payment method (C-9, wording: Michael 2026-09-25).
+// The grey delete button of a shipping or payment method (C-9).
 $GLOBALS['TL_LANG']['CONSHO']['methodInUse'] = 'This item is linked to at least one order and can no longer be deleted.';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['giroCode'] = 'Scan with your banking app to pay';
 
@@ -890,6 +897,18 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['intro'] = 'You requested a n
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['button'] = 'View order';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['validity'] = 'The link is valid for 90 days. After that you can request a new one on the order page at any time.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['notYou'] = 'If you did not request this, you can ignore this e-mail. The link was sent to you only.';
+
+// "Create a customer account" on the order page (K1).
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['subject'] = 'Your customer account: set your password';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['intro'] = 'You created a customer account on the page of your order. It opens as soon as you set your password. Your addresses from the order are already filled in, and the account shows your orders.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['username'] = 'Your username: %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['button'] = 'Set password';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['validity'] = 'The link is valid for 24 hours. If no password is set by then, the account is deleted again. You can create it again on the page of your order at any time.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['notYou'] = 'If you did not request this, you can ignore this e-mail. Without a password no account is opened.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['subject'] = 'You already have a customer account';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['intro'] = 'You wanted to create a customer account on the page of your order. There already is one for your e-mail address, with the username %s. If you forgot the password, you can set a new one here.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['button'] = 'Lost password';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['notYou'] = 'If you did not request this, you can ignore this e-mail. Nothing was changed in your account.';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['gate'] = [
     'text' => 'Your order %s is ready. Clicking the button also confirms your e-mail address.',
     'button' => 'Show order',
@@ -933,6 +952,15 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['notice'] = [
     'withdrawInvalid' => 'The items given do not match the order. Please check the quantities.',
     'withdrawNothingSelected' => 'Please enter a quantity for at least one item, or choose the whole order.',
     'withdrawNameMissing' => 'Please enter your name.',
+    // K1: one sentence for a new account and an existing one (K1-5).
+    'accountRequested' => 'We have sent an e-mail to the address of this order. It says how to continue. Please also check your spam folder.',
+    'accountTooMany' => 'You have requested this several times just now. Please try again later.',
+    'accountUnavailable' => 'No customer account can be created here for this order.',
+];
+$GLOBALS['TL_LANG']['CONSHO']['orderPage']['account'] = [
+    'title' => 'Create a customer account',
+    'text' => 'A customer account shows all your orders in one place, and your addresses are filled in on your next purchase. We will send you an e-mail to set your password.',
+    'submit' => 'Create customer account',
 ];
 
 // The withdrawal function (D-2). The two button labels follow Art. 11a of
@@ -952,7 +980,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'whole' => '%s (subscription, %s — whole only)',
     'message' => 'Message (optional)',
     'back' => 'Back to the order',
-    // WA, B2 (Michael, 2026-10-22).
+    // WA, B2.
     'late' => 'According to our records the withdrawal period has expired. The withdrawal will be reviewed accordingly.',
     'received' => 'Withdrawals received',
     'receivedEntry' => '%s, received %s',
@@ -960,7 +988,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'unconfirmed' => 'confirmation of receipt by e-mail pending',
 
     // The element for buyers without the order mail (W1, E6).
-    // WA (2026-10-22): the confirmation goes to the order's address where
+    // WA: the confirmation goes to the order's address where
     // they match, else to the one typed here.
     'formIntro' => 'Enter your order number, your e-mail address and your name. You will receive a confirmation of receipt by e-mail straight away.',
     'orderNumber' => 'Order number',
@@ -969,7 +997,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'tooMany' => 'Too many attempts. Please try again in a quarter of an hour.',
     'missing' => 'Please fill in order number, e-mail address and name.',
     'emailInvalid' => 'Please enter a valid e-mail address — the confirmation of receipt goes there.',
-    // Review WA, S1/B1: one answer for every case — no number (its shape told
+    // WA: one answer for every case — no number (its shape told
     // whether the order was found) and no "not sent" (only the path without
     // an order has a mail limit).
     'done' => 'Your withdrawal has been received and stored. The confirmation of receipt with the number of the withdrawal goes to the e-mail address you gave.',
@@ -1045,7 +1073,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cancellation'] = [
         'ended' => 'This subscription has already ended.',
     ],
 ];
-// Online payment (C-11). The page says only what it can prove (Michael, 2026-09-26).
+// Online payment (C-11). The page says only what it can prove.
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['online'] = [
     'confirmed' => 'Payment received (confirmed by the payment provider).',
     'reported' => 'The payment provider reports the payment as completed. As soon as the confirmation arrives, it will show here.',
@@ -1078,7 +1106,7 @@ $GLOBALS['TL_LANG']['CONSHO']['shippingCosts'] = [
     'codWithFee' => 'Cash on delivery available, plus a cash on delivery fee shown at checkout.',
 ];
 
-// Telefon für den Paketdienst (E-6, V6).
+// Phone number for the parcel service (E-6, V6).
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['problem']['phoneMissing'] = 'The carrier of this shipping method needs the recipient\'s phone number.';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhone'] = 'Phone for the carrier';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhoneHint'] = 'The carrier uses it to announce the delivery.';
@@ -1158,7 +1186,7 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['vouchersIssued'] = [
     'intro' => 'thank you for your order %s. Here is your gift voucher:',
     'attached' => 'Each voucher is attached to this e-mail as a PDF — to print or pass on.',
 ];
-// Wertgutscheine (WG-5, E3): Einlösung. %1$s der Code (…MDSN), %2$s ein Betrag.
+// Wertgutscheine (WG-5, E3): redemption. %1$s the code (…MDSN), %2$s an amount.
 $GLOBALS['TL_LANG']['CONSHO']['cart']['voucher'] = [
     'code' => 'Redeem gift voucher',
     'apply' => 'Redeem',
@@ -1177,6 +1205,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cart']['voucher'] = [
         'blocked' => 'Voucher %1$s is blocked.',
         'expired' => 'Voucher %1$s has expired.',
         'otherCurrency' => 'Voucher %1$s is not valid in this currency.',
+        'notApplicable' => 'Voucher %1$s does not fit any article in this purchase.',
         'unknown' => 'Voucher %1$s is not valid in this shop.',
     ],
     'after' => 'Afterwards %2$s remain on voucher %1$s.',

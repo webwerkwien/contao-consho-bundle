@@ -19,7 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-7 (P54–P59, P62): Die Kündigung wird zuerst geschrieben, dann bestätigt.
+ * Abo-7 (P54–P59, P62): The cancellation is written first, then confirmed.
  */
 final class CancellationRecorderTest extends TestCase
 {
@@ -40,12 +40,12 @@ final class CancellationRecorderTest extends TestCase
             DcaSchema::create($this->connection, $table);
         }
 
-        // Kauf mit alter Adresse, Folgebestellung mit der neuen: die neue gilt (P58).
+        // Purchase with the old address, follow-up order with the new one: the new one applies (P58).
         $this->connection->insert('tl_consho_order', ['id' => 90, 'orderNumber' => 'WEB-00090', 'email' => 'alt@example.test', 'language' => 'de', 'createdAt' => 1]);
         $this->connection->insert('tl_consho_order', ['id' => 91, 'orderNumber' => 'WEB-00091', 'email' => 'neu@example.test', 'language' => 'de', 'subscription' => 1, 'createdAt' => 2]);
         $this->connection->insert('tl_consho_order_item', ['id' => 5, 'pid' => 90, 'productName' => 'E-Book Kräuterkunde']);
 
-        // Monatsabo, ein Jahr, danach unbefristet; 30 Tage Frist. Ruht gerade.
+        // Monthly subscription, one year, unlimited after that; 30 days' notice. Currently paused.
         $this->connection->insert('tl_consho_subscription', [
             'id' => 1, 'subscriptionNumber' => 'WEB-00090-1', 'firstOrder' => 90, 'orderItem' => 5, 'state' => 'suspended', 'phase' => 'minimum',
             'renewal' => 'indefinite', 'termLength' => 1, 'termUnit' => 'year', 'billingInterval' => 1, 'noticeDays' => 30,
@@ -64,7 +64,7 @@ final class CancellationRecorderTest extends TestCase
 
         $subscription = $this->subscription();
         self::assertSame($this->at('2027-01-15 10:00'), (int) $subscription['endsAt']);
-        // Der Verzug wird bis zum Ende weiter beurteilt (P56): der Zustand bleibt.
+        // The arrears keep being assessed until the end (P56): the state stays.
         self::assertSame('suspended', $subscription['state']);
 
         $row = $this->cancellation(1);
@@ -125,7 +125,7 @@ final class CancellationRecorderTest extends TestCase
         self::assertNull($row['effectiveAt']);
         self::assertSame('extraordinary', $this->mails[0]['kind']);
 
-        // Eine ordentliche daneben bleibt möglich und zählt weiter.
+        // An ordinary one next to it stays possible and keeps counting.
         self::assertSame('WEB-00090-1-K2', $this->recorder()->record($this->ordinary(), $this->at('2026-06-02 12:00'))->number);
     }
 

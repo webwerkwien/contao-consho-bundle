@@ -5,7 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Catalog;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxPlace;
 
 /**
- * What a product is, set at its TYPE (docs/block-dienstleistung.md, DL1, DL5).
+ * What a product is, set at its TYPE (Block DL, DL1, DL5).
  *
  * Until this block a type was physical or not, and a digital product said at
  * itself whether it was withdrawn like content or like a service. A gym
@@ -74,16 +74,20 @@ enum ProductKind: string
      * matters (OrderFactory, CheckoutCalculator). One without a verified ID
      * is treated here like a consumer — a simplification, as it is for
      * goods; § 3a Abs. 2 UStG would place the service where that business
-     * is (review DL, L2).
+     * is (DL).
      *
      * Everything else is a supply that travels to the customer and follows
      * the switch "Steuer im Bestimmungsland" (block R, O1): below the
      * threshold a consumer in another member state is taxed in the shop's
      * country (TaxPlace).
+     *
+     * A single-purpose voucher (spec Wertgutscheine, EZ-2, F5) is the
+     * shop's country as well, whatever the switch says: it is only offered
+     * for supplies taxed there, so its tax has to be that country's.
      */
-    public function taxCountry(string $customerCountry, string $shopCountry, bool $taxAtDestination): string
+    public function taxCountry(string $customerCountry, string $shopCountry, bool $taxAtDestination, bool $singlePurpose = false): string
     {
-        if (self::Service === $this && '' !== trim($shopCountry)) {
+        if ((self::Service === $this || (self::Voucher === $this && $singlePurpose)) && '' !== trim($shopCountry)) {
             return strtoupper(trim($shopCountry));
         }
 

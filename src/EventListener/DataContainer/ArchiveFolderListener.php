@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Document\ArchiveFolderIsPublic;
 use Webwerkwien\ContaoConshoBundle\Document\ArchiveFolderProtector;
 
 /**
- * Protects the invoice archive folder the moment it is chosen (Michael,
- * 2026-09-24, for the GDPR) — see ArchiveFolderProtector for why a public
+ * Protects the invoice archive folder the moment it is chosen (for the
+ * GDPR) — see ArchiveFolderProtector for why a public
  * parent is refused rather than protected.
  *
  * Done the way the file manager does it (tl_files, the `protected` field):

@@ -79,13 +79,13 @@ class OssLedger
              * Integers, bound as integers: a CASE has no column affinity, and
              * SQLite compares its number with a parameter bound as text as
              * "never equal" — a delivery-only supply never counted in the
-             * tests (review R, found while fixing F11). MariaDB converts.
+             * tests (R). MariaDB converts.
              */
             [ArrayParameterType::INTEGER, ...array_fill(0, 6, ParameterType::INTEGER)],
         );
 
         /*
-         * The corrections of a withdrawal (review R, F1): a credit note for a
+         * The corrections of a withdrawal (R): a credit note for a
          * part, a CANCELLATION for the whole — told apart from the
          * cancellation of a re-issue (PaymentChange, SubscriptionChargeFallback)
          * by the withdrawal that names it as its refund document. Read for
@@ -135,7 +135,7 @@ class OssLedger
 
                 /*
                  * After the cancellation there is nothing left to take back:
-                 * it took all of it (second review R, B1). Issued AT the
+                 * it took all of it (R). Issued AT the
                  * cancellation it counts, and the cancellation leaves it out
                  * below — the same instant on both sides of one comparison.
                  */
@@ -153,7 +153,7 @@ class OssLedger
 
                 /*
                  * What a withdrawal took back already stays taken back once
-                 * (review R, F2): the cancellation takes only the rest — its
+                 * (R): the cancellation takes only the rest — its
                  * lines, less the credits issued before it.
                  */
                 foreach ($creditsByOrder[$order['id']] ?? [] as $credit) {

@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Order\DbalPaymentChangeRepository;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Abfragen hinter 7.5 gegen SQLite. lockOrder() nicht: SQLite kennt kein
- * FOR UPDATE, der Dienst darüber wird mit einem Repository im Speicher geprüft.
+ * The queries behind 7.5 against SQLite. Not lockOrder(): SQLite has no
+ * FOR UPDATE, the service above it is tested with an in-memory repository.
  */
 class DbalPaymentChangeRepositoryTest extends TestCase
 {
@@ -22,13 +22,14 @@ class DbalPaymentChangeRepositoryTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
         DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
         $this->connection->executeStatement('CREATE TABLE tl_member (id INTEGER PRIMARY KEY, "groups" BLOB NULL)');
     }
 
     /**
-     * Aus der DCA gebaut (Fall 31): reportedAt ist NULL bis zur Meldung, nicht 0.
+     * Built from the DCA, with the production column names: reportedAt is NULL
+     * until reported, not 0.
      */
     public function testGemeldetIstNurEineLieferungMitMeldung(): void
     {
@@ -60,8 +61,8 @@ class DbalPaymentChangeRepositoryTest extends TestCase
     }
 
     /**
-     * Review Nachlese B1, zweites Review S-4: Einmal-Berechtigungen gegen die
-     * echte Abfrage — Abo-Berechtigungen und gesperrte zählen nicht.
+     * Nachlese: one-off entitlements against the real query — subscription
+     * entitlements and blocked ones do not count.
      */
     public function testEinmalBerechtigungen(): void
     {

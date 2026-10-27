@@ -10,7 +10,7 @@ use Symfony\Component\Uid\Uuid;
 use Webwerkwien\ContaoConshoBundle\Notification\MailImageFile;
 
 /**
- * Block GARAN (GA4): ein Bild zum Einbetten — PNG und JPG, sonst nichts.
+ * Block GARAN (GA4): an image for embedding — PNG and JPG, nothing else.
  */
 class MailImageFileTest extends TestCase
 {
@@ -24,7 +24,7 @@ class MailImageFileTest extends TestCase
 
     public function testSvgUndAnderesNicht(): void
     {
-        // Gmail und Outlook entfernen SVG aus Mails.
+        // Gmail and Outlook remove SVG from mails.
         self::assertNull($this->file('files/garan.svg')->read($this->binary()));
         self::assertNull($this->file('files/garan.pdf')->read($this->binary()));
     }

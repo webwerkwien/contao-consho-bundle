@@ -12,12 +12,11 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRules;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Variante A, Planentscheidung A1 (Michael, 2026-10-08: „ja … Hinweis statt
- * Sperre"): Eine Regel „verlängert sich jeweils um die volle
- * Mindestlaufzeit" ist nicht mehr fest Geschäftskunden vorbehalten. Der
- * Hinweis nennt eine, die leer ist (alle Kunden) oder eine Gruppe enthält,
- * die in keinem Shop Nettopreis-Gruppe ist. Gruppe 3 ist hier die
- * Nettopreis-Gruppe von Shop 1.
+ * Variant A (A1): a rule "renews by the full
+ * minimum term each time" is no longer reserved for business customers. The
+ * notice names one that is empty (all customers) or contains a group
+ * that is a net price group in no shop. Group 3 is the
+ * net price group of shop 1 here.
  */
 final class SameTermOpenIssueSourceTest extends TestCase
 {

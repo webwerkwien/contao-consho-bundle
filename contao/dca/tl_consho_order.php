@@ -10,7 +10,7 @@
  * not have less data. Addresses are a frozen COPY, because an address on an
  * order is a historical fact rather than a reference — otherwise a customer
  * moving house rewrites last year's invoice.
- * See docs/block-a-fundament.md, sections 3.3 and 3.4.
+ * See Block A, sections 3.3 and 3.4.
  */
 $GLOBALS['TL_DCA']['tl_consho_order'] = [
     'config' => [
@@ -22,8 +22,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
          * An order is a record of a purchase, not a template (D-1). Copying
          * one took its children along — DC_Table::copyChildren() asks only
          * doNotCopyRecords, not notCopyable — and produced payments nobody
-         * made and parcels nobody sent, locked and undeletable (second Fable
-         * review of D-1, S-a).
+         * made and parcels nobody sent, locked and undeletable.
          */
         'notCopyable' => true,
 
@@ -153,7 +152,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
 
             // C-9. POST like the core's own resend (tl_opt_in): the button is a
             // form with the request token, not a link any page could trigger.
-            // Primary like every operation here (decision 2026-09-23, see
+            // Primary like every operation here (see
             // EveryDeleteButtonAsksBeforeDeletingTest).
             'resendConfirmation' => ['href' => 'key=resendConfirmation', 'icon' => 'resend.svg', 'method' => 'POST', 'primary' => true],
 
@@ -312,8 +311,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
 
         /*
          * When the customer changed the payment method on the order page
-         * (C-10). Set once — a second change is not offered (Michael,
-         * 2026-09-25). NULL-able like the other moments: 0 would read as 1970.
+         * (C-10). Set once — a second change is not offered. NULL-able like the other moments: 0 would read as 1970.
          */
         'paymentChangedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false]],
 
@@ -333,8 +331,8 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
         /*
          * When the order was cancelled (D-1). Set the first time a status with
          * isCancelled is set, and it STAYS: the next status — "Abgeschlossen"
-         * after "Storniert" — must not bring the claim back. Found by the test
-         * of Michael's own case (2026-09-27): with the cancellation living in
+         * after "Storniert" — must not bring the claim back. With the cancellation
+         * living in
          * the status alone, "storniert, erstattet, abschließen" was refused,
          * because the completing status owed the full amount again.
          *
@@ -475,8 +473,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
  *
  * Editable until a document carries them — the delivery address until a
  * delivery or delivery note, customer and billing address until an invoice
- * (OrderAddressLockListener, Connect-2 E2). They were called "frozen" here
- * before 2026-10-10 without anything freezing them.
+ * (OrderAddressLockListener, Connect-2 E2).
  */
 $conshoOrderStrings = [
     'salutation' => 128,

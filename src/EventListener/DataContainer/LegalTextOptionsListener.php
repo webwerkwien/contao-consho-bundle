@@ -51,10 +51,10 @@ class LegalTextOptionsListener
     }
 
     /**
-     * ⚠️ array<int|string, string>, nicht array<string, string>: Ein
-     * numerischer String als Array-Schlüssel wird in PHP still zu einem int.
-     * Contao ist das gleich, PHPStan nicht — und die Zusage „nur Strings"
-     * wäre schlicht unwahr.
+     * ⚠️ array<int|string, string>, not array<string, string>: a numeric
+     * string as an array key silently becomes an int in PHP. Contao does
+     * not care, PHPStan does — and the promise "strings only" would simply
+     * be untrue.
      *
      * @return array<int|string, string>
      */

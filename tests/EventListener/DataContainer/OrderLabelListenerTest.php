@@ -14,9 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * Das Zahlungssignal der Bestellliste nennt den Zustand, nicht die Farbe.
- * Gefunden beim Abgleich mit dem Dashboard (2026-10-07): WEB-00107, storniert
- * und erstattet, hieß „Zahlung: offen", weil „erstattet" grau ist wie „offen".
+ * The payment signal of the order list names the state, not the colour.
+ * An order that was cancelled and refunded read "Payment: open", because
+ * "refunded" is grey like "open".
  */
 final class OrderLabelListenerTest extends TestCase
 {

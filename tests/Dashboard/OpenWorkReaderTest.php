@@ -14,8 +14,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
 
 /**
- * Dashboard DB3: „Zu tun" zählt mit derselben Regel wie die Signale der
- * Bestellliste, je Shop.
+ * Dashboard DB3: "To do" counts with the same rule as the signals of the
+ * order list, per shop.
  */
 final class OpenWorkReaderTest extends TestCase
 {
@@ -38,20 +38,20 @@ final class OpenWorkReaderTest extends TestCase
         $this->connection->insert('tl_consho_shop', ['id' => 2, 'title' => 'Zwei']);
         $this->connection->insert('tl_consho_order_status', ['id' => 9, 'isCancelled' => 1]);
 
-        // 1 Vorkasse, nicht bezahlt: unbezahlt, nicht zu liefern.
+        // 1 prepayment, not paid: unpaid, nothing to deliver.
         $this->order(1, 1);
-        // 2 Rechnung, Ziel überschritten: unbezahlt, überfällig, zu liefern.
+        // 2 invoice, due date passed: unpaid, overdue, to deliver.
         $this->order(2, 1, ['paymentDueAt' => self::NOW - self::DAY]);
-        // 3 bezahlt, nicht geliefert: zu liefern.
+        // 3 paid, not delivered: to deliver.
         $this->order(3, 1, ['paymentSettledAt' => self::NOW], pay: '50.0000');
-        // 4 bezahlt und geliefert: nichts.
+        // 4 paid and delivered: nothing.
         $this->order(4, 1, ['paymentSettledAt' => self::NOW], pay: '50.0000', ship: true);
-        // 5 über den Status storniert, cancelledAt leer: nichts.
+        // 5 cancelled via the status, cancelledAt empty: nothing.
         $this->order(5, 1, ['orderStatus' => 9]);
-        // 6 im anderen Shop, bezahlt, nicht geliefert.
+        // 6 in the other shop, paid, not delivered.
         $this->order(6, 2, ['paymentSettledAt' => self::NOW], pay: '50.0000');
-        // 7 als bezahlt markiert, aber nur teilweise bezahlt und geliefert —
-        // die Vorauswahl darf ihn nicht verlieren.
+        // 7 marked as paid, but only partly paid and delivered —
+        // the preselection must not lose it.
         $this->order(7, 1, ['paymentSettledAt' => self::NOW], pay: '20.0000', ship: true);
     }
 
@@ -80,7 +80,7 @@ final class OpenWorkReaderTest extends TestCase
 
         self::assertSame(1, $work[1]->undecided);
         self::assertSame(1, $work[1]->refundOpen, 'erstattet zählt nicht');
-        // Jede Kachel ihre eigene Frist — auf c5 nannte die eine das Datum der anderen.
+        // Each tile its own deadline — one of them once showed the other's date.
         self::assertSame(WithdrawalSignals::refundDue(self::NOW - 2 * self::DAY), $work[1]->undecidedDue);
         self::assertSame(WithdrawalSignals::refundDue(self::NOW - 5 * self::DAY), $work[1]->refundDue);
         self::assertSame(1, $work[1]->complaints);
@@ -95,8 +95,8 @@ final class OpenWorkReaderTest extends TestCase
     }
 
     /**
-     * WA, A5: Ein Widerruf ohne Bestellung zählt bei dem Shop, über den er
-     * hereinkam, als zu entscheiden — in der Zahl und in der gefilterten Liste.
+     * WA, A5: a withdrawal without an order counts as to be decided for the shop it
+     * came in through — in the figure and in the filtered list.
      */
     public function testNichtZugeordnetZaehltBeimShopDesFormulars(): void
     {
@@ -111,9 +111,9 @@ final class OpenWorkReaderTest extends TestCase
     }
 
     /**
-     * Review M15, M18, M3: Reklamationen gehören ihrem Shop; von mehreren
-     * Fristen zählt die früheste, auch wenn sie später eingetragen ist; fällig
-     * genau jetzt ist noch nicht überfällig.
+     * Complaints belong to their shop; of several deadlines the earliest
+     * counts, even if it was entered later; due exactly now is not yet
+     * overdue.
      */
     public function testShopFristUndGrenze(): void
     {
@@ -133,8 +133,8 @@ final class OpenWorkReaderTest extends TestCase
     }
 
     /**
-     * Review A2: Der Leser zählt eine Zeile mit leerem Typ als Ware
-     * (OrderLineType::stored()); die Vorauswahl darf sie nicht verlieren.
+     * The reader counts a line with an empty type as goods
+     * (OrderLineType::stored()); the preselection must not lose it.
      */
     public function testEineZeileOhneTypIstWare(): void
     {

@@ -15,8 +15,8 @@ use Webwerkwien\ContaoConshoBundle\Shipping\FlatRateShipping;
 use Webwerkwien\ContaoConshoBundle\Shipping\ShippingCapabilities;
 
 /**
- * Nachnahme (E-3, Z2): nur mit einer Versandart, die kassiert; die einzige
- * Kern-Zahlungsart mit Gebühr (Z4), netto und in einer Währung.
+ * Cash on delivery (E-3, Z2): only with a shipping method that collects;
+ * the only core payment method with a fee (Z4), net and in one currency.
  */
 class CashOnDeliveryHandlerTest extends TestCase
 {
@@ -48,8 +48,8 @@ class CashOnDeliveryHandlerTest extends TestCase
     }
 
     /**
-     * Eine Gebühr in EUR lässt sich in CHF nicht verlangen — und eine
-     * Gebühr, die nicht verlangt werden kann, ist keine Gratis-Nachnahme.
+     * A fee in EUR cannot be charged in CHF — and a fee that cannot be charged
+     * does not make cash on delivery free.
      */
     public function testInEinerAnderenWaehrungGibtEsKeinAngebot(): void
     {
@@ -83,8 +83,8 @@ class CashOnDeliveryHandlerTest extends TestCase
     }
 
     /**
-     * Die Pauschale kassiert, wenn der Betreiber das Häkchen setzt — es hängt
-     * an seinem Vertrag mit dem Paketdienst, nicht am Code.
+     * The flat rate collects when the operator ticks the box — it depends on
+     * his contract with the parcel service, not on the code.
      */
     public function testDiePauschaleKassiertNurMitHaekchen(): void
     {

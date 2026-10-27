@@ -16,8 +16,8 @@ use Twig\Environment;
 use Webwerkwien\ContaoConshoBundle\Catalog\PublicFiles;
 
 /**
- * The shop's logo in the theme (GARAN Teil 2, L6; Michael, 2026-10-10: "L6a",
- * as a figure like Contao's own).
+ * The shop's logo in the theme (GARAN Teil 2, L6),
+ * as a figure like Contao's own.
  *
  *   {{consho_logo}}                     <figure> with the image as uploaded
  *   {{consho_logo::<size>}}             with an image size of the theme (id or `_name`)
@@ -72,7 +72,7 @@ final class ShopLogoInsertTag
         $size = $url || '' === $first ? null : (ctype_digit($first) ? (int) $first : $first);
 
         // Without a size the image is the original under files/ — from a folder
-        // that is not public that is a 403, a broken image (review L6, 5). A
+        // that is not public that is a 403, a broken image (L6). A
         // size has Contao write a copy to assets/images, which is public.
         if (null === $size && null !== $this->files && !$this->files->isPublic($uuid)) {
             return new InsertTagResult('', OutputType::html, null, $tags);
@@ -90,7 +90,7 @@ final class ShopLogoInsertTag
             }
 
             // Inside the try, as {{figure}} has it: a template that does not
-            // exist must leave the tag empty, not the page a 500 (review L6, 1).
+            // exist must leave the tag empty, not the page a 500 (L6).
             $html = $this->twig->render(self::template((string) ($insertTag->getParameters()->get(1) ?? '')), ['figure' => $figure]);
         } catch (\Throwable) {
             // As {{figure}}: a size, file or template that fails shows nothing.
@@ -103,7 +103,7 @@ final class ShopLogoInsertTag
     /**
      * A figure template of the Template Studio, by name — `my_logo.html.twig`
      * is `@Contao/my_logo.html.twig`. Nothing else from an editor's text field:
-     * no other namespace, no path tricks (review L6, 2). The image studio's own
+     * no other namespace, no path tricks (L6). The image studio's own
      * figure templates stay allowed.
      */
     private static function template(string $name): string

@@ -42,25 +42,25 @@ class IbanListenerTest extends TestCase
 
     public function testGeschuetzteLeerzeichenWerdenEbenfallsEntfernt(): void
     {
-        // U+00A0 (geschütztes Leerzeichen) und U+202F (schmales geschütztes
-        // Leerzeichen) landen beim Kopieren aus IBAN-Generatoren im Feld und
-        // überstehen ein '/\s+/' ohne 'u'-Modifier unbeschadet.
+        // U+00A0 (no-break space) and U+202F (narrow no-break space) end up in
+        // the field when copying from IBAN generators and survive a '/\s+/'
+        // without the 'u' modifier unharmed.
         self::assertSame('AT611904300234573201', (new IbanListener())("AT61\u{00A0}1904\u{202F}3002 3457 3201"));
     }
 
     public function testFormatzeichenWerdenEbenfallsEntfernt(): void
     {
-        // U+00AD (weicher Trennstrich), U+200B (Zero-Width-Space) und U+FEFF
-        // (BOM) landen aus PDF-Kopien im Feld und sind unsichtbar — \p{Cf}
-        // fängt sie, wo \s und \p{Z} allein sie durchlassen.
+        // U+00AD (soft hyphen), U+200B (zero-width space) and U+FEFF (BOM)
+        // end up in the field from PDF copies and are invisible — \p{Cf}
+        // catches them where \s and \p{Z} alone let them through.
         self::assertSame('AT611904300234573201', (new IbanListener())("AT61\u{00AD}1904\u{200B}3002\u{FEFF}34573201"));
     }
 
     public function testUngueltigesUtf8WirdAbgelehnt(): void
     {
-        // preg_replace() liefert hier null, nicht '' — das darf nicht als
-        // leeres, optionales Feld durchgehen. StringUtil::specialchars()
-        // ersetzt die ungültige Byte-Folge mit ENT_SUBSTITUTE durch U+FFFD.
+        // preg_replace() returns null here, not '' — that must not pass as an
+        // empty, optional field. StringUtil::specialchars() replaces the
+        // invalid byte sequence with U+FFFD via ENT_SUBSTITUTE.
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage("keine IBAN: AT61\u{FFFD}");
 
@@ -69,8 +69,8 @@ class IbanListenerTest extends TestCase
 
     public function testDieFehlermeldungEscaptDenWertHtml(): void
     {
-        // Widget::getErrorAsHTML() druckt die Meldung unescaped — Markup in
-        // der Eingabe darf nicht ins Backend durchschlagen.
+        // Widget::getErrorAsHTML() prints the message unescaped — markup in the
+        // input must not get through to the backend.
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('keine IBAN: AT61&lt;B&gt;');
 
@@ -79,8 +79,8 @@ class IbanListenerTest extends TestCase
 
     public function testEineVertippteIbanWirdAbgelehnt(): void
     {
-        // Eine Ziffer vertauscht: Die Prüfziffer fängt es, bevor ein Kunde auf
-        // ein fremdes Konto überweist.
+        // One digit swapped: the check digit catches it before a customer
+        // transfers money to somebody else's account.
         $this->expectExceptionMessage('keine IBAN: AT611904300234573210');
 
         (new IbanListener())('AT61 1904 3002 3457 3210');
@@ -88,8 +88,8 @@ class IbanListenerTest extends TestCase
 
     public function testLeerBleibtLeer(): void
     {
-        // Pflicht ist das Feld über eval.mandatory; leer erreicht den Callback
-        // nur, wenn ein Modul das ändert.
+        // The field is mandatory via eval.mandatory; empty only reaches the
+        // callback if a module changes that.
         self::assertSame('', (new IbanListener())(''));
     }
 }

@@ -9,8 +9,8 @@ use Symfony\Component\Mime\Address;
  *
  * Contao stores what the mask takes with its input encoding: "Müller & Co"
  * arrives as "Müller &amp; Co", brackets as "&#40;". In a mail header that is
- * what the customer reads — found at the test mail on the sales shop
- * (Nachlese Stufe 2), where the configuration's title came out as
+ * what the customer reads — in a test mail (Nachlese Stufe 2)
+ * the configuration's title came out as
  * "&#40;…&#41;" once the mask had saved it. The name of the sender went the
  * same way into every customer mail. One place, so the next mail cannot
  * forget it.

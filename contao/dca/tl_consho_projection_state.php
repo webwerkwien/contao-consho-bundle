@@ -7,7 +7,7 @@
  * to tl_consho_product_visibility (VisibilityBoundaryCron). Not in the Symfony
  * cache: every deploy empties var/cache/prod, and a lost marker means a full
  * rebuild. Not in tl_cron_job either: Contao's purgeOldRecords() removes rows
- * it does not know. See docs/block-b-katalog-frontend.md, section 5.7.
+ * it does not know. See Block B, section 5.7.
  */
 $GLOBALS['TL_DCA']['tl_consho_projection_state'] = [
     'config' => [

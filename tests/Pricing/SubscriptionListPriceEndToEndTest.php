@@ -21,13 +21,13 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Abo-2b, Ende zu Ende: echte Preistabelle, echte Verkaufsarten und Regeln,
- * echter Projektor — was die Projektion je Produkt schreibt.
+ * Abo-2b, end to end: real price table, real sale modes and rules,
+ * real projector — what the projection writes per product.
  *
- * Gebaut, weil die Lücke genau zwischen den Teilen lag: Der Resolver kannte
- * das erste Modell, aber die Projektion fragte ihre Produkte und Währungen nur
- * unter den Einmalkauf-Zeilen — ein reines Abo-Produkt wäre nie gerechnet
- * worden, und jeder Einzeltest wäre grün geblieben.
+ * Built because the gap lay exactly between the parts: the resolver knew
+ * the first model, but the projection asked for its products and currencies only
+ * among the one-off rows — a subscription-only product would never have been
+ * calculated, and every single test would have stayed green.
  */
 class SubscriptionListPriceEndToEndTest extends TestCase
 {
@@ -51,18 +51,18 @@ class SubscriptionListPriceEndToEndTest extends TestCase
         $this->connection->insert('tl_consho_subscription_rule', ['id' => 2, 'title' => 'Jahresabo', 'billingInterval' => 12, 'renewal' => 'ends']);
         $this->connection->insert('tl_consho_subscription_rule', ['id' => 3, 'title' => 'Mitglieder', 'billingInterval' => 1, 'renewal' => 'indefinite', $groups => serialize(['7'])]);
 
-        // 1: nur Abo, Jahresabo zuerst gewählt — ohne jede Einmalkauf-Zeile,
-        // sonst fände die Projektion es auch auf dem alten Weg.
+        // 1: subscription only, yearly subscription chosen first — without any one-off row,
+        // otherwise the projection would find it on the old path as well.
         $this->product(1, once: false, rules: ['2', '1']);
         $this->price(1, '1.0000', 1);
         $this->price(1, '10.0000', 2);
 
-        // 2: Einmalkauf und Abo.
+        // 2: one-off purchase and subscription.
         $this->product(2, once: true, rules: ['1']);
         $this->price(2, '9.0000');
         $this->price(2, '1.0000', 1);
 
-        // 3: nur ein Modell für eine Kundengruppe.
+        // 3: only one model, for one customer group.
         $this->product(3, once: false, rules: ['3']);
         $this->price(3, '1.0000', 3);
     }
@@ -82,8 +82,8 @@ class SubscriptionListPriceEndToEndTest extends TestCase
             2 => [9.0, 10.8, 0, true],
         ], $rows, 'Produkt 3 fehlt: sein einziges Modell steht nicht allen offen (P91)');
 
-        // Ein zweiter Lauf findet nichts zu ändern. Nicht verify(): das
-        // vergleicht Zeichenketten, und SQLite streicht die Nullen (Fall 30).
+        // A second run finds nothing to change. Not verify(): it
+        // compares strings, and SQLite strips the zeros.
         self::assertSame(0, $this->projector()->refresh([1, 2, 3], self::NOW));
     }
 
@@ -91,7 +91,7 @@ class SubscriptionListPriceEndToEndTest extends TestCase
     {
         $this->projector()->rebuild(self::NOW);
 
-        // Jetzt Monatsabo zuerst: derselbe Produktsatz, eine andere Zahl.
+        // Now the monthly subscription first: the same product set, a different number.
         $this->connection->update('tl_consho_product', ['subscriptionRules' => serialize(['1', '2'])], ['id' => 1]);
 
         self::assertSame(1, $this->projector()->refresh([1], self::NOW), 'nur das Modell ändert sich — der Vergleich muss es sehen');

@@ -8,11 +8,11 @@ use Webwerkwien\ContaoConshoBundle\Document\ArchiveFolderIsPublic;
 use Webwerkwien\ContaoConshoBundle\Document\ArchiveFolderProtector;
 
 /**
- * Michael, 2026-09-24: „wichtig für die DSGVO, wird ein Ordner ausgewählt,
- * sollte der gleich automatisch gesperrt werden".
+ * Important for the GDPR: when a folder is selected, it should be protected
+ * automatically right away.
  *
- * Gegen ein echtes Verzeichnis: Die Frage ist, welche Datei auf der Platte
- * liegt, und die beantwortet keine Attrappe.
+ * Against a real directory: the question is which file lies on the disk,
+ * and no test double answers that.
  */
 class ArchiveFolderProtectorTest extends TestCase
 {
@@ -44,9 +44,9 @@ class ArchiveFolderProtectorTest extends TestCase
     }
 
     /**
-     * 🔴 Ein öffentlicher OBERORDNER wird nicht angefasst: Ihn zu sperren
-     * nähme alles andere darin von der Website. Die Auswahl wird abgelehnt,
-     * der Oberordner genannt — und sein Marker bleibt liegen.
+     * 🔴 A public PARENT folder is not touched: protecting it would take
+     * everything else in it off the website. The selection is rejected, the
+     * parent folder named — and its marker stays where it is.
      */
     public function testEinOeffentlicherOberordnerWirdGenanntNichtGesperrt(): void
     {
@@ -63,7 +63,7 @@ class ArchiveFolderProtectorTest extends TestCase
     }
 
     /**
-     * Auch `files/` selbst zählt — ein Marker dort macht alles öffentlich.
+     * `files/` itself counts too — a marker there makes everything public.
      */
     public function testAuchDasWurzelverzeichnisZaehlt(): void
     {

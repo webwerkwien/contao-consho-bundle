@@ -21,14 +21,13 @@ use Webwerkwien\ContaoConshoBundle\Tax\DeliveryCountryProvider;
 final class DbalConfigurationIssueSource implements ConfigurationIssueSource
 {
     /**
-     * 🔴 **`$framework` steht hier, damit die Klasse prüfbar wird.**
+     * 🔴 **`$framework` is here so that the class can be tested.**
      *
-     * Sie war die letzte Stelle in `src/`, die ein Modell statisch holte
-     * (`ShopModel::findByPk()`), und — kein Zufall — die einzige Befundquelle
-     * ohne Test: Ein statischer Aufruf lässt sich nicht ersetzen, also hätte
-     * ein Test Datenbank **und** initialisiertes Framework gebraucht. Über den
-     * Adapter ist er ein Mock. Gleiche Ursache wie bei `DiagnoseTaxCommand`,
-     * gefunden beim Nachziehen von dessen Test am 2026-09-23.
+     * It was the last place in `src/` that fetched a model statically
+     * (`ShopModel::findByPk()`), and — no coincidence — the only finding source
+     * without a test: a static call cannot be replaced, so a test would have
+     * needed a database **and** an initialised framework. Through the adapter it
+     * is a mock. The same cause as with `DiagnoseTaxCommand`.
      */
     public function __construct(
         private readonly Connection $connection,
@@ -72,12 +71,11 @@ final class DbalConfigurationIssueSource implements ConfigurationIssueSource
             $issues = [
                 ...$issues,
                 /*
-                 * ⚠️ Mail-Transport und Heimatland liegen NICHT hier, sondern
-                 * in DbalCheckoutReadinessIssueSource. Beide sperren den
-                 * Checkout (11.2), und der fragt bei jedem Seitenaufruf im
-                 * Frontend nach — diese Quelle bringt daneben die ganze
-                 * Steuerdiagnose mit, eine Abfrage je Steuerklasse je Shop.
-                 * Im zweiten Review vom 2026-09-22 gemessen.
+                 * ⚠️ Mail transport and home country are NOT here but in
+                 * DbalCheckoutReadinessIssueSource. Both block the checkout (11.2),
+                 * which asks on every page call in the front end — and this source
+                 * brings the whole tax diagnosis along, one query per tax class per
+                 * shop.
                  */
             ];
 

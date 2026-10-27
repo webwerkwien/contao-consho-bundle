@@ -24,7 +24,7 @@
     {% if confirm and confirm != 'confirmed' %}
         {# The mail's link lands here (MyOrdersFlow::ANCHOR): on a page with
            other forms above, the box would otherwise sit out of sight
-           (acceptance D-4). #}
+           (D-4). #}
         <div class="consho-my-orders__confirm" id="consho-confirm">
             {% if confirm == 'pending' %}
                 <p>{{ (t ~ 'confirmIntro')|trans([email], 'contao_default') }}</p>
@@ -56,7 +56,7 @@
                     {# data-cellheadline: themes that stack a table on narrow
                        screens (the Contao demo theme among them) print it
                        before each cell — without it only ": " is left
-                       (acceptance D-4). #}
+                       (D-4). #}
                     <tr>
                         <td data-cellheadline="{{ (t ~ 'colOrder')|trans({}, 'contao_default') }}"><a href="{{ order.url }}">{{ order.number }}</a>{% if order.guest %} <span class="consho-my-orders__guest">{{ (t ~ 'asGuest')|trans({}, 'contao_default') }}</span>{% endif %}</td>
                         <td data-cellheadline="{{ (t ~ 'colDate')|trans({}, 'contao_default') }}">{{ order.date }}</td>
@@ -68,8 +68,7 @@
         {% endif %}
 
         {# Not while a confirmation link is open: two buttons about the same
-           thing, and the wrong one further down, is what the acceptance
-           tripped over. #}
+           thing, and the wrong one further down, invite the wrong click. #}
         {% if not guestConfirmed and not confirm %}
             <form method="post" class="consho-my-orders__guest-request">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">

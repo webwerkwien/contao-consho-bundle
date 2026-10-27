@@ -18,22 +18,20 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxRateRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * 🔴 **Die letzte Befundquelle ohne Test — und die letzte mit einem statischen
- * Modellaufruf. Das war dieselbe Tatsache.**
+ * 🔴 **The last finding source without a test — and the last one with a
+ * static model call. That was the same fact.**
  *
- * `ShopModel::findByPk()` lässt sich nicht ersetzen, also hätte ein Test bis
- * hierher eine echte Datenbank **und** ein initialisiertes Contao gebraucht.
- * Über `$framework->getAdapter()` — was zwölf andere Stellen in `src/` tun —
- * ist er ein Mock, und der Test kostet eine SQLite-Datei.
+ * `ShopModel::findByPk()` cannot be replaced, so up to here a test would
+ * have needed a real database **and** an initialised Contao. Through
+ * `$framework->getAdapter()` — as twelve other places in `src/` do — it is
+ * a mock, and the test costs one SQLite file.
  *
- * Nachgezogen am 2026-09-23, direkt nach demselben Umbau an
- * `DiagnoseTaxCommand`. Punkt 31: **Ein Vorfall, der nur eine Reparatur
- * hervorbringt, ist halb ausgewertet.**
+ * The same change as in `DiagnoseTaxCommand`.
  *
- * ⚠️ **Diese Klasse läuft bei JEDEM Aufruf der Backend-Startseite.** Ihr
- * eigener Klassenkommentar sagt, warum die teure Steuerdiagnose deshalb in
- * `consho:tax:diagnose` gehört und nicht hierher. Die Tests unten halten
- * beides fest: was gemeldet wird, und woran die Quelle vorbeigeht.
+ * ⚠️ **This class runs on EVERY call of the back-end start page.** Its own
+ * class comment says why the expensive tax diagnosis therefore belongs in
+ * `consho:tax:diagnose` and not here. The tests below pin down both: what
+ * is reported, and what the source passes by.
  */
 class DbalConfigurationIssueSourceTest extends TestCase
 {
@@ -53,11 +51,11 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * Ein Shop ohne Lieferländer **und** ohne Heimatland wird übersprungen —
-     * eine frische Einrichtung würde sonst jede Steuerklasse als fehlend
-     * melden und die Befunde begraben, auf die es ankommt. Die Bedingung steht
-     * als Kommentar in der Klasse; hier steht sie als Zusicherung, damit ein
-     * Aufräumen sie nicht als überflüssig entfernt.
+     * A shop without delivery countries **and** without a home country is
+     * skipped — a fresh setup would otherwise report every tax class as
+     * missing and bury the findings that matter. The condition is written as
+     * a comment in the class; here it is written as an assertion, so that a
+     * clean-up does not remove it as superfluous.
      */
     public function testEineFrischeEinrichtungWirdUebersprungen(): void
     {
@@ -70,7 +68,7 @@ class DbalConfigurationIssueSourceTest extends TestCase
     {
         $this->shop(1, deliveryCountries: ['AT', 'DK'], country: 'AT');
 
-        // Nur AT hat einen Satz, DK nicht.
+        // Only AT has a rate, DK does not.
         $issues = $this->issues(configured: ['AT']);
 
         self::assertCount(1, $issues);
@@ -78,8 +76,8 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * Nachlese Stufe 2: Mit dem Schalter aus rechnet ein EU-Privatkunde zum
-     * Satz des Shoplands — Dänemark braucht dann keinen eigenen.
+     * Nachlese stage 2: With the switch off, an EU private customer is charged
+     * at the shop country's rate — Denmark then needs no rate of its own.
      */
     public function testOhneSteuerImBestimmungslandKeinBefundFuerEuLaender(): void
     {
@@ -89,17 +87,17 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 **Der Befund trägt den Shop durch — seit 2026-09-23.**
+     * 🔴 **The finding carries the shop through.**
      *
-     * Er war als Einziger der drei ohne: `mailTransportMissing` sagt „Die
-     * Shop-Konfiguration „%shop%" …", `homeCountryMissing` ebenso, dieser
-     * nannte nur Land und Warengruppe, obwohl die Schleife hier den Shop
-     * kennt. Auf der Startseite stand der Gegenbeweis direkt daneben: zwei
-     * fast gleiche Versandart-Zeilen sind auseinanderzuhalten, **weil** sie
-     * den Shop nennen.
+     * It was the only one of the three without it: `mailTransportMissing`
+     * says "Die Shop-Konfiguration „%shop%" …", `homeCountryMissing` likewise,
+     * this one only named country and product group, although the loop here
+     * knows the shop. The counter-proof stood right next to it on the start
+     * page: two almost identical shipping method lines can be told apart
+     * **because** they name the shop.
      *
-     * Dieser Test prüft die Quelle, nicht nur `ConfigurationCheck`: dass der
-     * Titel aus der **Shop-Zeile** kommt und nicht irgendwoher.
+     * This test checks the source, not only `ConfigurationCheck`: that the
+     * title comes from the **shop row** and not from anywhere else.
      */
     public function testDerSteuersatzBefundTraegtDenShopDurch(): void
     {
@@ -112,10 +110,10 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * Zwei Shops, dasselbe unbepreiste Land: zwei Zeilen, die sich
-     * unterscheiden lassen. Genau der Fall, der vorher zweimal denselben Satz
-     * ergab — und der auf c5 nie auftrat, weil nur ein Shop nach Dänemark
-     * liefert. **Deshalb steht er hier und nicht nur dort.**
+     * Two shops, the same unpriced country: two lines that can be told apart.
+     * Exactly the case that used to produce the same sentence twice — and
+     * that an installation where only one shop delivers to Denmark never
+     * shows. **That is why it is set up here.**
      */
     public function testZweiShopsMitDemselbenLueckenlandSindUnterscheidbar(): void
     {
@@ -129,10 +127,10 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * 🎯 **Ländernamen, keine ISO-Kürzel.** Die Meldung beim Speichern der
-     * Shop-Konfiguration sagt seit A-3 „Dänemark"; diese Quelle sagte „DK" für
-     * denselben Sachverhalt. Zwei Formulierungen für eine Tatsache lassen
-     * einen Betreiber überlegen, ob es zwei Tatsachen sind.
+     * 🎯 **Country names, not ISO codes.** Since A-3 the message on saving the
+     * shop configuration says "Dänemark"; this source said "DK" for the same
+     * matter. Two wordings for one fact make an operator wonder whether they
+     * are two facts.
      */
     public function testDerBefundNenntDenLandesnamen(): void
     {
@@ -145,8 +143,8 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * Das Heimatland zählt mit, auch wenn der Shop nicht dorthin liefert:
-     * Sein Satz macht das Brutto jedes angezeigten Preises (C25).
+     * The home country counts too, even if the shop does not deliver there:
+     * its rate makes the gross amount of every displayed price (C25).
      */
     public function testDasHeimatlandZaehltAuchOhneLieferung(): void
     {
@@ -170,12 +168,12 @@ class DbalConfigurationIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 **Ein Shop, den es in der Modellschicht nicht gibt, darf die
-     * Startseite nicht abreißen.**
+     * 🔴 **A shop that does not exist in the model layer must not tear down
+     * the start page.**
      *
-     * Der Adapter gibt `null` zurück — bis zum Umbau war das ein Zweig, den
-     * kein Test erreichen konnte, weil der statische Aufruf sich nicht
-     * beantworten ließ. Die Zeile steht seither ungeprüft im Code.
+     * The adapter returns `null` — before the switch to the adapter this was a
+     * branch no test could reach, because the static call could not be
+     * answered. Until then the line stood in the code unchecked.
      */
     public function testEinShopOhneModellUeberspringtDieSteuerpruefung(): void
     {
@@ -188,9 +186,9 @@ class DbalConfigurationIssueSourceTest extends TestCase
      * @param list<string> $deliveryCountries
      */
     /**
-     * „Steuer im Bestimmungsland" an, wenn nichts anderes gesagt ist: Diese
-     * Tests stammen aus der Zeit vor dem Schalter und meinen „jedes Lieferland
-     * braucht seinen Satz" — seit der Nachlese Stufe 2 gilt das nur so.
+     * "Tax in the country of destination" on, unless stated otherwise: these
+     * tests date from before the switch and mean "every delivery country
+     * needs its rate" — since Nachlese stage 2 that only holds this way.
      */
     private function shop(int $id, array $deliveryCountries, string $country, string $vatId = '', bool $taxAtDestination = true): void
     {
@@ -228,8 +226,8 @@ class DbalConfigurationIssueSourceTest extends TestCase
         return (new DbalConfigurationIssueSource(
             $this->connection,
             new ConfigurationCheck(),
-            // Echt, nicht gemockt: Ein gemocktes incompleteFor() würde genau
-            // die Antwort erfinden, die hier geprüft werden soll (Regel 25).
+            // Real, not mocked: a mocked incompleteFor() would invent exactly
+            // the answer that is to be checked here.
             new DeliveryCountryProvider($rates, $provider),
             $provider,
             $this->framework($modelExists),

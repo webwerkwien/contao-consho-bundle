@@ -34,8 +34,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shipping_method');
         DcaSchema::create($this->connection, 'tl_consho_payment_method');
 
-        // Mail-Transport und Heimatland gesetzt: Sie sind seit dem zweiten
-        // Review auch hier Befunde, sollen aber die anderen Tests nicht stören.
+        // Mail transport and home country set: they are issues here too,
+        // but should not disturb the other tests.
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop', 'mailTransport' => 7, 'country' => 'AT']);
     }
 
@@ -59,13 +59,11 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Bei der Abnahme von C-5 selbst auf c5 gefunden (2026-09-22): Zwei
-     * UNVERÖFFENTLICHTE Test-Startpunkte von Shop 1 hatten keine
-     * Checkout-Seite. Der Befund feuerte, und über die Bereitschaft sperrte
-     * er den Checkout eines Shops, dessen echter Startpunkt vollständig
-     * eingerichtet war.
+     * 🔴 Two UNPUBLISHED test root pages of shop 1 had no checkout page. The
+     * issue fired, and through the readiness it blocked the checkout of a shop
+     * whose real root page was fully set up.
      *
-     * Ein unveröffentlichter Startpunkt bedient niemanden.
+     * An unpublished root page serves nobody.
      */
     public function testEinUnveroeffentlichterStartpunktWirdNichtGemeldet(): void
     {
@@ -79,10 +77,10 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * N1 (Nachlese Stufe 2): Die Einrichtungsseite fragt auch unveröffentlichte
-     * Startpunkte — ein Shop in Vorbereitung meldete dort sonst „erledigt",
-     * obwohl keine Shopseite angelegt war. Startseite und Checkout bleiben bei
-     * den veröffentlichten (Test darüber).
+     * N1 (Nachlese stage 2): the setup page also asks unpublished root pages —
+     * otherwise a shop in preparation reported "done" there although no shop
+     * page had been created. Start page and checkout stay with the published
+     * ones (test above).
      */
     public function testFuerDieEinrichtungZaehltAuchEinUnveroeffentlichterStartpunkt(): void
     {
@@ -104,8 +102,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
 
     public function testEinZeitlichUnerreichbarerStartpunktWirdNichtGemeldet(): void
     {
-        // Dieselbe Regel wie bei den Kundengruppen in C-4: Was ausserhalb
-        // seines Fensters liegt, ist so unerreichbar wie Unveröffentlichtes.
+        // The same rule as for the member groups in C-4: what lies outside
+        // its window is as unreachable as something unpublished.
         $this->vollstaendig();
         $this->connection->insert('tl_page', [
             'id' => 51, 'title' => 'Noch nicht', 'type' => 'root',
@@ -118,7 +116,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
 
     public function testEinVeroeffentlichterStartpunktOhneKasseWirdSehrWohlGemeldet(): void
     {
-        // Die Gegenprobe: Sonst prüfte der Test oben nur, dass nie etwas kommt.
+        // The control case: otherwise the test above would only check that nothing ever comes.
         $this->vollstaendig();
         $this->connection->insert('tl_page', [
             'id' => 52, 'title' => 'Zweiter Startpunkt', 'type' => 'root',
@@ -130,7 +128,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
 
     public function testEinStartpunktOhneShopWirdNichtGemeldet(): void
     {
-        // Eine Website ohne Consho hat keine Checkout-Seite und braucht keine.
+        // A website without Consho has no checkout page and needs none.
         $this->vollstaendig();
         $this->connection->insert('tl_page', ['id' => 99, 'title' => 'Andere Site', 'type' => 'root', 'consho_shop' => 0]);
 
@@ -150,8 +148,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
 
     public function testEinUnsichtbaresElementZaehltNicht(): void
     {
-        // Ein auf unsichtbar gestelltes Element rendert nicht — die Seite ist
-        // so leer wie ohne.
+        // An element set to invisible does not render — the page is
+        // as empty as without it.
         $this->vollstaendig();
         $this->connection->update('tl_content', ['invisible' => 1], ['id' => 1]);
 
@@ -170,9 +168,9 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Ausgewählt UND verfügbar. Ein Shop, der drei Arten angehakt und dann
-     * alle drei unveröffentlicht hat, ist genau in diesem Zustand — eine
-     * Prüfung auf „nichts angehakt" nennte das eingerichtet.
+     * 🔴 Selected AND available. A shop that ticked three methods and then
+     * unpublished all three is in exactly this state — a check for "nothing
+     * ticked" would call that set up.
      */
     public function testEineAusgewaehlteAberUnveroeffentlichteArtZaehltNicht(): void
     {
@@ -184,8 +182,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
 
     public function testEineVersandartOhneSteuerklasseZaehltNicht(): void
     {
-        // act=toggle veröffentlicht ohne Pflichtfeldprüfung — dieselbe
-        // Bedingung wie im Checkout (DbalShippingMethodRepository::offerable()).
+        // act=toggle publishes without the required-field check — the same
+        // condition as in the checkout (DbalShippingMethodRepository::offerable()).
         $this->vollstaendig();
         $this->connection->update('tl_consho_shipping_method', ['taxClass' => 0], ['id' => 4]);
 
@@ -202,9 +200,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
 
     public function testEinFehlenderMailTransportWirdHierGemeldet(): void
     {
-        // Seit dem zweiten Review vom 2026-09-22 liegt diese Prüfung hier und
-        // nicht mehr bei der Steuerdiagnose — sie sperrt den Checkout, und
-        // die läuft bei jedem Aufruf mit.
+        // This check lives here and no longer in the tax diagnosis — it
+        // blocks the checkout, and that runs on every request.
         $this->vollstaendig();
         $this->connection->update('tl_consho_shop', ['mailTransport' => 0], ['id' => 1]);
 
@@ -225,7 +222,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         self::assertSame(1, $issue->shopId);
     }
 
-    // ── Warenkorb- und Bestellseite (C-6) ───────────────────────────────────
+    // ── Cart and order page (C-6) ───────────────────────────────────────────
 
     public function testEinStartpunktOhneWarenkorbseiteWirdGemeldet(): void
     {
@@ -248,10 +245,10 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Die Zeile aus 11.3, die C-6 zunächst übersah: „Startpunkt ohne …
-     * Seite, ODER SEITE OHNE PASSENDES ELEMENT". Für die Checkout-Seite war
-     * sie umgesetzt, für die Warenkorbseite nicht — der Besucher landete nach
-     * dem Hinzufügen auf einer leeren Seite (Review 2026-09-22).
+     * 🔴 The line from 11.3 that C-6 overlooked at first: "root page without …
+     * page, OR PAGE WITHOUT A MATCHING ELEMENT". It was implemented for the
+     * checkout page, not for the cart page — after adding something the
+     * visitor landed on an empty page.
      */
     public function testEineWarenkorbseiteOhneElementWirdGemeldet(): void
     {
@@ -265,13 +262,13 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * C-10 (E5): Die Bestellseite ist eingestellt, aber leer — der Käufer
-     * landete nach dem Kauf und über den Link der Bestätigung im Nichts.
+     * C-10 (E5): the order page is set, but empty — after the purchase and
+     * through the link in the confirmation the buyer landed in nowhere.
      */
     /**
-     * E-6, V5: Die Versandkostenseite wie Warenkorb- und Bestellseite — aber
-     * ohne den Checkout zu sperren. Nicht gewählt ist ein Hinweis, gewählt
-     * und leer eine Warnung.
+     * E-6, V5: the shipping costs page like the cart and order pages — but
+     * without blocking the checkout. Not chosen is a notice, chosen and empty
+     * a warning.
      */
     public function testDieVersandkostenseiteWirdGeprueftSperrtAberNicht(): void
     {
@@ -317,9 +314,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Gefunden beim Deploy von C-10: Der Artikel der Bestellseite war
-     * unveröffentlicht, der Befund schwieg. Ein Artikel oder Element außerhalb
-     * seines Zeitraums rendert ebenso wenig.
+     * The order page's article was unpublished, and the issue stayed silent.
+     * An article or element outside its time window does not render either.
      *
      * @return iterable<string, array{string, array<string, int|string>, int, ConfigurationFinding}>
      */
@@ -349,7 +345,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         self::assertSame([$finding], array_map(static fn (ConfigurationIssue $issue): ConfigurationFinding => $issue->finding, $this->issues()));
     }
 
-    /** Gegenprobe: ein Zeitraum, der jetzt gilt, verbirgt nichts. */
+    /** Control case: a time window that applies now hides nothing. */
     public function testEinLaufenderZeitraumZaehlt(): void
     {
         $this->vollstaendig();
@@ -359,7 +355,7 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         self::assertSame([], $this->issues());
     }
 
-    /** Verschachtelt: auch der Artikel des äußeren Elements muss sichtbar sein. */
+    /** Nested: the article of the outer element must be visible too. */
     public function testEinVerschachteltesElementInEinemUnveroeffentlichtenArtikel(): void
     {
         $this->vollstaendig();
@@ -379,8 +375,8 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Dieselbe zweite Platzierung wie beim Checkout-Element: ein Element in
-     * einem Element (Elementgruppe, Akkordeon) trägt `ptable = 'tl_content'`.
+     * The same second placement as for the checkout element: an element in
+     * an element (element group, accordion) carries `ptable = 'tl_content'`.
      */
     public function testEinVerschachteltesWarenkorbElementZaehlt(): void
     {

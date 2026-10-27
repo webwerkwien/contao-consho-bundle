@@ -20,8 +20,7 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockBooking;
  * stock — what is there, what is on order (E1), the state the customer sees,
  * "wieder lieferbar ab", how many members wait for it, the supplier.
  *
- * "Einkauf" opens in Contao's modal (Michael: "Button 'Einkauf' -> öffnet
- * PopUp"); the link works without it too.
+ * "Einkauf" opens in Contao's modal ; the link works without it too.
  */
 final class StockListListener
 {
@@ -73,7 +72,7 @@ final class StockListListener
 
     /**
      * The columns of every active row at once, on the first label of the
-     * page (Nachlese K4, review G-7 L4): four queries per row made a page of
+     * page (Nachlese K4, G-7): four queries per row made a page of
      * a few hundred articles noticeably slow. The article asked for is added
      * in case the list shows one that is no longer active.
      */
@@ -139,7 +138,7 @@ final class StockListListener
         $operation['attributes']->set(
             'onclick',
             // HtmlAttributes escapes the attribute itself; only the quote of
-            // the JavaScript string is ours (review G-7, L7).
+            // the JavaScript string is ours (G-7).
             \sprintf("Backend.openModalIframe({'title':%s,'url':this.href+'&popup=1'});return false", json_encode($title, \JSON_HEX_APOS | \JSON_HEX_QUOT | \JSON_UNESCAPED_UNICODE)),
         );
     }

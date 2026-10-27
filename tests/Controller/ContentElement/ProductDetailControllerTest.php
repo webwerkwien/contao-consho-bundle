@@ -86,22 +86,21 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Das Element mit echten Zulieferern gegen SQLite — Repositories, Varianten-
- * matrix, Preisrechner, Sicherheitsangaben, ProductUrlGenerator und
- * ProductHead. Gedoppelt sind nur Contaos Rahmen (Seiten- und Shopmodell,
- * ContentUrlGenerator, Bildstudio).
+ * The element with real collaborators against SQLite — repositories,
+ * variant matrix, price calculator, safety information, ProductUrlGenerator
+ * and ProductHead. Only Contao's frame is doubled (page and shop model,
+ * ContentUrlGenerator, image studio).
  *
- * Abweichung vom Plan (Task 10, Step 4 „kein Unit-Test für den Controller"):
- * FragmentTemplate ist zwar final, lässt sich aber mit einer Closure bauen —
- * die Template-Daten sind damit prüfbar, ohne Twig und ohne Container. Die
- * 404-Regeln für `?variant=` sind zu leicht still falsch, um sie nur im
- * Browser abzuhaken.
+ * A unit test for the controller after all: FragmentTemplate is final, but
+ * it can be built with a closure — the template data can thus be checked
+ * without Twig and without a container. The 404 rules for `?variant=` are
+ * too easily silently wrong to tick them off only in the browser.
  *
- * Grundbestand wie auf dem Testserver: Seite 123 „Produkt" unter Startpunkt 1
- * (de, Shop 1, EUR). Produkt 1 „Schwedenbitter" mit den Varianten 3 (250 ml,
- * erbt 13,00 € ab 1 und 10,80 € ab 10) und 6 (750 ml, eigener Preis 29,00 €),
- * dazu Variante 8 (1 l, unveröffentlicht). Produkt 2 mit genau einer Variante 7
- * und ohne Preis.
+ * Base data as on a real installation: page 123 "Produkt" below start point
+ * 1 (de, shop 1, EUR). Product 1 "Schwedenbitter" with the variants 3
+ * (250 ml, inherits € 13.00 from 1 and € 10.80 from 10) and 6 (750 ml, own
+ * price € 29.00), plus variant 8 (1 l, unpublished). Product 2 with exactly
+ * one variant 7 and without a price.
  */
 class ProductDetailControllerTest extends TestCase
 {
@@ -129,7 +128,7 @@ class ProductDetailControllerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        // ShopLanguages liest die Sprachen aus den Startpunkten.
+        // ShopLanguages reads the languages from the start points.
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (
                 id INTEGER PRIMARY KEY,
@@ -166,8 +165,8 @@ class ProductDetailControllerTest extends TestCase
         $this->insertVariant(self::ML_750_VARIANT, self::PRODUCT, self::ML_750, 2, ['sku' => 'SB-750']);
         $this->insertVariant(self::UNPUBLISHED_VARIANT, self::PRODUCT, self::ML_1000, 3, ['published' => 0]);
 
-        // Staffel am Hauptprodukt; Variante 3 hat keine eigene Zeile und erbt
-        // den ganzen Satz, Variante 6 hat einen eigenen Preis.
+        // Scale on the main product; variant 3 has no row of its own and inherits
+        // the whole set, variant 6 has its own price.
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '10.8333', 'minQuantity' => '1.0000']);
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '9.0000', 'minQuantity' => '10.0000']);
         $this->insertPrice(['pid' => self::ML_750_VARIANT, 'net' => '24.1667', 'minQuantity' => '1.0000']);
@@ -177,12 +176,12 @@ class ProductDetailControllerTest extends TestCase
         $this->insertVariant(self::OTHER_VARIANT, self::OTHER_PRODUCT, self::ML_250, 1);
     }
 
-    // ── Ohne Produktseite ────────────────────────────────────────────────
+    // ── Without a product page ───────────────────────────────────────────
 
     public function testWithoutTheProductAttributeTheElementRendersNothing(): void
     {
-        // Das Element steht auf einer anderen Seite oder in einem Layout-Bereich.
-        // Auch ein unsinniges ?variant= darf dort keine 404 auslösen.
+        // The element stands on another page or in a layout section.
+        // Even a nonsensical ?variant= must not trigger a 404 there.
         $result = $this->render('https://example.org/impressum.html?variant=abc', productId: null);
 
         self::assertNull($result['data']['product']);
@@ -196,7 +195,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertNull($result['data']['product']);
     }
 
-    // ── Ohne Variantenwahl ───────────────────────────────────────────────
+    // ── Without a variant choice ─────────────────────────────────────────
 
     public function testWithoutAChoiceThePageShowsTheProductWithAFromPrice(): void
     {
@@ -206,22 +205,21 @@ class ProductDetailControllerTest extends TestCase
         self::assertInstanceOf(ProductDetail::class, $data['product']);
         self::assertSame(self::PRODUCT, $data['product']->articleId);
 
-        // Keine Vorwahl (Entscheidung 3): Die Varianten kosten verschieden, also
-        // „ab" mit dem günstigsten Preis — und keine Staffel, weil noch kein
-        // Artikel feststeht.
+        // No preselection: the variants cost differently, so "ab" (from) with the
+        // cheapest price — and no scale, because no article is fixed yet.
         self::assertIsArray($data['price']);
         self::assertTrue($data['price']['isFrom']);
         self::assertSame('13,00 €', $this->spaces($data['price']['formatted']));
         self::assertSame([], $data['price']['scale']);
 
-        // Der Kaufbereich kennt noch keinen Artikel.
+        // The purchase area does not know an article yet.
         self::assertNull($data['purchase']['articleId']);
     }
 
     public function testEinGastSiehtBruttoUndDenBruttoHinweis(): void
     {
-        // Der Ausgangspunkt, gegen den die drei Tests darunter messen. Ohne
-        // ihn wäre jedes „netto" auch mit einem kaputten Resolver grün.
+        // The starting point the three tests below measure against. Without it
+        // every "net" would be green even with a broken resolver.
         $this->netPriceGroup();
 
         $data = $this->render('https://example.org/produkt/schwedenbitter.html?variant=6')['data'];
@@ -232,8 +230,8 @@ class ProductDetailControllerTest extends TestCase
     }
 
     /**
-     * Block H (H-2): eine Aktion für alle, und die Projektion kennt ihren
-     * Bezugspreis — die Seite streicht ihn durch. Ohne Aktion nicht.
+     * Block H (H-2): a promotion for everyone, and the projection knows its
+     * reference price — the page strikes it through. Without a promotion not.
      */
     public function testDieAktionZeigtDenStreichpreisDerProjektion(): void
     {
@@ -330,7 +328,7 @@ class ProductDetailControllerTest extends TestCase
 
     /**
      * K3/K4: what is not shipped has no shipping costs and no return window
-     * in the markup (Fable review Connect-1, W4 — the branch had no test).
+     * in the markup (Connect-1).
      */
     public function testEinDownloadHatKeinenVersandUndKeineRueckgabe(): void
     {
@@ -369,7 +367,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertArrayNotHasKey('compare', $data['price']);
     }
 
-    // ── Modellwahl (Abo-2, P10) ───────────────────────────────────────────
+    // ── Model choice (Abo-2, P10) ─────────────────────────────────────────
 
     public function testEinReinerEinmalkaufHatKeineModellwahl(): void
     {
@@ -394,7 +392,7 @@ class ProductDetailControllerTest extends TestCase
             ],
             array_map(fn (array $plan): array => array_merge($plan, ['price' => $this->spaces($plan['price'])]), $data['plans']),
         );
-        // Die Seite zeigt oben weiter den Einmalkauf.
+        // At the top the page keeps showing the one-time purchase.
         self::assertSame('96,00 €', $this->spaces($data['price']['formatted']));
     }
 
@@ -408,7 +406,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertTrue($rendered['data']['plans'][0]['checked']);
         self::assertSame('1,20 €', $this->spaces($rendered['data']['price']['formatted']));
         self::assertSame('Bedingungen 5 zu 1.2000', $rendered['data']['price']['terms']);
-        // Ein Monatsbetrag ist kein Angebotspreis im Sinne von schema.org.
+        // A monthly amount is not an offer price in the sense of schema.org.
         self::assertStringNotContainsString('"price"', $rendered['jsonLd']);
     }
 
@@ -423,10 +421,10 @@ class ProductDetailControllerTest extends TestCase
 
     public function testEinUebriggebliebenerEinmalkaufPreisIstKeinAngebot(): void
     {
-        // Fable-Review Abo-2, L4a: nur im Abo verkauft, das einzige Abo (Regel
-        // 6) ohne Preis, und eine alte Einmalkauf-Zeile steht noch da. Die
-        // Seite zeigte sie als Preis, ins Markup kam sie auch, und der Klick
-        // endete in „nicht erhältlich".
+        // Abo-2: sold only as a subscription, the only subscription (rule
+        // 6) without a price, and an old one-time purchase row is still there.
+        // The page showed it as the price, it went into the markup too, and the
+        // click ended in "nicht erhältlich" (not available).
         $this->subscriptionProduct();
 
         $rendered = $this->render('https://example.org/produkt/ebook.html', productId: 10, offers: $this->offersOf([6]));
@@ -442,17 +440,17 @@ class ProductDetailControllerTest extends TestCase
         $this->netPriceGroup();
 
         $offers = $this->createMock(SubscriptionOffers::class);
-        // Die Gruppen allein entscheiden (P11; seit Variante A keine Geschäftskunden-Sperre mehr).
-        // Once: the page asks, and OneTimeOffer gets the answer (review Connect-1, H5).
+        // The groups alone decide (P11; there is no business-customer lock any more).
+        // Once: the page asks, and OneTimeOffer gets the answer (Connect-1).
         $offers->expects(self::once())->method('offered')->with(10, [3])->willReturn([0 => null]);
 
         $this->render('https://example.org/produkt/ebook.html', productId: 10, memberGroups: [3], offers: $offers);
     }
 
     /**
-     * Block G (G7): Eine ausverkaufte Variante behält Seite und Link, sagt es
-     * und hat keinen Kaufknopf; das Markup sagt OutOfStock. Ohne geführten
-     * Bestand sagt die Seite gar nichts.
+     * Block G (G7): a sold-out variant keeps its page and link, says so and
+     * has no purchase button; the markup says OutOfStock. Without managed
+     * stock the page says nothing at all.
      */
     public function testAusverkauftBleibtDieSeiteOhneKaufknopf(): void
     {
@@ -484,13 +482,14 @@ class ProductDetailControllerTest extends TestCase
         self::assertSame([false, true], $options[self::ML_250_VARIANT]);
         self::assertSame([true, true], $options[self::ML_750_VARIANT], 'gekennzeichnet, aber weiter verlinkt');
 
-        // Wahl offen: lieferbar, solange eine Variante es ist.
+        // Choice open: available as long as one variant is.
         self::assertStringContainsString('schema.org\/InStock"', $this->render('https://example.org/produkt/schwedenbitter.html')['jsonLd']);
     }
 
     /**
-     * Block G (G12, G15): Wo der Kaufknopf fehlt, steht der Wunsch — für Gäste
-     * der Hinweis, sich anzumelden; der Link der Mail zeigt das Bestätigen.
+     * Block G (G12, G15): where the purchase button is missing, the wish
+     * stands — for guests the notice to log in; the mail's link shows the
+     * confirmation.
      */
     public function testBenachrichtigenWoNichtsMehrDaIst(): void
     {
@@ -506,7 +505,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertSame('subscribed', $this->render('https://example.org/produkt/schwedenbitter.html?variant=6', memberId: 5)['data']['stockNotice']['state']);
         self::assertSame('subscribe', $this->render('https://example.org/produkt/schwedenbitter.html?variant=6', memberId: 8)['data']['stockNotice']['state']);
 
-        // Lieferbar: kein Wunsch.
+        // Available: no wish.
         $this->connection->update('tl_consho_stock', ['quantity' => '2.0000'], ['article' => self::ML_750_VARIANT]);
         self::assertNull($this->render('https://example.org/produkt/schwedenbitter.html?variant=6', memberId: 5)['data']['stockNotice']);
 
@@ -521,19 +520,20 @@ class ProductDetailControllerTest extends TestCase
 
     public function testSolangeEineVarianteFehltGibtEsKeineModellwahl(): void
     {
-        // Gefragt wird seit Abo-2b trotzdem — je Variante, für den Ab-Preis.
+        // Since Abo-2b it is asked anyway — per variant, for the from-price.
         self::assertSame([], $this->render('https://example.org/produkt/schwedenbitter.html', offers: $this->offersOf([0, 5]))['data']['plans']);
     }
 
     /**
-     * Fable-Review Abo-2b, S1: ein Variantenprodukt nur im Abo. Die Kachel
-     * druckt „ab 1,20 € / Monat"; die Seite zeigte keinen Preis, weil der
-     * Ab-Preis nur Einmalkauf-Zeilen fragte. Jetzt dieselbe Zahl, mit den
-     * Bedingungen der billigsten Variante — und nichts davon im Markup.
+     * Abo-2b: a variant product only as a subscription. The tile prints
+     * "ab 1,20 € / Monat" (from € 1.20 / month); the page showed no price,
+     * because the from-price only asked one-time purchase rows. Now the same
+     * figure, with the terms of the cheapest variant — and none of it in the
+     * markup.
      */
     public function testEinVariantenproduktNurImAboZeigtDenAbPreisSeinesModells(): void
     {
-        // Variante 250 ml erbt Regel 5 vom Hauptprodukt, 750 ml hat eine eigene.
+        // Variant 250 ml inherits rule 5 from the main product, 750 ml has its own.
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '1.0000', 'minQuantity' => '1.0000', 'subscriptionRule' => 5]);
         $this->insertPrice(['pid' => self::ML_750_VARIANT, 'net' => '2.0000', 'minQuantity' => '1.0000', 'subscriptionRule' => 5]);
 
@@ -550,16 +550,16 @@ class ProductDetailControllerTest extends TestCase
 
     public function testEinMitgliedEinerNettogruppeSiehtNettoUndDenNettoHinweis(): void
     {
-        // ⚠️ Durch den Controller, nicht am Resolver vorbei (Regel 24): Ein
-        // Test, der PriceAudienceResolver direkt füttert, prüft nicht, ob der
-        // Controller ihn überhaupt fragt — und genau das ist hier neu.
+        // ⚠️ Through the controller, not past the resolver: a test that feeds
+        // PriceAudienceResolver directly does not check whether the controller
+        // asks it at all — and that is exactly what is new here.
         $this->netPriceGroup();
 
         $data = $this->render('https://example.org/produkt/schwedenbitter.html?variant=6', memberGroups: [3])['data'];
 
         self::assertIsArray($data['price']);
-        // 24,1667 netto, gerundet auf die Stelle der Währung — dieselben
-        // 29,00 brutto wie beim Gast, nur ohne die 20 % darin.
+        // 24.1667 net, rounded to the currency's digits — the same 29.00 gross
+        // as for the guest, only without the 20 % in it.
         self::assertTrue($data['price']['showsNet']);
         self::assertSame('24,17 €', $this->spaces($data['price']['formatted']));
     }
@@ -580,9 +580,9 @@ class ProductDetailControllerTest extends TestCase
         $this->netPriceGroup();
         $this->insertPrice(['pid' => self::ML_750_VARIANT, 'net' => '10.0000', 'currency' => 'EUR', 'minQuantity' => '1.0000', 'customerGroup' => 3]);
 
-        // Brutto, weil die Gruppe nicht in netPriceGroups steht: 10,00 + 20 %.
-        // Der Preis ändert sich also, die Darstellung nicht — die beiden
-        // Fragen sind getrennt, und dieser Test hält sie auseinander.
+        // Gross, because the group is not in netPriceGroups: 10.00 + 20 %.
+        // So the price changes, the display does not — the two questions are
+        // separate, and this test keeps them apart.
         $data = $this->render('https://example.org/produkt/schwedenbitter.html?variant=6', memberGroups: [4])['data'];
 
         self::assertIsArray($data['price']);
@@ -598,13 +598,13 @@ class ProductDetailControllerTest extends TestCase
     public function testDerGrundpreisLiestSichWieDerPreisDarueber(): void
     {
         /*
-         * ⚠️ Im Abschlussreview C-4 als Prüflücke gemeldet: `basePriceNet` gab
-         * es im Code, aber keinen einzigen Treffer in den Tests.
+         * ⚠️ C-4: `basePriceNet` exists in the code, and this is the test that
+         * hits it.
          *
-         * § 4 PAngV will den Grundpreis „in derselben Weise" wie den
-         * Gesamtpreis. Ein Brutto-Literpreis unter einem Netto-Flaschenpreis
-         * vergleicht nichts — und fiele niemandem auf, weil beide Zahlen für
-         * sich stimmen.
+         * § 4 PAngV wants the unit price "in the same way" as the total
+         * price. A gross price per litre under a net bottle price compares
+         * nothing — and nobody would notice, because both figures are right
+         * on their own.
          */
         $this->netPriceGroup();
         $this->connection->update(
@@ -619,15 +619,15 @@ class ProductDetailControllerTest extends TestCase
         self::assertIsArray($brutto['basePrice']);
         self::assertIsArray($netto['basePrice']);
 
-        // 29,00 auf 0,75 l → 38,67 je Liter; netto 24,17 → 32,22 je Liter.
+        // 29.00 for 0.75 l → 38.67 per litre; net 24.17 → 32.22 per litre.
         self::assertSame('38,67 €', $this->spaces($brutto['basePrice']['formatted']));
         self::assertSame('32,22 €', $this->spaces($netto['basePrice']['formatted']));
     }
 
     public function testDieStaffelStufenLesenSichWieDerPreisDarueber(): void
     {
-        // Eine Staffel in brutto unter einem Netto-Preis wäre ein zweites,
-        // widersprechendes Angebot auf derselben Seite.
+        // A gross scale under a net price would be a second, contradictory
+        // offer on the same page.
         $this->netPriceGroup();
         $this->insertPrice(['pid' => self::ML_750_VARIANT, 'net' => '20.0000', 'currency' => 'EUR', 'minQuantity' => '10.0000']);
 
@@ -640,9 +640,9 @@ class ProductDetailControllerTest extends TestCase
 
     public function testDerAbPreisFolgtDemAngezeigtenBetrag(): void
     {
-        // Ohne gewählte Variante: „ab" über alle Varianten. Auch dieser Weg
-        // muss netto rechnen, sonst steht über einer Netto-Produktseite ein
-        // Brutto-„ab"-Preis.
+        // Without a chosen variant: "ab" (from) across all variants. This path
+        // has to calculate net too, otherwise a gross from-price stands above a
+        // net product page.
         $this->netPriceGroup();
 
         $brutto = $this->render('https://example.org/produkt/schwedenbitter.html')['data']['price'];
@@ -653,15 +653,15 @@ class ProductDetailControllerTest extends TestCase
 
         self::assertTrue($netto['isFrom']);
         self::assertTrue($netto['showsNet']);
-        // 13,00 brutto = 10,8333 netto, auf die Stelle der Währung gerundet.
+        // 13.00 gross = 10.8333 net, rounded to the currency's digits.
         self::assertSame('10,83 €', $this->spaces($netto['formatted']));
     }
 
     public function testDasMarkupBleibtBruttoAuchFuerEinNettoMitglied(): void
     {
-        // schema.org `price` ist der zu zahlende Betrag einschließlich Steuer.
-        // Eine Netto-Zahl dort wäre eine falsche Aussage, keine andere
-        // Darstellung einer richtigen.
+        // schema.org `price` is the amount to pay including tax. A net figure
+        // there would be a false statement, not another representation of a
+        // true one.
         $this->netPriceGroup();
 
         $jsonLd = $this->render('https://example.org/produkt/schwedenbitter.html?variant=6', memberGroups: [3])['jsonLd'];
@@ -671,11 +671,12 @@ class ProductDetailControllerTest extends TestCase
     }
 
     /**
-     * Gruppe 3 sieht netto, Gruppe 4 nicht. Beide existieren.
+     * Group 3 sees net, group 4 does not. Both exist.
      */
     /**
-     * Produkt 10 „E-Book" ohne Varianten: Einmalkauf 80,00 netto, Monatsabo
-     * (Regel 5) 1,00 netto, Regel 6 ohne Preis. Brutto mit 20 %.
+     * Product 10 "E-Book" without variants: one-time purchase 80.00 net,
+     * monthly subscription (rule 5) 1.00 net, rule 6 without a price. Gross
+     * with 20 %.
      */
     private function subscriptionProduct(): void
     {
@@ -686,7 +687,7 @@ class ProductDetailControllerTest extends TestCase
     }
 
     /**
-     * @param list<int> $rules die angebotenen Modelle in dieser Reihenfolge; 0 = Einmalkauf
+     * @param list<int> $rules the offered models in this order; 0 = one-time purchase
      */
     private function offersOf(array $rules): SubscriptionOffers
     {
@@ -694,11 +695,11 @@ class ProductDetailControllerTest extends TestCase
     }
 
     /**
-     * Je Artikel eigene Angebote (zweiter Fable-Review Abo-2b, 3) — sonst
-     * lässt sich „Variante A einmalig, Variante B nur im Abo" nicht bauen.
+     * Offers of their own per article (Abo-2b) — otherwise "variant A once,
+     * variant B only as a subscription" cannot be built.
      *
-     * @param array<int, list<int>> $perArticle Artikel-ID => Modelle; 0 = Einmalkauf
-     * @param list<int>             $default    für alle anderen Artikel
+     * @param array<int, list<int>> $perArticle article ID => models; 0 = one-time purchase
+     * @param list<int>             $default    for all other articles
      */
     private function offersPerArticle(array $perArticle, array $default): SubscriptionOffers
     {
@@ -718,7 +719,7 @@ class ProductDetailControllerTest extends TestCase
         return $offers;
     }
 
-    /** Gemischt: 250 ml nur im Abo und billiger, 750 ml einmalig. */
+    /** Mixed: 250 ml only as a subscription and cheaper, 750 ml once. */
     public function testGemischteVariantenAboIstDerAbPreis(): void
     {
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '1.0000', 'minQuantity' => '1.0000', 'subscriptionRule' => 5]);
@@ -731,7 +732,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertStringNotContainsString('1.20', $rendered['jsonLd']);
     }
 
-    /** Gemischt: die billigste ist der Einmalkauf — keine Bedingungen. */
+    /** Mixed: the cheapest is the one-time purchase — no terms. */
     public function testGemischteVariantenEinmalkaufIstDerAbPreis(): void
     {
         $this->insertPrice(['pid' => self::ML_750_VARIANT, 'net' => '99.0000', 'minQuantity' => '1.0000', 'subscriptionRule' => 5]);
@@ -742,10 +743,10 @@ class ProductDetailControllerTest extends TestCase
         self::assertNull($rendered['data']['price']['terms']);
     }
 
-    /** Gleichstand: wie die Kachel — der Einmalkauf zuerst, auch wenn das Abo vorne steht. */
+    /** Tie: like the tile — the one-time purchase first, even if the subscription comes first. */
     public function testGleichstandNimmtDenEinmalkaufWieDieKachel(): void
     {
-        // 250 ml (zuerst in der Matrix) nur im Abo zu 13,00 brutto, 750 ml einmalig zu 13,00.
+        // 250 ml (first in the matrix) only as a subscription at 13.00 gross, 750 ml once at 13.00.
         $this->connection->update('tl_consho_price', ['net' => '10.8333'], ['pid' => self::ML_750_VARIANT, 'minQuantity' => '1.0000']);
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '10.8333', 'minQuantity' => '1.0000', 'subscriptionRule' => 5]);
 
@@ -764,8 +765,8 @@ class ProductDetailControllerTest extends TestCase
 
     public function testEineAbgelehnteHinzufuegungWirdAusDerAdresseGelesen(): void
     {
-        // C-3c: Die Add-Route schickt den Besucher mit ?consho_notice=<fall>
-        // zurück auf diese Seite — hier wird daraus wieder ein CartNotice.
+        // C-3c: the add route sends the visitor back to this page with
+        // ?consho_notice=<case> — here it becomes a CartNotice again.
         $result = $this->render('https://example.org/produkt/schwedenbitter.html?consho_notice=unavailable');
 
         self::assertSame(CartNotice::Unavailable, $result['data']['notice']);
@@ -773,10 +774,10 @@ class ProductDetailControllerTest extends TestCase
 
     public function testEinErfundenerGrundInDerAdresseErgibtKeineMeldung(): void
     {
-        // Streng als Aufzählung nachgeschlagen, nie als Text weitergereicht:
-        // Was nicht zu einem unserer Fälle passt, ist null — und die Vorlage
-        // rendert für null nichts. Sonst wäre die Adresse ein Weg, fremden
-        // Text auf eine gecachte Seite zu bringen.
+        // Looked up strictly as an enum, never passed on as text: whatever does
+        // not match one of our cases is null — and the template renders nothing
+        // for null. Otherwise the address would be a way to put foreign text on
+        // a cached page.
         foreach (['<script>', 'other_shop', '', 'UNAVAILABLE'] as $wert) {
             $result = $this->render('https://example.org/produkt/schwedenbitter.html?consho_notice='.rawurlencode($wert));
 
@@ -786,11 +787,11 @@ class ProductDetailControllerTest extends TestCase
 
     public function testEinErfolgLaesstSichNichtUeberDieAdresseVortaeuschen(): void
     {
-        // `Added` ist ein Fall derselben Aufzählung — ein blankes tryFrom()
-        // nähme ihn an. Dann zeigte ein geteilter Link jedem Besucher „wurde
-        // in den Warenkorb gelegt", ohne dass etwas passiert ist, und die
-        // Seite bliebe so im geteilten Cache stehen. Die Route schreibt diesen
-        // Wert nie in eine Adresse; gelesen wird er auch nicht (Review C-3c).
+        // `Added` is a case of the same enum — a bare tryFrom() would accept it.
+        // Then a shared link would show every visitor "wurde in den Warenkorb
+        // gelegt" (was added to the cart) without anything having happened, and
+        // the page would stay that way in the shared cache. The route never
+        // writes this value into an address; it is not read either (C-3c).
         $result = $this->render('https://example.org/produkt/schwedenbitter.html?consho_notice=added');
 
         self::assertNull($result['data']['notice']);
@@ -798,9 +799,8 @@ class ProductDetailControllerTest extends TestCase
 
     public function testEinFeldStattEinesWertesErgibtKeineFehlerantwort(): void
     {
-        // ?consho_notice[]=1 kommt von Crawlern. getString() beantwortet das
-        // mit einer 400 — eine Produktseite, die daran scheitert, füllt nur
-        // das Fehlerlog.
+        // ?consho_notice[]=1 comes from crawlers. getString() answers that with
+        // a 400 — a product page that fails on it only fills the error log.
         $result = $this->render('https://example.org/produkt/schwedenbitter.html?consho_notice%5B%5D=1');
 
         self::assertNull($result['data']['notice']);
@@ -817,20 +817,20 @@ class ProductDetailControllerTest extends TestCase
     public function testDerPreisStehtInDerWaehrungDesStartpunktsNichtInDerDesShops(): void
     {
         /*
-         * Spec 4.0: Die Währung hängt am Startpunkt, das Heimatland am Shop.
-         * Der Shop dieses Tests steht auf EUR und auf Österreich; der
-         * Startpunkt verkauft in Pfund. Die Euro-Preise bleiben daneben
-         * stehen — nähme das Element wieder die des Shops, stünde hier der
-         * „ab"-Preis von 13,00 € statt der 24,00 £ aus der Pfund-Staffel.
+         * Spec 4.0: the currency hangs off the start point, the home country
+         * off the shop. The shop of this test is set to EUR and to Austria; the
+         * start point sells in pounds. The euro prices stay next to them — if
+         * the element took the shop's again, the from-price of € 13.00 would
+         * stand here instead of the £ 24.00 from the pound scale.
          *
-         * Nur Variante 6 bekommt einen Pfund-Preis: Damit ist „ab" hinfällig
-         * und die Aussage hängt nicht an einem Betrag, den zwei Zeilen teilen.
+         * Only variant 6 gets a pound price: that makes "ab" (from) moot, and
+         * the statement does not depend on an amount two rows share.
          */
         $this->insertPrice(['pid' => self::ML_750_VARIANT, 'net' => '20.0000', 'currency' => 'GBP', 'minQuantity' => '1.0000']);
 
         $data = $this->render('https://example.org/produkt/schwedenbitter.html?variant=6', currency: 'GBP')['data'];
 
-        // 20,00 netto plus 20 % aus Österreich = 24,00 brutto.
+        // 20.00 net plus 20 % from Austria = 24.00 gross.
         self::assertIsArray($data['price']);
         self::assertSame('GBP', $data['price']['currency']);
         self::assertSame((new MoneyFormatter())->format('24.0000', 'GBP', 'de'), $data['price']['formatted']);
@@ -850,8 +850,8 @@ class ProductDetailControllerTest extends TestCase
             $urls[$option->label] = $option->url;
         }
 
-        // Pfad ohne Host, wie die Kachel-Links; die Adresse selbst kommt aus
-        // ProductUrlGenerator. 1 l hat nur die unveröffentlichte Variante 8.
+        // Path without host, like the tile links; the address itself comes from
+        // ProductUrlGenerator. 1 l has only the unpublished variant 8.
         self::assertSame([
             '250 ml' => '/produkt/schwedenbitter.html?variant=3',
             '750 ml' => '/produkt/schwedenbitter.html?variant=6',
@@ -870,8 +870,8 @@ class ProductDetailControllerTest extends TestCase
 
     public function testTheOnlyVisibleVariantIsTheArticleWithoutAChoice(): void
     {
-        // Produkt 2 hat genau eine Variante — sie ist die kaufbare Einheit.
-        // Ohne Preiszeile irgendwo: kein Preisbereich, die Seite bleibt stehen.
+        // Product 2 has exactly one variant — it is the purchasable unit.
+        // No price row anywhere: no price area, the page stays up.
         $data = $this->render('https://example.org/produkt/kraeutersalz.html', productId: self::OTHER_PRODUCT)['data'];
 
         self::assertInstanceOf(ProductDetail::class, $data['product']);
@@ -880,7 +880,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertNull($data['price']);
     }
 
-    // ── Mit ?variant= ────────────────────────────────────────────────────
+    // ── With ?variant= ───────────────────────────────────────────────────
 
     public function testAChosenVariantInheritsTheWholePriceSetWithItsScale(): void
     {
@@ -923,9 +923,9 @@ class ProductDetailControllerTest extends TestCase
 
     public function testAVariantAddressCarriesTheProductsMetaDescription(): void
     {
-        // Das Feld gilt nur fürs Hauptprodukt. Selbst eine an der Variante
-        // eingetragene Meta-Beschreibung oder ein Kurztext der Variante ändern
-        // den Kopf nicht — die Adresse ist kanonisch zum Produkt.
+        // The field applies only to the main product. Even a meta description
+        // entered on the variant or a short text of the variant does not change
+        // the head — the address is canonical to the product.
         $this->connection->update('tl_consho_product', ['metaDescription' => 'Schwedenbitter nach Originalrezept'], ['id' => self::PRODUCT]);
         $this->connection->update('tl_consho_product', ['metaDescription' => 'Nur die große Flasche', 'teaser' => 'Variantenteaser'], ['id' => self::ML_750_VARIANT]);
 
@@ -965,23 +965,21 @@ class ProductDetailControllerTest extends TestCase
     #[DataProvider('addressesConshoNeverBuilds')]
     public function testAVariantParameterConshoNeverBuildsIsNotFound(string $query): void
     {
-        // Entscheidung 3 und Michaels Antwort 2: 404, keine Weiterleitung.
+        // 404, no redirect.
         $this->expectException(PageNotFoundException::class);
 
         $this->render('https://example.org/produkt/schwedenbitter.html?'.$query);
     }
 
-    // ── Sicherheitsangaben in einer anderen Sprache ─────────────────────
+    // ── Safety information in another language ──────────────────────────
 
     public function testAVariantWhoseOwnSafetyTextsAreNotTranslatedIsNotFoundInThatLanguage(): void
     {
         /*
-         * Aus der Prüfung von Task 7/8: Die Sichtbarkeit entscheidet je
-         * Variante, die Anzeige je Feld. Variante 6 hat eigene
-         * Sicherheitsinformationen, aber keine eigenen Warnhinweise und keine
-         * französische Zeile. Der Resolver allein würde den geerbten
-         * französischen Warnhinweis liefern — die Seite darf es gar nicht so
-         * weit kommen lassen.
+         * Visibility decides per variant, display per field. Variant 6 has
+         * safety information of its own, but no warnings of its own and no
+         * French row. The resolver alone would deliver the inherited French
+         * warning — the page must not even let it get that far.
          */
         $this->frenchProduct();
         $this->connection->update('tl_consho_product', ['safetyInformation' => '<p>Kühl lagern.</p>'], ['id' => self::ML_750_VARIANT]);
@@ -993,8 +991,8 @@ class ProductDetailControllerTest extends TestCase
 
     public function testAVariantWithoutOwnSafetyTextsShowsTheProductsTranslatedWarning(): void
     {
-        // Die Gegenprobe: ohne eigene Texte gilt der französische Hinweis des
-        // Hauptprodukts — nie der deutsche.
+        // The counter-check: without texts of its own the main product's French
+        // warning applies — never the German one.
         $this->frenchProduct();
 
         $data = $this->render('https://example.org/produkt/amer-suedois.html?variant='.self::ML_250_VARIANT, language: 'fr')['data'];
@@ -1003,7 +1001,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertSame('<p>Contient de l’alcool.</p>', $data['safety']->warnings);
     }
 
-    // ── Bilder ───────────────────────────────────────────────────────────
+    // ── Images ───────────────────────────────────────────────────────────
 
     public function testWithoutImagesTheStudioIsNotAsked(): void
     {
@@ -1031,7 +1029,7 @@ class ProductDetailControllerTest extends TestCase
             ->expects(self::exactly(2))
             ->method('fromUuid')
             ->willReturnCallback(static function (string $uuid) use ($builder, $first, $second): FigureBuilder {
-                // In der gespeicherten Reihenfolge.
+                // In the stored order.
                 static $expected = null;
                 $expected ??= [StringUtil::binToUuid($first), StringUtil::binToUuid($second)];
                 self::assertSame(array_shift($expected), $uuid);
@@ -1039,7 +1037,7 @@ class ProductDetailControllerTest extends TestCase
                 return $builder;
             })
         ;
-        // Beide Dateien fehlen in der Dateiverwaltung — keine Figur, kein Fehler.
+        // Both files are missing in the file manager — no figure, no error.
         $builder->method('buildIfResourceExists')->willReturn(null);
 
         $studio = $this->createMock(Studio::class);
@@ -1054,7 +1052,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertSame([], $data['figures']);
     }
 
-    // ── GARAN-Label (Block GARAN, GA3) ───────────────────────────────────
+    // ── GARAN label (Block GARAN, GA3) ───────────────────────────────────
 
     public function testDasLabelDesHauptproduktsStehtAufDerSeite(): void
     {
@@ -1071,7 +1069,7 @@ class ProductDetailControllerTest extends TestCase
         self::assertNull($this->render('https://example.org/produkt/schwedenbitter.html')['data']['garan']);
     }
 
-    // ── Teilvorlage des Produkttyps ──────────────────────────────────────
+    // ── Partial template of the product type ─────────────────────────────
 
     public function testTheTypesPartialReachesTheTemplateAsATwigPath(): void
     {
@@ -1096,8 +1094,8 @@ class ProductDetailControllerTest extends TestCase
         yield 'Variante der Kennung' => ['consho_product_type/wein', '@Contao/consho_product_type/wein.html.twig'];
         yield 'Unterordner' => ['consho_product_type/getraenke/wein', '@Contao/consho_product_type/getraenke/wein.html.twig'];
 
-        // Contaos Finder bildet die Kennung aus dem Dateinamen, Großbuchstaben
-        // inklusive. Wer „Wein.html.twig" anlegt, soll sie auch gerendert sehen.
+        // Contao's finder forms the identifier from the file name, capital
+        // letters included. Whoever creates "Wein.html.twig" should see it rendered.
         yield 'Großbuchstaben' => ['consho_product_type/Wein', '@Contao/consho_product_type/Wein.html.twig'];
 
         yield 'leer' => ['', ''];
@@ -1116,11 +1114,11 @@ class ProductDetailControllerTest extends TestCase
         self::assertSame($expected, ProductDetailController::partial($stored));
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
-     * Ein französischer Startpunkt im selben Shop und eine vollständige
-     * französische Übersetzung des Hauptprodukts, samt Warnhinweis.
+     * A French start point in the same shop and a complete French
+     * translation of the main product, including the warning.
      */
     private function frenchProduct(): void
     {
@@ -1148,7 +1146,7 @@ class ProductDetailControllerTest extends TestCase
 
     public function testAnOpenVariantChoiceIsMarkedUpAsAnAggregateOffer(): void
     {
-        // Dieselben Preise wie der Ab-Preis: Variante 3 erbt 13,00 €, Variante 6 kostet 29,00 €.
+        // The same prices as the from-price: variant 3 inherits € 13.00, variant 6 costs € 29.00.
         $product = $this->productMarkup($this->render('https://example.org/produkt/schwedenbitter.html')['jsonLd']);
 
         self::assertNotNull($product);
@@ -1174,12 +1172,12 @@ class ProductDetailControllerTest extends TestCase
 
     public function testAProductWithoutAPriceGetsNoMarkup(): void
     {
-        // E3: Produkt 2 hat genau eine Variante und keinen Preis.
+        // E3: product 2 has exactly one variant and no price.
         self::assertNull($this->productMarkup($this->render('https://example.org/produkt/anderes.html', productId: self::OTHER_PRODUCT)['jsonLd']));
     }
 
     /**
-     * @return array<string, mixed>|null der Product-Knoten im schema.org-Graphen der Seite
+     * @return array<string, mixed>|null the Product node in the page's schema.org graph
      */
     private function productMarkup(string $script): ?array
     {
@@ -1196,8 +1194,8 @@ class ProductDetailControllerTest extends TestCase
     }
 
     /**
-     * NumberFormatter trennt Betrag und Währung mit einem geschützten
-     * Leerzeichen. Für die Vergleiche hier zählt nur, was dasteht.
+     * NumberFormatter separates amount and currency with a non-breaking
+     * space. For the comparisons here only what is shown counts.
      */
     private function spaces(string $formatted): string
     {
@@ -1206,7 +1204,7 @@ class ProductDetailControllerTest extends TestCase
 
     public function testThePageCarriesTheCatalogueAndItsMainProductTag(): void
     {
-        // B-7b: Auf c5 blieb die Detailseite nach einer Titeländerung veraltet.
+        // B-7b: the detail page once stayed stale after a title change.
         self::assertSame([CatalogCacheTags::CATALOG, 'contao.db.tl_consho_product.1'], $this->render('/produkt/schwedenbitter.html')['tags']);
     }
 
@@ -1217,7 +1215,7 @@ class ProductDetailControllerTest extends TestCase
 
     public function testThePageLivesUntilItsNextScheduledChange(): void
     {
-        // B-7b, E2: Endet die Veröffentlichung in einer Stunde, darf der Cache nicht länger halten.
+        // B-7b, E2: if publication ends in an hour, the cache must not hold longer.
         $this->connection->update('tl_consho_product', ['stop' => (string) (time() + 3600)], ['id' => self::PRODUCT]);
 
         $maxAge = $this->render('/produkt/schwedenbitter.html')['response']->getMaxAge();
@@ -1233,11 +1231,11 @@ class ProductDetailControllerTest extends TestCase
     }
 
     /**
-     * Ein angemeldetes Mitglied mit diesen Gruppen, oder niemand.
+     * A logged-in member with these groups, or nobody.
      *
-     * Echter FrontendUser statt Mock, wie in CartResolverTest: Der Resolver
-     * entscheidet an `instanceof FrontendUser`, und ein Mock einer anderen
-     * Klasse liefe an diesem Zweig vorbei.
+     * A real FrontendUser instead of a mock, as in CartResolverTest: the
+     * resolver decides on `instanceof FrontendUser`, and a mock of another
+     * class would bypass this branch.
      *
      * @param list<int>|null $groups
      */
@@ -1261,7 +1259,7 @@ class ProductDetailControllerTest extends TestCase
 
     /**
      * @param array<string, mixed> $element
-     * @param list<int>|null       $memberGroups null = niemand angemeldet (C-4)
+     * @param list<int>|null       $memberGroups null = nobody logged in (C-4)
      *
      * @return array{data: array<string, mixed>, head: HtmlHeadBag, jsonLd: string, tags: list<string>, response: Response}
      */
@@ -1285,10 +1283,10 @@ class ProductDetailControllerTest extends TestCase
         $page = $this->createMock(PageModel::class);
         $page->method('__get')->willReturnCallback(static fn (string $key): mixed => ['id' => 123, 'type' => 'regular', 'rootId' => 1, 'language' => $language][$key] ?? null);
 
-        // `consho_currency` steht nur in der Zeile des STARTPUNKTS, nicht in
-        // der der Produktseite darunter: Die Spalte wird nur oben gepflegt,
-        // und ein Doppel, das sie überall herausgäbe, wäre fähiger als das
-        // Original und machte den Baumlauf ungeprüft.
+        // `consho_currency` is only in the row of the START POINT, not in that
+        // of the product page below it: the column is only maintained at the top,
+        // and a double that handed it out everywhere would be more capable than
+        // the original and leave the tree walk unchecked.
         $root = $this->createMock(PageModel::class);
         $root->method('__get')->willReturnCallback(static fn (string $key): mixed => ['id' => 1, 'type' => 'root', 'rootId' => 1, 'language' => $language][$key] ?? null);
         $root->method('row')->willReturn(['consho_shop' => $shopOfRoot, 'consho_currency' => $currency]);
@@ -1317,8 +1315,8 @@ class ProductDetailControllerTest extends TestCase
             static fn (string $class): Adapter => ShopModel::class === $class ? $shopAdapter : $pageAdapter,
         );
 
-        // Wie Symfonys Generator: {alias} kennt die Route, alles andere hängt er
-        // als Query an.
+        // Like Symfony's generator: {alias} is known to the route, everything
+        // else is appended as a query.
         $contentUrls = $this->createMock(ContentUrlGenerator::class);
         $contentUrls->method('generate')->willReturnCallback(
             static function (object $content, array $values, int $referenceType): string {
@@ -1363,8 +1361,8 @@ class ProductDetailControllerTest extends TestCase
         $prices = new DbalPriceRepository($this->connection);
         $resolver = new ArticlePriceResolver(new PriceCalculator($prices), $prices, new BasePriceCalculator(), $this->grossCalculator(), new DbalArticleTaxClasses($this->connection));
 
-        // Der Satz selbst ist in SubscriptionTermsTest geprüft; hier zählt,
-        // welcher Regel und welcher Betrag hineingehen.
+        // The sentence itself is checked in SubscriptionTermsTest; what counts
+        // here is which rule and which amount go into it.
         $lineTerms = $this->createMock(SubscriptionLineTerms::class);
         $lineTerms->method('of')->willReturnCallback(
             static fn (int $rule, string $amount): string => 'Bedingungen '.$rule.' zu '.$amount,

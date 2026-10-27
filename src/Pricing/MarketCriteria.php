@@ -65,7 +65,7 @@ final class MarketCriteria
          * mask only offers currencies that are markets), publish.
          *
          * Block A made exactly this mistake once, deriving the delivery
-         * countries, and dropped it — see docs/block-a-fundament.md, section
+         * countries, and dropped it — see Block A, section
          * 7: an invisible record must not quietly shrink the shop.
          *
          * ⚠️ Two of the five conditions are redundant — measured, by turning

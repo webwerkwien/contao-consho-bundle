@@ -48,7 +48,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\NotTaxableArticles;
  *
  * A content element, not a front end module. Contao is retiring modules class
  * by class ("will no longer work in Contao 6"), and layout sections have taken
- * content elements since 5.7 — see docs/block-b-katalog-frontend.md, section 2.
+ * content elements since 5.7 — see Block B, section 2.
  *
  * ── Where the products come from ──────────────────────────────────────────
  *
@@ -63,8 +63,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\NotTaxableArticles;
  * ── ⚠️ The type is declared, not derived ──────────────────────────────────
  *
  * Contao builds it from the class name — ProductListController becomes
- * "product_list", with no bundle prefix. Measured on the test server on
- * 2026-09-11, where the palette said consho_product_list and the front end
+ * "product_list", with no bundle prefix. With the palette saying consho_product_list, the front end
  * logged: Content element class "" (content element "consho_product_list")
  * does not exist. The element simply rendered nothing, and the page looked
  * like an empty article.
@@ -75,7 +74,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\NotTaxableArticles;
  * ── Pins (B-7) ────────────────────────────────────────────────────────────
  *
  * Nested `consho_product_pin` elements put products first. Five rules, from
- * docs/block-b-katalog-frontend.md 3.1:
+ * Block B, 3.1:
  *
  * 1. Pinned first, in the dragged order; the rule after them WITHOUT them.
  * 2. New products keep appearing by themselves — membership is the preset.
@@ -104,12 +103,12 @@ class ProductListController extends AbstractContentElementController
         private readonly PriceAudienceResolver $audiences,
         private readonly DbalCatalogSchedule $schedule,
         /*
-         * The kind of the article (DL1; acceptance DL, find 2): "zzgl.
+         * The kind of the article (DL1): "zzgl.
          * Versandkosten" only where something is shipped. Optional for the
          * tests built by hand — without it the sentence stays as it was.
          */
         private readonly ArticleShippingDataInterface|null $articles = null,
-        // Block Wertgutscheine (acceptance WG-7): the tax sentence. Optional
+        // Block Wertgutscheine (WG-7): the tax sentence. Optional
         // like the one above.
         private readonly NotTaxableArticles|null $notTaxable = null,
         // GA8: the nested GARAN label on the tile. Optional like the above.
@@ -196,8 +195,8 @@ class ProductListController extends AbstractContentElementController
         // root page: PageModel::loadDetails() overwrites the property
         // (PageModel.php:1035, `$this->language =
         // $objParentPage->language`). Looking at the database shows
-        // something different on an ordinary page — on the test server the
-        // listing page carries `de`, its root page `en`, and `en` is what
+        // something different on an ordinary page — a listing page may
+        // carry `de` and its root page `en`, and `en` is what
         // counts.
         //
         // That assumes loadDetails() has run. ShopResolver already makes the
@@ -306,9 +305,9 @@ class ProductListController extends AbstractContentElementController
         $tiles = $this->tiles->forIds($ids, $currency, $country, $showsNet, $shopId, $language, $fallback);
         $template->set('products', $this->linked($tiles, (int) $page->rootId, $currency, $language));
         $template->set('shippedTiles', $this->shippedOf(array_map(static fn ($tile): int => $tile->id, $tiles)));
-        // Acceptance WG-7: no "inkl. USt." under a tile that is not taxable.
+        // WG-7: no "inkl. USt." under a tile that is not taxable.
         $template->set('untaxedTiles', $this->notTaxable?->each(array_map(static fn ($tile): int => $tile->id, $tiles)) ?? []);
-        // GA8 (Michael, 2026-10-10: "GA8a"): the nested label where one is set.
+        // GA8a: the nested label where one is set.
         $template->set('garanTiles', $this->durability?->nestedOf(array_map(static fn ($tile): int => $tile->id, $tiles)) ?? []);
 
         /*
@@ -333,13 +332,12 @@ class ProductListController extends AbstractContentElementController
         $template->set('ownPriceGroup', $audience->groupLabel);
 
         /*
-         * Kaufknopf auf der Kachel (Michael, 2026-09-22). Die Kachel
-         * entscheidet dann je Produkt, ob sie ihn zeigen darf — ein
-         * Variantenprodukt hat keinen kaufbaren Artikel.
+         * Purchase button on the tile. The tile then decides per product
+         * whether it may show it — a product with variants has no buyable
+         * article.
          *
-         * `purchasePage` ist die Seite, auf der die Liste steht: Die
-         * Warenkorb-Route braucht sie, um den Shop aufzulösen und nach dem
-         * Hinzufügen zurückzufinden (C12).
+         * `purchasePage` is the page the list is on: the cart route needs it
+         * to resolve the shop and to find its way back after adding (C12).
          */
         $template->set('tilePurchase', (bool) ($row['conshoTilePurchase'] ?? false));
         $template->set('purchasePage', (int) $page->id);
@@ -373,7 +371,7 @@ class ProductListController extends AbstractContentElementController
      * stock moves, and a bookmark must not turn into the error page when the
      * last red one sells. Empty because of it is an empty listing — asked
      * without it, once, and only when empty: the pins and, unless the list is
-     * curated, the rule (review Verfügbarkeit, 1 — a sold-out pin was the only
+     * curated, the rule (Verfügbarkeit — a sold-out pin was the only
      * match).
      *
      * A method of its own so the recount is tested against the real query
@@ -531,7 +529,7 @@ class ProductListController extends AbstractContentElementController
     }
 
     /**
-     * Per tile, whether its product is shipped (acceptance DL, find 2): the
+     * Per tile, whether its product is shipped (DL): the
      * tile says "zzgl. Versandkosten" only then.
      *
      * @param list<int> $ids

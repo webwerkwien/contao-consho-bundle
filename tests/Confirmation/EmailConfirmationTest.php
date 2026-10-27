@@ -24,9 +24,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Notification\SpyTransport;
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * D-4, K3a — die Bestätigungsmail als Dienst für mehrere Stellen. Token über
- * Contaos Opt-in, Mail über den Transport des Shops; der Link bestätigt
- * nichts, erst confirm() (aus einem POST).
+ * D-4, K3a — the confirmation mail as a service for several callers. Token
+ * via Contao's opt-in, mail via the shop's transport; the link confirms
+ * nothing, only confirm() does (from a POST).
  */
 final class EmailConfirmationTest extends TestCase
 {

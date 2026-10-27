@@ -9,9 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
  * Two document number ranges with the same prefix issue the same number
- * twice (spec C, open points, acceptance C-12): "Testshop 2" was a copy of
- * the test shop with the prefix "RE-", and RE-00005 would have existed in
- * both. The same within one shop: an invoice and a cancellation both
+ * twice (spec C, open points, C-12): a shop copied from another with the
+ * prefix "RE-" would issue RE-00005 a second time. The same within one shop: an invoice and a cancellation both
  * numbered "RE-00001".
  *
  * A note, not a warning — like DuplicateVatId the other way round: two

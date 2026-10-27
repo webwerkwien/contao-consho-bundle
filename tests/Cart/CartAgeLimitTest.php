@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Cart\CartAgeLimit;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Die Altersfreigabe eines ganzen Warenkorbs (C19, C-4).
+ * The age limit of a whole cart (C19, C-4).
  */
 class CartAgeLimitTest extends TestCase
 {
@@ -37,8 +37,8 @@ class CartAgeLimitTest extends TestCase
 
     public function testDieHoechsteUeberAlleZeilenGilt(): void
     {
-        // Nicht die des ersten Artikels und nicht die Summe: Ein Korb mit
-        // Kräutersalz und Schwedenbitter ist ab 18.
+        // Neither that of the first article nor the sum: a cart with
+        // herbal salt and Swedish bitters is 18+.
         $this->product(1, minimumAge: 0);
         $this->product(2, minimumAge: 16);
         $this->product(3, minimumAge: 18);
@@ -49,9 +49,9 @@ class CartAgeLimitTest extends TestCase
 
     public function testEineVarianteKannDieFreigabeDesHauptproduktsAnheben(): void
     {
-        // Dieselbe Regel wie ProductDetailAssembler: der höhere von beiden.
-        // Eine 40-%-Abfüllung ist nicht deshalb weniger beschränkt, weil die
-        // Reihe als Ganzes ab 16 verkauft wird.
+        // The same rule as ProductDetailAssembler: the higher of the two.
+        // A 40 % bottling is not less restricted just because the series
+        // as a whole is sold from 16.
         $this->product(1, minimumAge: 16);
         $this->variant(2, 1, minimumAge: 18);
 
@@ -68,9 +68,9 @@ class CartAgeLimitTest extends TestCase
 
     public function testEinArtikelDenEsNichtMehrGibtZaehltNicht(): void
     {
-        // Der Korb überlebt einen gelöschten Artikel (CartTitles lässt ihn
-        // ebenso weg). Ein Fehler wäre hier eine leere Seite für einen
-        // Hinweis, der nichts sperrt.
+        // The cart survives a deleted article (CartTitles leaves it out as
+        // well). An error here would be a blank page for a notice that
+        // blocks nothing.
         $this->product(1, minimumAge: 16);
 
         self::assertSame(16, $this->limit([1, 999]));

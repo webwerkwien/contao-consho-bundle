@@ -14,9 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Notification\ContaoLikeTranslator;
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * Regel 5 Monatsabo, „läuft weiter, jederzeit kündbar"; Regel 9 eine
- * Altregel aus der Zeit vor Variante A (jederzeit kündbar, aber eine Zahlung
- * je Laufzeit); Regel 11 Jahresabo „volle Mindestlaufzeit".
+ * Rule 5 monthly subscription, "continues, cancellable at any time"; rule 9 a
+ * legacy rule from before variant A (cancellable at any time, but one payment
+ * per term); rule 11 yearly subscription "full minimum term".
  */
 class SubscriptionLineTermsTest extends TestCase
 {
@@ -34,8 +34,8 @@ class SubscriptionLineTermsTest extends TestCase
     }
 
     /**
-     * Variante A (2026-10-08): kein Monatspreis mehr. Eine Altregel ohne
-     * monatliche Zahlung endet — so sagt es der Satz, so tut es der Übergang.
+     * Variant A: no monthly price any more. A legacy rule without
+     * monthly payment ends — that is what the sentence says, and what the transition does.
      */
     public function testEineAltregelOhneMonatlicheZahlungEndet(): void
     {
@@ -57,7 +57,7 @@ class SubscriptionLineTermsTest extends TestCase
     }
 
     /**
-     * NumberFormatter setzt ein geschütztes Leerzeichen vor das Währungszeichen.
+     * NumberFormatter puts a non-breaking space before the currency sign.
      */
     private static function plain(string|null $text): string
     {

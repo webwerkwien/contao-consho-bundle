@@ -9,8 +9,7 @@ namespace Webwerkwien\ContaoConshoBundle\Catalog;
  * VAT, reverse charge — where Iceland, Liechtenstein and Norway are third
  * countries. Consumer law is different: Directive 2011/83/EU applies in the
  * EEA through the EEA Agreement, and the withdrawal right with it. So the
- * withdrawal findings ask EU OR EEA (Michael, 2026-09-27: "ja" to counting the
- * EEA), and nothing else should.
+ * withdrawal findings ask EU OR EEA, and nothing else should.
  */
 final class EeaStates
 {

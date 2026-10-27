@@ -10,8 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * DL5, Spec 6.4: „Produkt passt nicht zu seiner Art" — drei Widersprüche,
- * ein gültiger Fall. Typ 1 digital, 2 Dienstleistung, 3 körperlich.
+ * DL5, Spec 6.4: "Produkt passt nicht zu seiner Art" (product does not fit
+ * its kind) — three contradictions, one valid case. Type 1 digital,
+ * 2 service, 3 physical.
  */
 class ProductKindMismatchIssueSourceTest extends TestCase
 {
@@ -39,12 +40,12 @@ class ProductKindMismatchIssueSourceTest extends TestCase
 
     public function testDreiWidersprueche(): void
     {
-        // 1: Dienstleistung mit Datei und Auslieferungsart.
+        // 1: service with a file and a delivery method.
         $this->product(1, 'Beratungspaket', 2, ['digitalDelivery' => 'file', 'digitalFile' => str_repeat('a', 16)]);
-        // 2: Ware im Abo.
+        // 2: goods in a subscription.
         $this->product(2, 'Wanderstock', 3, ['saleSubscription' => 1]);
-        // 3: Variante einer Dienstleistung mit Schlüsseln im Vorrat — der Typ
-        //    des Grundprodukts zählt, nicht ihr eigener (digital).
+        // 3: variant of a service with keys in stock — the type
+        //    of the base product counts, not its own (digital).
         $this->product(3, 'Mitgliedschaft', 2);
         $this->product(4, 'Mitgliedschaft Gold', 1, ['pid' => 3]);
         $this->connection->insert('tl_consho_key', ['pid' => 4, 'code' => 'ABC']);
@@ -61,8 +62,8 @@ class ProductKindMismatchIssueSourceTest extends TestCase
     }
 
     /**
-     * Block GARAN (GA5): eine Haltbarkeitsgarantie ist ein Versprechen über
-     * eine Ware — am E-Book nach einem Typwechsel ein Widerspruch.
+     * Block GARAN (GA5): a durability guarantee is a promise about
+     * goods — on an e-book after a type change, a contradiction.
      */
     public function testEineGarantieAnEinemNichtWarenproduktIstEinWiderspruch(): void
     {
@@ -80,9 +81,9 @@ class ProductKindMismatchIssueSourceTest extends TestCase
     {
         $this->product(1, 'E-Book', 1, ['digitalDelivery' => 'file', 'digitalFile' => str_repeat('a', 16), 'saleSubscription' => 1]);
         $this->connection->insert('tl_consho_key', ['pid' => 1, 'code' => 'ABC']);
-        // Eine Dienstleistung im Abo ist gewollt (Fitnesscenter).
+        // A service in a subscription is intended (gym).
         $this->product(2, 'Mitgliedschaft', 2, ['saleSubscription' => 1]);
-        // Unveröffentlicht zählt nicht.
+        // Unpublished does not count.
         $this->product(3, 'Entwurf', 3, ['saleSubscription' => 1, 'published' => 0]);
 
         self::assertSame([], (new ProductKindMismatchIssueSource($this->connection))->issues());

@@ -49,7 +49,7 @@ class OrderConfirmationTest extends TestCase
         $this->logger = new ErrorSpyLogger();
     }
 
-    /** D-2: Ohne Widerrufsfunktion (Frist 0) keine Zeile „Vertrag widerrufen". */
+    /** D-2: Without the withdrawal function (period 0) no "withdraw from contract" line. */
     public function testOhneWiderrufsfunktionKeinWiderrufslink(): void
     {
         $this->source->shopRow['withdrawalDays'] = 0;
@@ -60,9 +60,9 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * F-3: Die Bestätigung auf dauerhaftem Datenträger hält Zustimmung und
-     * Kenntnisnahme fest (§ 7 Abs. 3 FAGG, § 312f Abs. 3 BGB) — in beiden
-     * Sprachen übersetzt, und nur, wo zugestimmt wurde.
+     * F-3: The confirmation on a durable medium records consent and
+     * acknowledgement (§ 7 Abs. 3 FAGG, § 312f Abs. 3 BGB) — translated in
+     * both languages, and only where consent was given.
      */
     public function testDieZustimmungZumVorzeitigenBeginnStehtInDerBestaetigung(): void
     {
@@ -82,8 +82,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Abo-2, P14 (A12): Bei einer Dienstleistung hält die Bestätigung das
-     * Verlangen fest, nicht die Zustimmung zur Bereitstellung von Inhalten.
+     * Abo-2, P14 (A12): For a service the confirmation records the request,
+     * not the consent to the provision of content.
      */
     public function testBeiEinerDienstleistungStehtDerSatzZurDienstleistung(): void
     {
@@ -99,8 +99,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Abo-2 (P13): Die Bedingungen des Abos stehen an seiner Zeile in der
-     * Bestätigung — dem dauerhaften Datenträger.
+     * Abo-2 (P13): The terms of the subscription stand at its line in the
+     * confirmation — the durable medium.
      */
     public function testDieAbobedingungenStehenInDerBestaetigung(): void
     {
@@ -112,13 +112,13 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * F-7, F20: Die Bestätigung geht vor jeder Freigabe hinaus — sie sagt,
-     * wann die digitalen Inhalte auf der Bestellseite stehen.
+     * F-7, F20: The confirmation goes out before any release — it says when
+     * the digital content will be on the order page.
      */
     public function testDieBestaetigungSagtWannDieDigitalenInhalteKommen(): void
     {
         $this->source->digital = true;
-        $periodEnds = 1_759_968_000; // 09.10.2025, 00:00 UTC — nur das Datum zählt
+        $periodEnds = 1_759_968_000; // 09.10.2025, 00:00 UTC — only the date counts
 
         foreach ([
             [true, null, 'stellen wir auf Ihrer Bestellseite bereit.'],
@@ -136,7 +136,7 @@ class OrderConfirmationTest extends TestCase
             self::assertStringContainsString($text, (string) $this->transport->sent[0]->getHtmlBody());
         }
 
-        // DL3: Eine Dienstleistung wird freigeschaltet, nicht bereitgestellt.
+        // DL3: A service is activated, not provided.
         $this->source->kind = 'service';
         $this->transport = new SpyTransport();
         $this->confirmation($releases)->send(7, 1, 'https://shop.test/o', 1);
@@ -145,7 +145,7 @@ class OrderConfirmationTest extends TestCase
         self::assertStringNotContainsString('digitalen Inhalte', $html);
         $this->source->kind = 'digital';
 
-        // Ohne digitale Position kein Satz dazu.
+        // Without a digital item, no sentence about it.
         $this->source->digital = false;
         $this->transport = new SpyTransport();
         $this->confirmation($releases)->send(7, 1, 'https://shop.test/o', 1);
@@ -153,9 +153,9 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Block GARAN (GA4, GA6): Die Garantie steht in der Bestätigung, wie sie
-     * an der Position eingefroren ist — als Satz und mit dem Label EINGEBETTET
-     * (cid:), nicht verlinkt.
+     * Block GARAN (GA4, GA6): The guarantee stands in the confirmation as it
+     * is frozen on the item — as a sentence and with the label EMBEDDED
+     * (cid:), not linked.
      */
     public function testDieHaltbarkeitsgarantieStehtMitEingebettetemLabelInDerBestaetigung(): void
     {
@@ -168,11 +168,11 @@ class OrderConfirmationTest extends TestCase
         $this->confirmation(images: $images)->send(7, 1, 'https://shop.test/o', 1);
         $mail = $this->transport->sent[0];
         $html = (string) $mail->getHtmlBody();
-        // Mit Endung: weitergeleitet erscheint der Teil als Bild, nicht als namenloser Anhang.
+        // With an extension: forwarded, the part appears as an image, not as a nameless attachment.
         $cid = 'garan-'.bin2hex($label).'.png';
 
         self::assertStringContainsString('Haltbarkeitsgarantie des Herstellers', $html);
-        // Escaped wie jeder Text der Vorlage: das gerade Anführungszeichen als &quot;.
+        // Escaped like every text of the template: the straight quotation mark as &quot;.
         self::assertStringContainsString('Für „Wanderstock&quot; gewährt der Hersteller eine Haltbarkeitsgarantie von 5 Jahren.', $html);
         self::assertStringContainsString('src="cid:'.$cid.'"', $html);
 
@@ -199,9 +199,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Review GARAN, 4 und 6: zwei Jahre an einer eingefrorenen Position sind
-     * keine Garantie im Sinne von Z 12a; die Breite ist die eigene des Bildes,
-     * höchstens 300 px — nie gestreckt.
+     * GARAN: two years on a frozen item are no guarantee within the meaning of
+     * Z 12a; the width is the image's own, at most 300 px — never stretched.
      */
     public function testZweiJahreKeinLabelUndDieEigeneBreite(): void
     {
@@ -212,7 +211,7 @@ class OrderConfirmationTest extends TestCase
         $this->confirmation(images: $quiet)->send(7, 1, 'https://shop.test/o', 1);
         self::assertStringNotContainsString('Haltbarkeitsgarantie', (string) $this->transport->sent[0]->getHtmlBody());
 
-        // Ein echtes PNG von 1 × 1 Pixel.
+        // A real PNG of 1 × 1 pixel.
         $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', true);
         $this->transport = new SpyTransport();
         $this->source->durability = ['durabilityYears' => 3, 'durabilityLabel' => $label];
@@ -223,8 +222,9 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * GA9 und GA10: 2,5 Jahre mit dem Komma der Sprache, und der Link dorthin,
-     * wohin der QR-Code führt — lesbar auch, wenn das Mailprogramm Bilder sperrt.
+     * GA9 and GA10: 2.5 years with the language's decimal comma, and the link
+     * to where the QR code leads — readable even when the mail program blocks
+     * images.
      */
     public function testHalbeJahreUndDerLinkAufIhrEuropa(): void
     {
@@ -241,9 +241,9 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * GARAN Teil 2 (L1–L4): oben das Logo, eingebettet; unten Firma, Anschrift
-     * und die Fußzeile des Betreibers — auch im Textteil. Die Kopie an den
-     * Betreiber bleibt ohne (L3).
+     * GARAN part 2 (L1–L4): at the top the logo, embedded; at the bottom
+     * company, address and the operator's footer — in the text part too. The
+     * copy to the operator stays without (L3).
      */
     public function testKopfUndFussDerKundenmail(): void
     {
@@ -279,12 +279,12 @@ class OrderConfirmationTest extends TestCase
         $images = $this->createMock(MailImageFile::class);
         $images->method('read')->willReturn(null);
 
-        // Datei gelöscht: lieber nichts als ein kaputtes Bild.
+        // File deleted: rather nothing than a broken image.
         $this->source->durability = ['durabilityYears' => 5, 'durabilityLabel' => str_repeat("\x07", 16)];
         $this->confirmation(images: $images)->send(7, 1, 'https://shop.test/o', 1);
         self::assertStringNotContainsString('Haltbarkeitsgarantie', (string) $this->transport->sent[0]->getHtmlBody());
 
-        // Keine Garantie: nicht einmal gefragt.
+        // No guarantee: not even asked.
         $this->transport = new SpyTransport();
         $this->source->durability = [];
         $quiet = $this->createMock(MailImageFile::class);
@@ -307,14 +307,14 @@ class OrderConfirmationTest extends TestCase
         self::assertStringContainsString('Wanderstock', $html);
         self::assertStringContainsString('13,90', $html);
         self::assertStringContainsString('AT61 1904 3002 3457 3201', $html);
-        // Der Verwendungszweck ist die Rechnungsnummer, wie beim Giro-Code.
+        // The remittance information is the invoice number, as with the giro code.
         self::assertMatchesRegularExpression('#Verwendungszweck</th><td[^>]*>RE-00014</td>#', $html);
         self::assertStringContainsString('https://shop.test/bestellung?consho_order=abc', $html);
         self::assertStringContainsString('<p>Das sind die AGB.</p>', $html);
         self::assertStringContainsString('<p>Widerrufsbelehrung und Muster-Formular.</p>', $html);
-        // C24, seit D-2: der Widerrufslink führt auf die Erklärung der Bestellseite.
+        // C24, since D-2: the withdrawal link leads to the declaration on the order page.
         self::assertStringContainsString('<a href="https://shop.test/bestellung?consho_order=abc&amp;consho_withdraw=1">Vertrag widerrufen</a>', $html);
-        // Wer nur Text liest, braucht die Adresse — nicht nur „View your order".
+        // Whoever reads only text needs the address — not just "View your order".
         self::assertStringContainsString('https://shop.test/bestellung?consho_order=abc', (string) $mail->getTextBody());
 
         $names = array_map(static fn ($part): string => (string) $part->getFilename(), $mail->getAttachments());
@@ -324,8 +324,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Contao füllt contao_default mit vsprintf. Ein Schlüssel, der fehlt,
-     * erscheint als Schlüssel — in keiner der beiden Sprachen darf einer stehen.
+     * Contao fills contao_default with vsprintf. A key that is missing appears
+     * as a key — none may stand in either of the two languages.
      */
     public function testKeinUnuebersetzterSchluesselInKundenmailUndBetreiberkopie(): void
     {
@@ -361,8 +361,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Der Zahlungsblock stammt aus dem Rechnungs-Snapshot. Ein erneutes Senden
-     * in einem Jahr darf kein Konto nennen, das der Shop inzwischen hat.
+     * The payment block comes from the invoice snapshot. Sending again in a
+     * year must not name an account the shop has in the meantime.
      */
     public function testDieBankverbindungKommtAusDemRechnungsSnapshot(): void
     {
@@ -386,9 +386,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * F2 des Reviews (Michael, 2026-09-25: „den Hinweis beim Kauf an der
-     * Bestellung einfrieren → OK"): Ohne Rechnung beim Kauf kommt der
-     * Zahlungshinweis von der Bestellung selbst.
+     * Without an invoice at purchase, the payment notice comes from the order
+     * itself.
      */
     public function testOhneRechnungKommtDerZahlungshinweisVonDerBestellung(): void
     {
@@ -410,8 +409,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Die Bestellung besteht schon. Ein Mailserver, der nicht antwortet, wird
-     * protokolliert und lässt `confirmationSentAt` leer — geworfen wird nichts.
+     * The order already exists. A mail server that does not answer is logged
+     * and leaves `confirmationSentAt` empty — nothing is thrown.
      */
     public function testScheitertDerVersandBleibtEsBeiFalseUndEinemEintragImLog(): void
     {
@@ -432,7 +431,7 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Nur die Kundenmail zählt als Bestätigung (§ 7 Abs 3 FAGG).
+     * Only the customer mail counts as the confirmation (§ 7 Abs 3 FAGG).
      */
     public function testEineGescheiterteBetreiberkopieMachtDieBestellungNichtUnbestaetigt(): void
     {
@@ -444,9 +443,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Review 2026-09-25, F3: Was auf der Rechnung steht, gehört auch in die
-     * Bestätigung — der Reverse-Charge-Hinweis und der Lieferzeitraum, beide
-     * aus dem Rechnungs-Snapshot.
+     * What is on the invoice belongs in the confirmation too — the reverse
+     * charge notice and the delivery period, both from the invoice snapshot.
      */
     public function testHinweisUndLieferzeitraumKommenAusDemRechnungsSnapshot(): void
     {
@@ -464,9 +462,9 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Review 2026-09-25, F5: Die Mail ist draußen, nur der Zeitstempel nicht.
-     * Das ist ein Erfolg — und die Meldung darf nicht zu „Erneut senden"
-     * verleiten, sonst hat der Kunde die Bestätigung zweimal.
+     * The mail is out, only the timestamp is not. That is a success — and the
+     * message must not tempt anyone to "send again", otherwise the customer
+     * has the confirmation twice.
      */
     public function testGescheitertesVermerkenIstKeinGescheiterterVersand(): void
     {
@@ -478,8 +476,8 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
-     * Review 2026-09-25, F6: Derselbe Server gibt dieselbe Antwort. Die Kopie
-     * noch zu versuchen, kostete den Käufer ein zweites Zeitlimit.
+     * The same server gives the same answer. Still trying the copy would cost
+     * the buyer a second timeout.
      */
     public function testNachEinemTransportfehlerKeinZweiterVersuchFuerDieKopie(): void
     {
@@ -709,18 +707,18 @@ final class FakeConfirmationSource implements OrderConfirmationSourceInterface
 
     public string $itemSource = 'list';
 
-    /** F-7: der Wanderstock als digitale Position. */
+    /** F-7: the hiking pole as a digital item. */
     public bool $digital = false;
 
-    /** DL1: eingefrorene Art einer digitalen Position (digital oder Dienstleistung), Abo-2: ihre Abo-Bedingungen. */
+    /** DL1: frozen kind of a digital item (digital or service), Abo-2: its subscription terms. */
     public string $kind = 'digital';
 
     public string $terms = '';
 
-    /** Block GARAN: eingefrorene Haltbarkeitsgarantie am Wanderstock. */
+    /** Block GARAN: frozen durability guarantee on the hiking pole. */
     public array $durability = [];
 
-    /** Weitere Positionen am Ende (Block GARAN: zwei Zeilen, ein Label). */
+    /** Further items at the end (Block GARAN: two lines, one label). */
     public array $extraItems = [];
 
     public function order(int $orderId): array

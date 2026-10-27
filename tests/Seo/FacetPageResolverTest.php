@@ -41,9 +41,9 @@ class FacetPageResolverTest extends TestCase
 
     public function testTheLookupUsesTheNormalisedStateNotTheClickOrder(): void
     {
-        // Freigegeben als "colour:red;volume:250ml". Wer zuerst das Volumen
-        // anklickt, muss auf derselben Landingpage landen, nicht auf einer
-        // Parameter-Adresse.
+        // Released as "colour:red;volume:250ml". Whoever clicks the volume
+        // first must land on the same landing page, not on a
+        // parameter address.
         $resolver = $this->resolverKnowing(['colour:red;volume:250ml' => 'rote-farben-250-ml']);
 
         self::assertSame(
@@ -54,8 +54,8 @@ class FacetPageResolverTest extends TestCase
 
     public function testASortOrderIsNeverALandingPage(): void
     {
-        // Sortieren liefert dieselben Produkte in anderer Reihenfolge — immer
-        // Duplicate Content, nie eine eigene indexierte Seite wert.
+        // Sorting returns the same products in a different order — always
+        // duplicate content, never worth an indexed page of its own.
         $resolver = $this->resolverKnowing(['volume:250ml' => 'schwedenbitter-250-ml']);
 
         self::assertSame(
@@ -66,9 +66,9 @@ class FacetPageResolverTest extends TestCase
 
     public function testNurVerfuegbareIstNieEineLandingpage(): void
     {
-        // Block Verfügbarkeit, V5: eine Sicht nach Lager — wie die Sortierung
-        // ein ausgeschlossener Parameter, auch über einer freigegebenen
-        // Kombination, und nie die Kategorie.
+        // Block Verfügbarkeit (availability), V5: a view by stock — like sorting
+        // an excluded parameter, also on top of a released
+        // combination, and never the category.
         $resolver = $this->resolverKnowing(['volume:250ml' => 'schwedenbitter-250-ml']);
 
         self::assertSame(UrlClass::Parameter, $resolver->classify(12, new FilterState(['volume' => ['250ml']], '', true)));
@@ -77,8 +77,8 @@ class FacetPageResolverTest extends TestCase
 
     public function testASortOrderOnItsOwnIsNotTheCategoryEither(): void
     {
-        // Unsortiert und sortiert zeigen dieselben Produkte. Nur die schlichte
-        // Liste ist die Kategorie; die andere ist ein ausgeschlossener Parameter.
+        // Unsorted and sorted show the same products. Only the plain
+        // list is the category; the other one is an excluded parameter.
         $resolver = $this->resolverKnowing([]);
 
         self::assertSame(UrlClass::Parameter, $resolver->classify(12, new FilterState([], 'price_asc')));
@@ -86,9 +86,9 @@ class FacetPageResolverTest extends TestCase
 
     public function testTheReleaseBelongsToOnePage(): void
     {
-        // "250 ml" unter "Kräuterbitter" und "250 ml" unter "Tees" sind zwei
-        // verschiedene Mengen. Wer mit der falschen Seite fragt, darf die
-        // Freigabe der anderen nicht finden.
+        // "250 ml" under "Kräuterbitter" and "250 ml" under "Tees" are two
+        // different sets. Whoever asks with the wrong page must not find the
+        // release of the other one.
         $repository = $this->createMock(FacetPageRepositoryInterface::class);
         $repository
             ->method('findByState')
@@ -125,8 +125,8 @@ class FacetPageResolverTest extends TestCase
 
     public function testAnEmptyStateIsNotLookedUpAtAll(): void
     {
-        // Die Kategorie hat schon eine Adresse. Die Datenbank danach zu fragen,
-        // wäre eine Abfrage je Listenaufruf für eine Antwort, die sich nie ändert.
+        // The category already has an address. Asking the database for it
+        // would be one query per list request for an answer that never changes.
         $repository = $this->createMock(FacetPageRepositoryInterface::class);
         $repository->expects(self::never())->method('findByState');
 
@@ -139,8 +139,8 @@ class FacetPageResolverTest extends TestCase
 
     public function testASortedViewOfAReleasedCombinationStillHasItsLandingPage(): void
     {
-        // Keine eigene Adresse (aliasFor null), aber derselbe Inhalt — Titel und
-        // Canonical der Landingpage gelten weiter.
+        // No address of its own (aliasFor null), but the same content — title and
+        // canonical of the landing page still apply.
         $resolver = $this->resolverKnowing(['volume:250ml' => 'schwedenbitter-250-ml']);
         $state = new FilterState(['volume' => ['250ml']], 'price_asc');
 
@@ -150,9 +150,9 @@ class FacetPageResolverTest extends TestCase
 
     public function testTheLandingPageIsLookedUpWithoutTheSortOrder(): void
     {
-        // Gespeichert ist die Kombination ohne Sortierung (FacetStateListener
-        // lehnt eine Sortierung ab). Fragte landingFor() mit "…;sort_by:price_asc",
-        // fände es nie etwas.
+        // The combination is stored without sorting (FacetStateListener
+        // rejects a sort order). If landingFor() asked with "…;sort_by:price_asc",
+        // it would never find anything.
         $repository = $this->createMock(FacetPageRepositoryInterface::class);
         $repository
             ->expects(self::once())

@@ -35,7 +35,7 @@ class RunSubscriptionsCommand extends Command
         private readonly SubscriptionDelinquencyRun $delinquency,
         private readonly SubscriptionLifecycleRun $lifecycle,
         // Required, like in SubscriptionCron: "Charges caught up: 0" must not
-        // mean "not wired" (second review Abo-4b).
+        // mean "not wired" (Abo-4b).
         private readonly SubscriptionCharger $charger,
         private readonly SubscriptionChargeFallback $fallback,
         private readonly SubscriptionPause $pauses,

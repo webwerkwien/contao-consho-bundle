@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Checkout\PurchaseProblem;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherStatus;
 
 /**
- * WG-5 (E3): die Gutscheine auf der Prüfseite, am echten Abschnitt der
- * Vorlage gerendert, und die Texte dazu in beiden Sprachen.
+ * WG-5 (E3): the vouchers on the review page, rendered on the real section
+ * of the template, and their texts in both languages.
  */
 class VoucherTemplateTest extends TestCase
 {
@@ -30,7 +30,7 @@ class VoucherTemplateTest extends TestCase
         self::assertStringContainsString('<dt>CONSHO.cart.voucher.applied[…MDSN]</dt>', $html);
         self::assertStringContainsString('−30,00 €', $html);
         self::assertStringContainsString('CONSHO.cart.voucher.after[…MDSN|20,00 €]', $html);
-        // Wer nicht zahlen kann, sagt warum; wer nur nicht gebraucht wird, schweigt.
+        // Whatever cannot pay says why; whatever is merely not needed stays silent.
         self::assertStringContainsString('CONSHO.cart.voucher.status.blocked[…HHHH|10,00 €]', $html);
         self::assertStringNotContainsString('…ZZZZ', $html);
         self::assertStringContainsString('<dt>CONSHO.cart.voucher.payable</dt>', $html);

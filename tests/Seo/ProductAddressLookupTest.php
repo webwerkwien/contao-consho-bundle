@@ -114,8 +114,8 @@ class ProductAddressLookupTest extends TestCase
     public function testTheFallbackAliasDoesNotResolveInAnotherLanguage(): void
     {
         /*
-         * Der wichtigste Test: sonst ist jede Adresse doppelt erreichbar —
-         * unter dem deutschen UND dem englischen Alias.
+         * The most important test: otherwise every address is reachable twice —
+         * under the German AND the English alias.
          */
         $this->product(1, alias: 'kraeuterbitter');
         $this->translate(1, 'en', alias: 'herbal-bitters');
@@ -143,10 +143,10 @@ class ProductAddressLookupTest extends TestCase
     public function testWithoutALanguageNothingChanges(): void
     {
         /*
-         * Der Prüfstein: ohne Sprachangabe exakt das Verhalten von vorher,
-         * auch wenn Übersetzungen existieren. In der Standardsprache liefert
-         * TranslationJoin::sql() eine leere Zeichenkette — kein zusätzlicher
-         * Join entsteht.
+         * The touchstone: without a language exactly the previous behaviour,
+         * even if translations exist. In the default language
+         * TranslationJoin::sql() returns an empty string — no additional
+         * join is created.
          */
         $this->product(1, alias: 'kraeuterbitter');
         $this->translate(1, 'en', alias: 'herbal-bitters');

@@ -30,7 +30,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
  * ArticlePriceResolver is where that rule lives. Asking PriceCalculator
  * directly, as this class did until C-7, meant such a variant could be shown,
  * added to a basket and priced through the whole checkout — and then failed at
- * the click with PriceNotFound. On c5 that was "Schwedenbitter 250 ml".
+ * the click with PriceNotFound.
  *
  * **The totals add up the lines as they are shown**, each amount rounded to the
  * currency's own place before it enters its sum, the same rule CartPricer
@@ -93,10 +93,10 @@ final class OrderFactory implements OrderFactoryInterface
              * (block R, O1) — the rule CartPricer priced the basket by. Charge
              * lines follow the goods they come with, as the checkout taxed
              * them — except a reduction, which names the country of the
-             * supplies it reduces (review H, S1).
+             * supplies it reduces (H).
              */
             $taxCountry = OrderLineType::Product === $line->type
-                ? ProductKind::stored($item['kind'])->taxCountry($deliveryCountry, $draft->shopCountry, $draft->taxAtDestination)
+                ? ProductKind::stored($item['kind'])->taxCountry($deliveryCountry, $draft->shopCountry, $draft->taxAtDestination, $item['singlePurpose'] ?? false)
                 : ('' !== $line->taxCountry ? $line->taxCountry : TaxPlace::forDistanceSale($deliveryCountry, $draft->shopCountry, $draft->taxAtDestination));
 
             $rate = $reverseCharge
@@ -110,11 +110,23 @@ final class OrderFactory implements OrderFactoryInterface
              * tax is claimed. A voucher at a rate above 0 is a class the
              * operator did not mark — sold as taxed, and the finding says so.
              */
-            $notTaxable = OrderLineType::Product === $line->type && ProductKind::Voucher === ProductKind::stored($item['kind']) && $rate->isZero();
+            $notTaxable = OrderLineType::Product === $line->type && ProductKind::Voucher === ProductKind::stored($item['kind']) && $rate->isZero()
+                // EZ-1: the sale of a single-purpose voucher IS a supply, so
+                // under reverse charge it passes over like goods — unless its
+                // class itself is "nicht steuerbar".
+                && !(($item['singlePurpose'] ?? false) && $reverseCharge && !BigDecimal::of($this->taxes->resolveRate($item['taxClass'], $taxCountry, $timestamp))->isZero());
 
             if ($notTaxable) {
                 $taxCountry = '';
             }
+
+            /*
+             * EZ-1, EZ-5: a single-purpose voucher is one whose sale was
+             * taxed. Sold at 0 — a class marked "nicht steuerbar", reverse
+             * charge — nothing was taxed that a later purchase could leave
+             * out, so the voucher it becomes is a multi-purpose one.
+             */
+            $singlePurpose = !$notTaxable && !$rate->isZero() && ($item['singlePurpose'] ?? false);
 
             $lineNet = BigDecimal::of($item['net'])
                 ->multipliedBy(BigDecimal::of($line->quantity))
@@ -151,7 +163,7 @@ final class OrderFactory implements OrderFactoryInterface
              * rounded figures. grandTotal is therefore built the same way, and
              * taxTotal follows as the remainder.
              *
-             * 🔴 Until 2026-09-23 this was the other way round — net and tax
+             * 🔴 This used to be the other way round — net and tax
              * rounded per line and summed, gross left to differ. It was a
              * defensible choice on its own and wrong in company: the checkout
              * already summed rounded grosses, so an order disagreed with the
@@ -171,8 +183,7 @@ final class OrderFactory implements OrderFactoryInterface
              * taxTotal by a cent per rate. Not by assigning the remainder to a
              * rate: DocumentPayloadBuilder::summariseTax() applies THIS rule
              * per rate — net and gross from the same rounded lines, tax as the
-             * difference — so the rates add up to taxTotal exactly (Michael,
-             * 2026-09-24: "Je Satz: Brutto − Netto").
+             * difference — so the rates add up to taxTotal exactly (per rate: gross − net).
              *
              * The summing itself lives in OrderTotals since C-10, which a
              * change of payment method uses as well.
@@ -213,6 +224,8 @@ final class OrderFactory implements OrderFactoryInterface
                 'discountNet' => (string) BigDecimal::of($line->discountNet)->toScale(4, RoundingMode::HalfUp),
                 // WG-4: a voucher's value, frozen like its price.
                 'voucherValue' => (string) BigDecimal::of($item['voucherValue'] ?? '0')->toScale(4, RoundingMode::HalfUp),
+                // EZ-5: issued as single-purpose — at the class, rate and country above.
+                'voucherSinglePurpose' => $singlePurpose ? 1 : 0,
                 // Block GARAN (GA6): the guarantee and label shown before the button.
                 'durabilityYears' => $item['durabilityYears'] ?? '0',
                 'durabilityLabel' => $item['durabilityLabel'] ?? null,
@@ -227,7 +240,7 @@ final class OrderFactory implements OrderFactoryInterface
          * The checksum (CheckoutFingerprint) proves the input has not changed;
          * this proves that two pieces of code agree on what that input costs.
          * Different questions — and the second one went unasked until the
-         * review of 2026-09-23 found them disagreeing in 16.7 % of cases.
+         * two were found disagreeing in 16.7 % of cases.
          */
         if ('' !== $draft->expectedGrandTotal && 0 !== $totals->grossDecimal()->compareTo($draft->expectedGrandTotal)) {
             throw TotalDisagreesWithCheckout::between($draft->expectedGrandTotal, $totals->gross());
@@ -286,7 +299,7 @@ final class OrderFactory implements OrderFactoryInterface
     /**
      * An article: looked up, never taken from the request.
      *
-     * @return array{net: string, taxClass: int, name: string, sku: string, priceSource: string, customerGroup: int, kind: string, mainProduct: int, voucherValue: string, durabilityYears: string, durabilityLabel: string|null}
+     * @return array{net: string, taxClass: int, name: string, sku: string, priceSource: string, customerGroup: int, kind: string, mainProduct: int, voucherValue: string, singlePurpose: bool, durabilityYears: string, durabilityLabel: string|null}
      *
      * @throws ProductGoneFromCatalogue
      * @throws PriceNotFound
@@ -330,6 +343,7 @@ final class OrderFactory implements OrderFactoryInterface
             'kind' => $snapshot['kind'],
             'mainProduct' => $snapshot['mainProduct'],
             'voucherValue' => ProductKind::Voucher->value === $snapshot['kind'] ? ($snapshot['voucherValue'] ?? '0') : '0',
+            'singlePurpose' => ProductKind::Voucher->value === $snapshot['kind'] && ($snapshot['singlePurpose'] ?? false),
             'durabilityYears' => $snapshot['durabilityYears'] ?? '0',
             'durabilityLabel' => $snapshot['durabilityLabel'] ?? null,
         ];
@@ -368,7 +382,7 @@ final class OrderFactory implements OrderFactoryInterface
          * A fee arrives here already taxed the way the operator chose at the
          * method (E-1, Z3): the calculator split it into shares with their
          * tax class, and a method without that choice was never offered.
-         * Until E-1 this refused every fee (decision 2026-09-23).
+         * Until E-1 this refused every fee (by decision).
          */
         return [
             'net' => $line->net,

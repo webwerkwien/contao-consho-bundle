@@ -62,7 +62,7 @@ final class DbalShippingPriceIssueSource implements ConfigurationIssueSource
             // finding. That is the answer, not a gap: the cause is then
             // CurrencyMissing or RootWithoutCurrency, and this source would
             // otherwise report every flat rate with an empty currency in the
-            // sentence (measured 2026-09-21).
+            // sentence.
             foreach ($this->currencies->of((int) $shop['id']) as $currency) {
                 $selections[] = ['id' => (int) $shop['id'], 'title' => (string) $shop['title'], 'currency' => $currency, 'ids' => $ids];
             }
@@ -103,8 +103,8 @@ final class DbalShippingPriceIssueSource implements ConfigurationIssueSource
                 }
 
                 // With the shop (block I): without it the finding stood under
-                // every shop on the setup page — "Testshop" lacked a franc
-                // price, and "Testshop 2" showed it (c5, 2026-10-08).
+                // every shop on the setup page — one shop lacked a franc
+                // price, and another showed it.
                 $issues[] = new ConfigurationIssue(ConfigurationFinding::ShippingPriceMissing, [
                     'method' => (string) $titles[$id],
                     'shop' => $shop['title'],

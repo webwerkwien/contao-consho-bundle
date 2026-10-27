@@ -44,7 +44,7 @@ class ArticleShippingRates
     /**
      * @param string $net        the net of the whole line (ShippingLine) — the price at quantity one for one piece; a type may depend on the basket's value
      * @param int    $minimumAge the article's (ProductDetail::$minimumAge); a method that cannot check it may refuse
-     * @param string $quantity   pieces in the basket — more than one for an article with a minimum purchase (review Connect-1, H2), so weight and value are the basket's
+     * @param string $quantity   pieces in the basket — more than one for an article with a minimum purchase (Connect-1), so weight and value are the basket's
      */
     public function cheapest(CatalogContext $context, string $country, int $articleId, string $net, int $minimumAge = 0, string $quantity = '1'): ShippingRate|null
     {

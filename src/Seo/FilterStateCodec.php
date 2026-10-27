@@ -33,9 +33,8 @@ final class FilterStateCodec
 
     /**
      * With an underscore, which ALIAS rejects: no property group can ever be
-     * called this. It was `sort` until 2026-10-09 — and a group with the alias
-     * "sort" was read as the sort order and could not be filtered (review
-     * Verfügbarkeit, open point; Michael: "ja" to renaming it). Consho was not
+     * called this. It was `sort` before — and a group with the alias
+     * "sort" was read as the sort order and could not be filtered (Verfügbarkeit). Consho was not
      * live anywhere; an old `sort:` link keeps its page and loses only its order.
      */
     private const SORT_KEY = 'sort_by';

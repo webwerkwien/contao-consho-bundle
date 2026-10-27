@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\EntitlementListen
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * F, Abnahme 2026-09-29: Die Liste der Berechtigungen zeigte „4 × 1.0000" —
- * Artikel-ID und rohe Dezimalzahl (Fall 30).
+ * F: the list of entitlements showed "4 × 1.0000" — the item ID and a raw
+ * decimal number.
  */
 class EntitlementListenerTest extends TestCase
 {
@@ -30,7 +30,7 @@ class EntitlementListenerTest extends TestCase
         self::assertStringStartsWith('20 × ', $revoked);
         self::assertStringContainsString('gesperrt', $revoked);
 
-        // Abo-5 (P38): „ruht seit …", neben „gesperrt" und unabhängig davon.
+        // Abo-5 (P38): "paused since …", next to "locked" and independent of it.
         $GLOBALS['TL_LANG']['tl_consho_entitlement']['suspendedLabel'] = 'ruht seit %s';
         $GLOBALS['TL_CONFIG']['dateFormat'] = 'd.m.Y';
         $suspended = $listener->label(['orderItem' => 79, 'product' => 4, 'quantity' => '1.0000', 'validUntil' => null, 'revoked' => 0, 'suspendedAt' => 1_790_000_000]);

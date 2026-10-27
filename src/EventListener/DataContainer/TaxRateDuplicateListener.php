@@ -7,13 +7,12 @@ use Contao\DataContainer;
 use Doctrine\DBAL\Connection;
 
 /**
- * One saved rate per tax class, country and "valid from" (block A, open point
- * of 2026-10-11).
+ * One saved rate per tax class, country and "valid from" (block A).
  *
  * Rates may overlap on purpose — the later "valid from" supersedes the earlier
  * one (ContaoTaxRateRepository::findRate()). Two rates with the SAME start
- * leave nothing to decide by: found at the CW-5 acceptance on c5, where an
- * aborted run had created two equal rates and neither the mask nor the
+ * leave nothing to decide by: an aborted run (CW-5) once created two
+ * equal rates and neither the mask nor the
  * commands refused it. Two empty "valid from" are the same start.
  *
  * onbeforesubmit, so the mask and, since contao-ai v1.5.0, the commands meet

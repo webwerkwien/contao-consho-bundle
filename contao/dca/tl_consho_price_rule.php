@@ -2,20 +2,19 @@
 
 
 /*
- * Catalogue price rules (block H, H-3; docs/block-h-preise.md, H5): "20 %
+ * Catalogue price rules (Block H, H-3 and H5): "20 %
  * on manufacturer X until Sunday" — a promotion over many products without a
  * price row at each.
  *
- * Percent only (Michael, 2026-10-05: "ja, wie empfohlen"): a fixed amount is
+ * Percent only: a fixed amount is
  * meant gross by the operator and would be a different net amount per tax
  * rate. Fixed amounts are the cart rules' (H-4).
  *
  * Conditions: an empty list means "any". All filled-in lists have to match.
  * The rule works on the price PriceCalculator found (CatalogPriceRules), as a
  * promotion: struck through against the 30-day price like any other (H-2).
- * `reduced`: whether it also applies to goods already on promotion (Michael:
- * "man muss auch festlegen können, ob der Rabatt auch für bereits reduzierte
- * Ware gilt"). Several matching rules: the cheapest result, no sum (C2).
+ * `reduced`: whether it also applies to goods already on promotion.
+ * Several matching rules: the cheapest result, no sum (C2).
  *
  * No shop: price rows have none either — prices are per currency, and the
  * projection per market, not per shop.

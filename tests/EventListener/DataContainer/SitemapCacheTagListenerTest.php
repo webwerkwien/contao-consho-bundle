@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SitemapCacheTagLi
 use Webwerkwien\ContaoConshoBundle\Seo\SitemapCacheTags;
 
 /**
- * Startpunkte: 1 mit Shop 1, 2 ohne Shop (eine fremde Website), 3 mit Shop 2,
- * dazu eine normale Seite 4 mit einer versehentlich gesetzten Shop-Spalte.
+ * Root pages: 1 with shop 1, 2 without a shop (a foreign website), 3 with
+ * shop 2, plus a normal page 4 with a shop column set by mistake.
  */
 class SitemapCacheTagListenerTest extends TestCase
 {
@@ -33,7 +33,7 @@ class SitemapCacheTagListenerTest extends TestCase
 
     public function testAProductChangeInvalidatesTheSitemapsOfTheStartPointsWithAShop(): void
     {
-        // Wie Contao selbst: je Startpunkt, nie der ganze Tag — die fremde Website 2 bleibt unberührt.
+        // Like Contao itself: per root page, never the whole tag — the foreign website 2 stays untouched.
         $tags = $this->listener()($this->dc(7), ['contao.db.tl_consho_product.7']);
 
         self::assertSame(['contao.db.tl_consho_product.7', 'contao.sitemap.1', 'contao.sitemap.3'], $tags);
@@ -52,8 +52,8 @@ class SitemapCacheTagListenerTest extends TestCase
 
     public function testRestoringFromTheRecycleBinInvalidatesTheShopSitemapsDirectly(): void
     {
-        // DC_Table::undo() entwertet die Tags von tl_undo, nicht die des wiederhergestellten
-        // Datensatzes — auf c5 blieb ein wiederhergestellter Preis deshalb aus der Sitemap.
+        // DC_Table::undo() invalidates the tags of tl_undo, not those of the restored
+        // record — on a real installation a restored price therefore stayed out of the sitemap.
         $tags = $this->createMock(CacheTagManager::class);
         $tags->expects(self::once())->method('invalidateTags')->with(['contao.sitemap.1', 'contao.sitemap.3']);
 
@@ -70,7 +70,7 @@ class SitemapCacheTagListenerTest extends TestCase
 
     public function testARestoredShopWithoutIdInvalidatesNothing(): void
     {
-        // forShops(0) nennte die Startpunkte OHNE Shop — also fremde Websites.
+        // forShops(0) would name the root pages WITHOUT a shop — that is, foreign websites.
         $tags = $this->createMock(CacheTagManager::class);
         $tags->expects(self::never())->method('invalidateTags');
 
@@ -80,10 +80,10 @@ class SitemapCacheTagListenerTest extends TestCase
     public function testHangsOnEveryTableThatMovesAConshoAddress(): void
     {
         /*
-         * Die Tabellen, deren Änderung eine Adresse in die Sitemap bringt oder
-         * herausnimmt — beim Speichern UND beim Wiederherstellen aus dem
-         * Papierkorb. Fehlt eine, steht die Sitemap bis zu einem Monat falsch,
-         * und nichts schlägt dabei fehl.
+         * The tables whose change brings a URL into the sitemap or takes it
+         * out — on save AND on restoring from the recycle bin. If one is
+         * missing, the sitemap is wrong for up to a month, and nothing fails
+         * along the way.
          */
         $expected = ['tl_consho_facet_page', 'tl_consho_manufacturer', 'tl_consho_price', 'tl_consho_product', 'tl_consho_product_type', 'tl_consho_shop'];
 

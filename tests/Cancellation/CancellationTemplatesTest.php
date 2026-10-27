@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Notification\ContaoLikeTranslator;
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * Die Bestätigungs- und die Ergebnisseite (Abo-7, P61; § 312k Abs. 2 und 3
- * BGB), gerendert mit strikten Variablen.
+ * The confirmation and the result page (Abo-7, P61; § 312k Abs. 2 and 3
+ * BGB), rendered with strict variables.
  */
 final class CancellationTemplatesTest extends TestCase
 {
@@ -24,7 +24,7 @@ final class CancellationTemplatesTest extends TestCase
             'error' => 'alreadyEnding', 'until' => '31. März 2027', 'earliest' => '',
         ]);
 
-        // S1: ohne bekannten Vertrag der allgemeine Satz, kein Termin.
+        // Without a known contract the general sentence, no date.
         self::assertStringContainsString('noch voll berechnet', $html);
         self::assertStringNotContainsString('Frühestmöglich bei', $html);
 
@@ -68,7 +68,7 @@ final class CancellationTemplatesTest extends TestCase
 
         self::assertStringContainsString('14:03:05', $html);
         self::assertStringContainsString('WEB-00084-1-K1', $html);
-        // Abnahme: Beschriftung als dt, nicht als th, das ein Theme ausblendet.
+        // Label as dt, not as th, which a theme hides.
         self::assertStringContainsString('<dt>Eingang</dt>', $html);
         self::assertStringNotContainsString('<th', $html);
         self::assertStringContainsString('endet durch diese Kündigung am 15. Januar 2027', $html);
@@ -78,8 +78,8 @@ final class CancellationTemplatesTest extends TestCase
     }
 
     /**
-     * S1: ein Ende nach dem frühestmöglichen kostet angebrochene Perioden —
-     * die Ergebnisseite sagt es.
+     * An end after the earliest possible one costs started periods —
+     * the result page says so.
      */
     public function testEinSpaeteresEndeSagtWasEsKostet(): void
     {

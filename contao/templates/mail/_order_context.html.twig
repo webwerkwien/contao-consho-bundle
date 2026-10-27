@@ -2,14 +2,14 @@
   What a forger cannot know: order date, address, shipping method and the
   articles — the block every mail after the purchase carries (D-1, D-7).
 
-  History: in the D-1 acceptance the bare "on its way + tracking number + one
+  History: in D-1 the bare "on its way + tracking number + one
   button" was the only mail filed as junk; with this block the shipping mail
-  reached the inbox. In D-7 (c5, a fresh Gmail mailbox, 2026-09-28) the two
+  reached the inbox. In D-7 (a fresh Gmail mailbox) the two
   mails still without it went to spam — "payment received" and the
   confirmation of a withdrawal — while the confirmation and the shipping mail
   arrived. SPF, DKIM and DMARC passed on all four. Not proven to be the cause
   (four mails, a test domain, Gmail gives no reasons), but the customer needs
-  to see WHICH order is meant anyway (Michael, 2026-09-28: M7).
+  to see WHICH order is meant anyway (M7).
 
   Parameters (include ... with):
     order  the order in InvoiceView's shape

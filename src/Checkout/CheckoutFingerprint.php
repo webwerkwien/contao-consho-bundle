@@ -30,7 +30,7 @@ use Webwerkwien\ContaoConshoBundle\Address\Address;
  *   corrected typo in a shipping method's title is not a change to the deal.
  *   The method's id and its amount are in, and those are what would change it.
  *
- * ── The legal texts ARE in, since 2026-09-23 ─────────────────────────────
+ * ── The legal texts ARE in ───────────────────────────────────────────────
  *
  * They are not display texts. The terms and the withdrawal instruction are
  * what the buyer agreed to, and OrderPlacer freezes them at the click by
@@ -40,7 +40,7 @@ use Webwerkwien\ContaoConshoBundle\Address\Address;
  * the order records v2 with their timestamp beside it, which is exactly the
  * case the snapshot exists for.
  *
- * Found in the Fable review of C-7 (F3); the controller had written the gap
+ * The controller had once written the gap
  * down as "belongs with the freezing itself (C-7)" and C-7 had not closed it.
  */
 class CheckoutFingerprint
@@ -85,8 +85,7 @@ class CheckoutFingerprint
          * The withdrawal kinds the consent box was worded after (Abo-2, P14).
          * The order freezes the kind at the click; switched in between, the
          * confirmation would record a sentence the buyer never read — the
-         * same gap the legal texts closed on 2026-09-23 (Fable review Abo-2,
-         * L2). Only written when there is one, so a basket without digital
+         * same gap the legal texts closed (Abo-2). Only written when there is one, so a basket without digital
          * lines keeps the checksum it had before.
          */
         if ([] !== $state->withdrawalKinds) {
@@ -132,7 +131,7 @@ class CheckoutFingerprint
                  * the deploy.
                  */
                 ...($line->subscriptionRule > 0 ? ['r'.$line->subscriptionRule] : []),
-                // Abo-7b (review L1): which subscription a line renews — a
+                // Abo-7b: which subscription a line renews — a
                 // renewal and a new subscription of the same plan are two
                 // contracts at one price. Written the same way, only if set.
                 ...($line->renews > 0 ? ['n'.$line->renews] : []),

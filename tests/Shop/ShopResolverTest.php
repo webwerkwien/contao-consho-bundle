@@ -80,17 +80,16 @@ class ShopResolverTest extends TestCase
     public function testEineNichtAufbereiteteUnterseiteHatKeinenStartpunktStattSelbstEinerZuSein(): void
     {
         /*
-         * 🔴 Der Fehler vom 2026-09-20 an seiner Wurzel. Hier stand
-         * `(int) $page->rootId ?: $pageId` — „keine rootId? dann bist du selbst
-         * der Startpunkt". Das gilt für eine Seite vom Typ `root` und für
-         * sonst keine. Eine Unterseite aus findById() bekam damit sich selbst
-         * zurück, trug kein `consho_shop`, und „in den Warenkorb" antwortete
-         * von jeder Unterseite mit 400.
+         * 🔴 A bug at its root. Here stood `(int) $page->rootId ?: $pageId`
+         * — "no rootId? then you are the start point yourself". That holds for
+         * a page of type `root` and for no other. A subpage from findById()
+         * therefore got itself back, carried no `consho_shop`, and "add to
+         * cart" answered with 400 from every subpage.
          *
-         * Nicht zu verwechseln mit dem Fall „Startpunkt gelöscht": Dort ist
-         * die rootId bekannt und der Datensatz weg (siehe der Test darunter).
-         * Hier ist die rootId selbst unbekannt — und darauf ist die einzig
-         * ehrliche Antwort „ich weiß es nicht", nicht „ich bin es".
+         * Not to be confused with the case "start point deleted": there the
+         * rootId is known and the record is gone (see the test below). Here
+         * the rootId itself is unknown — and the only honest answer to that is
+         * "I don't know", not "it's me".
          */
         $framework = $this->createMock(ContaoFramework::class);
         $framework->expects(self::never())->method('getAdapter');
@@ -115,10 +114,10 @@ class ShopResolverTest extends TestCase
 
     public function testDieWaehrungKommtVomStartpunktUndNichtVomShop(): void
     {
-        // Spec 4.0: Die Währung hängt am Startpunkt, das Heimatland am Shop.
-        // Ein österreichischer Shop, der über /en/ in Pfund verkauft, ist das
-        // Marktpaar (GBP, AT) — und genau diese Aufteilung prüft der Test:
-        // Der Shop trägt hier ausdrücklich eine andere Währung.
+        // Spec 4.0: The currency belongs to the start point, the home country to the shop.
+        // An Austrian shop selling in pounds via /en/ is the market pair
+        // (GBP, AT) — and this test checks exactly that split: the shop
+        // explicitly carries a different currency here.
         $shop = $this->createMock(ShopModel::class);
         $shop->method('__get')->willReturnMap([['id', 7], ['currency', 'EUR'], ['country', 'AT']]);
 
@@ -133,9 +132,9 @@ class ShopResolverTest extends TestCase
 
     public function testEineUnterseiteErbtDieWaehrungIhresStartpunkts(): void
     {
-        // `consho_currency` steht nur am Startpunkt. Die Unterseite, von der
-        // aus gekauft wird, trägt die Spalte leer — wer sie dort liest, liest
-        // nichts.
+        // `consho_currency` is only on the start point. The subpage from
+        // which the purchase is made carries the column empty — whoever reads
+        // it there reads nothing.
         $root = $this->page(id: 5, rootId: 5, shopId: 7, currency: 'GBP');
 
         $pageAdapter = $this->createMock(Adapter::class);
@@ -152,14 +151,13 @@ class ShopResolverTest extends TestCase
     public function testDerBaumWirdHochgelaufenBevorNachDemStartpunktGefragtWird(): void
     {
         /*
-         * ⚠️ Der Fehler vom 2026-09-20 in seiner eigenen Prüfung: `rootId` ist
-         * keine Spalte von tl_page, sondern eine Eigenschaft, die PageModel
-         * beim Hochlaufen des Baums setzt. Eine Seite aus findById() hat sie
-         * nicht — rootOf() gäbe dann die Unterseite selbst zurück, und die
-         * trägt keine Währung.
+         * ⚠️ The same bug in its own check: `rootId` is not a column of
+         * tl_page but a property that PageModel sets while walking up the
+         * tree. A page from findById() does not have it — rootOf() would then
+         * return the subpage itself, and that carries no currency.
          *
-         * Das Doppel unten gibt `rootId` deshalb erst nach loadDetails()
-         * heraus. Ohne den Aufruf in currencyOfPage() bleibt hier '' übrig.
+         * The double below therefore only hands out `rootId` after
+         * loadDetails(). Without the call in currencyOfPage(), '' is left here.
          */
         $root = $this->page(id: 5, rootId: 5, shopId: 7, currency: 'GBP');
 
@@ -176,10 +174,10 @@ class ShopResolverTest extends TestCase
 
     public function testOhneGewaehlteWaehrungKommtEineLeereZeichenketteZurueck(): void
     {
-        // Kein Euro als Notnagel: Ein Startpunkt ohne Währung soll als solcher
-        // sichtbar bleiben. Wer damit rechnet, findet keinen Preis — das ist
-        // die gewollte Folge, nicht ein Preis in einer Währung, die niemand
-        // ausgewählt hat.
+        // No euro as a last resort: a start point without a currency should
+        // stay visible as such. Whoever calculates with it finds no price —
+        // that is the intended consequence, not a price in a currency nobody
+        // selected.
         $framework = $this->createMock(ContaoFramework::class);
 
         $resolver = new ShopResolver($framework);
@@ -190,13 +188,13 @@ class ShopResolverTest extends TestCase
     public function testEinStartpunktOhneDieSpalteIstKeinEuroStartpunkt(): void
     {
         /*
-         * Die Spalte fehlt in der Zeile, nicht nur ihr Wert: der Stand
-         * zwischen Deploy und `contao:migrate`, und derselbe Fall, gegen den
-         * RootCurrencyMigration ihre eigenen Prüfungen stellt.
+         * The column is missing from the row, not just its value: the state
+         * between deploying new code and `contao:migrate`, and the same case
+         * against which RootCurrencyMigration sets up its own checks.
          *
-         * Gemessen: Ohne diesen Test überlebt ein `?? 'EUR'` an dieser Stelle
-         * die ganze Suite — und damit ein Shop, der während des Deploys
-         * Pfundpreise in Euro anschreibt.
+         * Measured: without this test a `?? 'EUR'` at this point survives the
+         * whole suite — and with it a shop that labels pound prices in euros
+         * during an update.
          */
         $root = $this->createMock(PageModel::class);
         $root->method('__get')->willReturnMap([['id', 5], ['type', 'root'], ['rootId', 5]]);
@@ -210,16 +208,16 @@ class ShopResolverTest extends TestCase
     public function testEinGeloeschterStartpunktLaesstDieWaehrungLeerImBackendUndAufDerKommandozeile(): void
     {
         /*
-         * ⚠️ Der Name sagt bewusst, wo dieser Zweig vorkommt. Im Front-End
-         * kommt er nicht vor: Dort wirft `loadDetails()` für eine Seite unter
-         * keinem Startpunkt `NoRootPageFoundException`
-         * (PageModel.php:1087), bevor currencyOfPage() überhaupt etwas
-         * zurückgeben könnte. Das Doppel unten hat `loadDetails()` als
-         * Nichtstuer und bildet damit den Backend- und CLI-Weg ab — dort
-         * prüft Contao den Anfragekontext und wirft nicht.
+         * ⚠️ The name deliberately says where this branch occurs. It does not
+         * occur in the front end: there `loadDetails()` throws
+         * `NoRootPageFoundException` for a page under no start point
+         * (PageModel.php:1087) before currencyOfPage() could return anything.
+         * The double below has `loadDetails()` as a no-op and thereby models
+         * the back-end and CLI path — there Contao checks the request context
+         * and does not throw.
          *
-         * Die Zeile bleibt also richtig, aber sie belegt nicht, was ein
-         * Besucher sieht.
+         * So the line stays correct, but it does not prove what a visitor
+         * sees.
          */
         $pageAdapter = $this->createMock(Adapter::class);
         $pageAdapter->method('__call')->willReturn(null);
@@ -233,9 +231,9 @@ class ShopResolverTest extends TestCase
     }
 
     /**
-     * Ein Startpunkt. `type` ist die echte Spalte, an der ShopResolver ihn
-     * erkennt; `rootId` steht daneben, weil ein aufbereiteter Startpunkt beides
-     * trägt.
+     * A start point. `type` is the real column by which ShopResolver
+     * recognises it; `rootId` stands next to it because a prepared start point
+     * carries both.
      */
     private function page(int $id, int $rootId, int $shopId, string $currency = ''): PageModel
     {
@@ -255,12 +253,13 @@ class ShopResolverTest extends TestCase
     }
 
     /**
-     * Eine Unterseite, wie der Frontend-Index sie weiterreicht: loadDetails()
-     * ist gelaufen, `rootId` steht.
+     * A subpage as the front-end index passes it on: loadDetails() has run,
+     * `rootId` is set.
      *
-     * Ihre Zeile trägt **kein** `consho_currency` — die Spalte wird nur am
-     * Startpunkt gepflegt. Ein Doppel, das sie hier ungefragt herausgäbe, wäre
-     * fähiger als das Original und machte jede Prüfung des Baumlaufs blind.
+     * Its row carries **no** `consho_currency` — the column is only
+     * maintained on the start point. A double that handed it out here unasked
+     * would be more capable than the original and would make every check of
+     * the tree walk blind.
      */
     private function subpage(int $id, int $rootId): PageModel
     {
@@ -272,13 +271,13 @@ class ShopResolverTest extends TestCase
     }
 
     /**
-     * Dieselbe Unterseite, aber frisch aus findById(): Sie hat den Baum noch
-     * nicht hochlaufen lassen und gibt `rootId` erst nach loadDetails() heraus
-     * — genau wie das echte PageModel.
+     * The same subpage, but fresh from findById(): it has not yet walked up
+     * the tree and only hands out `rootId` after loadDetails() — exactly like
+     * the real PageModel.
      *
-     * Eine echte Closure mit `&$detailsLoaded`, keine Pfeilfunktion: die bindet
-     * nur Kopien, und das Flag bliebe für immer false. Vorbild ist die
-     * reparierte Fassung in AddToCartControllerTest.
+     * A real closure with `&$detailsLoaded`, not an arrow function: that only
+     * binds copies, and the flag would stay false for ever. The model is the
+     * repaired version in AddToCartControllerTest.
      */
     private function unwalkedSubpage(int $id, int $rootId): PageModel
     {
@@ -297,9 +296,9 @@ class ShopResolverTest extends TestCase
             static function (string $key) use ($id, $rootId, &$detailsLoaded): int|string|null {
                 return match ($key) {
                     'id' => $id,
-                    // `type` steht in der Zeile und gilt auch ohne Baumlauf —
-                    // `rootId` erst danach. Genau dieser Unterschied ist der
-                    // Grund, dass ShopResolver auf `type` prüft.
+                    // `type` is in the row and holds even without a tree walk —
+                    // `rootId` only afterwards. Exactly this difference is the
+                    // reason ShopResolver checks `type`.
                     'type' => 'regular',
                     'rootId' => $detailsLoaded ? $rootId : null,
                     default => null,

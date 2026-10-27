@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Cart\Discount\CodeStatus;
 use Webwerkwien\ContaoConshoBundle\Checkout\PurchaseProblem;
 
 /**
- * Block H (H-4): die Rabattzeile auf der Prüfseite, am echten Abschnitt der
- * Vorlage gerendert, und die Texte dazu in beiden Sprachen.
+ * Block H (H-4): the discount line on the review page, rendered on the real
+ * section of the template, and its texts in both languages.
  */
 class CheckoutDiscountTemplateTest extends TestCase
 {
@@ -37,7 +37,7 @@ class CheckoutDiscountTemplateTest extends TestCase
 
     public function testEinCodeDerHierNichtGiltSagtWarum(): void
     {
-        // W5: die Adresse des Gastes hat den Code schon eingelöst.
+        // W5: the guest's address has already redeemed the code.
         $html = $this->render(['title' => '', 'code' => '', 'amount' => '0,00 €', 'freeShipping' => false, 'status' => 'exhausted'], 'Herbst');
 
         self::assertStringNotContainsString('<dt>', $html);
@@ -46,7 +46,7 @@ class CheckoutDiscountTemplateTest extends TestCase
 
     public function testDerFehlendeMindestwertStehtDa(): void
     {
-        // Review H, S2: der Betrag, der fehlt, als zweiter Platzhalter.
+        // H: the missing amount as the second placeholder.
         $html = $this->render(['title' => '', 'code' => '', 'amount' => '0,00 €', 'freeShipping' => false, 'status' => 'minimumOrder', 'missing' => '1,00 €'], 'Herbst');
 
         self::assertStringContainsString('CONSHO.cart.discount.status.minimumOrder[Herbst|1,00 €]', $html);

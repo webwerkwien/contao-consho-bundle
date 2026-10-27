@@ -10,12 +10,11 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 /**
- * Deleting a main product deletes its variants (Michael, 2026-10-11: "1 als
- * (b)") — with their prices, translations and join rows, into the SAME undo
+ * Deleting a main product deletes its variants — with their prices, translations and join rows, into the SAME undo
  * entry, so that restoring brings the product back whole.
  *
  * Before, the variants stayed behind with a pid pointing nowhere and showed in
- * the list like products of their own (found at the CW-3 acceptance).
+ * the list like products of their own (until CW-3).
  *
  * Why a callback and not the ctable: with this table in its own ctable,
  * DC_Table::reviseTable() deletes every row whose pid matches no parent — for

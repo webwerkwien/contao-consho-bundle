@@ -9,9 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen eine echte Datenbank, nicht gegen einen Mock: Es geht um Zeilen, die
- * ein UNIQUE-Index zulässt oder ablehnt — das beantwortet kein erwarteter
- * Aufruf.
+ * Against a real database, not against a mock: this is about rows that a
+ * UNIQUE index allows or rejects — no expected call answers that.
  */
 class TranslationStorageTest extends TestCase
 {
@@ -21,8 +20,8 @@ class TranslationStorageTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Das Testschema muss mindestens so streng sein wie die echte
-        // Datenbank — siehe contao/dca/tl_consho_translation.php.
+        // The test schema must be at least as strict as the real database —
+        // see contao/dca/tl_consho_translation.php.
         DcaSchema::create($this->connection, 'tl_consho_translation');
     }
 
@@ -59,10 +58,9 @@ class TranslationStorageTest extends TestCase
 
     public function testAnEmptyAliasIsStoredAsNull(): void
     {
-        // property_option hat kein alias unter den übersetzbaren Feldern —
-        // die Spalte bleibt beim Standard NULL, und zwei Zeilen mit NULL
-        // vertragen sich mit UNIQUE (ptable, language, alias), zwei leere
-        // Strings nicht.
+        // property_option has no alias among the translatable fields — the
+        // column stays at the default NULL, and two rows with NULL get along
+        // with UNIQUE (ptable, language, alias), two empty strings do not.
         $this->storage()->write('tl_consho_property_option', 1, 'en', ['title' => 'Rot']);
         $this->storage()->write('tl_consho_property_option', 2, 'en', ['title' => 'Blau']);
 
@@ -150,8 +148,8 @@ class TranslationStorageTest extends TestCase
 
     public function testRowIdIsTheIdOfTheTranslationRowNotOfTheParent(): void
     {
-        // Eine fremde Zeile vorweg, damit Zeilen-ID und Produkt-ID
-        // auseinanderfallen — sonst bestünde der Test auch mit der falschen.
+        // A foreign row first, so that row ID and product ID diverge —
+        // otherwise the test would also pass with the wrong one.
         $this->storage()->write('tl_consho_manufacturer', 9, 'en', ['title' => 'Maker']);
         $this->storage()->write('tl_consho_product', 1, 'en', ['title' => 'Bitters']);
 
@@ -175,7 +173,7 @@ class TranslationStorageTest extends TestCase
 
     public function testANewRecordHasNoShops(): void
     {
-        // Beim Anlegen ist die ID noch 0 — ohne Abfrage, auch ohne Tabelle.
+        // On creation the ID is still 0 — without a query, even without a table.
         self::assertSame([], $this->storage()->shopsOfProduct(0));
     }
 

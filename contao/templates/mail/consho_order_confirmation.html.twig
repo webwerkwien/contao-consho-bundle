@@ -1,13 +1,13 @@
 {#
   Order confirmation to the customer (C-9), in the language of the order.
 
-  Decision A4 holds: verified in Template Studio on 2026-09-09, this template
+  Decision A4 holds: verified in Template Studio, this template
   is listed and carries both "Ihr Template erstellen" and "Variante erstellen".
   Dropping Notification Center is only defensible because its main benefit —
   editing texts in the back end — applies without it, and it does.
 
-  🔴 The folder IS part of the name. Measured on c5 on 2026-09-24 with
-  `debug:contao-twig` (Contao 5.7):
+  🔴 The folder IS part of the name. As
+  `debug:contao-twig` shows it (Contao 5.7):
 
       Original name  @Contao_ContaoConshoBundle/mail/consho_order_confirmation.html.twig
       @Contao name   @Contao/mail/consho_order_confirmation.html.twig
@@ -53,8 +53,7 @@
 
 {% block body %}
 {#
-  Laid out for mail clients, not browsers (Michael, 2026-09-25, after the
-  first real mail: "hübsch ist es nicht"): one centred column of 600 px,
+  Laid out for mail clients, not browsers: one centred column of 600 px,
   tables for structure, inline styles only — Outlook and most webmailers
   ignore <style> blocks and flexbox. Amounts right-aligned and never wrapped.
 #}
@@ -95,7 +94,7 @@
 </table>
 
 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-top: 12px; {{ font }}">
-    {#- Acceptance WG-7: an order of vouchers only is not taxable — said, not "0,00". #}
+    {#- WG-7: an order of vouchers only is not taxable — said, not "0,00". #}
     {% set untaxed = order.taxes|default([]) is not empty and order.taxes|filter(t => not t.notTaxable) is empty %}
     {% if not untaxed %}
     <tr>

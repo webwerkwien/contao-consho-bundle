@@ -18,7 +18,7 @@ interface ProductSafetyRepositoryInterface
 {
     /**
      * In any other language `safetyWarnings` and `safetyInformation` come from
-     * the translation row ONLY, never from the main row (docs/mehrsprachigkeit.md,
+     * the translation row ONLY, never from the main row (Block M,
      * 4.1) — empty or null when that language has none. The row then also carries
      * `hasOwnSafetyWarnings` and `hasOwnSafetyInformation`: whether THIS article
      * has its own text in the default language, which is what decides whether a

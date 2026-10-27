@@ -61,7 +61,7 @@ final class TaxReportBackendController
     {
         // Contao checks `consho_dashboard` only. The report and its record
         // export are order data, bound like the dashboard's figures (DB8) —
-        // the dashboard alone was not enough before DB6 either (review A1).
+        // the dashboard alone was not enough before DB6 either.
         if (null !== $this->security && !$this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, 'consho_order')) {
             throw new AccessDeniedHttpException();
         }
@@ -106,7 +106,7 @@ final class TaxReportBackendController
             $businesses[] = [
                 'label' => $business->label(),
                 // Without a VAT ID the label already is the shop's title
-                // (acceptance R-5: "Testshop 2 (DE) Testshop 2 (DE)").
+                // (R-5: "Shop (DE) Shop (DE)").
                 'shops' => '' === $business->vatId ? '' : implode(', ', array_map(static fn (array $shop): string => $shop['title'], $business->shops)),
                 'atDestination' => $business->taxesAtDestination(),
                 'years' => $years,

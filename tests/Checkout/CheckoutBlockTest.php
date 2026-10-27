@@ -9,14 +9,14 @@ use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutBlock;
 class CheckoutBlockTest extends TestCase
 {
     /**
-     * Michaels Entscheidung vom 2026-09-22 im Wortlaut: **„Kaufen bleibt
-     * eigen."** Bei zwei Schritten (Adresse + Versand + Zahlung) | (Prüfen und
-     * kaufen), bei drei (Adresse) | (Versand + Zahlung) | (Prüfen und kaufen).
+     * **Buying stays a step of its own.** With two steps (address + shipping +
+     * payment) | (review and buy), with three (address) | (shipping + payment) |
+     * (review and buy).
      *
-     * Der Grund steht neben der Erwartung, weil eine Tabelle aus Aufzählungen
-     * sonst nur sagt, was der Code tut, und nicht, was jemand wollte: § 8 FAGG
-     * will die wesentlichen Angaben unmittelbar über dem Knopf, und ein
-     * eigener Schritt bringt das ohne weiteres Zutun zustande.
+     * The reason stands next to the expectation, because a table of enums
+     * otherwise only says what the code does, not what someone wanted: § 8 FAGG
+     * wants the essential information directly above the button, and a step of
+     * its own achieves that without further effort.
      */
     public function testKaufenBleibtEinEigenerSchritt(): void
     {
@@ -60,9 +60,9 @@ class CheckoutBlockTest extends TestCase
     }
 
     /**
-     * Jeder Baustein kommt in jeder Aufteilung genau einmal vor — sonst
-     * verlöre eine Einstellung stillschweigend eine Frage, etwa die nach der
-     * Zahlungsart.
+     * Every building block occurs exactly once in every split — otherwise a
+     * setting would silently lose a question, such as the one about the
+     * payment method.
      */
     #[DataProvider('schrittzahlen')]
     public function testJedeAufteilungEnthaeltAlleVierBausteineGenauEinmal(int $count): void
@@ -74,9 +74,9 @@ class CheckoutBlockTest extends TestCase
     }
 
     /**
-     * Eine Zahl aus einem Feld im Backend kann alles sein. Sie wird
-     * eingefangen, nicht zurückgewiesen: ein Checkout, der wegen einer 7 in
-     * einer Spalte gar nicht erscheint, ist die schlechtere Antwort.
+     * A number from a field in the backend can be anything. It is caught, not
+     * refused: a checkout that does not appear at all because of a 7 in a
+     * column is the worse answer.
      */
     #[DataProvider('unsinnigeZahlen')]
     public function testEineUnsinnigeSchrittzahlWirdEingefangen(int $count, int $erwartet): void
@@ -85,19 +85,19 @@ class CheckoutBlockTest extends TestCase
     }
 
     /**
-     * 🔴 Im Review vom 2026-09-22 gefunden: Die Schrittnamen waren
-     * durchnummeriert und stimmten nur bei EINEM Schritt. Bei dreien las ein
-     * Screenreader „Versand und Zahlung" über dem Kaufknopf.
+     * 🔴 The step names used to be numbered and were right only for ONE step.
+     * With three, a screen reader read "Shipping and payment" above the buy
+     * button.
      *
-     * Seitdem kommt der Name aus den Bausteinen — und dieser Test hält ihn an
-     * die Sprachdatei: Jede Gruppe, die irgendeine Aufteilung erzeugt, braucht
-     * dort einen Satz. Ohne ihn zeigt Contao den Schlüssel.
+     * Since then the name comes from the building blocks — and this test holds
+     * it to the language file: every group that any split produces needs a
+     * sentence there. Without it Contao shows the key.
      */
     #[DataProvider('sprachen')]
     public function testJedeMoeglicheGruppeHatEinenText(string $sprache): void
     {
-        // Beide Sprachen, nicht nur Deutsch: ein fehlender englischer Satz
-        // zeigt dem Besucher den Schlüssel.
+        // Both languages, not just German: a missing English sentence
+        // shows the visitor the key.
         $GLOBALS['TL_LANG'] = [];
         include \dirname(__DIR__, 2).'/contao/languages/'.$sprache.'/default.php';
 
@@ -129,15 +129,15 @@ class CheckoutBlockTest extends TestCase
 
     public function testDerNameKommtAusDenBausteinenUndNichtAusDerNummer(): void
     {
-        // Der dritte Schritt von dreien ist „Prüfen und kaufen" — vorher hieß
-        // er „Versand und Zahlung", weil er der dritte war.
+        // The third step of three is "Review and buy" — before, it was called
+        // "Shipping and payment" because it was the third.
         $drei = CheckoutBlock::steps(3);
 
         self::assertSame('review', CheckoutBlock::labelOf($drei[2]));
         self::assertSame('shipping_payment', CheckoutBlock::labelOf($drei[1]));
         self::assertSame('address', CheckoutBlock::labelOf($drei[0]));
 
-        // Und bei vieren ist der dritte die Zahlung, nicht der Kauf.
+        // And with four, the third is the payment, not the purchase.
         self::assertSame('payment', CheckoutBlock::labelOf(CheckoutBlock::steps(4)[2]));
     }
 

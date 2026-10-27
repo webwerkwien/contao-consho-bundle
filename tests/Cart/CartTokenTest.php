@@ -39,7 +39,7 @@ class CartTokenTest extends TestCase
 
     public function testOhneHttpsIstDasCookieNichtSecure(): void
     {
-        // Eine Testinstallation ohne Zertifikat bekäme sonst gar kein Cookie.
+        // A test installation without a certificate would otherwise get no cookie at all.
         self::assertFalse(CartToken::cookie('token', false, 1_000_000)->isSecure());
     }
 
@@ -65,7 +65,7 @@ class CartTokenTest extends TestCase
 
     public function testEinUnsinnigerCookieWertGiltAlsKeiner(): void
     {
-        // Sonst landet Fremdeingabe ungeprüft in einer Abfrage.
+        // Otherwise foreign input ends up unchecked in a query.
         $request = new Request();
         $request->cookies->set(CartToken::NAME, 'nicht base64url!');
 
@@ -74,9 +74,9 @@ class CartTokenTest extends TestCase
 
     public function testEinAngehaengterZeilenumbruchGiltNichtAlsToken(): void
     {
-        // PCRE lässt bei $ einen abschließenden Zeilenumbruch durch. Über eine
-        // echte Cookie-Kopfzeile kommt der nicht, über einen im Code gebauten
-        // Request schon — ein Subrequest, ein Test, ein nachlässiger Proxy.
+        // PCRE lets a trailing line break through at $. It does not arrive via a
+        // real cookie header line, but it does via a request built in code —
+        // a subrequest, a test, a sloppy proxy.
         $request = new Request();
         $request->cookies->set(CartToken::NAME, CartToken::generate()."\n");
 
@@ -85,7 +85,7 @@ class CartTokenTest extends TestCase
 
     public function testEinFremdesZeichenInRichtigerLaengeGiltNichtAlsToken(): void
     {
-        // Standard-Base64 statt base64url: richtige Länge, falsches Alphabet.
+        // Standard Base64 instead of base64url: right length, wrong alphabet.
         $request = new Request();
         $request->cookies->set(CartToken::NAME, str_repeat('a', 42).'+');
 
@@ -94,8 +94,8 @@ class CartTokenTest extends TestCase
 
     public function testDasLoeschCookieTraegtDieselbenSchutzmerkmale(): void
     {
-        // Ein Löschcookie, das der Browser wegen abweichender Merkmale nicht
-        // dem gesetzten zuordnet, löscht nichts.
+        // A deletion cookie that the browser does not match to the one it set,
+        // because of differing attributes, deletes nothing.
         $cookie = CartToken::clearCookie(true);
 
         self::assertTrue($cookie->isHttpOnly());
@@ -106,9 +106,9 @@ class CartTokenTest extends TestCase
 
     public function testEinWertMitFalscherLaengeGiltAlsKeiner(): void
     {
-        // Ein Cookie, das nicht von generate() stammt, ist keines von uns.
-        // Die Längenprüfung kostet nichts und wirft alles weg, was nur
-        // zufällig aus erlaubten Zeichen besteht.
+        // A cookie that does not come from generate() is not one of ours.
+        // The length check costs nothing and throws away everything that just
+        // happens to consist of allowed characters.
         $request = new Request();
         $request->cookies->set(CartToken::NAME, 'abc');
 

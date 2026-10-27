@@ -42,7 +42,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_token'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],
@@ -76,9 +76,8 @@ $GLOBALS['TL_DCA']['tl_consho_order_token'] = [
          * Whether acting through this token proves the mailbox (C-10). Only a
          * token that travelled BY MAIL does: the purchase redirects the buyer
          * to the order page with a token of its own, and a click there proves
-         * nothing about the address — found at the acceptance, where the
-         * address was "confirmed" before the mail had been opened (Michael,
-         * 2026-09-25: „ok" to two tokens). Tokens from before are false:
+         * nothing about the address — the address would count as "confirmed"
+         * before the mail had been opened. Tokens from before are false:
          * redirect and mail shared one then, so none of them can tell.
          */
         'confirmsEmail' => ['sql' => ['type' => 'boolean', 'default' => false]],

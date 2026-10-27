@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingLine;
 use Webwerkwien\ContaoConshoBundle\Shipping\WeightRateShipping;
 
 /**
- * Gewichtsstaffel (E-4, V2): die kleinste Stufe, in die das Paket passt;
- * über der höchsten nicht verfügbar.
+ * Weight scale (E-4, V2): the smallest step the parcel fits into;
+ * above the highest one not available.
  */
 class WeightRateShippingTest extends TestCase
 {
@@ -35,8 +35,8 @@ class WeightRateShippingTest extends TestCase
     }
 
     /**
-     * Die Reihenfolge der Zeilen spielt keine Rolle: Ein Betreiber legt die
-     * 5-kg-Stufe vielleicht nachträglich an.
+     * The order of the rows does not matter: an operator may add the 5 kg
+     * step later.
      */
     public function testDieReihenfolgeDerZeilenIstEgal(): void
     {
@@ -50,8 +50,8 @@ class WeightRateShippingTest extends TestCase
     }
 
     /**
-     * „Bis 0 kg" fasst nichts. Als „ohne Grenze" gelesen, wäre die Versandart
-     * für jedes Gewicht offen.
+     * "Up to 0 kg" holds nothing. Read as "no limit", the shipping method
+     * would be open for every weight.
      */
     public function testEineZeileOhneGrenzeIstKeineStufe(): void
     {

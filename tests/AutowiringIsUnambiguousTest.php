@@ -7,32 +7,33 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Jede Schnittstelle mit mehr als einer Implementierung braucht eine
- * Entscheidung — sonst baut der Container gar nicht erst.
+ * Every interface with more than one implementation needs a decision —
+ * otherwise the container does not even build.
  *
- * 🔴 **Am 2026-09-21 live passiert.** Eine zweite Implementierung von
- * `PriceRepositoryInterface` (`InMemoryPriceRepository`, für einen Befund, der
- * den Rechner mehrfach befragen muss) machte das Autowiring **jedes**
- * Verbrauchers mehrdeutig:
+ * 🔴 **This happened on a live site.** A second implementation of
+ * `PriceRepositoryInterface` (`InMemoryPriceRepository`, for a case that has
+ * to ask the calculator several times) made the autowiring of **every**
+ * consumer ambiguous:
  *
  *     Cannot autowire service "ArticlePriceResolver": argument "$repository"
  *     references interface "PriceRepositoryInterface"
  *
- * `cache:clear` brach daraufhin ab — der alte Container blieb stehen, die
- * Website lief weiter mit dem **alten Code**, und der frisch deployte Befund
- * erschien einfach nicht. Kein Fehler im Frontend, kein Fehler im Backend.
- * Aufgefallen nur, weil der erwartete Hinweis fehlte und ich ins Log sah.
+ * `cache:clear` then aborted — the old container stayed in place, the
+ * website kept running the **old code**, and the freshly deployed change
+ * simply did not appear. No error in the front end, no error in the back
+ * end. It only showed because the expected notice was missing and the log
+ * said why.
  *
- * ⚠️ **Warum 2185 grüne Tests daran vorbeigingen** — dieselbe Ursache wie beim
- * `%env(default::…)%`-Vorfall am selben Tag: Tests bauen die Klassen direkt
- * und nie den Container. Die Mehrdeutigkeit entsteht erst beim Verdrahten, und
- * dorthin sieht keine Unit. Siehe [Prüfungen, die nicht prüfen was man glaubt],
- * Regel 25.
+ * ⚠️ **Why 2185 green tests missed it** — the same cause as the
+ * `%env(default::…)%` incident: tests build the classes directly and never
+ * the container. The ambiguity only arises during wiring, and no unit test
+ * looks there. Check the instance the runtime uses, not one the test built
+ * itself.
  *
- * Dieser Test baut den Container nicht nach — das wäre eine zweite Abschrift
- * von Symfonys Regeln. Er prüft die **Voraussetzung**, unter der die Frage
- * überhaupt entsteht: zwei Implementierungen einer eigenen Schnittstelle, und
- * nichts, was die Wahl trifft.
+ * This test does not rebuild the container — that would be a second copy
+ * of Symfony's rules. It checks the **precondition** under which the
+ * question arises at all: two implementations of one of our own interfaces,
+ * and nothing that makes the choice.
  */
 class AutowiringIsUnambiguousTest extends TestCase
 {
@@ -44,8 +45,8 @@ class AutowiringIsUnambiguousTest extends TestCase
         $implementations = [];
 
         foreach ($this->classes() as $file => $class) {
-            // Ausgeschlossene Klassen sind kein Dienst und machen deshalb
-            // nichts mehrdeutig.
+            // Excluded classes are not services and therefore make nothing
+            // ambiguous.
             if (\in_array($file, $excluded, true)) {
                 continue;
             }
@@ -61,11 +62,11 @@ class AutowiringIsUnambiguousTest extends TestCase
 
         foreach ($implementations as $interface => $classes) {
             /*
-             * Eine GETAGGTE Schnittstelle ist mit Absicht mehrfach
-             * implementiert: Symfony sammelt sie und reicht sie als `iterable`
-             * weiter, nie einzeln — ConfigurationIssueSource sagt das in
-             * seinem eigenen Kommentar („Tagged, and therefore plural").
-             * Mehrdeutig wird nur, was jemand als EIN Argument erwartet.
+             * A TAGGED interface is implemented several times on purpose: Symfony
+             * collects the implementations and passes them on as an `iterable`,
+             * never one by one — ConfigurationIssueSource says so in its own comment
+             * ("Tagged, and therefore plural"). Only what someone expects as ONE
+             * argument becomes ambiguous.
              */
             if ($this->isTagged($interface) || \count($classes) < 2 || isset($services[$interface])) {
                 continue;
@@ -86,7 +87,7 @@ class AutowiringIsUnambiguousTest extends TestCase
 
     public function testDerTestFindetUeberhauptKlassen(): void
     {
-        // Ein Test, der nichts findet, wäre immer grün.
+        // A test that finds nothing would always be green.
         self::assertGreaterThan(100, \count($this->classes()));
     }
 
@@ -95,9 +96,9 @@ class AutowiringIsUnambiguousTest extends TestCase
      */
     private function isTagged(string $interface): bool
     {
-        // Eine Unter-Schnittstelle einer getaggten ist ebenso Mehrzahl
-        // (SetupIssueSource, N1): ihre Klassen kommen über das Tag der
-        // Eltern-Schnittstelle, nie einzeln.
+        // A sub-interface of a tagged one is just as plural
+        // (SetupIssueSource, N1): its classes come via the tag of the parent
+        // interface, never one by one.
         foreach ([$interface, ...(class_implements($interface) ?: [])] as $candidate) {
             if ([] !== (new \ReflectionClass($candidate))->getAttributes(AutoconfigureTag::class)) {
                 return true;
@@ -108,7 +109,7 @@ class AutowiringIsUnambiguousTest extends TestCase
     }
 
     /**
-     * Die `exclude`-Einträge als Dateipfade, Glob-Klammern aufgelöst.
+     * The `exclude` entries as file paths, glob braces expanded.
      *
      * @param array<string, mixed> $services
      *
@@ -135,7 +136,7 @@ class AutowiringIsUnambiguousTest extends TestCase
     }
 
     /**
-     * Jede Klasse unter `src/`, über den Dateipfad gefunden und dann geladen.
+     * Every class under `src/`, found via its file path and then loaded.
      *
      * @return array<string, class-string>
      */
@@ -156,8 +157,8 @@ class AutowiringIsUnambiguousTest extends TestCase
             $relative = substr($path, \strlen(str_replace('\\', '/', $src)) + 1, -4);
             $class = 'Webwerkwien\\ContaoConshoBundle\\'.str_replace('/', '\\', $relative);
 
-            // Aufzählungen, Schnittstellen und Merkmale implementieren nichts,
-            // was der Container bauen müsste.
+            // Enums, interfaces and traits implement nothing the container would
+            // have to build.
             if (class_exists($class) && !(new \ReflectionClass($class))->isAbstract()) {
                 $classes[$path] = $class;
             }

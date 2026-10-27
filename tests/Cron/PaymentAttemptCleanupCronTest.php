@@ -23,8 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentStarter;
 use Webwerkwien\ContaoConshoBundle\Tests\Payment\InMemoryPaymentAttempts;
 
 /**
- * Verwaiste offene Versuche (Michael, 2026-09-26: „ja zur doku und
- * aufräumen"): nach dem Verfall abgebrochen, der Anbieter erfährt es.
+ * Orphaned open attempts: cancelled after expiry, the provider is told.
  */
 class PaymentAttemptCleanupCronTest extends TestCase
 {

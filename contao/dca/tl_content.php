@@ -13,7 +13,7 @@ use Contao\DataContainer;
  * ModuleCloseAccount and ModuleTwoFactor since 5.7, each "will no longer work
  * in Contao 6" — and since 5.7 layout sections accept content elements too
  * (ModuleWizard reads tl_content WHERE ptable='tl_theme'). See
- * docs/block-b-katalog-frontend.md, section 2.
+ * Block B, section 2.
  */
 
 $GLOBALS['TL_DCA']['tl_content']['palettes']['consho_product_list'] =
@@ -48,7 +48,7 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['conshoFilter'] = [
  * On by default: that is the category listing. Off for a curated list beside
  * it (cross-selling, "new this week"): `cq` belongs to the whole page, and a
  * list that followed it would take the page down to a 404 whenever someone
- * appended a colour it does not carry. See docs/block-b-katalog-frontend.md,
+ * appended a colour it does not carry. See Block B,
  * section 3.1.
  */
 $GLOBALS['TL_DCA']['tl_content']['fields']['conshoFollowsAddress'] = [
@@ -128,7 +128,7 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['conshoPerPage'] = [
  *
  * Template choice sits here and not on the product: one article appears as a
  * tile, on a detail page and in a basket, and a template on the record could
- * serve only one of them. Decided 2026-09-10, see block A section 3.6.
+ * serve only one of them. See Block A, section 3.6.
  *
  * Stored: the full identifier, e.g. content_element/consho_product_tile/compact.
  * 128 rather than 64, because that prefix alone takes 36 characters.
@@ -373,16 +373,16 @@ $GLOBALS['TL_DCA']['tl_content']['fields']['conshoSteps'] = [
 ];
 
 /*
- * Kaufknopf auf der Kachel (Michael, 2026-09-22).
+ * Purchase button on the tile.
  *
- * Ab Werk AUS, und zwar aus zwei Gründen: Bestehende Listen sollen sich durch
- * ein Update nicht verändern, und eine Liste steht oft dort, wo ein Kaufknopf
- * nicht hingehört — als Übersicht auf der Startseite, als Anriss in einem
- * Text. Wer ein Kaufregal will, hakt es an.
+ * OFF by default, for two reasons: existing lists must not change through an
+ * update, and a list often stands where a purchase button does not belong — as
+ * an overview on the start page, as a teaser in a text. Whoever wants a shop
+ * shelf ticks it.
  *
- * ⚠️ Der Knopf erscheint NUR bei Produkten ohne Varianten. Ein Hauptprodukt
- * mit Varianten hat keinen kaufbaren Artikel, solange niemand gewählt hat;
- * seine Kachel verlinkt wie bisher auf die Detailseite (ProductTile::$isBuyable).
+ * ⚠️ The button appears ONLY for products without variants. A main product
+ * with variants has no buyable article until someone has chosen one; its tile
+ * links to the detail page as before (ProductTile::$isBuyable).
  */
 $GLOBALS['TL_DCA']['tl_content']['fields']['conshoTilePurchase'] = [
     'inputType' => 'checkbox',

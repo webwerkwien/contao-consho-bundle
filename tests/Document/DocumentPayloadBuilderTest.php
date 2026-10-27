@@ -27,15 +27,14 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * 🔴 F6 des Reviews vom 2026-09-23: **Die Art der Zeile gehört in den
-     * Schnappschuss.**
+     * 🔴 **The kind of line belongs in the snapshot.**
      *
-     * Vor C-7 war jede Zeile ein Artikel, also musste niemand es dazusagen.
-     * Jetzt sind Versand, Zahlungsgebühr und Nachlass eigene Zeilen — und eine
-     * Rechnung, die sie nicht unterscheiden kann, setzt „Paket" mitten in die
-     * Artikelliste, mit leerer Artikelnummer daneben.
+     * Before C-7 every line was an article, so nobody had to say so. Now
+     * shipping, payment fee and discount are lines of their own — and an
+     * invoice that cannot tell them apart puts "Paket" in the middle of the
+     * article list, with an empty article number next to it.
      *
-     * Jetzt und nicht mit C-8: Ein Schnappschuss wird einmal geschrieben.
+     * Now and not with C-8: a snapshot is written once.
      */
     public function testDieArtDerZeileStehtImSchnappschuss(): void
     {
@@ -46,20 +45,20 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Und die Fassung dazu — für den, der das in ein paar Jahren liest.
+     * And the version with it — for whoever reads this in a few years.
      *
-     * Die sieben Rechnungen, die auf c5 schon liegen, kennen weder das eine
-     * noch das andere: Wer keine `formatVersion` findet, liest Fassung 1 ohne
-     * `lineType`, und dort war jede Zeile ein Artikel.
+     * Invoices written before know neither the one nor the other: whoever finds
+     * no `formatVersion` reads version 1 without `lineType`, and there every
+     * line was an article.
      */
     public function testDerSchnappschussSagtInWelcherFassungErGeschriebenWurde(): void
     {
-        self::assertSame(10, $this->builder->build($this->order(), $this->items())['formatVersion']);
+        self::assertSame(13, $this->builder->build($this->order(), $this->items())['formatVersion']);
     }
 
     /**
-     * Fassung 7 (Abo-4): Die Rechnung einer Folgebestellung nennt Abo und
-     * Leistungszeitraum; jede andere trägt null.
+     * Version 7 (Abo-4): The invoice of a follow-up order names subscription
+     * and service period; every other one carries null.
      */
     public function testDieFolgerechnungNenntAboUndLeistungszeitraum(): void
     {
@@ -70,9 +69,9 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Abo-2 (P13): Die Bedingungen eines Abos gehören auf die Rechnung — und
-     * in den Schnappschuss, weil eine später neu erzeugte Rechnung sonst ohne
-     * sie dastünde. Die Id der Regel bleibt draußen wie `customerGroup`.
+     * Abo-2 (P13): The terms of a subscription belong on the invoice — and in
+     * the snapshot, because an invoice generated anew later would otherwise
+     * stand without them. The id of the rule stays out, like `customerGroup`.
      */
     public function testDieAbobedingungenStehenImSchnappschussDieRegelNicht(): void
     {
@@ -87,8 +86,20 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Fassung 2 (C-8): Absender, Logo, Zahlung und Betreibertexte stehen im
-     * Schnappschuss — die Vorlage liefert nie Daten (8.1).
+     * Version 12 (EZ-3): whether a line sold a single-purpose voucher is
+     * frozen with it — a regenerated invoice says the same.
+     */
+    public function testDerEinzweckGutscheinStehtImSchnappschuss(): void
+    {
+        $items = $this->items();
+        $items[0]['voucherSinglePurpose'] = '1';
+
+        self::assertSame('1', $this->builder->build($this->order(), $items)['items'][0]['voucherSinglePurpose']);
+    }
+
+    /**
+     * Version 2 (C-8): Issuer, logo, payment and operator texts are in the
+     * snapshot — the template never supplies data (8.1).
      */
     public function testFassungZweiTraegtDenKontextDerRechnung(): void
     {
@@ -102,9 +113,9 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * 🔴 Der Reverse-Charge-Hinweis erscheint NUR mit einer Reverse-Charge-
-     * Zeile. Auf einer gewöhnlichen Rechnung behauptete er etwas über diesen
-     * Verkauf, das nicht stimmt.
+     * 🔴 The reverse charge notice appears ONLY with a reverse charge line. On
+     * an ordinary invoice it would claim something about this sale that is
+     * not true.
      */
     public function testDerReverseChargeHinweisNurMitReverseChargeZeile(): void
     {
@@ -120,8 +131,8 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Ohne Kontext — die Fassung-1-Aufrufer — entsteht trotzdem ein
-     * vollständiger Schnappschuss mit leeren Teilen, kein halber.
+     * Without context — the version 1 callers — a complete snapshot with empty
+     * parts comes out anyway, not half a one.
      */
     public function testOhneKontextSindDieTeileLeerNichtFehlend(): void
     {
@@ -135,7 +146,7 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Eine Zeile aus der Zeit davor — der Bauplan darf daran nicht scheitern.
+     * A line from the time before — the builder must not fail on it.
      */
     public function testEineZeileOhneArtWirdLeerUebernommen(): void
     {
@@ -170,8 +181,8 @@ class DocumentPayloadBuilderTest extends TestCase
     {
         $payload = $this->builder->build($this->order(), $this->items());
 
-        // Der Versand zählt zum Satz seiner Zeile, nicht in einen eigenen
-        // Topf: 50 + 5 netto zu 20 %, 20 netto zu 10 %.
+        // Shipping counts towards the rate of its line, not into a pot of its
+        // own: 50 + 5 net at 20 %, 20 net at 10 %.
         self::assertSame(
             [
                 '10.0000' => ['net' => '20.00', 'tax' => '2.00', 'gross' => '22.00'],
@@ -182,13 +193,12 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * 🔴 Die Steuer je Satz ist Brutto − Netto JE SATZ (Michael, 2026-09-24:
-     * „Je Satz: Brutto − Netto").
+     * 🔴 The tax per rate is gross − net PER RATE.
      *
-     * Zwei Zeilen à 8,3367 netto zu 20 %: Die Zeilensteuern ergeben gerundet
-     * 1,67 + 1,67 = 3,34, die Bestellung aber — Brutto 10,00 + 10,00 = 20,00,
-     * Netto 8,34 + 8,34 = 16,68 — trägt 3,32 als taxTotal. Die alte Übersicht
-     * zeigte 3,3346, also gerundet 3,33, und widersprach der eigenen Summe.
+     * Two lines of 8.3367 net at 20 %: the line taxes, rounded, give
+     * 1.67 + 1.67 = 3.34, but the order — gross 10.00 + 10.00 = 20.00,
+     * net 8.34 + 8.34 = 16.68 — carries 3.32 as taxTotal. The old summary
+     * showed 3.3346, rounded 3.33, and contradicted its own total.
      */
     public function testDieSteuerJeSatzIstBruttoMinusNettoUndGehtAufTaxTotalAuf(): void
     {
@@ -205,10 +215,10 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * DL4 (Michael, 2026-10-01: „Je Land und Satz"): FR 20 % am E-Book und
-     * AT 20 % an der Beratung sind zwei Zeilen, nicht eine „20 %". Eine
-     * Rechnung mit einem Land bleibt beim Satz allein; null Prozent (Reverse
-     * Charge) wird nie nach Land getrennt. Die Steuer aller Zeilen bleibt
+     * DL4: FR 20 % on the e-book and
+     * AT 20 % on the consultation are two lines, not one "20 %". An invoice
+     * with one country stays with the rate alone; zero percent (reverse
+     * charge) is never split by country. The tax of all lines remains
      * taxTotal.
      */
     public function testZweiSteuerlaenderMitGleichemSatzBleibenGetrennt(): void
@@ -234,10 +244,10 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Und über mehrere Sätze: Die Summe der Steuer je Satz ist GENAU taxTotal,
-     * ohne dass ein Rest-Cent einem Satz zugeschlagen werden muss — weil
-     * Netto und Brutto je Satz aus denselben gerundeten Zeilen stammen wie die
-     * Summen der Bestellung.
+     * And across several rates: the sum of the tax per rate is EXACTLY
+     * taxTotal, without a remaining cent having to be added to one rate —
+     * because net and gross per rate come from the same rounded lines as the
+     * totals of the order.
      */
     public function testDieSteuerAllerSaetzeErgibtTaxTotal(): void
     {
@@ -271,7 +281,7 @@ class DocumentPayloadBuilderTest extends TestCase
     }
 
     /**
-     * Die Stellen kommen aus der Währung, nicht fest zwei: Yen haben keine.
+     * The decimal places come from the currency, not a fixed two: yen has none.
      */
     public function testDieStellenDerUebersichtKommenAusDerWaehrung(): void
     {
@@ -305,8 +315,8 @@ class DocumentPayloadBuilderTest extends TestCase
         return [
             'orderNumber' => 'WEB-00042',
             'currency' => 'EUR',
-            'firstname' => 'Michael',
-            'lastname' => 'Morgenbesser',
+            'firstname' => 'Eva',
+            'lastname' => 'Example',
             'company' => '',
             'billingStreet' => 'Musterstraße 1',
             'billingPostal' => '1100',

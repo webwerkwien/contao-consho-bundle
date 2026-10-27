@@ -26,7 +26,7 @@ final class SqliteWithoutRowLocks
 {
     /**
      * The statements that asked for a row lock, in order — for a test that
-     * has to show WHICH reads lock (Block G, review B2).
+     * has to show WHICH reads lock (Block G).
      *
      * @var list<string>
      */

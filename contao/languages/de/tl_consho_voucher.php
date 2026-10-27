@@ -2,6 +2,10 @@
 
 $GLOBALS['TL_LANG']['tl_consho_voucher']['voucher_legend'] = 'Gutschein';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['use_legend'] = 'Einlösung';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['purpose_legend'] = 'Einzweck-Gutschein';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['taxClass'] = ['Steuerklasse', 'Leer: Mehrzweck-Gutschein. Sonst ein Einzweck-Gutschein, beim Verkauf versteuert und nur für Artikel dieser Steuerklasse einlösbar.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['taxRate'] = ['Steuersatz beim Verkauf', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['taxCountry'] = ['Steuerland', ''];
 $GLOBALS['TL_LANG']['tl_consho_voucher']['note_legend'] = 'Notiz';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['code'] = ['Code', ''];
 $GLOBALS['TL_LANG']['tl_consho_voucher']['createdAt'] = ['Ausgestellt', ''];

@@ -111,8 +111,8 @@ class CheckoutController extends AbstractContentElementController
     /**
      * The delivery address asks only for what the order keeps of it
      * (OrderFactory::frozenAddresses). It used to repeat every billing field,
-     * and the salutation, e-mail and phone typed there went nowhere — found at
-     * the acceptance of C-10 (Michael, 2026-09-25: „ja", out with them). The
+     * and the salutation, e-mail and phone typed there went nowhere, so
+     * they went in C-10. The
      * contact details of the order are the billing address's. A recipient's
      * phone for the carrier is block E, with the carrier that needs it.
      */
@@ -153,7 +153,7 @@ class CheckoutController extends AbstractContentElementController
         private readonly SubscriptionLineTerms|null $lineTerms = null,
         // "Lizenz verlängern" (Abo-7b, P70): asked before the button.
         private readonly SubscriptionRenewal|null $renewals = null,
-        // Acceptance WG-7: the total of an order of vouchers only carries no
+        // WG-7: the total of an order of vouchers only carries no
         // "inkl. USt." label.
         private readonly NotTaxableArticles|null $notTaxable = null,
         // Block GARAN: the label before the button. Optional like the above.
@@ -219,15 +219,14 @@ class CheckoutController extends AbstractContentElementController
         $steps = CheckoutBlock::steps((int) ($model->conshoSteps ?? 3));
 
         /*
-         * C14: „Ist die Gastbestellung am Shop aus, bleibt nur das Anmelden."
-         * Das ist eine SPERRE, kein Hinweis — der Review vom 2026-09-22 fand
-         * sie als blosses Template-Flag, während das Adressformular daneben
-         * weiter Eingaben annahm. Das Anmelde-Element ist Contaos eigenes und
-         * steht auf derselben Seite (Michael, 2026-09-22).
+         * C14: with guest orders switched off at the shop, signing in is all
+         * that is left. That is a BLOCK, not a hint — it once was a mere template
+         * flag while the address form beside it kept taking input. The sign-in
+         * element is Contao's own and stands on the same page.
          */
-        // CartResolver beantwortet „wer ist das" ohnehin schon, und zwar mit
-        // derselben Regel wie der Warenkorb — eine zweite Quelle dafür wäre
-        // eine Stelle mehr, an der die Antwort auseinanderlaufen kann.
+        // CartResolver already answers "who is this", with the same rule as
+        // the cart — a second source for it would be one more place where the
+        // answer can drift apart.
         /*
          * P12 (Abo-2; A10, F9): a subscription needs an account, whatever the
          * shop says about guests — it runs on, and "Meine Abos" is where it is
@@ -242,7 +241,7 @@ class CheckoutController extends AbstractContentElementController
 
         if (!$guestsWelcome) {
             $template->set('login_required', true);
-            // Why, in the visitor's words (acceptance on c5, Abo-2): "this shop
+            // Why, in the visitor's words (Abo-2): "this shop
             // requires an account" is untrue in a shop that welcomes guests —
             // there it is the subscription that asks for one.
             $template->set('login_reason', (bool) $shop->guestCheckout ? 'subscription' : 'shop');
@@ -280,26 +279,23 @@ class CheckoutController extends AbstractContentElementController
          * orders (C-7) or sends the visitor back with a reason.
          */
         /*
-         * 🔴 **Der SPÄTE Doppelklick** (F5 des Reviews vom 2026-09-23 war der
-         * Versuch, F2 ist dies).
+         * 🔴 **The LATE double click** (F2; F5 was the attempt).
          *
-         * OrderPlacer fängt die zweite Anfrage, die noch VOR dem Commit an der
-         * Zeilensperre hing: sie findet `converted` und bekommt dieselbe
-         * Bestellung. Wer erst DANACH ankommt — zurück im Browser, Formular
-         * noch einmal abgeschickt —, kommt gar nicht so weit: markConverted()
-         * setzt `tokenHash` auf NULL und den Zustand auf `converted`, und
-         * CartResolver sucht nur nach `open`. Die Bedingung unten ist dann
-         * falsch, und die Kasse rendert mit leerem Warenkorb.
+         * OrderPlacer catches the second request that still waited at the row lock
+         * BEFORE the commit: it finds `converted` and gets the same order. Whoever
+         * arrives only AFTERWARDS — back in the browser, the form sent again — does
+         * not get that far: markConverted() sets `tokenHash` to NULL and the state to
+         * `converted`, and CartResolver only looks for `open`. The condition below is
+         * then false, and the checkout renders with an empty basket.
          *
-         * Bestellt ist nichts doppelt, aber „Ihr Warenkorb ist leer" ist die
-         * falsche Auskunft für jemanden, der gerade gekauft hat. Der Hinweis
-         * reist in der Adresse mit, wie die Absagen auch: POST → Weiterleitung
-         * → GET, damit ein Neuladen nicht wieder hier landet.
+         * Nothing is ordered twice, but "Ihr Warenkorb ist leer" is the wrong answer
+         * for someone who has just bought. The notice travels in the address, like
+         * the refusals: POST → redirect → GET, so that a reload does not land here
+         * again.
          *
-         * Auf den Warenkorb selbst greift das nicht zu. Ihn auffindbar zu
-         * halten, hiesse den Hash in eine eigene Spalte zu retten und das
-         * Korb-Cookie dauerhaft auf eine alte Bestellung zeigen zu lassen
-         * (Michael, 2026-09-23).
+         * The basket itself is not touched. Keeping it findable would mean saving the
+         * hash into a column of its own and letting the basket cookie point at an old
+         * order for good.
          */
         if (
             null === $cart
@@ -323,10 +319,9 @@ class CheckoutController extends AbstractContentElementController
             );
 
             /*
-             * The basket cookie goes once nothing hangs on it any more (C-12,
-             * Michael 2026-09-26: "ja, gleich umsetzen").
+             * The basket cookie goes once nothing hangs on it any more (C-12).
              *
-             * Measured at the acceptance: every page with a shared cache sends
+             * Every page with a shared cache sends
              * `Vary: Cookie` (Contao's AbstractController::setCacheHeaders),
              * so a visitor carrying consho_cart is served every page freshly —
              * for the cookie's 30 days, and after the purchase too, since
@@ -368,16 +363,16 @@ class CheckoutController extends AbstractContentElementController
         $template->set('step_count', \count($steps));
 
         /*
-         * Die Namen der Schritte, aus ihren Bausteinen gebildet. Nicht aus der
-         * Nummer: bei drei Schritten hiesse der dritte sonst „Versand und
-         * Zahlung", obwohl dort gekauft wird (Review 2026-09-22).
+         * The names of the steps, formed from their blocks. Not from the
+         * number: with three steps the third would otherwise be called
+         * "Versand und Zahlung", although that is where the purchase happens.
          */
         $template->set('step_labels', array_map(
             /*
-             * Über die GEFILTERTEN Bausteine: fällt der Versand weg (4.3),
-             * hiesse ein Schritt sonst weiter „Versand und Zahlung", obwohl
-             * dort nur noch gezahlt wird. In C ist das nicht erreichbar —
-             * alles ist versendbar —, in Block F schon.
+             * Over the FILTERED blocks: when shipping drops out (4.3), a step
+             * would otherwise still be called "Versand und Zahlung" although only
+             * payment is left there. In C this cannot be reached — everything
+             * ships —, in Block F it can.
              */
             fn (array $blocks): string => CheckoutBlock::labelOf($this->applicable($blocks, $state)),
             $steps,
@@ -397,7 +392,7 @@ class CheckoutController extends AbstractContentElementController
         // Delivery: only where a shipping method goes (E-5). Billing: the
         // shop's list as before — the calculator checks the DELIVERY country,
         // and a German invoice to an Austrian parcel is an ordinary case
-        // (Fable review E, S2).
+        // (E).
         $template->set('countries', $this->countriesFor($shop, $language));
         $template->set('billing_countries', $this->countriesFor($shop, $language, false));
 
@@ -417,8 +412,8 @@ class CheckoutController extends AbstractContentElementController
         // Which sentences the box carries (Abo-2, P14): content, service, or both.
         $template->set('digital_consent_kinds', $this->asksDigitalConsent($shop, $state) ? $state->withdrawalKinds : []);
         /*
-         * A renewal in the basket (Abo-7b; review S5, Michael 2026-10-01:
-         * „Hinweis in der Kasse sollte da sein"): without the consent the
+         * A renewal in the basket (Abo-7b), and the checkout says so: without
+         * the consent the
          * licence moves over only after the withdrawal period — if the old
          * subscription ends before, there is none until then. Said beside the
          * box, only where the box is asked.
@@ -437,17 +432,16 @@ class CheckoutController extends AbstractContentElementController
             $this->audiences->forShop((int) $shop->id)->showsNet,
         ));
         // The lines above are net (P75) — said at each, as product page and
-        // basket do (review Abo-Nachlese, L1). Not under reverse charge: no
+        // basket do (Abo-Nachlese). Not under reverse charge: no
         // VAT comes on top there.
         $template->set('review_net', $this->audiences->forShop((int) $shop->id)->showsNet && !$state->reverseCharge);
-        // Review H, L2 (Michael, 2026-10-05: „wie empfohlen"): shipping,
+        // H: shipping,
         // payment and discount the way the goods above them read — net for
         // the net group as under reverse charge. Until then a net customer
         // read −1,60 in the basket and −1,92 on this page.
         $shownNet = $state->reverseCharge || $this->audiences->forShop((int) $shop->id)->showsNet;
-        // The amount beside each option where there is one (Michael,
-        // 2026-09-28: „wenn es einen gibt ja") — the cash on delivery fee
-        // must not first show up on the review page.
+        // The amount beside each option where there is one — the cash on
+        // delivery fee must not first show up on the review page.
         $template->set('option_amounts', [
             'shipping' => $this->optionAmounts($state->shippingOptions, $state, $language, $shownNet),
             'payment' => $this->optionAmounts($state->paymentOptions, $state, $language, $shownNet),
@@ -478,10 +472,10 @@ class CheckoutController extends AbstractContentElementController
         )?->value);
 
         /*
-         * F2: der späte Doppelklick, weitergeleitet von oben. Kein Fall von
-         * PurchaseProblem — dort steht, warum NICHT bestellt wurde, und hier
-         * wurde bestellt. Das Template zeigt den Satz an der Stelle, an der
-         * sonst „Ihr Warenkorb ist leer" steht.
+         * F2: the late double click, passed on from above. Not a case of
+         * PurchaseProblem — that one says why NO order was placed, and here
+         * an order was placed. The template shows the sentence where
+         * "Ihr Warenkorb ist leer" would otherwise stand.
          */
         $template->set('already_ordered', '1' === $request->query->getString('consho_ordered'));
 
@@ -504,8 +498,8 @@ class CheckoutController extends AbstractContentElementController
     }
 
     /**
-     * Die Bausteine eines Schritts, die für DIESEN Warenkorb gelten: ohne
-     * Versendbares entfällt „Versand" (4.3).
+     * The blocks of a step that apply to THIS cart: without anything to
+     * ship, "Versand" drops out (4.3).
      *
      * @param list<CheckoutBlock> $blocks
      *
@@ -633,7 +627,7 @@ class CheckoutController extends AbstractContentElementController
      * Formatted here, like everywhere else in Consho — a template that formats
      * money formats it differently on the next page.
      *
-     * 🔴 Both reviews of 2026-09-22 found this method. The quantity was passed
+     * 🔴 The quantity used to be passed
      * through raw, and `tl_consho_cart_item.quantity` is `decimal(10,4)`:
      * MySQL hands back "2.0000", so the essential details read
      * "2.0000 × Wanderstock". The basket got this right in C-3 through
@@ -647,7 +641,7 @@ class CheckoutController extends AbstractContentElementController
      * follow — in the one place where the law asks what is being bought.
      *
      * Net for a member of a net price group, as product page and basket show
-     * them (Abo-Nachlese, P75; review Abo-2, H1: until then the review was
+     * them (Abo-Nachlese, P75; Abo-2: until then the review was
      * the one place a net customer read gross), marked "plus VAT" in the
      * template. Gross for everybody else. The totals right below give net and
      * — except under reverse charge — gross, which is what will be charged.
@@ -720,7 +714,7 @@ class CheckoutController extends AbstractContentElementController
     /**
      * A chosen shipping or payment method with WHAT IT COSTS.
      *
-     * 🔴 Found in the review of 2026-09-22: the block named the method and not
+     * 🔴 The block used to name the method and not
      * its amount. § 8 Abs. 2 FAGG points at § 4 Abs. 1 Z 4 — the total
      * including tax **and all shipping, freight and other costs** — and
      * § 312j Abs. 2 BGB says the same through Art. 246a EGBGB. A buyer saw
@@ -764,7 +758,7 @@ class CheckoutController extends AbstractContentElementController
      * is the difference the buyer sees — or "free shipping"; and, where a
      * typed code does not apply here (a guest's address already used it, W5),
      * what became of it — also a minimum the basket reached and the checkout
-     * does not, once the delivery country prices the goods (review H, S2):
+     * does not, once the delivery country prices the goods (H):
      * never silently gone.
      *
      * @return array{title: string, code: string, amount: string, freeShipping: bool, status: string, missing: string}|null
@@ -798,7 +792,7 @@ class CheckoutController extends AbstractContentElementController
         }
 
         // Net where the goods read net — reverse charge, or the net group
-        // (review H, L2) —, gross everywhere else.
+        // (H) —, gross everywhere else.
         $amount = $net ? $method->net : $method->gross;
 
         return [
@@ -815,8 +809,7 @@ class CheckoutController extends AbstractContentElementController
      * Only the headline and the address — the text itself stays behind.
      *
      * An earlier comment here claimed the text travelled along so that C-7
-     * would freeze exactly what was read; the review of 2026-09-22 pointed out
-     * that it does not, and that C-7 will therefore read a second time. That
+     * would freeze exactly what was read. It does not, and C-7 will therefore read a second time. That
      * is the honest state of it, and it is a real gap: change the terms
      * between the page being rendered and the button being pressed, and the
      * checksum still matches, because CheckoutFingerprint covers the basket
@@ -964,8 +957,7 @@ class CheckoutController extends AbstractContentElementController
              *
              * The result was an order with no billing address whenever a shop
              * required terms and the customer left the prefilled form alone.
-             * Found by the review of 2026-09-23; the acceptance on c5 could
-             * not see it, because termsRequired is off on both test shops.
+             * A shop with termsRequired off never shows it.
              *
              * $state->data is exactly what the checksum confirmed. Saving it
              * writes the prefill along with the tick, which is correct: from
@@ -1029,8 +1021,8 @@ class CheckoutController extends AbstractContentElementController
             |SubscriptionRenewalRefused $e
         ) {
             /*
-             * 🔴 Logged since C-12 (2026-09-26). The comment below promised
-             * it from C-7 on and nothing wrote it: at the acceptance a
+             * 🔴 Logged since C-12. The comment below promised
+             * it from C-7 on and nothing wrote it: a
              * reverse charge purchase was refused, the buyer read "could not
              * be placed", and the log was empty — the cause had to be found
              * in the code.
@@ -1188,16 +1180,15 @@ class CheckoutController extends AbstractContentElementController
     }
 
     /**
-     * Die Länder zur Auswahl: die Lieferländer des Shops, sonst alle, die
-     * Contao kennt.
+     * The countries to choose from: the shop's delivery countries, otherwise
+     * every country Contao knows.
      *
-     * ⚠️ Eine AUSWAHL, kein Freitextfeld. Im Review vom 2026-09-22 gemessen:
-     * „Österreich" statt „AT" ergibt keinen Steuersatz, damit keinen Preis,
-     * und der Besucher liest „Für einen Artikel gibt es derzeit keinen Preis.
-     * Bitte entfernen Sie ihn." — eine Meldung über den Warenkorb, für einen
-     * Tippfehler in der Adresse.
+     * ⚠️ A SELECTION, not a free text field: "Österreich" instead of "AT" gives
+     * no tax rate, hence no price, and the visitor reads "Für einen Artikel gibt
+     * es derzeit keinen Preis. Bitte entfernen Sie ihn." — a message about the
+     * basket for a typo in the address.
      *
-     * @return array<string, string> ISO-Code => übersetzter Name
+     * @return array<string, string> ISO code => translated name
      */
     private function countriesFor(object $shop, string $language, bool $byShipping = true): array
     {
@@ -1205,17 +1196,17 @@ class CheckoutController extends AbstractContentElementController
         $allowed = $this->deliveryCountriesOf($shop);
 
         /*
-         * Und davon nur, wohin eine Versandart liefert (E-5, V3; Spec A 707).
-         * Nicht still: Ein Lieferland ohne Versandart nennt die Startseite
-         * (ShippingCountryCoverage).
+         * And of those only where a shipping method delivers (E-5, V3).
+         * Not silently: a delivery country without a shipping method is
+         * named on the start page (ShippingCountryCoverage).
          */
         $served = $byShipping ? $this->shippingCountries?->servedBy((int) $shop->id) : null;
 
         if (null !== $served) {
             $allowed = [] === $allowed ? $served : array_values(array_intersect($allowed, $served));
 
-            // Kein Land übrig: nicht „alle" zeigen, sondern keins — die
-            // Versandarten liefern nirgends hin, wohin der Shop liefert.
+            // No country left: show none rather than "all" — the shipping methods
+            // deliver nowhere the shop delivers to.
             return array_intersect_key($all, array_flip($allowed));
         }
 

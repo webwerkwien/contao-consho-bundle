@@ -12,9 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\ResolvedPrice;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block H (H-2): die Produktseite liest den Streichpreis aus der Zeile, die
- * auch die Kachel liest — und nur für den Preis, den diese Zeile beschreibt.
- * Dazu der Start des Verlaufs beim ersten Deploy.
+ * Block H (H-2): the product page reads the strike-through price from the row that
+ * the tile reads as well — and only for the price this row describes.
+ * Plus the start of the history at the first deployment.
  */
 class ComparePricesTest extends TestCase
 {
@@ -47,7 +47,7 @@ class ComparePricesTest extends TestCase
 
     public function testKeinStreichpreisWennDieZahlEineAndereIst(): void
     {
-        // Etwa eine Aktion ab einer höheren Schwelle (A) — die Projektion beschreibt Menge 1.
+        // Say a promotion from a higher threshold (A) — the projection describes quantity 1.
         self::assertNull($this->compare(8, new ResolvedPrice('7.0000', 'EUR', PriceSource::Promotion, '1')));
     }
 

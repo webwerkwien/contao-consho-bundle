@@ -65,7 +65,7 @@ class SubscriptionPause
             // Also what keeps a second pause out: an announced one moved the
             // next billing to its end.
             || (int) ($row['nextBillingAt'] ?? 0) !== $periodUntil
-            // A term that ends anyway (review S2): a pause from its last
+            // A term that ends anyway: a pause from its last
             // period would only move the end by months nobody pays.
             || ('minimum' === (string) ($row['phase'] ?? '') && 'ends' === (string) ($row['renewal'] ?? '') && $periodUntil >= (int) ($row['minimumEndsAt'] ?? 0))
         ) {
@@ -169,7 +169,7 @@ class SubscriptionPause
                 [$subscriptionId, $now],
             );
 
-            // Not once an end is known (review S1): the date of notice was
+            // Not once an end is known: the date of notice was
             // reckoned from the term the pause had moved; putting the term
             // back would leave that end two months behind it, and a same-term
             // contract would renew before it. An ended one always has its end.
@@ -196,7 +196,7 @@ class SubscriptionPause
     /**
      * Whether a pause is announced and has not begun — what "Meine Abos" and
      * the back end show, also after a cancellation: it takes place all the
-     * same (second review, S-A).
+     * same.
      *
      * @param array<string, mixed> $row
      */
@@ -207,7 +207,7 @@ class SubscriptionPause
 
     /**
      * Whether the announced pause can still be taken back (P107): not once an
-     * end is known (review S1).
+     * end is known.
      *
      * @param array<string, mixed> $row
      */
@@ -302,7 +302,7 @@ class SubscriptionPause
      */
     private function inTransaction(\Closure $work): mixed
     {
-        // Back to exactly the level we found (SubscriptionBiller, review B1).
+        // Back to exactly the level we found (SubscriptionBiller).
         $level = $this->connection->getTransactionNestingLevel();
         $this->connection->beginTransaction();
 

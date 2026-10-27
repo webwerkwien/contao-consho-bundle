@@ -20,12 +20,12 @@ class DbalPriceRepositoryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Wie in der DB: validFrom/validTo NULL-fähig, customerGroup 0 = alle.
+        // As in the DB: validFrom/validTo nullable, customerGroup 0 = everyone.
         DcaSchema::create($this->connection, 'tl_consho_price');
 
-        // Die Währung steht ausdrücklich da, seit die Spalte keinen
-        // EUR-Vorgabewert mehr hat (2026-09-21). Vorher stimmte sie nur
-        // zufällig mit dem überein, wonach die Tests unten suchen.
+        // The currency is stated explicitly, since the column no longer has an
+        // EUR default. Before that it only matched by
+        // chance what the tests below search for.
         $this->connection->insert('tl_consho_price', [
             'pid' => 1,
             'tstamp' => 1,
@@ -37,7 +37,7 @@ class DbalPriceRepositoryTest extends TestCase
     }
 
     /**
-     * Dieselbe Regel wie Contaos start/stop: Beginn einschließlich, Ende ausschließlich.
+     * The same rule as Contao's start/stop: start inclusive, end exclusive.
      *
      * @return iterable<string, array{int, bool}>
      */
@@ -71,13 +71,13 @@ class DbalPriceRepositoryTest extends TestCase
 
         $repository = new DbalPriceRepository($this->connection);
 
-        // Gast: nur die Zeile für alle.
+        // Guest: only the row for everyone.
         self::assertSame([null], $this->groupsOf($repository->findCandidates(1, 'EUR', [], self::FROM)));
 
-        // Mitglied in 3: seine Zeile und die für alle, nicht die von 4.
+        // Member of 3: their row and the one for everyone, not that of 4.
         self::assertSame([null, 3], $this->groupsOf($repository->findCandidates(1, 'EUR', [3], self::FROM)));
 
-        // In beiden Gruppen: beide Zeilen, und der Rechner entscheidet.
+        // In both groups: both rows, and the calculator decides.
         self::assertSame([null, 3, 4], $this->groupsOf($repository->findCandidates(1, 'EUR', [3, 4], self::FROM)));
     }
 
@@ -93,10 +93,10 @@ class DbalPriceRepositoryTest extends TestCase
 
     public function testDieNullAlsGruppeIstKeineGruppe(): void
     {
-        // ⚠️ 0 ist in der Spalte das Wort für „alle", keine Gruppen-Id. Käme
-        // sie in die IN-Liste, änderte das zwar nichts am Ergebnis — aber eine
-        // 0 aus tl_member.groups würde stillschweigend zu „alle" und wäre
-        // später nicht mehr von einer echten Auswahl zu unterscheiden.
+        // ⚠️ In the column 0 is the word for "everyone", not a group id. If it
+        // went into the IN list, that would not change the result — but a
+        // 0 from tl_member.groups would silently become "everyone" and could
+        // later no longer be told apart from a real selection.
         $this->groupPrice(3, '8.0000');
 
         self::assertSame(
@@ -107,7 +107,7 @@ class DbalPriceRepositoryTest extends TestCase
 
     public function testEineNieGespeichertePreiszeileZaehltNicht(): void
     {
-        // tstamp 0: die Preismaske wurde geöffnet, aber nie gespeichert.
+        // tstamp 0: the price form was opened but never saved.
         $this->connection->insert('tl_consho_price', [
             'pid' => 2,
             'tstamp' => 0,
@@ -124,33 +124,33 @@ class DbalPriceRepositoryTest extends TestCase
 
     public function testEinAbopreisIstKeinPreisFuerDenEinmalkauf(): void
     {
-        // Abo-1 (A2): Eine Preiszeile mit Aboregel ist der Preis eines anderen
-        // Vertrags. Käme sie hier mit, gewänne der Monatsbetrag als günstigster
-        // Preis — der Listenpreis eines 199-€-Themes wäre 10 €.
+        // Abo-1 (A2): a price row with a subscription rule is the price of another
+        // contract. If it came along here, the monthly amount would win as the cheapest
+        // price — the list price of a €199 theme would be €10.
         $this->connection->insert('tl_consho_price', ['pid' => 2, 'tstamp' => 1, 'currency' => 'CHF', 'net' => '8.0000', 'subscriptionRule' => 5]);
 
         $repository = new DbalPriceRepository($this->connection);
 
         self::assertSame([], $repository->findCandidates(2, 'CHF', [], self::FROM));
 
-        // Abo-2b (P88): gefunden wird das Produkt trotzdem — ein reines
-        // Abo-Produkt steht mit seinem ersten Modell in der Projektion, und
-        // die fragt nur Produkte und Währungen von hier.
+        // Abo-2b (P88): the product is found nevertheless — a subscription-only
+        // product is in the projection with its first model, and
+        // the projection asks only for products and currencies from here.
         self::assertContains(2, $repository->findProductIdsWithPrices());
         self::assertContains('CHF', $repository->findCurrencies());
     }
 
     public function testEinAbopreisWirdNachSeinerRegelGefragt(): void
     {
-        // Abo-2: Die Regel ist eine Dimension der Abfrage — gefragt nach Regel 5
-        // kommt genau der Vertrag 5, nie der Einmalkauf dazu (und umgekehrt).
+        // Abo-2: the rule is a dimension of the query — asked for rule 5,
+        // exactly contract 5 comes back, never the one-off purchase as well (and vice versa).
         $this->connection->insert('tl_consho_price', ['pid' => 2, 'tstamp' => 1, 'currency' => 'CHF', 'net' => '80.0000']);
         $this->connection->insert('tl_consho_price', ['pid' => 2, 'tstamp' => 1, 'currency' => 'CHF', 'net' => '8.0000', 'subscriptionRule' => 5]);
         $this->connection->insert('tl_consho_price', ['pid' => 2, 'tstamp' => 1, 'currency' => 'CHF', 'net' => '70.0000', 'subscriptionRule' => 6]);
 
         $repository = new DbalPriceRepository($this->connection);
 
-        // Als Zahl verglichen: SQLite streicht die Nullen, MySQL nicht (Fall 30).
+        // Compared as a number: SQLite strips the zeros, MySQL does not.
         self::assertSame([8.0], array_map(static fn ($row) => (float) $row->net, $repository->findCandidates(2, 'CHF', [], self::FROM, 5)));
         self::assertSame([80.0], array_map(static fn ($row) => (float) $row->net, $repository->findCandidates(2, 'CHF', [], self::FROM)));
     }
@@ -175,8 +175,8 @@ class DbalPriceRepositoryTest extends TestCase
      */
     private function groupsOf(array $rows): array
     {
-        // Sortiert, weil die Zeilenreihenfolge der Engine gehört und nicht
-        // Gegenstand dieser Tests ist — hier zählt, WELCHE Zeilen kommen.
+        // Sorted, because the row order belongs to the engine and is not
+        // the subject of these tests — what counts here is WHICH rows come.
         $groups = array_map(static fn ($row) => $row->customerGroup, $rows);
         sort($groups);
 

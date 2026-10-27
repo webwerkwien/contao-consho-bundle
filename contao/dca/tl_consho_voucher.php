@@ -53,7 +53,7 @@ $GLOBALS['TL_DCA']['tl_consho_voucher'] = [
     ],
 
     'palettes' => [
-        'default' => '{voucher_legend},code,currency,faceValue,paidAmount,balance,source,orderId,createdAt;{use_legend},shop,shops,validUntil,blocked;{note_legend},note',
+        'default' => '{voucher_legend},code,currency,faceValue,paidAmount,balance,source,orderId,createdAt;{purpose_legend},taxClass,taxRate,taxCountry;{use_legend},shop,shops,validUntil,blocked;{note_legend},note',
     ],
 
     'fields' => [
@@ -140,6 +140,30 @@ $GLOBALS['TL_DCA']['tl_consho_voucher'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
         ],
         'orderItem' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
+        /*
+         * EZ-5: a single-purpose voucher, frozen at its issue from the line
+         * that sold it — the class it pays for, the rate and country its sale
+         * was taxed at. 0: multi-purpose, as every voucher issued by hand
+         * (EZ-6). Not editable: the tax of its sale is on an invoice.
+         */
+        'taxClass' => [
+            'filter' => true,
+            'foreignKey' => 'tl_consho_tax_class.title',
+            'inputType' => 'select',
+            'eval' => ['disabled' => true, 'includeBlankOption' => true, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
+            'relation' => ['type' => 'belongsTo', 'load' => 'lazy'],
+        ],
+        'taxRate' => [
+            'inputType' => 'text',
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'decimal', 'precision' => 6, 'scale' => 4, 'default' => '0.0000'],
+        ],
+        'taxCountry' => [
+            'inputType' => 'text',
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'string', 'length' => 2, 'default' => ''],
+        ],
         // WG-6 (WG7): the withdrawal that took this bought voucher back —
         // blocked it, and keeps back what was spent of it.
         'withdrawal' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],

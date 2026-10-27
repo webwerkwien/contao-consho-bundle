@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\ProductCopyListen
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abnahme Abo-5: „Speichern und duplizieren" nahm die Shop-Zuordnung nicht
- * mit — die Kopie war veröffentlicht und nirgends erreichbar.
+ * Abo-5: "Save and duplicate" did not take the shop assignment along —
+ * the copy was published and reachable nowhere.
  */
 final class ProductCopyListenerTest extends TestCase
 {
@@ -32,7 +32,7 @@ final class ProductCopyListenerTest extends TestCase
         $this->connection->insert('tl_consho_product_shop', ['pid' => 4, 'shop' => 2]);
         $this->connection->insert('tl_consho_product_property', ['pid' => 4, 'optionId' => 7]);
         $this->connection->insert('tl_consho_product_option', ['pid' => 4, 'optionId' => 9]);
-        // Gegenprobe: ein anderes Produkt.
+        // Control case: another product.
         $this->connection->insert('tl_consho_product_shop', ['pid' => 5, 'shop' => 3]);
     }
 
@@ -50,8 +50,8 @@ final class ProductCopyListenerTest extends TestCase
     }
 
     /**
-     * Review Abo-6, S3: Eine kopierte Variante nimmt ihre Achsenwerte nicht
-     * mit — sonst stünden zwei gleiche Varianten unter einem Hauptprodukt.
+     * Abo-6: a copied variant does not take its axis values along — otherwise
+     * there would be two identical variants under one main product.
      */
     public function testEineKopierteVarianteOhneAchsenwerte(): void
     {

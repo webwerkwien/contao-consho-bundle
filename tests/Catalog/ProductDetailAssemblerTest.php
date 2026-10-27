@@ -8,15 +8,16 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductDetailRow;
 use Webwerkwien\ContaoConshoBundle\Catalog\PropertyView;
 
 /**
- * Die Vererbungsregeln Variante → Hauptprodukt, ohne Datenbank.
+ * The inheritance rules variant → main product, without a database.
  *
- * Drei Lagen je Feld: Variante mit eigenem Wert, Variante mit leerem Feld,
- * Hauptprodukt ohne gewählte Variante. Die wichtigste Zeile ist die GTIN — eine
- * geerbte GTIN ist eine falsche Aussage über den Artikel, keine Bequemlichkeit.
+ * Three layers per field: variant with its own value, variant with an empty
+ * field, main product without a chosen variant. The most important row is the
+ * GTIN — an inherited GTIN is a false statement about the item, not a
+ * convenience.
  */
 class ProductDetailAssemblerTest extends TestCase
 {
-    // ── Hauptprodukt ohne Variante ───────────────────────────────────────
+    // ── Main product without a variant ───────────────────────────────────
 
     public function testWithoutAVariantEverythingIsTheMainProductsOwn(): void
     {
@@ -44,7 +45,7 @@ class ProductDetailAssemblerTest extends TestCase
         self::assertSame($properties, $detail->properties);
     }
 
-    // ── Variante mit eigenen Werten ──────────────────────────────────────
+    // ── Variant with its own values ──────────────────────────────────────
 
     public function testAVariantWithValuesOfItsOwnKeepsThem(): void
     {
@@ -66,9 +67,9 @@ class ProductDetailAssemblerTest extends TestCase
 
     public function testTextsAlwaysComeFromTheMainProduct(): void
     {
-        // Die Seite ist die des Hauptprodukts. Der Titel an der Variante ist eine
-        // Backend-Beschriftung („Schwedenbitter 250 ml"), die Variante zeigt sich
-        // über die Achse.
+        // The page is that of the main product. The title on the variant is a
+        // backend label ("Schwedenbitter 250 ml"); the variant shows itself
+        // through the axis.
         $detail = ProductDetailAssembler::assemble($this->main(), $this->variant(), []);
 
         self::assertSame('Schwedenbitter', $detail->title);
@@ -86,7 +87,7 @@ class ProductDetailAssemblerTest extends TestCase
         self::assertSame($properties, $detail->properties);
     }
 
-    // ── Variante mit leeren Feldern ──────────────────────────────────────
+    // ── Variant with empty fields ────────────────────────────────────────
 
     public function testAnEmptyVariantTakesImagesManufacturerAndUnitsFromTheMainProduct(): void
     {
@@ -102,8 +103,8 @@ class ProductDetailAssemblerTest extends TestCase
 
     public function testAnEmptyVariantHasNoIdentificationOfItsOwnAndInheritsNone(): void
     {
-        // 🔴 A-12: GTIN, SKU und MPN gehören zum ARTIKEL. „250 ml" und „750 ml"
-        // haben zwei EANs — die des Hauptprodukts an der Variante wäre falsch.
+        // 🔴 A-12: GTIN, SKU and MPN belong to the ITEM. "250 ml" and "750 ml"
+        // have two EANs — the main product's on the variant would be wrong.
         $detail = ProductDetailAssembler::assemble($this->main(), $this->emptyVariant(), []);
 
         self::assertSame('', $detail->gtin);
@@ -113,8 +114,8 @@ class ProductDetailAssemblerTest extends TestCase
 
     public function testQuantitiesAreAlwaysTheArticlesOwn(): void
     {
-        // Die Spalten haben den Vorgabewert 1 — eine Variante hat immer einen
-        // eigenen Wert, „leer" gibt es hier nicht.
+        // The columns default to 1 — a variant always has a value of its
+        // own; "empty" does not exist here.
         $detail = ProductDetailAssembler::assemble($this->main(minPurchase: '6.0000', purchaseSteps: '6.0000'), $this->emptyVariant(), []);
 
         self::assertSame('1.0000', $detail->minPurchase);
@@ -123,9 +124,9 @@ class ProductDetailAssemblerTest extends TestCase
 
     public function testTheUnitFieldsAreInheritedAsOneSet(): void
     {
-        // 250 ml und 750 ml haben verschiedene Inhalte. Eine Variante mit eigener
-        // Einheit, aber ohne Füllmenge, bekommt NICHT die Füllmenge des
-        // Hauptprodukts dazu — sonst stünde ein Grundpreis aus zwei Artikeln da.
+        // 250 ml and 750 ml have different contents. A variant with its own
+        // unit but without a quantity does NOT get the main product's quantity
+        // added — otherwise a unit price from two items would be shown.
         $variant = $this->row(id: 2, pid: 1, unit: 'l', purchaseUnit: '0.0000', referenceUnit: '0.0000');
 
         $detail = ProductDetailAssembler::assemble($this->main(), $variant, []);
@@ -137,8 +138,8 @@ class ProductDetailAssemblerTest extends TestCase
 
     public function testQuantityFieldsWithoutAUnitOnTheVariantDoNotBreakTheSet(): void
     {
-        // Umgekehrt: Füllmenge an der Variante, aber keine Einheit — dann gilt der
-        // Satz des Hauptprodukts ganz, nicht halb.
+        // Conversely: quantity on the variant, but no unit — then the main
+        // product's set applies wholly, not half.
         $variant = $this->row(id: 2, pid: 1, unit: '', purchaseUnit: '250.0000', referenceUnit: '100.0000');
 
         $detail = ProductDetailAssembler::assemble($this->main(), $variant, []);
@@ -148,31 +149,31 @@ class ProductDetailAssemblerTest extends TestCase
         self::assertSame('1000.0000', $detail->referenceUnit);
     }
 
-    // ── Jugendschutz ─────────────────────────────────────────────────────
+    // ── Youth protection ─────────────────────────────────────────────────
 
     public function testTheMinimumAgeIsTheHigherOfBoth(): void
     {
-        // Der Vorgabewert der Spalte ist 0 — „nicht gesetzt" und „jugendfrei" sind
-        // nicht zu unterscheiden. Ein Hauptprodukt ab 18 wird durch eine 0 an der
-        // Variante nicht jugendfrei.
+        // The column defaults to 0 — "not set" and "suitable for minors" cannot be
+        // told apart. A main product restricted to 18+ does not become suitable for
+        // minors through a 0 on the variant.
         self::assertSame(18, ProductDetailAssembler::assemble($this->main(minimumAge: 18), $this->emptyVariant(), [])->minimumAge);
         self::assertSame(18, ProductDetailAssembler::assemble($this->main(minimumAge: 18), $this->row(id: 2, pid: 1, minimumAge: 16), [])->minimumAge);
         self::assertSame(18, ProductDetailAssembler::assemble($this->main(minimumAge: 16), $this->row(id: 2, pid: 1, minimumAge: 18), [])->minimumAge);
         self::assertSame(0, ProductDetailAssembler::assemble($this->main(minimumAge: 0), $this->emptyVariant(), [])->minimumAge);
     }
 
-    // ── Falsche Paare ────────────────────────────────────────────────────
+    // ── Wrong pairs ──────────────────────────────────────────────────────
 
     public function testAVariantOfAnotherProductIsRefused(): void
     {
-        // Ein stilles Mischen zweier Artikel — Texte des einen, GTIN des anderen —
-        // wäre auf der Seite nicht zu erkennen.
+        // A silent mix of two items — texts of one, GTIN of the other —
+        // would not be recognisable on the page.
         $this->expectException(\InvalidArgumentException::class);
 
         ProductDetailAssembler::assemble($this->main(), $this->row(id: 9, pid: 4), []);
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     private function main(int $minimumAge = 18, string $minPurchase = '1.0000', string $purchaseSteps = '1.0000'): ProductDetailRow
     {
@@ -225,8 +226,8 @@ class ProductDetailAssemblerTest extends TestCase
     }
 
     /**
-     * Eine Variante, wie das Backend sie anlegt: nur der Titel, sonst die
-     * Vorgabewerte der Spalten.
+     * A variant as the backend creates it: only the title, otherwise the
+     * default values of the columns.
      */
     private function emptyVariant(): ProductDetailRow
     {

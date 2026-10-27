@@ -43,7 +43,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
  * erhalten" — the customer was not there to pay, and the mail that says a
  * period has begun is the one they expect.
  *
- * ── The back-end window (Fable review of C-10) ───────────────────────────
+ * ── The back-end window (C-10) ───────────────────────────
  *
  * DC_Table stores the payment before any callback can lock the order. The
  * lock here makes the CONSEQUENCES consistent with a concurrent payment
@@ -155,7 +155,7 @@ class PaymentRecorded
          * A resting subscription comes back with the payment that settles it
          * (Abo-5, P35) — now, not within the hour. AFTER "Zahlung erhalten":
          * the customer reads the payment first, then that the access is back
-         * (acceptance Abo-5). The run never throws for a subscription; the
+         * (Abo-5). The run never throws for a subscription; the
          * cron asks again what fails here.
          */
         if (null !== $this->subscriptions) {

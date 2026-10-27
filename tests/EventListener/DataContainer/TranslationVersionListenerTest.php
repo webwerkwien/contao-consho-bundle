@@ -21,14 +21,15 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationVersioning;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * DC_Table und Versions laufen hier nicht — ihre Reihenfolge wird von Hand
- * nachgestellt, so wie sie in Contao 5.7 steht:
+ * DC_Table and Versions do not run here — their order is reproduced by
+ * hand, as it stands in Contao 5.7:
  *
- *   DC_Table::submit(): UPDATE Haupttabelle → onsubmit_callback → Versions::create()
+ *   DC_Table::submit(): UPDATE main table → onsubmit_callback → Versions::create()
  *   Versions::create(): INSERT tl_version → oncreate_version_callback
  *   Versions::restore(): array_intersect_key() → UPDATE → onrestore_version_callback
  *
- * Ob Contao das im Browser wirklich so tut, gehört in die Abnahme.
+ * Whether Contao really does it that way in the browser has to be checked
+ * in the browser.
  */
 class TranslationVersionListenerTest extends TestCase
 {
@@ -38,9 +39,9 @@ class TranslationVersionListenerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // published, urlPrefix, urlSuffix: Der Alias-Wechsel im ersten Test läuft
-        // durch RedirectRecorder, der Startpunkte und Produktseiten liest. Es gibt
-        // keine Produktseite, also wird nichts aufgezeichnet.
+        // published, urlPrefix, urlSuffix: the alias change in the first test
+        // runs through RedirectRecorder, which reads root pages and product
+        // pages. There is no product page, so nothing is recorded.
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '', language TEXT NOT NULL DEFAULT '', published INTEGER NOT NULL DEFAULT 0, urlPrefix TEXT NOT NULL DEFAULT '', urlSuffix TEXT NOT NULL DEFAULT '')",
         );
@@ -71,17 +72,17 @@ class TranslationVersionListenerTest extends TestCase
 
     public function testBothCallbacksAreRegisteredForEveryTranslatedTable(): void
     {
-        // Eine vergessene Tabelle fiele nirgends auf: Ihre Versionen hätten
-        // einfach keine Übersetzungen.
+        // A forgotten table would show up nowhere: its versions would simply
+        // have no translations.
         self::assertSame(TranslatableFields::tables(), $this->tablesOf('onCreate', 'config.oncreate_version'));
         self::assertSame(TranslatableFields::tables(), $this->tablesOf('onRestore', 'config.onrestore_version'));
     }
 
     public function testAVersionCreatedOnSaveHoldsWhatWasJustSaved(): void
     {
-        // Die Frage, an der M-5 hängt: Enthält die Version den neuen Stand oder
-        // den davor? Der Schnappschuss liest die Datenbank im oncreate-Callback,
-        // und der läuft nach dem onsubmit, in dem store() schreibt.
+        // The question M-5 hangs on: does the version contain the new state or
+        // the one before? The snapshot reads the database in the oncreate
+        // callback, and that runs after the onsubmit in which store() writes.
         $this->storage()->write('tl_consho_product', 5, 'en', ['title' => 'Herbal Bitters', 'alias' => 'herbal-bitters']);
 
         $fields = $this->fieldsListener();
@@ -91,7 +92,7 @@ class TranslationVersionListenerTest extends TestCase
         // onsubmit_callback
         $fields->store($this->dc('tl_consho_product', 5));
 
-        // Versions::create(): INSERT, dann oncreate_version_callback
+        // Versions::create(): INSERT, then oncreate_version_callback
         $data = ['id' => 5, 'tstamp' => 1, 'title' => 'Kräuterbitter'];
         $this->connection->insert('tl_version', ['pid' => 5, 'version' => 2, 'fromTable' => 'tl_consho_product', 'data' => serialize($data)]);
         $this->versionListener()->onCreate('tl_consho_product', 5, 2, $data);
@@ -105,8 +106,8 @@ class TranslationVersionListenerTest extends TestCase
 
     public function testRestoreDoesNotRelyOnTheDataContaoPassesAlong(): void
     {
-        // Versions::restore() reicht $data nach array_intersect_key() auf die
-        // Spalten der Haupttabelle weiter — ohne title__en.
+        // Versions::restore() passes $data on after array_intersect_key() on the
+        // columns of the main table — without title__en.
         $this->storage()->write('tl_consho_product', 5, 'en', ['title' => 'Something Else', 'alias' => 'something-else']);
         $this->connection->insert('tl_version', ['pid' => 5, 'version' => 1, 'fromTable' => 'tl_consho_product', 'data' => serialize([
             'id' => 5,
@@ -115,7 +116,7 @@ class TranslationVersionListenerTest extends TestCase
             'alias__en' => 'herbal-bitters',
         ])]);
 
-        // Die Versionsnummer kommt aus Input::post() — als Zeichenkette.
+        // The version number comes from Input::post() — as a string.
         $this->versionListener()->onRestore('tl_consho_product', 5, '1', ['id' => 5, 'title' => 'Kräuterbitter']);
 
         self::assertSame('Herbal Bitters', $this->storage()->read('tl_consho_product', 5, 'en', 'title'));

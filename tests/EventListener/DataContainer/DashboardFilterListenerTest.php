@@ -23,8 +23,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * Dashboard DB4: der Link einer Kachel öffnet die Liste mit genau den
- * gezählten Datensätzen.
+ * Dashboard DB4: the link of a tile opens the list with exactly the
+ * records counted.
  */
 final class DashboardFilterListenerTest extends TestCase
 {
@@ -72,13 +72,13 @@ final class DashboardFilterListenerTest extends TestCase
 
         $this->listener('/contao?do=consho_order&consho_filter=unpaid')->narrow($this->dc('tl_consho_order'));
 
-        // Ein leeres root zeigt in DC_Table ALLE Datensätze.
+        // An empty root shows ALL records in DC_Table.
         self::assertSame([0], $GLOBALS['TL_DCA']['tl_consho_order']['list']['sorting']['root']);
     }
 
     /**
-     * Je Ausgang ein eigener Fall (Prüfungsnotiz Punkt 43), jeder für sich —
-     * sonst beweist ein leeres Ergebnis nur, dass einer gegriffen hat.
+     * A case of its own per exit, each on its own — otherwise an empty result
+     * only proves that one of them took effect.
      *
      * @return iterable<string, array{string, string}>
      */
@@ -89,7 +89,7 @@ final class DashboardFilterListenerTest extends TestCase
         yield 'bei einer Aktion' => ['/contao?do=consho_order&consho_filter=unpaid&key=invoicePdf&id=5', 'tl_consho_order'];
         yield 'Filter eines anderen Moduls' => ['/contao?do=consho_order&consho_filter=undecided', 'tl_consho_order'];
         yield 'Filter der Bestellungen bei den Widerrufen' => ['/contao?do=consho_withdrawal&consho_filter=unpaid', 'tl_consho_withdrawal'];
-        // Aus der gefilterten Liste in die Widerrufe einer Bestellung (Review A6).
+        // From the filtered list into the withdrawals of an order.
         yield 'Kindliste unter der Bestellung' => ['/contao?do=consho_order&table=tl_consho_withdrawal&id=4&consho_filter=unpaid', 'tl_consho_withdrawal'];
     }
 

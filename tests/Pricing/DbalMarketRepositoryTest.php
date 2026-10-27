@@ -10,13 +10,13 @@ use Webwerkwien\ContaoConshoBundle\Pricing\Market;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Seit C-1c kommt das Marktpaar aus dem Verbund Startpunkt → Shop: die Währung
- * vom Startpunkt, das Heimatland vom Shop (Spezifikation 4.0). Vorher las diese
- * Klasse beides aus `tl_consho_shop` — ein Shop war damit genau ein Markt.
+ * Since C-1c the market pair comes from the link root page → shop: the currency
+ * from the root page, the home country from the shop (specification 4.0). Before that this
+ * class read both from `tl_consho_shop` — a shop was thus exactly one market.
  *
- * Die Wirkung des fehlenden `published`-Filters — die Preismaske nimmt eine
- * Währung an, die nur ein unveröffentlichter Startpunkt führt — steht in
- * PriceInputListenerTest, wo die Maske zu Hause ist.
+ * The effect of the missing `published` filter — the price form accepts a
+ * currency that only an unpublished root page carries — is covered in
+ * PriceInputListenerTest, where the form lives.
  */
 class DbalMarketRepositoryTest extends TestCase
 {
@@ -33,8 +33,8 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testJedeWaehrungEinesStartpunktsErgibtMitDemHeimatlandDesShopsEinenMarkt(): void
     {
-        // Ein Shop, zwei Startpunkte: die österreichische Firma verkauft über
-        // /en/ in Pfund. Das ist EIN Rechnungssteller und trotzdem zwei Märkte.
+        // One shop, two root pages: the Austrian company sells via
+        // /en/ in pounds. That is ONE invoicing entity and still two markets.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1, 'EUR');
         $this->insertRootPage(2, 'en', 1, 'GBP');
@@ -44,7 +44,7 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testZweiStartpunkteDerselbenWaehrungSindEinMarkt(): void
     {
-        // Der Regelfall eines zweisprachigen Shops: de und en, beide in Euro.
+        // The usual case of a bilingual shop: de and en, both in euros.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1, 'EUR');
         $this->insertRootPage(2, 'en', 1, 'EUR');
@@ -54,11 +54,11 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testEinStartpunktOhneWaehrungBringtKeinenMarktUndNimmtKeinenWeg(): void
     {
-        // Er kann nichts anzeigen — ein Preis ohne Währung ist keine Angabe.
-        // Die übrigen Startpunkte desselben Shops bleiben davon unberührt.
-        // Gemeldet wird er auf der Backend-Startseite als RootWithoutCurrency
-        // (DbalShopScopeIssueSource) — hier fällt er nur still aus den Märkten,
-        // und genau das ist die gewollte Lautstärke.
+        // It cannot display anything — a price without a currency is no statement.
+        // The other root pages of the same shop are unaffected.
+        // It is reported on the back-end start page as RootWithoutCurrency
+        // (DbalShopScopeIssueSource) — here it just silently drops out of the markets,
+        // and that is exactly the intended volume.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1, 'EUR');
         $this->insertRootPage(2, 'en', 1, '');
@@ -68,7 +68,7 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testOhneHeimatlandKeinMarkt(): void
     {
-        // Es gibt nichts, womit ein Brutto zu rechnen wäre.
+        // There is nothing to calculate a gross amount with.
         $this->insertShop(['id' => 1, 'country' => '']);
         $this->insertRootPage(1, 'de', 1, 'EUR');
 
@@ -77,7 +77,7 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testDieselbeWaehrungAusZweiLaendernSindZweiMaerkte(): void
     {
-        // C25: gleicher Nettopreis, zwei Steuersätze, zwei Brutto.
+        // C25: the same net price, two tax rates, two gross amounts.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->insertShop(['id' => 2, 'country' => 'DE']);
         $this->insertRootPage(1, 'de', 1, 'EUR');
@@ -88,9 +88,9 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testEineSeiteDieKeinStartpunktIstZaehltNicht(): void
     {
-        // consho_currency steht auf jeder Seite. Ein Restwert auf einer Seite,
-        // die einmal Startpunkt war, darf kein Verkaufssignal werden — dieselbe
-        // Bedingung wie in RootCurrencyMigration.
+        // consho_currency is on every page. A leftover value on a page
+        // that was once a root page must not become a sales signal — the same
+        // condition as in RootCurrencyMigration.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'regular', 'consho_shop' => 1, 'consho_currency' => 'EUR']);
 
@@ -99,7 +99,7 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testEinStartpunktOhneShopZaehltNicht(): void
     {
-        // Eine fremde Website in derselben Installation.
+        // Another website in the same installation.
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->connection->insert('tl_page', ['id' => 1, 'type' => 'root', 'consho_shop' => 0, 'consho_currency' => 'EUR']);
 
@@ -108,8 +108,8 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testEinStartpunktMitGeloeschtemShopZaehltNicht(): void
     {
-        // Der Verbund ist ein INNER JOIN: ohne Shop gibt es kein Heimatland
-        // und damit kein Brutto.
+        // The link is an INNER JOIN: without a shop there is no home country
+        // and thus no gross amount.
         $this->insertRootPage(1, 'de', 404, 'EUR');
 
         self::assertSame([], $this->markets());
@@ -129,12 +129,12 @@ class DbalMarketRepositoryTest extends TestCase
 
     public function testEinUnveroeffentlichterStartpunktBringtSeinenMarktTrotzdem(): void
     {
-        // 🎯 So wird eine Währung vorbereitet, bevor sie jemand sieht: Startpunkt
-        // anlegen, GBP wählen, Preise pflegen, dann veröffentlichen. Ein
-        // published-Filter nähme die GBP-Preiszeilen aus der Projektion, sobald
-        // jemand den Startpunkt depubliziert — derselbe Fehler, den Block A bei
-        // den abgeleiteten Lieferländern schon einmal gemacht und verworfen hat
-        // (docs/block-a-fundament.md, Abschnitt 7).
+        // 🎯 This is how a currency is prepared before anyone sees it: create the
+        // root page, choose GBP, maintain prices, then publish. A
+        // published filter would take the GBP price rows out of the projection as soon as
+        // someone unpublishes the root page — the same mistake Block A once made
+        // and discarded with the derived delivery countries
+        // (Block A, section 7).
         $this->insertShop(['id' => 1, 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 1, 'EUR');
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'language' => 'en', 'consho_shop' => 1, 'consho_currency' => 'GBP', 'published' => 0]);

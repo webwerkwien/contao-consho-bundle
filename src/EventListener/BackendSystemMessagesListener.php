@@ -132,8 +132,8 @@ class BackendSystemMessagesListener implements ResetInterface
 
         foreach ($this->sources as $source) {
             /*
-             * One failing source must not take the back end with it (review
-             * Abo-7, S2): between unpacking a release and contao:migrate a
+             * One failing source must not take the back end with it
+             * (Abo-7): between unpacking a release and contao:migrate a
              * source reads a column or table that is not there yet, and an
              * exception here answered every back end page with a 500 — the
              * pages an operator needs to see what is wrong. Logged, skipped.
@@ -163,7 +163,7 @@ class BackendSystemMessagesListener implements ResetInterface
 
     /**
      * The same findings as panel(), as two boxes apart — the dashboard counts
-     * them and shows each in its own dialog (Michael, 2026-10-09, DB1–DB3).
+     * them and shows each in its own dialog (DB1–DB3).
      * Counted is what this user may see, and of the notes only those nobody
      * has taken note of yet: exactly what the list shows.
      *
@@ -228,7 +228,7 @@ class BackendSystemMessagesListener implements ResetInterface
 
     /**
      * Whether the current user may open a module in which the finding is put
-     * right (Michael, 2026-10-07, H1, H2). Administrators see everything,
+     * right (H1, H2). Administrators see everything,
      * including what no module repairs. Without a security layer — the console,
      * a test — nothing is held back.
      */
@@ -271,7 +271,7 @@ class BackendSystemMessagesListener implements ResetInterface
     {
         // From the request, not Input::post(): a fingerprint is hex and needs
         // none of Contao's input encoding, and this way the path is testable
-        // (review M6/M19/M20 — no test had ever touched it).
+        // — no test had ever touched it before.
         $request = $this->requests?->getCurrentRequest();
 
         if (null === $request || !$request->isMethod('POST')) {
@@ -349,8 +349,7 @@ class BackendSystemMessagesListener implements ResetInterface
             /*
              * Decoded, then escaped, and both are needed.
              *
-             * 🔴 Found on c5 on 2026-09-22 while measuring the C-6 findings: a
-             * shop called "Testshop 2 (DE)" appeared as "Testshop 2 &#40;DE&#41;".
+             * 🔴 A shop called "Shop (DE)" appeared as "Shop &#40;DE&#41;".
              * Contao stores the brackets encoded (Input::encodeInsertTags keeps
              * them out of insert tags), so specialchars() alone turns the
              * ampersand into &amp; and the operator reads the entity. They then
@@ -361,13 +360,11 @@ class BackendSystemMessagesListener implements ResetInterface
              * apart. Decoding first does not weaken that — it only makes the
              * text say what the operator typed.
              */
-            // Der zweite Parameter entfernt Insert-Tags: decodeEntities()
-            // holt auch die {{ }} zurück, die Input::encodeInsertTags beim
-            // Speichern gerade unschädlich gemacht hat, und specialchars()
-            // fasst geschweifte Klammern nicht an. Heute nicht ausnutzbar —
-            // die Systemmeldungen werden ohne Insert-Tag-Parser ausgegeben —,
-            // aber das ist eine Eigenschaft der Aufrufstelle, nicht dieser
-            // (Review 2026-09-22).
+            // The second parameter strips insert tags: decodeEntities() also brings
+            // back the {{ }} that Input::encodeInsertTags has just made harmless on
+            // saving, and specialchars() leaves curly brackets alone. Not exploitable
+            // today — the system messages are printed without an insert tag parser —,
+            // but that is a property of the caller, not of this place.
             $replacements['%'.$key.'%'] = StringUtil::specialchars(StringUtil::decodeEntities($value), true);
         }
 

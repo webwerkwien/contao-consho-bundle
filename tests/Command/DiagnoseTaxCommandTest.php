@@ -22,25 +22,24 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Subscription\SubscriptionSchema;
 
 /**
- * 🔴 **Dieser Test existiert, weil es ihn nicht gab.**
+ * 🔴 **This test exists because it did not exist.**
  *
- * Im Fremdmodell-Review vom 2026-09-23 als Regel-24-Lücke benannt: Der
- * Abschnitt über verwaiste Steuerklassen-Verweise, in A/C-12 neu gebaut, wurde
- * von keinem Test aufgerufen. Belegt war nur `TaxClassReferences::orphans()`,
- * also die Logik — nicht, dass der Befehl sie überhaupt erreicht.
+ * The section on orphaned tax class references, newly built in A/C-12,
+ * was called by no test. Only `TaxClassReferences::orphans()` was
+ * covered, i.e. the logic — not that the command reaches it at all.
  *
- * **Der Grund war nicht „schwer testbar", sondern eine ausgelassene Hausregel.**
- * Zwölf Stellen in `src/` holen Modelle über `$this->framework->getAdapter()`;
- * dieser Befehl rief `ShopModel::findByPk()` statisch. Ein statischer Aufruf
- * lässt sich nicht ersetzen — deshalb brauchte ein Test bisher Datenbank und
- * initialisiertes Framework. Über den Adapter ist er ein Mock. (Punkt 13:
- * „gibt es das schon?" kostet ein `grep` und wird trotzdem nicht gestellt.)
+ * **The reason was not "hard to test", but a house rule that was not
+ * followed.** Twelve places in `src/` fetch models via
+ * `$this->framework->getAdapter()`; this command called
+ * `ShopModel::findByPk()` statically. A static call cannot be replaced —
+ * which is why a test so far needed a database and an initialised
+ * framework. Through the adapter it is a mock. (Asking "does this already
+ * exist?" costs one `grep`.)
  *
- * ⚠️ **Gemockt wird nur, was der Befehl NICHT ist.** `DeliveryCountryProvider`,
- * `TaxResolver` und `TaxClassReferences` sind echte Exemplare über einer
- * SQLite-Datenbank und einer gemockten Satz-Schnittstelle — ein Mock von
- * `incompleteFor()` würde die Abschnitte bestätigen, die er selbst erfindet
- * (Regel 25).
+ * ⚠️ **Only what the command is NOT gets mocked.** `DeliveryCountryProvider`,
+ * `TaxResolver` and `TaxClassReferences` are real instances over an
+ * SQLite database and a mocked rate interface — a mock of
+ * `incompleteFor()` would confirm the sections it invents itself.
  */
 class DiagnoseTaxCommandTest extends TestCase
 {
@@ -58,6 +57,7 @@ class DiagnoseTaxCommandTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shipping_method');
         DcaSchema::create($this->connection, 'tl_consho_payment_method');
         DcaSchema::create($this->connection, 'tl_consho_tax_rate');
+        DcaSchema::create($this->connection, 'tl_consho_voucher');
         SubscriptionSchema::create($this->connection);
 
         $this->connection->insert('tl_consho_tax_class', ['id' => 1, 'title' => 'Allgemeine Waren']);
@@ -69,9 +69,9 @@ class DiagnoseTaxCommandTest extends TestCase
     }
 
     /**
-     * Review CW-6, K6: Ein Satz ohne tstamp zählt nicht (findRate). Ein
-     * Import ohne tstamp hinterließe sonst eine Lücke ohne Namen. Ein
-     * „neuer" Entwurf ohne Land und Sätze anderer Klassen erscheinen nicht.
+     * CW-6: A rate without a tstamp does not count (findRate). An
+     * import without a tstamp would otherwise leave a gap without a name. A
+     * "new" draft without a country and rates of other classes do not appear.
      */
     public function testEntwuerfeWerdenGenannt(): void
     {
@@ -83,11 +83,11 @@ class DiagnoseTaxCommandTest extends TestCase
         $display = preg_replace('/\s+/', ' ', $this->diagnose()->getDisplay()) ?? '';
 
         self::assertStringContainsString('Drafts that do not count', $display);
-        // SQLite gibt decimal ohne Nachkommastellen zurück, MySQL mit (Fall 30).
+        // SQLite returns decimal without decimal places, MySQL with them.
         self::assertMatchesRegularExpression('/Drafts that do not count .* 1 DE 19(\.0+)? .*never saved/', $display);
         self::assertDoesNotMatchRegularExpression('/Drafts that do not count .* AT .*never saved/', $display, 'der gespeicherte Satz ist kein Entwurf');
         self::assertStringNotContainsString(' IT ', $display, 'eine Klasse, die der Shop nicht nutzt');
-        // Zweiter Review CW-6, S2: die Zeile ohne Land (1, leer, 0) fehlt.
+        // Second CW-6: the row without a country (1, empty, 0) is missing.
         self::assertDoesNotMatchRegularExpression('/Drafts that do not count .* 1 0(\.0+)? .*never saved/', $display, 'ein „neuer" Entwurf ohne Land');
     }
 
@@ -107,10 +107,10 @@ class DiagnoseTaxCommandTest extends TestCase
     }
 
     /**
-     * 🎯 **Die Zusicherung, um die es geht.** Am 2026-09-23 auf c5 von Hand
-     * hergestellt — Versandart löschen, Steuerklasse löschen, Versandart aus
-     * dem Papierkorb zurückholen — und der Abschnitt erschien. Das war ein
-     * Beleg für jenen Stand; hier ist er einer für jeden nächsten.
+     * 🎯 **The assertion that matters.** Produced by hand once on a real
+     * installation — delete the shipping method, delete the tax class, restore
+     * the shipping method from the recycle bin — and the section appeared.
+     * That was proof for that state; here it is proof for every later one.
      */
     public function testEinVerwaisterVerweisStehtImBericht(): void
     {
@@ -125,13 +125,13 @@ class DiagnoseTaxCommandTest extends TestCase
         self::assertStringContainsString('tl_consho_shipping_method', $display);
         self::assertStringContainsString('99', $display);
         self::assertStringContainsString('cannot be priced', $display);
-        // Gegenprobe: ohne Abo kein Abo-Satz.
+        // Counter-check: no subscription, no subscription rate.
         self::assertStringNotContainsString('cannot be billed again', $display);
     }
 
     /**
-     * Review Abo-3, L3: Das Abo ist schreibgeschützt und zeigt keinen Preis —
-     * „Datensatz öffnen" hilft dort nicht, der Schaden ist die nächste Rechnung.
+     * Abo-3: The subscription is read-only and shows no price —
+     * "open record" does not help there, the damage is the next invoice.
      */
     public function testEinAboMitVerwaisterKlasseBekommtSeinenEigenenSatz(): void
     {
@@ -144,9 +144,9 @@ class DiagnoseTaxCommandTest extends TestCase
     }
 
     /**
-     * Ein Produkt ohne jede Zuordnung gehört genauso in den Bericht — der
-     * Schaden ist derselbe, und über das Backend kann es gar nicht entstehen
-     * (Pflichtfeld), also kommt es aus Import oder SQL.
+     * A product without any assignment belongs in the report just as much —
+     * the damage is the same, and it cannot come about through the back end
+     * at all (mandatory field), so it comes from an import or SQL.
      */
     public function testAuchEineLeereZuordnungStehtImBericht(): void
     {
@@ -156,13 +156,13 @@ class DiagnoseTaxCommandTest extends TestCase
     }
 
     /**
-     * 🔴 **Der Weg, auf dem der Abschnitt NICHT kommt.**
+     * 🔴 **The path on which the section does NOT come.**
      *
-     * `--class/--country` kehrt vor dem Bericht zurück. Das ist richtig — die
-     * Frage lautet dort „welcher Satz gilt hier", nicht „was ist kaputt" —,
-     * aber es ist der Grund, warum ein flüchtiger Blick den Abschnitt für
-     * gebaut halten könnte, wo er nie läuft. Festgehalten, damit ein späteres
-     * Aufräumen die frühe Rückkehr nicht versehentlich entfernt.
+     * `--class/--country` returns before the report. That is correct — the
+     * question there is "which rate applies here", not "what is broken" —,
+     * but it is the reason why a cursory look could take the section for
+     * built where it never runs. Pinned down so that a later clean-up does
+     * not remove the early return by accident.
      */
     public function testDerDirekteWegUeberEineKlasseBerichtetNichtUeberVerwaiste(): void
     {
@@ -175,8 +175,8 @@ class DiagnoseTaxCommandTest extends TestCase
     }
 
     /**
-     * Die Meldung nennt die Shops, die es gibt — sonst bleibt nur, IDs
-     * durchzuprobieren (Michael, 2026-10-12: nicht raten lassen).
+     * The message names the shops that exist — otherwise the only option left
+     * is trying out IDs, and nobody should have to guess.
      */
     public function testEinUnbekannterShopScheitertMitMeldung(): void
     {

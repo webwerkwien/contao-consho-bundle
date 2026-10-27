@@ -8,8 +8,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProjectionState;
 
 /**
- * Die dauerhaften Merker der Projektionen (B-10, 5.7) — gegen eine echte
- * Datenbank, weil das Schreiben ohne ON DUPLICATE KEY auskommen muss.
+ * The persistent markers of the projections (B-10, 5.7) — against a real
+ * database, because writing has to manage without ON DUPLICATE KEY.
  */
 class ProjectionStateTest extends TestCase
 {
@@ -25,7 +25,7 @@ class ProjectionStateTest extends TestCase
 
     public function testAnUnknownNameHasNoValue(): void
     {
-        // null, nicht 0: „nie gesetzt" heißt für den Cron vollständiger Neubau.
+        // null, not 0: "never set" means a full rebuild for the cron.
         self::assertNull((new ProjectionState($this->connection))->get(ProjectionState::VISIBILITY_BOUNDARIES));
     }
 
@@ -44,8 +44,8 @@ class ProjectionStateTest extends TestCase
 
     public function testSettingTheSameValueTwiceKeepsOneRow(): void
     {
-        // MariaDB meldet bei unverändertem UPDATE 0 betroffene Zeilen — ein
-        // blindes INSERT danach stieße an den eindeutigen Namen.
+        // MariaDB reports 0 affected rows for an unchanged UPDATE — a
+        // blind INSERT afterwards would hit the unique name.
         $state = new ProjectionState($this->connection);
 
         $state->set('other', 5);
@@ -81,8 +81,8 @@ class ProjectionStateTest extends TestCase
 
     public function testWithPrefixListsOnlyNamesThatStartWithIt(): void
     {
-        // Der Unterstrich ist in LIKE ein Platzhalter: visibilityXshop_2 darf
-        // nicht mitkommen.
+        // The underscore is a wildcard in LIKE: visibilityXshop_2 must
+        // not come along.
         $state = new ProjectionState($this->connection);
 
         $state->set('visibility_shop_12', 12);

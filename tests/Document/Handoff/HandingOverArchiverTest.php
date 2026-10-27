@@ -16,9 +16,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block R (R13): jeder ausgestellte Beleg geht nach der Ablage an die
- * Buchhaltungsmodule — mit Schnappschuss und PDF, einmal, und ein Modul, das
- * scheitert, hält weder den Beleg noch das nächste Modul auf.
+ * Block R (R13): every issued document goes to the accounting modules after
+ * archiving — with snapshot and PDF, once, and a module that fails holds up
+ * neither the document nor the next module.
  */
 class HandingOverArchiverTest extends TestCase
 {
@@ -55,7 +55,7 @@ class HandingOverArchiverTest extends TestCase
         self::assertSame([3, 2, 7, DocumentType::Invoice, 1_790_000_000], [$received->id, $received->shopId, $received->orderId, $received->type, $received->issuedAt]);
         self::assertSame(['formatVersion' => 10, 'eInvoice' => true], $received->payload);
 
-        // Das PDF erst auf Nachfrage, und nur einmal.
+        // The PDF only on request, and only once.
         self::assertSame(0, $this->rendered);
         self::assertSame('%PDF-3', $received->pdf());
         self::assertSame('%PDF-3', $received->pdf());
@@ -84,9 +84,9 @@ class HandingOverArchiverTest extends TestCase
     }
 
     /**
-     * dev#2, Review: Der Lieferschein wird abgelegt, aber nicht übergeben —
-     * den Modulen sind Rechnung, Korrektur und Storno versprochen, und ein
-     * Beleg ohne Betrag bucht nichts.
+     * dev#2: The delivery note is archived but not handed over — the modules
+     * are promised invoice, correction and cancellation, and a document
+     * without an amount books nothing.
      */
     public function testDerLieferscheinWirdAbgelegtAberNichtUebergeben(): void
     {

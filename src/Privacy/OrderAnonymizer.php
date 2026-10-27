@@ -140,7 +140,7 @@ class OrderAnonymizer
             $this->connection->executeStatement("UPDATE tl_consho_delivery SET trackingNumber = '', tstamp = ? WHERE pid = ?", [$now, $orderId]);
 
             // The provider's transaction reference names the payer at the
-            // provider (Fable review D-5); the attempt itself stays. Not the
+            // provider (D-5); the attempt itself stays. Not the
             // tokenHash: a hash of a random value, unique and NOT NULL — an
             // empty string on two rows would break the index.
             $this->connection->executeStatement("UPDATE tl_consho_payment_attempt SET providerReference = '', tstamp = ? WHERE pid = ?", [$now, $orderId]);
@@ -224,7 +224,7 @@ class OrderAnonymizer
     }
 
     /**
-     * The net under the rule above (Fable review Abo-DSGVO, S2): a contract
+     * The net under the rule above (Abo-DSGVO): a contract
      * can END after its last order was anonymised — paid in advance for two
      * years in a shop that keeps one, or an erasure request whose orders ran
      * out of their period first. No order is anonymised any more then, so
@@ -237,7 +237,7 @@ class OrderAnonymizer
         // member > 0 marks "not yet anonymised" only because every
         // subscription starts with an account (SubscriptionRecorder refuses
         // one without: SubscriptionWithoutAccount). Should that ever change,
-        // the cancellations still name the person (second Fable review, 2).
+        // the cancellations still name the person.
         $ids = array_map('intval', $this->connection->fetchFirstColumn(
             "SELECT s.id FROM tl_consho_subscription s
              WHERE s.state = 'ended'
@@ -257,7 +257,7 @@ class OrderAnonymizer
 
     /**
      * Withdrawals that never found their order (WA, A6): no order, so no
-     * order's period to follow. Kept three years (Michael, 2026-10-22), from
+     * order's period to follow. Kept three years, from
      * the end of the year of receipt like the regular limitation period
      * (§ 195, § 199 Abs. 1 BGB), as proof of what was declared and when, then
      * emptied like an anonymised order's.

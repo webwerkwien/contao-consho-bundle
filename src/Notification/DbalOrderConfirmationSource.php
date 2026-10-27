@@ -145,12 +145,23 @@ final class DbalOrderConfirmationSource implements OrderConfirmationSourceInterf
         /*
          * A shop may have several start points — one per language, and since
          * C-1c one per currency. The language decides which order page and
-         * which guarantee notice (per language) fit; among equals the lowest
-         * id wins, so the answer is the same on every call.
+         * which guarantee notice (per language) fit. Without a root in that
+         * language, the fallback root, as Contao itself would serve; among
+         * equals the lowest id wins, so the answer is the same on every call.
+         *
+         * A published root before an unpublished one, whatever its language:
+         * links into an offline root lead nowhere. An unpublished root is
+         * still better than none.
+         *
+         * `fallback` is a column; "rootfallback" is the palette of a root
+         * with it set, not a type a row carries.
          */
         $id = $this->connection->fetchOne(
             "SELECT id FROM tl_page WHERE type IN ('root', 'rootfallback') AND consho_shop = ?
-             ORDER BY CASE WHEN language = ? THEN 0 ELSE 1 END, id",
+             ORDER BY CASE WHEN published = '1' THEN 0 ELSE 1 END,
+                      CASE WHEN language = ? THEN 0 ELSE 1 END,
+                      CASE WHEN fallback = '1' THEN 0 ELSE 1 END,
+                      id",
             [$shopId, $language],
         );
 

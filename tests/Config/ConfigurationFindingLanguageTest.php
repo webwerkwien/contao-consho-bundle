@@ -23,21 +23,21 @@ class ConfigurationFindingLanguageTest extends TestCase
     }
 
     /**
-     * 🔴 **Beide Sprachen müssen dieselben Platzhalter benutzen.**
+     * 🔴 **Both languages must use the same placeholders.**
      *
-     * Die Prüfung oben sagt nur, **dass** ein Text da ist. Am 2026-09-23 kam
-     * `%shop%` in den Steuersatz-Befund — hätte ich ihn nur ins Deutsche
-     * geschrieben, wäre der englische Text still ohne Shop geblieben, und
-     * genau die Mehrdeutigkeit, die der Zusatz beseitigen soll, wäre in einer
-     * Sprache erhalten geblieben. Nichts hätte es gemeldet: Der Text ist
-     * vorhanden und nicht leer.
+     * The check above only says **that** a text is there. When `%shop%` was
+     * added to the tax rate finding, writing it only into the German text
+     * would have left the English text silently without a shop, and exactly
+     * the ambiguity the addition is meant to remove would have survived in
+     * one language. Nothing would have reported it: the text exists and is
+     * not empty.
      *
-     * ⚠️ **Was dieser Test NICHT prüft:** ob ein Platzhalter im Kontext des
-     * Befunds auch vorkommt. Ein `%shipping%` in beiden Sprachen bestünde ihn
-     * und stünde im Backend wörtlich da. Dafür müsste jede Prüfmethode
-     * aufgerufen werden, mit ihren Argumenten — das koppelte den Test an
-     * sechs Aufrufformen. Die Asymmetrie zwischen den Sprachen ist der
-     * wahrscheinlichere Fehler und hier billig zu haben.
+     * ⚠️ **What this test does NOT check:** whether a placeholder also occurs
+     * in the finding's context. A `%shipping%` in both languages would pass
+     * it and appear literally in the back end. That would require calling
+     * every check method with its arguments — which would couple the test to
+     * six call forms. The asymmetry between the languages is the more likely
+     * error and cheap to catch here.
      */
     public function testBeideSprachenBenutzenDieselbenPlatzhalter(): void
     {
@@ -82,9 +82,9 @@ class ConfigurationFindingLanguageTest extends TestCase
 
     private static function assertFindingTextsExist(string $language): void
     {
-        // Isoliert laden: die Datei ersetzt $GLOBALS['TL_LANG']['CONSHO']['findings']
-        // komplett, ein zweites require ohne dieses unset würde die vorige
-        // Sprache noch im Speicher haben, ohne dass der Test es merkt.
+        // Load in isolation: the file replaces $GLOBALS['TL_LANG']['CONSHO']['findings']
+        // completely; a second require without this unset would still have the
+        // previous language in memory, without the test noticing.
         unset($GLOBALS['TL_LANG']);
 
         require __DIR__.'/../../contao/languages/'.$language.'/default.php';

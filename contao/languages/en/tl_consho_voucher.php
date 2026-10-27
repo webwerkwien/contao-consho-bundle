@@ -2,6 +2,10 @@
 
 $GLOBALS['TL_LANG']['tl_consho_voucher']['voucher_legend'] = 'Voucher';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['use_legend'] = 'Redemption';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['purpose_legend'] = 'Single-purpose voucher';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['taxClass'] = ['Tax class', 'Empty: a multi-purpose voucher. Otherwise a single-purpose voucher, taxed at its sale and redeemable only for articles of this tax class.'];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['taxRate'] = ['Tax rate at the sale', ''];
+$GLOBALS['TL_LANG']['tl_consho_voucher']['taxCountry'] = ['Tax country', ''];
 $GLOBALS['TL_LANG']['tl_consho_voucher']['note_legend'] = 'Note';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['code'] = ['Code', ''];
 $GLOBALS['TL_LANG']['tl_consho_voucher']['createdAt'] = ['Issued', ''];

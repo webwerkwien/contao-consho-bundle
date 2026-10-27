@@ -17,9 +17,9 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * sells a subscription product — published main products with `saleSubscription`
  * assigned to the shop. A main product without an assignment is sold nowhere
  * (VisibilityCriteria::assignedToShop; "empty = like the main product" is the
- * variants' rule). Until the acceptance of Abo-5 this read "every shop when the
+ * variants' rule). Until Abo-5 this read "every shop when the
  * product names none" and claimed that was the catalogue's reading — it was
- * not, it was written without looking (Prüfungsnotiz, Fall 29 pattern).
+ * not, it was written without looking.
  */
 final class SubscriptionBillingIssueSource implements ConfigurationIssueSource
 {

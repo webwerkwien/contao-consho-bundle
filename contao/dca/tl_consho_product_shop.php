@@ -5,7 +5,7 @@
  *
  * One catalogue, a selection per shop — a customer running two shops with
  * overlapping ranges maintains each product once. See
- * docs/block-a-fundament.md, section 3.1.
+ * Block A, section 3.1.
  *
  * Per-shop prices and texts are a possible later stage; they would add columns
  * here rather than introduce a new concept.
@@ -29,7 +29,7 @@ $GLOBALS['TL_DCA']['tl_consho_product_shop'] = [
                  *
                  * The former single-column index on shop goes with it —
                  * index changes are applied even without --with-deletes, which
-                 * only guards columns and tables. Measured 2026-09-11.
+                 * only guards columns and tables.
                  */
                 'shop,pid' => 'index',
             ],

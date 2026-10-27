@@ -21,16 +21,17 @@ use Webwerkwien\ContaoConshoBundle\Seo\FilterStateCodec;
 use Webwerkwien\ContaoConshoBundle\Seo\FilterUrlGenerator;
 
 /**
- * Die Sortierauswahl im Listentemplate (Michael, 2026-09-13).
+ * The sort selection in the list template.
  *
- * Wie FilterUrlGeneratorTest mit dem echten ContentUrlGenerator: geprüft wird,
- * was im href landet. Seite 12 „Kräuter" hat „volume:250ml" freigegeben.
+ * Like FilterUrlGeneratorTest with the real ContentUrlGenerator: what is
+ * checked is what ends up in the href. Page 12 "Kräuter" has released
+ * "volume:250ml".
  */
 class SortLinksTest extends TestCase
 {
     public function testEveryKnownOrderButTheManualOneGetsOneLinkInItsOwnOrder(): void
     {
-        // Übergabe aus Task 7: „Eigene Reihenfolge" sagt einem Besucher nichts.
+        // "Eigene Reihenfolge" (custom order) tells a visitor nothing.
         $links = $this->links(new FilterState(), ProductSort::TITLE);
 
         self::assertSame(
@@ -41,8 +42,8 @@ class SortLinksTest extends TestCase
 
     public function testTheManualOrderIsOfferedWhenItIsTheElementsDefault(): void
     {
-        // Dann ist sie die Reihenfolge, in der die Liste ankommt — ohne Eintrag
-        // stünde die Auswahl ohne aktiven Wert da.
+        // Then it is the order in which the list arrives — without an entry
+        // the selection would have no active value.
         $links = $this->links(new FilterState(), ProductSort::MANUAL);
         $bySort = $this->bySort($links);
 
@@ -53,8 +54,8 @@ class SortLinksTest extends TestCase
 
     public function testTheDefaultOrderIsLinkedWithoutASortValue(): void
     {
-        // Übergabe aus Task 5: withSort(…, ''), nicht sort_by:title. Sonst hätte
-        // dieselbe Reihenfolge zwei Adressen.
+        // withSort(…, ''), not sort_by:title. Otherwise
+        // the same order would have two addresses.
         $links = $this->bySort($this->links(new FilterState(), ProductSort::TITLE));
 
         self::assertSame('/kraeuter.html', $links[ProductSort::TITLE]->url);
@@ -68,8 +69,8 @@ class SortLinksTest extends TestCase
 
     public function testTheDefaultComesFromTheElementNotFromTheClass(): void
     {
-        // Steht am Element „Preis aufsteigend", ist das die Adresse ohne sort —
-        // und „Bezeichnung" braucht dann einen eigenen Wert.
+        // If the element says "Preis aufsteigend" (price ascending), that is the
+        // address without sort — and "Bezeichnung" (name) then needs a value of its own.
         $links = $this->bySort($this->links(new FilterState(), ProductSort::PRICE_ASC));
 
         self::assertSame('/kraeuter.html', $links[ProductSort::PRICE_ASC]->url);
@@ -88,8 +89,8 @@ class SortLinksTest extends TestCase
 
     public function testSortingOnALandingPageStaysOnIt(): void
     {
-        // Sortieren erzeugt keine neue Menge — Überschrift und Einleitung der
-        // Landingpage bleiben (Entscheidung 3).
+        // Sorting creates no new set — heading and introduction of the
+        // landing page stay.
         $links = $this->bySort($this->links(new FilterState(['volume' => ['250ml']]), ProductSort::TITLE));
 
         self::assertSame('/kraeuter/schwedenbitter-250-ml.html', $links[ProductSort::TITLE]->url);
@@ -98,8 +99,8 @@ class SortLinksTest extends TestCase
 
     public function testTheDefaultWrittenOutByHandIsStillTheDefault(): void
     {
-        // ?cq=sort_by:title bei Vorgabe „Bezeichnung" — von Hand getippt. Aktiv
-        // ist die Bezeichnung, der Link zeigt trotzdem auf die Adresse ohne sort.
+        // ?cq=sort_by:title with the default "Bezeichnung" — typed by hand. The
+        // name is active, the link still points to the address without sort.
         $links = $this->bySort($this->links(new FilterState([], ProductSort::TITLE), ProductSort::TITLE));
 
         self::assertTrue($links[ProductSort::TITLE]->active);
@@ -108,8 +109,8 @@ class SortLinksTest extends TestCase
 
     public function testAnUnknownOrderMarksTheDefaultActive(): void
     {
-        // Die Liste sortiert dann nach der Vorgabe — die Auswahl muss dasselbe
-        // sagen und darf nicht ohne aktiven Eintrag dastehen.
+        // The list then sorts by the default — the selection must say the same
+        // and must not be left without an active entry.
         self::assertSame([ProductSort::NEWEST], $this->active($this->links(new FilterState([], 'gibtsnicht'), ProductSort::NEWEST)));
     }
 

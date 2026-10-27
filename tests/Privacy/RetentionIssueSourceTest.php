@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Privacy\RetentionIssueSource;
 use Webwerkwien\ContaoConshoBundle\Privacy\RetentionPolicy;
 
 /**
- * D-5 auf der Startseite: Shop ohne Frist (Warnung), und die Ankündigung
- * der automatischen Anonymisierung 30 Tage vorher (Hinweis).
+ * D-5 on the start page: shop without a period (warning), and the
+ * announcement of the automatic anonymisation 30 days ahead (notice).
  */
 final class RetentionIssueSourceTest extends TestCase
 {
@@ -20,7 +20,7 @@ final class RetentionIssueSourceTest extends TestCase
         $c->insert('tl_consho_shop', ['id' => 2, 'title' => 'Ohne', 'retentionYears' => 0]);
 
         foreach (range(1, 7) as $i) {
-            $c->insert('tl_consho_order', ['id' => $i, 'shop' => 1, 'orderNumber' => 'WEB-'.$i, 'createdAt' => strtotime('2019-06-01')]); // Ende 31.12.2026
+            $c->insert('tl_consho_order', ['id' => $i, 'shop' => 1, 'orderNumber' => 'WEB-'.$i, 'createdAt' => strtotime('2019-06-01')]); // ends 31.12.2026
         }
         $c->insert('tl_consho_order', ['id' => 8, 'shop' => 1, 'orderNumber' => 'WEB-8', 'createdAt' => strtotime('2020-06-01')]);
 

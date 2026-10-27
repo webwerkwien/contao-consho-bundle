@@ -66,12 +66,12 @@ class FacetPagePageListenerTest extends TestCase
 
     public function testOffersPagesWithAListingGroupedByStartPoint(): void
     {
-        // Dieselbe Kategorie gibt es je Sprache einmal; der Redakteur muss sehen,
-        // für welche er den Titel schreibt.
+        // The same category exists once per language; the editor must see
+        // which one they are writing the title for.
         $this->listingPage(12, 'Kräuterbitter', root: 1, language: 'de');
         $this->listingPage(22, 'Herbal bitters', root: 2, language: 'en');
 
-        // Startpunkte alphabetisch, Seiten darin nach Titel.
+        // Root pages alphabetically, pages within them by title.
         self::assertSame(
             [
                 'Herb shop (en)' => [22 => 'Herbal bitters'],
@@ -83,8 +83,8 @@ class FacetPagePageListenerTest extends TestCase
 
     public function testLeavesOutAPageWhoseStartPointHasNoShop(): void
     {
-        // Ohne Shop gibt es keine Produkte und keine Filter — eine Landingpage
-        // dort wäre leer.
+        // Without a shop there are no products and no filters — a landing page
+        // there would be empty.
         $this->listingPage(12, 'Kräuterbitter', root: 1, language: 'de');
         $this->listingPage(32, 'Neuigkeiten', root: 3, language: 'de');
 

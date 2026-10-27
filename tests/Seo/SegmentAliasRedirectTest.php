@@ -23,19 +23,19 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Weiterleitungen, wenn sich der Alias eines Herstellers oder Produkttyps ändert.
+ * Redirects when the alias of a manufacturer or product type changes.
  *
- * Anders als beim Produkt-Alias wandert hier nicht eine Adresse, sondern die
- * aller Produkte des Herstellers bzw. Typs — aber nur auf Startpunkten, deren
- * Vorlage den Platzhalter enthält.
+ * Unlike with the product alias, not one address moves here but those
+ * of all products of the manufacturer or type — but only on start points
+ * whose template contains the placeholder.
  *
- * Aufbau:
- * - Shop 1 (Standardsprache de): Startpunkt 1 (de) und 2 (en), beide mit
+ * Setup:
+ * - Shop 1 (default language de): start point 1 (de) and 2 (en), both with
  *   {manufacturer}/{alias}.
- * - Shop 2 (de): Startpunkt 3 mit {type}/{alias}.
- * - Hersteller 7 „kraeuterhaus" (Produkte 10, 11), Hersteller 8 „bienenhof"
- *   (Produkt 12). Typ 3 „tinktur" (10, 12), Typ 4 „salbe" (11).
- * - Variante 13 unter Produkt 10, gleicher Hersteller und Typ.
+ * - Shop 2 (de): start point 3 with {type}/{alias}.
+ * - Manufacturer 7 "kraeuterhaus" (products 10, 11), manufacturer 8 "bienenhof"
+ *   (product 12). Type 3 "tinktur" (10, 12), type 4 "salbe" (11).
+ * - Variant 13 under product 10, same manufacturer and type.
  */
 class SegmentAliasRedirectTest extends TestCase
 {
@@ -96,15 +96,15 @@ class SegmentAliasRedirectTest extends TestCase
         $this->insertTranslation(['pid' => 12, 'ptable' => 'tl_consho_product', 'language' => 'en', 'title' => 'Honey', 'alias' => 'honey']);
     }
 
-    // ── Hersteller-Alias ────────────────────────────────────────────────
+    // ── Manufacturer alias ──────────────────────────────────────────────
 
     public function testEinGeaenderterHerstellerAliasZeichnetDieAlteAdresseJedesSeinerProdukteAuf(): void
     {
         /*
-         * Startpunkt 1 und 2 haben {manufacturer} in der Vorlage. Der englische
-         * zeigt den Alias des Herstellers, weil es keine Übersetzung dafür gibt
-         * (TranslationJoin::coalesce()). Startpunkt 3 hat nur {type}.
-         * Produkt 12 gehört einem anderen Hersteller, 13 ist eine Variante.
+         * Start points 1 and 2 have {manufacturer} in the template. The English
+         * one shows the manufacturer's alias because there is no translation for it
+         * (TranslationJoin::coalesce()). Start point 3 only has {type}.
+         * Product 12 belongs to another manufacturer, 13 is a variant.
          */
         $written = $this->recorder()->recordSegmentAlias(self::MANUFACTURER, 7, 'kraeuterhaus-wien', self::NOW);
 
@@ -184,10 +184,10 @@ class SegmentAliasRedirectTest extends TestCase
     public function testEinHerstellerOhneBisherigenAliasLoestDieAdresseOhneSegmentAb(): void
     {
         /*
-         * Hersteller aus der Zeit vor B-1 haben keinen Alias; die Vorlage lässt
-         * das Segment dann weg (ProductPathTemplate::render()). „Aliase
-         * generieren" setzt einen — die Adresse wandert von /produkt/x.html
-         * nach /produkt/kraeuterhaus/x.html.
+         * Manufacturers from before B-1 have no alias; the template then leaves
+         * the segment out (ProductPathTemplate::render()). "Aliase
+         * generieren" (generate aliases) sets one — the address moves from
+         * /produkt/x.html to /produkt/kraeuterhaus/x.html.
          */
         $this->renameRecord(self::MANUFACTURER, 7, '');
 
@@ -205,11 +205,11 @@ class SegmentAliasRedirectTest extends TestCase
         self::assertNull($this->resolver()->find('/produkt/neu/melissengeist.html', 'example.org'));
     }
 
-    // ── Übersetzter Hersteller-Alias ────────────────────────────────────
+    // ── Translated manufacturer alias ───────────────────────────────────
 
     public function testEinUebersetzterHerstellerAliasVerdecktDieAenderungDesEigenen(): void
     {
-        // Mit Übersetzung zeigt der englische Startpunkt „herb-house" — dort wandert nichts.
+        // With a translation the English start point shows "herb-house" — nothing moves there.
         $this->insertTranslation(['pid' => 7, 'ptable' => self::MANUFACTURER, 'language' => 'en', 'title' => 'Herb House', 'alias' => 'herb-house']);
 
         $this->recorder()->recordSegmentAlias(self::MANUFACTURER, 7, 'kraeuterhaus-wien', self::NOW);
@@ -235,9 +235,9 @@ class SegmentAliasRedirectTest extends TestCase
     public function testEinErsterUebersetzterHerstellerAliasLoestDenEigenenAliasAb(): void
     {
         /*
-         * Anders als beim Produkt: Ohne Übersetzung ist das Produkt nicht
-         * unsichtbar, der englische Startpunkt zeigte „kraeuterhaus". Diese
-         * Adresse wandert jetzt.
+         * Unlike with the product: without a translation the product is not
+         * invisible, the English start point showed "kraeuterhaus". This
+         * address moves now.
          */
         $this->recorder()->recordTranslatedSegmentAlias(self::MANUFACTURER, 7, 'en', 'herb-house', self::NOW);
 
@@ -255,7 +255,7 @@ class SegmentAliasRedirectTest extends TestCase
         self::assertSame(0, $this->recorder()->recordTranslatedSegmentAlias(self::MANUFACTURER, 7, 'de', 'kraeuterhaus-de', self::NOW));
     }
 
-    // ── Produkttyp-Alias ────────────────────────────────────────────────
+    // ── Product type alias ──────────────────────────────────────────────
 
     public function testEinGeaenderterProdukttypAliasZeichnetDieAlteAdresseJedesSeinerProdukteAuf(): void
     {
@@ -300,11 +300,11 @@ class SegmentAliasRedirectTest extends TestCase
 
     public function testEineAndereTabelleZeichnetNichtsAuf(): void
     {
-        // Eigenschaftsgruppen sind Filteradressen, keine Produktadressen.
+        // Property groups are filter addresses, not product addresses.
         self::assertSame(0, $this->recorder()->recordSegmentAlias('tl_consho_property_group', 3, 'farbe', self::NOW));
     }
 
-    // ── Die Masken ──────────────────────────────────────────────────────
+    // ── The masks ───────────────────────────────────────────────────────
 
     public function testDieHerstellerMaskeZeichnetAufSolangeDieDatenbankDenAltenAliasHat(): void
     {
@@ -339,14 +339,14 @@ class SegmentAliasRedirectTest extends TestCase
         self::assertSame('herb-house', (new TranslationStorage($this->connection))->read(self::MANUFACTURER, 7, 'en', 'alias'));
     }
 
-    // ── Wiederherstellen einer Version ──────────────────────────────────
+    // ── Restoring a version ─────────────────────────────────────────────
 
     public function testEineWiederhergestellteHerstellerVersionMitAnderemAliasZeichnetAuf(): void
     {
         $listener = $this->restoreListener();
         $listener->onLoad($this->dc(self::MANUFACTURER, 7));
 
-        // Versions::restore(): erst der UPDATE, dann onrestore_version_callback.
+        // Versions::restore(): first the UPDATE, then onrestore_version_callback.
         $this->renameRecord(self::MANUFACTURER, 7, 'kraeuterhaus-alt');
         $listener->onRestoreVersion(self::MANUFACTURER, 7, 2, []);
 
@@ -362,7 +362,7 @@ class SegmentAliasRedirectTest extends TestCase
         $listener = $this->restoreListener();
         $listener->onLoad($this->dc(self::TYPE, 3));
 
-        // TranslationVersioning::restore() hat die Übersetzung schon zurückgeschrieben.
+        // TranslationVersioning::restore() has already written the translation back.
         $this->connection->update('tl_consho_translation', ['alias' => 'drops'], ['ptable' => self::TYPE, 'pid' => 3]);
         $listener->onRestoreVersion(self::TYPE, 3, 2, []);
 
@@ -375,7 +375,7 @@ class SegmentAliasRedirectTest extends TestCase
         );
     }
 
-    // ── Hilfen ──────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────
 
     private function recorder(): RedirectRecorder
     {
@@ -448,7 +448,7 @@ class SegmentAliasRedirectTest extends TestCase
     }
 
     /**
-     * Was Contao nach den save_callbacks tut: der eine UPDATE am Ende der Anfrage.
+     * What Contao does after the save_callbacks: the one UPDATE at the end of the request.
      */
     private function renameRecord(string $table, int $id, string $alias): void
     {

@@ -9,8 +9,8 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
  * This is the belt to the braces of CheckoutFingerprint. The checksum proves
  * that the INPUT has not changed since the page was rendered; this proves that
  * two pieces of code agree on what that input costs. They are different
- * questions, and on 2026-09-23 the second one had been answered wrong for as
- * long as there had been an answer: the checkout summed rounded line grosses,
+ * questions, and the second one was once answered wrong for as long as
+ * there had been an answer: the checkout summed rounded line grosses,
  * the order summed rounded net plus rounded tax, and they disagreed for
  * 16.7 % of gross prices at the standard rate — with an invoice issued in the
  * same transaction.

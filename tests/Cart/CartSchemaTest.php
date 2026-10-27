@@ -19,10 +19,10 @@ class CartSchemaTest extends TestCase
     {
         $this->insertCart(['tokenHash' => str_repeat('a', 64), 'shop' => 3]);
 
-        // Zweimal derselbe Hash im selben Shop wäre zweimal derselbe
-        // Warenkorb. Der Shop ist hier ausdrücklich gesetzt: Ohne ihn trügen
-        // beide Zeilen die Vorgabe 0 und der Test prüfte (hash, 0) gegen
-        // (hash, 0) — also nicht, was sein Name sagt (Abschlussreview C-3b).
+        // The same hash twice in the same shop would be the same cart twice.
+        // The shop is set explicitly here: without it both rows would carry
+        // the default 0 and the test would check (hash, 0) against
+        // (hash, 0) — that is, not what its name says.
         $this->expectExceptionMessageMatches('/UNIQUE|unique/');
 
         $this->insertCart(['tokenHash' => str_repeat('a', 64), 'shop' => 3]);
@@ -30,9 +30,9 @@ class CartSchemaTest extends TestCase
 
     public function testDerselbeTokenHashDarfInZweiShopsStehen(): void
     {
-        // Die gelockerte Seite des Schlüssels: Ein Cookie identifiziert den
-        // Besucher, nicht den Warenkorb (C-3b). Unter dem alten Index
-        // `(tokenHash)` warf die zweite Zeile.
+        // The relaxed side of the key: a cookie identifies the
+        // visitor, not the cart (C-3b). Under the old index
+        // `(tokenHash)` the second row threw.
         $this->insertCart(['tokenHash' => str_repeat('a', 64), 'shop' => 3]);
         $this->insertCart(['tokenHash' => str_repeat('a', 64), 'shop' => 4]);
 
@@ -41,8 +41,8 @@ class CartSchemaTest extends TestCase
 
     public function testMehrereWarenkoerbeOhneTokenHash(): void
     {
-        // Mitglieder-Warenkörbe tragen keinen Hash. Ein UNIQUE-Index über eine
-        // leere Zeichenkette ließe nur einen einzigen zu — deshalb NULL.
+        // Member carts carry no hash. A UNIQUE index over an
+        // empty string would allow only a single one — hence NULL.
         $this->insertCart(['member' => 1]);
         $this->insertCart(['member' => 2]);
 
@@ -54,20 +54,20 @@ class CartSchemaTest extends TestCase
         $cartId = $this->insertCart(['tokenHash' => str_repeat('b', 64)]);
         $this->insertCartItem(['pid' => $cartId, 'product' => 7, 'quantity' => '2.5000']);
 
-        // NUMERIC-Affinität in SQLite speichert '2.5000' als REAL 2.5 und gibt beim
-        // Lesen '2.5' zurück (verlustfrei ohne Nachkommastellen-Auffüllung) — ein
-        // exakter String-Vergleich auf '2.5000' würde daher hier immer scheitern,
-        // unabhängig vom Schema. Entscheidend ist, dass der Wert dezimal bleibt
-        // (nicht auf 2 oder 3 gerundet wird), nicht die Nachkommanullen.
+        // NUMERIC affinity in SQLite stores '2.5000' as REAL 2.5 and returns '2.5'
+        // on reading (lossless, without padding the decimals) — an exact
+        // string comparison against '2.5000' would therefore always fail here,
+        // regardless of the schema. What matters is that the value stays decimal
+        // (is not rounded to 2 or 3), not the trailing zeros.
         self::assertSame(2.5, (float) $this->cartConnection->fetchOne('SELECT quantity FROM tl_consho_cart_item'));
     }
 
     public function testDerselbeArtikelKommtNurEinmalImWarenkorbVor(): void
     {
-        // Das ist die tragende Entscheidung der Tabelle: zweimal derselbe
-        // Artikel addiert die Menge, statt eine zweite Zeile anzulegen. Ohne
-        // den Index wäre das eine Regel im PHP, die eine Nebenläufigkeit
-        // aushebelt.
+        // This is the load-bearing decision of the table: the same article
+        // twice adds up the quantity instead of creating a second row. Without
+        // the index this would be a rule in PHP that concurrency
+        // overrides.
         $cartId = $this->insertCart(['tokenHash' => str_repeat('c', 64)]);
         $this->insertCartItem(['pid' => $cartId, 'product' => 7, 'quantity' => '1.0000']);
 

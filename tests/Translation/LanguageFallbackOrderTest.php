@@ -6,13 +6,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Abnahme G-8: Die Einkaufsseiten waren im deutschen Backend englisch. Ihre
- * Sprachdatei hängte die Texte mit `+=` an; Contao lädt aber zuerst Englisch
- * als Rückfall und danach Deutsch, und `+=` lässt jeden schon vorhandenen
- * Schlüssel stehen. Jeder Test lud nur eine Sprache und sah es nicht.
+ * G-8: The shopping pages were English in the German backend. Their
+ * language file appended the texts with `+=`; but Contao first loads
+ * English as the fallback and then German, and `+=` leaves every key that
+ * already exists in place. Every test loaded only one language and did not
+ * see it.
  *
- * Hier wird geladen wie in Contao: erst en, dann de. Jeder Wert, den die
- * deutsche Datei setzt, muss danach der deutsche sein.
+ * Here loading happens as in Contao: first en, then de. Every value the
+ * German file sets must be the German one afterwards.
  */
 class LanguageFallbackOrderTest extends TestCase
 {

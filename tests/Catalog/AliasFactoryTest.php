@@ -18,14 +18,14 @@ class AliasFactoryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Das Testschema muss mindestens so streng sein wie die echte
-        // Datenbank — sonst wirkt eine Gefahr plausibel, die real unmöglich
-        // ist (siehe contao/dca/tl_consho_translation.php und M-2).
+        // The test schema must be at least as strict as the real
+        // database — otherwise a danger looks plausible that is impossible
+        // in reality (see contao/dca/tl_consho_translation.php and M-2).
         DcaSchema::create($this->connection, 'tl_consho_translation');
 
-        // Eigenschaftsoptionen haben in der echten DCA keinen Unique-Key,
-        // nur einen Index — die Eindeutigkeit je Gruppe ist ausdrücklich
-        // AliasFactorys Job (contao/dca/tl_consho_property_option.php).
+        // Property options have no unique key in the real DCA,
+        // only an index — uniqueness per group is explicitly
+        // AliasFactory's job (contao/dca/tl_consho_property_option.php).
         DcaSchema::create($this->connection, 'tl_consho_property_option');
     }
 
@@ -48,8 +48,8 @@ class AliasFactoryTest extends TestCase
     {
         $this->translation('tl_consho_product', 'en', 'bitters');
 
-        // Leer eingegeben, damit der Zähl-Mechanismus des Slug-Generators
-        // greift statt der direkten "existiert schon"-Ausnahme.
+        // Entered empty, so that the counting mechanism of the slug generator
+        // applies instead of the direct "already exists" exception.
         $alias = $this->factory($this->countingSlug('bitters'))->forRecord(
             'tl_consho_translation',
             '',
@@ -78,9 +78,9 @@ class AliasFactoryTest extends TestCase
 
     public function testTheExistingSingleDimensionScopeStillWorks(): void
     {
-        // Regressionstest: der heutige Eigenschaftsoptionen-Fall — eine
-        // einzige Dimension, ohne zweite Spalte — muss unverändert
-        // funktionieren.
+        // Regression test: today's property option case — a
+        // single dimension, without a second column — must keep
+        // working unchanged.
         $this->connection->insert('tl_consho_property_option', ['pid' => 5, 'alias' => 'rot']);
 
         $free = $this->factory()->forRecord(
@@ -110,9 +110,9 @@ class AliasFactoryTest extends TestCase
     }
 
     /**
-     * Simuliert den Zähl-Mechanismus von Contao\CoreBundle\Slug\Slug::generate()
-     * (dieselbe Schleife), damit die an ihn übergebene Duplikatprüfung wirklich
-     * ausgeführt wird — ohne echten SlugGenerator und ContaoFramework aufzusetzen.
+     * Simulates the counting mechanism of Contao\CoreBundle\Slug\Slug::generate()
+     * (the same loop), so that the duplicate check passed to it really runs —
+     * without setting up a real SlugGenerator and ContaoFramework.
      */
     private function countingSlug(string $base): Slug
     {

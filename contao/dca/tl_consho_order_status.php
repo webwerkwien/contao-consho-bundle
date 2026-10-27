@@ -6,7 +6,7 @@
  * The operator names the value; the system reads the flags, never the name.
  * Someone who calls their status "Kohle da" still gets correct documents,
  * and a translated shop does not need the code to learn a second vocabulary.
- * See docs/block-a-fundament.md, section 5.4.
+ * See Block A, section 5.4.
  */
 $GLOBALS['TL_DCA']['tl_consho_order_status'] = [
     'config' => [

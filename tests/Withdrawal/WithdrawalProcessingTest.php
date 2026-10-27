@@ -35,12 +35,12 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherLedger;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
 
 /**
- * Widerruf bearbeiten (D-3, Entscheidungen F1–F10). Echte Salden auf SQLite;
- * Belege, Mail und Status sind Spione — was ein Beleg enthält, prüft
- * DocumentIssuerTest.
+ * Processing a withdrawal (D-3, F1–F10). Real balances on SQLite;
+ * documents, mail and status are spies — what a document contains is
+ * checked by DocumentIssuerTest.
  *
- * Bestellung: 2 × Wanderstock (60,00), 1 × Rucksack (35,00), Versand 5,00 —
- * zusammen 100,00, bezahlt.
+ * Order: 2 × hiking pole (`Wanderstock`, 60.00), 1 × backpack (`Rucksack`,
+ * 35.00), shipping 5.00 — together 100.00, paid.
  */
 final class WithdrawalProcessingTest extends TestCase
 {
@@ -50,7 +50,7 @@ final class WithdrawalProcessingTest extends TestCase
 
     private Connection $connection;
 
-    /** @var list<array{string, mixed}> */
+    /** @var list<array{0: string, 1: mixed, 2?: mixed}> */
     private array $documentCalls = [];
 
     /** @var list<array{string, array<int, mixed>}> */
@@ -71,10 +71,10 @@ final class WithdrawalProcessingTest extends TestCase
         // Without row locks: VoucherLedger locks the voucher with FOR UPDATE (WG-6).
         $this->connection = \Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks::connection();
         WithdrawalSchema::create($this->connection);
-        // The real DCA schema: the subscription's delinquency check reads more of the order (review Abo-8).
+        // The real DCA schema: the subscription's delinquency check reads more of the order (Abo-8).
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (review WG-7, P5), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -86,12 +86,12 @@ final class WithdrawalProcessingTest extends TestCase
         $this->connection->insert('tl_consho_order_item', ['id' => 3, 'pid' => self::ORDER, 'productName' => 'Paket', 'quantity' => '1.0000', 'unitPrice' => '4.1667', 'taxRate' => '20.0000', 'taxAmount' => '0.8333', 'lineTotal' => '5.0000', 'lineType' => 'shipping']);
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '100.0000']);
 
-        // Erklärt: 1 Wanderstock.
+        // Declared: 1 hiking pole.
         $this->connection->insert('tl_consho_withdrawal', ['id' => self::WITHDRAWAL, 'pid' => self::ORDER, 'number' => 'WEB-00077-W1', 'scope' => 'items']);
         $this->connection->insert('tl_consho_withdrawal_item', ['pid' => self::WITHDRAWAL, 'orderItem' => 1, 'quantity' => '1']);
     }
 
-    // ── Annehmen ──────────────────────────────────────────────────────────
+    // ── Accept ────────────────────────────────────────────────────────────
 
     public function testAnnehmenMitDenErklaertenMengen(): void
     {
@@ -101,15 +101,15 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('accepted', $this->withdrawalRow()['state']);
         self::assertSame(self::NOW, (int) $this->withdrawalRow()['decidedAt']);
 
-        // Die Erklärung bleibt, daneben steht, was angenommen ist.
+        // The declaration stays; next to it stands what has been accepted.
         $item = $this->connection->fetchAssociative('SELECT quantity, acceptedQuantity, declared FROM tl_consho_withdrawal_item');
         self::assertIsArray($item);
         self::assertTrue(BigDecimal::of('1')->isEqualTo((string) $item['quantity']));
         self::assertTrue(BigDecimal::of('1')->isEqualTo((string) $item['acceptedQuantity']));
 
-        // F1: Teilwiderruf → kein Versandanteil vorgeschlagen.
+        // F1: partial withdrawal → no shipping share proposed.
         self::assertTrue(BigDecimal::zero()->isEqualTo((string) $this->withdrawalRow()['refundShipping']));
-        // F7: Die Forderung sinkt um 30.
+        // F7: The amount due drops by 30.
         self::assertTrue(BigDecimal::of('70')->isEqualTo($this->balance()->claim));
     }
 
@@ -151,8 +151,9 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Abo-8, P77: Eine Abo-Zeile wird nur ganz angenommen — ein Teil wäre eine
-     * Mengenänderung am laufenden Abo, und die gibt es nicht (A11).
+     * Abo-8, P77: A subscription line is only accepted as a whole — a part
+     * would be a quantity change on the running subscription, and there is no
+     * such thing (A11).
      */
     public function testEineAboZeileNurGanz(): void
     {
@@ -165,7 +166,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame([], $this->ended, 'abgelehnt: kein Abo beendet');
 
         self::assertTrue($this->processing()->accept(self::WITHDRAWAL, [1 => '2'], self::NOW)->done);
-        // P78: die angenommenen Zeilen gehen an das Beenden der Abos.
+        // P78: the accepted lines go to ending the subscriptions.
         self::assertSame([[self::ORDER, [1], self::NOW]], $this->ended);
     }
 
@@ -177,7 +178,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('tooMuch', $this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW)->key);
     }
 
-    // ── Ablehnen (F6) ─────────────────────────────────────────────────────
+    // ── Reject (F6) ───────────────────────────────────────────────────────
 
     public function testAblehnenBrauchtEineBegruendungUndSchicktSieWoertlich(): void
     {
@@ -197,7 +198,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('alreadyDecided', $this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW)->key);
     }
 
-    // ── Rücksendung (F8) ──────────────────────────────────────────────────
+    // ── Return shipment (F8) ──────────────────────────────────────────────
 
     public function testRuecksendungHoechstensDasAngenommene(): void
     {
@@ -208,14 +209,14 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue($this->processing()->recordReturn(self::WITHDRAWAL, self::NOW, [$row => '1'], self::NOW)->done);
         self::assertSame(self::NOW, (int) $this->withdrawalRow()['returnReceivedAt']);
 
-        // Review S2: ein leeres Datum löscht das erfasste nicht.
+        // An empty date does not delete the one recorded.
         self::assertTrue($this->processing()->recordReturn(self::WITHDRAWAL, 0, [$row => '1'], self::NOW)->done);
         self::assertSame(self::NOW, (int) $this->withdrawalRow()['returnReceivedAt']);
     }
 
     /**
-     * Block G (G9): jede Position der Rücksendung geht an die Rückbuchung —
-     * mit dem Häkchen aus dem Formular, sonst mit der letzten Wahl.
+     * Block G (G9): every item of the return goes to the restocking — with the
+     * tick from the form, otherwise with the last choice.
      */
     public function testDieRuecksendungGehtMitHaekchenAnDenBestand(): void
     {
@@ -233,14 +234,14 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue($this->processing(stock: $stock)->recordReturn(self::WITHDRAWAL, self::NOW, [$row => '1'], self::NOW, [$row => false], 5)->done);
         self::assertTrue($this->processing(stock: $stock)->recordReturn(self::WITHDRAWAL, self::NOW, [$row => '1'], self::NOW)->done);
 
-        // Die zweite ohne Angabe nimmt die gespeicherte Wahl — hier die
-        // Vorgabe, weil das Doppel nichts speichert.
+        // The second one without a value takes the stored choice — here the
+        // default, because the double stores nothing.
         self::assertSame([[$row, false, 5], [$row, true, 0]], $calls);
     }
 
     /**
-     * Review G, L2: Ein angenommener Widerruf vor der Auslieferung gibt
-     * Schlüssel frei — die Produktseite muss es erfahren.
+     * G: An accepted withdrawal before delivery releases keys — the product
+     * page has to learn about it.
      */
     public function testAnnehmenMeldetFreigewordeneSchluessel(): void
     {
@@ -250,12 +251,12 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue($this->processing(stock: $stock)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW)->done);
     }
 
-    // ── Erstattung (F3, F4) ───────────────────────────────────────────────
+    // ── Refund (F3, F4) ───────────────────────────────────────────────────
 
     /**
-     * DL4, zweites Review S1: Die Korrektur trägt das Steuerland ihrer Zeilen
-     * und fasst damit je Land und Satz zusammen wie die Rechnung, die sie
-     * korrigiert — geprüft am Endzustand, der Übersicht des echten Builders.
+     * DL4: The correction carries the tax country of its lines and so groups
+     * by country and rate like the invoice it corrects — checked on the end
+     * state, the summary of the real builder.
      */
     public function testDieKorrekturTraegtDasSteuerlandIhrerZeilen(): void
     {
@@ -271,11 +272,11 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame(['AT:20.0000', 'FR:20.0000'], array_keys((new DocumentPayloadBuilder())->summariseTax($lines, 'EUR')));
     }
 
-    // ── Wertgutscheine (WG-6) ─────────────────────────────────────────────
+    // ── Vouchers (WG-6) ───────────────────────────────────────────────────
 
     /**
-     * WG11: Bezahlt mit 40 Gutschein und 60 Karte — die Erstattung von 30
-     * geht ganz auf den Gutschein (dasselbe Zahlungsmittel zuerst).
+     * WG11: Paid with 40 voucher and 60 card — the refund of 30 goes entirely
+     * to the voucher (the same means of payment first).
      */
     public function testErstattungGehtZuerstAufDenGutschein(): void
     {
@@ -290,15 +291,93 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('voucher:1', $back[0]['reference']);
         self::assertEquals(40, $this->connection->fetchOne('SELECT balance FROM tl_consho_voucher WHERE id = 1'));
 
-        // Die Erstattung zeigt auf die Gutscheinzahlung; die Mail sagt, was zurückging.
+        // The refund points to the voucher payment; the mail says what went back.
         self::assertSame((int) $this->connection->fetchOne('SELECT id FROM tl_consho_payment WHERE amount < 0'), (int) $this->withdrawalRow()['refundPayment']);
         self::assertSame('30,00 €', str_replace("\u{a0}", ' ', (string) $this->mails[0][1][9]));
         self::assertTrue($this->balance()->paymentSettled());
     }
 
     /**
-     * WG11: der Betreiber ändert die Aufteilung — 10 auf den Gutschein, 20
-     * an die Zahlungsart.
+     * EZ-4: back onto a single-purpose voucher, its tax goes along — on the
+     * payment, and on the correction as the deduction it takes back, issued
+     * before the payment is booked and stating the same figures.
+     */
+    public function testAufDenEinzweckGutscheinGehtDieSteuerMitZurueck(): void
+    {
+        $return = $this->einzweckGutscheinBezahlt();
+        $this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+
+        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
+
+        // 6.67 × 30 / 40 = 5.0025 → 5.00
+        self::assertEquals([-30, 20, 'AT', -5], array_values((array) $this->connection->fetchAssociative('SELECT amount, prepaidTaxRate, prepaidTaxCountry, prepaidTax FROM tl_consho_payment WHERE amount < 0')));
+
+        $corrections = array_values(array_filter($this->documentCalls, static fn (array $call): bool => 'correct' === $call[0]));
+        self::assertSame(
+            [['label' => 'Gift voucher …AAAA', 'country' => 'AT', 'rate' => '20.0000', 'net' => '-25.0000', 'tax' => '-5.0000', 'gross' => '-30.0000']],
+            $corrections[0][2],
+        );
+    }
+
+    /**
+     * EZ-4 (F2): a single-purpose voucher takes back only what the withdrawn
+     * articles of its pot give back. Withdrawn is the rucksack of another tax
+     * class: everything goes to the payment method, the voucher keeps what it
+     * paid, and the correction takes back no deduction.
+     */
+    public function testEinFremderArtikelGehtNichtAufDenEinzweckGutschein(): void
+    {
+        $return = $this->einzweckGutscheinBezahlt();
+        $this->connection->update('tl_consho_order_item', ['taxClass' => 4], ['id' => 2]);
+        $this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [2 => '1'], self::NOW);
+
+        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
+
+        $back = $this->connection->fetchAllAssociative('SELECT amount, reference FROM tl_consho_payment WHERE amount < 0 ORDER BY id');
+        self::assertEquals([[-35, 'WEB-00077-W1']], array_map('array_values', $back));
+        self::assertEquals(10, $this->connection->fetchOne('SELECT balance FROM tl_consho_voucher WHERE id = 1'));
+
+        $corrections = array_values(array_filter($this->documentCalls, static fn (array $call): bool => 'correct' === $call[0]));
+        self::assertSame([], $corrections[0][2]);
+    }
+
+    /**
+     * EZ-4: the page proposes onto the vouchers only what they can take back,
+     * and a share typed above it is refused naming that most — not cut down
+     * without a word.
+     */
+    public function testMehrAlsDerTopfHergibtWirdAbgelehnt(): void
+    {
+        $return = $this->einzweckGutscheinBezahlt();
+        $this->connection->update('tl_consho_order_item', ['taxClass' => 4], ['id' => 2]);
+        $this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [1 => '1', 2 => '1'], self::NOW);
+
+        // The hiking pole (30) is in the voucher's pot, the rucksack is not.
+        self::assertSame('30.0000', $this->processing(vouchers: $return)->proposal(self::WITHDRAWAL)['vouchers']);
+
+        $result = $this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW, null, '40');
+        self::assertFalse($result->done);
+        self::assertSame(['invalidVoucherShare', ['30.00']], [$result->key, $result->params]);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+    }
+
+    /**
+     * Voucher 1 as a single-purpose voucher of class 3, AT, 20 % — the class
+     * of the hiking poles; 40 × 20 / 120 = 6.67 already taxed.
+     */
+    private function einzweckGutscheinBezahlt(): VoucherReturn
+    {
+        $return = $this->gutscheinBezahlt();
+        $this->connection->update('tl_consho_voucher', ['taxClass' => 3, 'taxRate' => '20.0000', 'taxCountry' => 'AT'], ['id' => 1]);
+        $this->connection->update('tl_consho_payment', ['prepaidTaxRate' => '20.0000', 'prepaidTaxCountry' => 'AT', 'prepaidTax' => '6.6700'], ['reference' => 'voucher:1']);
+        $this->connection->update('tl_consho_order_item', ['taxClass' => 3, 'taxCountry' => 'AT'], ['pid' => self::ORDER]);
+
+        return $return;
+    }
+
+    /**
+     * WG11: the operator changes the split — 10 to the voucher, 20 to the
+     * payment method.
      */
     public function testDieAufteilungLaesstSichAendern(): void
     {
@@ -312,8 +391,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Mehr, als der Gutschein bezahlt hat, geht nicht auf ihn — und
-     * abgelehnt heißt: nichts gebucht.
+     * More than the voucher paid cannot go to it — and rejected means:
+     * nothing booked.
      */
     public function testMehrAlsBezahltGehtNichtAufDenGutschein(): void
     {
@@ -329,10 +408,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * WG7, Review S1 (Michael, 2026-10-06: „wurde er eingelöst, wurde damit
-     * etwas erworben, was zurück gegeben werden muss"): ein eingelöster
-     * Gutschein — hier einer von zweien — hält die Annahme auf; nichts ist
-     * gebucht, die Meldung nennt ihn.
+     * WG7: a redeemed voucher — here one of two — holds up the acceptance;
+     * nothing is booked, the message names it.
      */
     public function testWiderrufEinesEingeloestenGutscheinsWirdAbgelehnt(): void
     {
@@ -344,7 +421,7 @@ final class WithdrawalProcessingTest extends TestCase
             $this->connection->insert('tl_consho_voucher', ['id' => $id, 'code' => $code, 'shop' => 1, 'currency' => 'EUR', 'faceValue' => '50', 'paidAmount' => '50', 'balance' => $balance, 'source' => 'purchase', 'orderId' => self::ORDER, 'orderItem' => 4]);
         }
 
-        // Gutschein 2 hat 30 in einer anderen Bestellung bezahlt.
+        // Voucher 2 has paid 30 in another order.
         $this->connection->insert('tl_consho_order', ['id' => 78, 'orderNumber' => 'WEB-00078']);
         $this->connection->update('tl_consho_voucher', ['balance' => '50'], ['id' => 2]);
         (new VoucherLedger($this->connection))->book(2, '-30', VoucherBookingType::Redeem, self::NOW - 50, 78);
@@ -357,7 +434,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame(['0', '0'], array_map('strval', $this->connection->fetchFirstColumn('SELECT blocked FROM tl_consho_voucher WHERE id IN (2, 3) ORDER BY id')));
         self::assertSame('received', $this->withdrawalRow()['state']);
 
-        // Nur das nicht eingelöste Stück: angenommen, gesperrt, voll erstattet.
+        // Only the unredeemed piece: accepted, blocked, fully refunded.
         self::assertTrue($this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [4 => '1'], self::NOW)->done);
         self::assertSame(['0', '1'], array_map('strval', $this->connection->fetchFirstColumn('SELECT blocked FROM tl_consho_voucher WHERE id IN (2, 3) ORDER BY id')));
         self::assertTrue(BigDecimal::zero()->isEqualTo((string) $this->withdrawalRow()['valueCompensation']));
@@ -367,8 +444,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Zweites Review, L-B: ein von Hand gesperrter Gutschein hält die
-     * Annahme mit eigener Meldung auf — entscheiden muss der Betreiber.
+     * A voucher blocked by hand holds up the acceptance with a message of its
+     * own — the operator has to decide.
      */
     public function testEinVonHandGesperrterGutscheinHatEigeneMeldung(): void
     {
@@ -384,7 +461,7 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Gutschein 1 hat 40 von der Bestellung bezahlt, die Karte 60.
+     * Voucher 1 has paid 40 of the order, the card 60.
      */
     private function gutscheinBezahlt(): VoucherReturn
     {
@@ -410,7 +487,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue($result->done);
         self::assertSame('correct', $this->documentCalls[0][0]);
         self::assertSame('-30.0000', $this->documentCalls[0][1][0]['lineTotal']);
-        // Stückpreis netto wie auf der Rechnung, Menge positiv (Regel des Stornos).
+        // Unit price net as on the invoice, quantity positive (the cancellation's rule).
         self::assertSame('-25.0000', $this->documentCalls[0][1][0]['unitPrice']);
         self::assertSame('1', $this->documentCalls[0][1][0]['quantity']);
         self::assertSame('-5.0000', $this->documentCalls[0][1][0]['taxAmount']);
@@ -424,7 +501,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue(BigDecimal::of('30')->isEqualTo((string) $this->withdrawalRow()['refundAmount']));
         self::assertSame(55, (int) $this->withdrawalRow()['refundDocument']);
 
-        // Forderung 70, bezahlt 70.
+        // Amount due 70, paid 70.
         $balance = $this->balance();
         self::assertTrue(BigDecimal::of('70')->isEqualTo($balance->claim));
         self::assertTrue($balance->paymentSettled());
@@ -436,10 +513,11 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Abo-8, P79: Der Rucksack ist hier ein Dienstleistungs-Abo (35,00 €,
-     * Periode 35 Tage), mit Zustimmung freigegeben, 7 begonnene Tage genutzt —
-     * vorgeschlagen 7,00 € Wertersatz. Bis zur Erstattung bleiben sie offen,
-     * dann wird korrigiert statt storniert, auch wenn alles widerrufen ist.
+     * Abo-8, P79: The backpack here is a service subscription (€ 35.00, period
+     * 35 days), released with consent, 7 days begun and used — proposed
+     * € 7.00 compensation for value. Until the refund they stay open, then
+     * the invoice is corrected instead of cancelled, even if everything is
+     * withdrawn.
      */
     public function testWertersatzWirdVorgeschlagenUndEinbehalten(): void
     {
@@ -447,15 +525,15 @@ final class WithdrawalProcessingTest extends TestCase
         $this->processing()->accept(self::WITHDRAWAL, [1 => '2', 2 => '1'], self::NOW);
 
         self::assertTrue(BigDecimal::of('7')->isEqualTo((string) $this->withdrawalRow()['valueCompensation']));
-        // Forderung 100 − 60 − (35 − 7) = 12: der Wertersatz bleibt geschuldet.
+        // Amount due 100 − 60 − (35 − 7) = 12: the compensation for value stays owed.
         self::assertTrue(BigDecimal::of('12')->isEqualTo($this->balance()->claim));
 
-        // Beendet hat es die Annahme (P78; hier ein Stub) — die Mail liest den Zustand.
+        // The acceptance ended it (P78; a stub here) — the mail reads the state.
         $this->connection->update('tl_consho_subscription', ['state' => 'ended', 'endsAt' => self::NOW], ['orderItem' => 2]);
 
         self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '5', self::NOW)->done);
 
-        // P81: die Mail nennt den Wertersatz und das beendete Abo.
+        // P81: the mail names the compensation for value and the ended subscription.
         self::assertSame('7,00 €', str_replace("\u{a0}", ' ', (string) $this->mails[0][1][7]));
         self::assertSame(['WEB-00077-1'], $this->mails[0][1][8]);
 
@@ -468,10 +546,11 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Review Abo-8, L2 (Regel 38): Annahme und Erstattung mit dem echten
-     * Baustein statt des Stubs. Der Vorschlag entsteht vor dem Beenden, das
-     * Abo endet zum Zeitpunkt der Annahme, die Berechtigung ist gesperrt, und
-     * die Mail nennt genau dieses Abo.
+     * Abo-8: Acceptance and refund with the real building block instead of
+     * the stub — a doubled block can have side effects that differ in
+     * combination. The proposal comes about before the ending, the
+     * subscription ends at the time of acceptance, the entitlement is blocked,
+     * and the mail names exactly this subscription.
      */
     public function testAnnahmeUndErstattungMitDemEchtenAboBaustein(): void
     {
@@ -489,10 +568,10 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * DL9: Eine einmalige Dienstleistung, ganz widerrufen, ist gesperrt — ohne
-     * Abo, das es beenden könnte. Wertersatz schlägt Consho nicht vor: ohne
-     * Laufzeit gibt es keine Tage zu zählen (Grund noPeriod). Teilweise
-     * widerrufen bleibt die Berechtigung; Ware hat keine.
+     * DL9: A one-off service, withdrawn entirely, is blocked — without a
+     * subscription it could end. Consho proposes no compensation for value:
+     * without a term there are no days to count (reason noPeriod). Withdrawn
+     * in part, the entitlement stays; goods have none.
      */
     public function testEineEinmaligeDienstleistungWirdGesperrt(): void
     {
@@ -503,7 +582,7 @@ final class WithdrawalProcessingTest extends TestCase
         $this->connection->update('tl_consho_order_item', ['kind' => 'service'], ['id' => 1]);
         $this->connection->insert('tl_consho_entitlement', ['pid' => self::ORDER, 'orderItem' => 1, 'quantity' => '2.0000']);
 
-        // E6: das Auslieferungsmodul erfährt genau diese Sperre.
+        // E6: the delivery module learns of exactly this block.
         $revoked = (int) $this->connection->fetchOne('SELECT id FROM tl_consho_entitlement WHERE orderItem = 2');
         $revocations = $this->createMock(EntitlementRevocations::class);
         $revocations->expects(self::once())->method('revoked')->with([$revoked]);
@@ -517,9 +596,9 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Zweites Review Abo-8, L1: dasselbe für eine Verlängerung, mit dem echten
-     * Baustein. Die Lizenz geht ans alte Abo zurück (ungesperrt), und die
-     * Maske rechnet danach dasselbe wie bei der Annahme (S2).
+     * Abo-8: the same for a renewal, with the real building block. The
+     * licence goes back to the old subscription (unblocked), and the form
+     * computes the same afterwards as at the acceptance.
      */
     public function testEineWiderrufeneVerlaengerungGibtDieLizenzZurueckUndDieRechnungBleibt(): void
     {
@@ -539,8 +618,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Review Abo-8, S3: Ein geleertes Feld behält nichts ein — wie beim
-     * Versandanteil. Nur ein nicht gezeigtes Feld (null) behält den Vorschlag.
+     * Abo-8: A cleared field retains nothing — as with the shipping share.
+     * Only a field not shown (null) keeps the proposal.
      */
     public function testEinLeeresFeldBehaeltNichtsEin(): void
     {
@@ -566,8 +645,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Gegenprobe: Auf 0 gesetzt, ist alles zurück — die Rechnung wird wie
-     * bisher storniert.
+     * Control case: set to 0, everything is back — the invoice is cancelled
+     * as before.
      */
     public function testOhneWertersatzBleibtEsBeimStorno(): void
     {
@@ -602,8 +681,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * F3: Alles zurück in einem Schritt — die Rechnung wird storniert, und
-     * erstattet wird die ganze Summe.
+     * F3: Everything back in one step — the invoice is cancelled, and the
+     * whole sum is refunded.
      */
     public function testAllesErstattetStorniertDieRechnung(): void
     {
@@ -617,9 +696,9 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * F3a (Fable-Review B2): Ohne Rechnung und nicht alles widerrufen — die
-     * Rechnung entsteht jetzt, dann die Korrektur, beide in der Mail. Beim
-     * Versand stellte „Rechnung bei Versand" sonst die volle Rechnung aus.
+     * F3a: Without an invoice and not everything withdrawn — the invoice is
+     * created now, then the correction, both in the mail. Otherwise "invoice
+     * on shipping" would issue the full invoice on shipping.
      */
     public function testOhneRechnungEntstehenRechnungUndKorrektur(): void
     {
@@ -631,15 +710,15 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame(55, (int) $this->withdrawalRow()['refundDocument']);
         self::assertSame([60, 55], $this->mails[0][1][4], 'Rechnung zuerst, dann die Korrektur');
 
-        // F3b: ohne Giro-Code; bezahlt ist alles, also kein Restbetrag.
+        // F3b: without a giro code; everything is paid, so no remaining amount.
         self::assertSame(['giroCode' => false], $this->documentCalls[0][1]);
         self::assertSame('', $this->mails[0][1][6]);
     }
 
     /**
-     * F3b: Unbezahlt, Rechnung mit ausgestellt — die Mail nennt, was nach
-     * der Korrektur noch zu zahlen ist (100 − 30 = 70), denn kein Beleg nennt
-     * diesen Betrag.
+     * F3b: Unpaid, invoice issued along with it — the mail names what is
+     * still to be paid after the correction (100 − 30 = 70), because no
+     * document names that amount.
      */
     public function testUnbezahltNenntDieMailDenRestbetrag(): void
     {
@@ -652,7 +731,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('70,00 €', str_replace("\u{a0}", ' ', (string) $this->mails[0][1][6]));
     }
 
-    /** Alles widerrufen, nichts wird versandt: keine Rechnung, kein Beleg. */
+    /** Everything withdrawn, nothing is shipped: no invoice, no document. */
     public function testOhneRechnungUndAllesWiderrufenKeinBeleg(): void
     {
         $this->invoice = null;
@@ -665,7 +744,7 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Nie Geld zurück, das nie kam: unbezahlt sinkt nur die Forderung.
+     * Never money back that never came: unpaid, only the amount due drops.
      */
     public function testUnbezahltSinktNurDieForderung(): void
     {
@@ -688,7 +767,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * F9: Fehlt der Nummernkreis, sagt die Seite es — und nichts ist gebucht.
+     * F9: If the number range is missing, the page says so — and nothing is
+     * booked.
      */
     public function testOhneNummernkreisWirdNichtsGebucht(): void
     {
@@ -704,18 +784,18 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Block H (H-5, R1): Mit Vorkasse-Nachlass 9,50 (10 % von 95,00, eine
-     * Steuerklasse) hat die Bestellung 90,50 gekostet. Ein Wanderstock geht
-     * zurück: erstattet wird, was er gekostet hat — 30,00 abzüglich seines
-     * Anteils am Nachlass (netto 25,00 von 79,1667 → 3,00), also 27,00. Die
-     * Korrektur weist den Anteil als eigene Zeile aus, positiv.
+     * Block H (H-5, R1): With a prepayment discount of 9.50 (10 % of 95.00,
+     * one tax class) the order cost 90.50. One hiking pole goes back: what it
+     * cost is refunded — 30.00 minus its share of the discount (net 25.00 of
+     * 79.1667 → 3.00), so 27.00. The correction shows the share as a line of
+     * its own, positive.
      */
     public function testTeilwiderrufNimmtDenNachlassAnteiligMit(): void
     {
         $this->paymentDiscount();
         $this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
 
-        // F7: Die Forderung sinkt nur um das, was der Stock gekostet hat.
+        // F7: The amount due only drops by what the pole cost.
         self::assertTrue(BigDecimal::of('63.5')->isEqualTo($this->balance()->claim), $this->balance()->claim);
         self::assertSame('27.0000', (string) BigDecimal::of($this->processing()->proposal(self::WITHDRAWAL)['goods'])->toScale(4));
 
@@ -736,9 +816,9 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * H-5 (R1): Ein Rabattcode galt nur für den Rucksack (−3,50, beim Kauf
-     * an seiner Zeile festgehalten). Der widerrufene Wanderstock gibt nichts
-     * davon zurück; der Rucksack alles.
+     * H-5 (R1): A discount code applied only to the backpack (−3.50, recorded
+     * on its line at purchase). The withdrawn hiking pole gives none of it
+     * back; the backpack all of it.
      */
     public function testDerRabattGehtNurMitDerZeileZurueckDieErBekam(): void
     {
@@ -760,9 +840,10 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * H-5 mit Wertersatz (P79): Der Rucksack ist ein Dienstleistungs-Abo und
-     * hat nach dem Vorkasse-Nachlass 31,50 gekostet; 7 von 35 Tagen → 6,30.
-     * Einbehalten wird vom Rucksack, der Nachlass geht ganz zurück.
+     * H-5 with compensation for value (P79): The backpack is a service
+     * subscription and cost 31.50 after the prepayment discount; 7 of 35
+     * days → 6.30. It is retained from the backpack, the discount goes back
+     * entirely.
      */
     public function testWertersatzAufDasWasDieZeileGekostetHat(): void
     {
@@ -771,7 +852,7 @@ final class WithdrawalProcessingTest extends TestCase
         $this->processing()->accept(self::WITHDRAWAL, [1 => '2', 2 => '1'], self::NOW);
 
         self::assertTrue(BigDecimal::of('6.3')->isEqualTo((string) $this->withdrawalRow()['valueCompensation']));
-        // 90,50 − (60 − 6) − (31,50 − 6,30).
+        // 90.50 − (60 − 6) − (31.50 − 6.30).
         self::assertTrue(BigDecimal::of('11.3')->isEqualTo($this->balance()->claim), $this->balance()->claim);
 
         self::assertSame('invalidCompensation', $this->processing()->refund(self::WITHDRAWAL, '5', self::NOW, '31.51')->key, 'höchstens, was der Rucksack gekostet hat');
@@ -784,9 +865,9 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Zwei Dienstleistungen, 60,00 einbehalten: die erste hat nach dem
-     * Nachlass 54,00 gekostet und wird ganz einbehalten — samt ihrem Anteil;
-     * die übrigen 6,00 gehen vom Rucksack ab (31,50 → 25,50).
+     * Two services, 60.00 retained: the first cost 54.00 after the discount
+     * and is retained entirely — with its share; the remaining 6.00 come off
+     * the backpack (31.50 → 25.50).
      */
     public function testDerWertersatzReichtVonZeileZuZeileNachDemWasSieGekostetHaben(): void
     {
@@ -810,7 +891,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '0', self::NOW, '31.50')->done);
 
         $lines = $this->documentCalls[0][1];
-        // Wanderstock 1 von 2 mit seinem halben Anteil (3,00); vom Rucksack nichts.
+        // Hiking pole 1 of 2 with half its share (3.00); nothing from the backpack.
         self::assertSame(['-30.0000', '3.0000'], array_column($lines, 'lineTotal'));
         self::assertTrue(BigDecimal::of('27')->isEqualTo((string) $this->withdrawalRow()['refundAmount']));
     }
@@ -821,8 +902,8 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * Vorkasse 10 % auf die Ware (95,00): eine Zeile je Steuerklasse, negativ,
-     * wie PurchaseHandler sie schreibt. Alle Zeilen in Klasse 1.
+     * Prepayment 10 % on the goods (95.00): one line per tax class, negative,
+     * as PurchaseHandler writes them. All lines in class 1.
      */
     private function paymentDiscount(): void
     {
@@ -884,12 +965,12 @@ final class WithdrawalProcessingTest extends TestCase
         $documentRows->method('findIdByOrderAndType')->willReturnCallback(fn (): int|null => $this->invoice);
 
         $documents = $this->createStub(DocumentIssuerInterface::class);
-        $documents->method('correct')->willReturnCallback(function (int $invoiceId, array $lines): int {
+        $documents->method('correct')->willReturnCallback(function (int $invoiceId, array $lines, string $withdrawalNumber = '', array $prepaid = []): int {
             if ($this->rangeMissing) {
                 throw NumberRangeNotConfigured::for(1, 'creditNote');
             }
 
-            $this->documentCalls[] = ['correct', $lines];
+            $this->documentCalls[] = ['correct', $lines, $prepaid];
 
             return 55;
         });

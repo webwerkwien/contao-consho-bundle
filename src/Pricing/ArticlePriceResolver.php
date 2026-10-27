@@ -156,13 +156,13 @@ final class ArticlePriceResolver implements CartLinePriceSource
      * is no business, so only plans open to everyone (P91): the projection is
      * per market, not per visitor, and a tile must not show a plan the visitor
      * cannot book. An article not sold once ignores a one-time row left over
-     * from before (review Abo-2, L4a — the page already does).
+     * from before (Abo-2 — the page already does).
      *
      * ⚠️ So the tile and the page can differ for a visitor in a group on
-     * purpose (Fable review Abo-2b, K3): with a plan for that group first, the
+     * purpose (Abo-2b): with a plan for that group first, the
      * page shows it to them, the tile the first plan open to everyone (P91).
      * Open to everyone means the rule's groups only — since variant A
-     * (2026-10-08, A3) no longer its renewal kind.
+     * (A3) no longer its renewal kind.
      */
     public function listPrice(int $articleId, int $mainProductId, string $currency, string $country, int $now): ListPrice|null
     {

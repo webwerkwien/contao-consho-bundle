@@ -106,7 +106,7 @@ class ProductProperties
 
     /**
      * Two variants of one main product with the same axis values: the
-     * variant matrix took the first in silence (spec Abo, review Abo-6, S3 —
+     * variant matrix took the first in silence (spec Abo, Abo-6 —
      * a copied variant comes without its values, ProductCopyListener, and the
      * operator sets them). Refused, naming the sister. An empty set is
      * incomplete, not a duplicate.

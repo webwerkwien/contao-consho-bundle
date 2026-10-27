@@ -6,10 +6,10 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\InvoiceLogoFieldListener;
 
 /**
- * Michael, 2026-09-24: „bei der Dateiauswahl darauf achten, dass nur geeignete
- * und in Contao erlaubte Dateitypen auswählbar sind".
+ * The file picker offers only file types that are suitable and allowed in
+ * Contao.
  *
- * Gegen die echte DCA, nicht gegen eine Abschrift.
+ * Against the real DCA, not against a copy.
  */
 class InvoiceLogoFieldListenerTest extends TestCase
 {
@@ -31,8 +31,8 @@ class InvoiceLogoFieldListenerTest extends TestCase
     }
 
     /**
-     * Was die Installation nicht als Bild zulässt, fällt heraus — auch wenn
-     * es für die Rechnung geeignet wäre.
+     * What the installation does not allow as an image drops out — even if it
+     * would be suitable for the invoice.
      */
     public function testWasContaoNichtErlaubtFaelltHeraus(): void
     {
@@ -42,9 +42,9 @@ class InvoiceLogoFieldListenerTest extends TestCase
     }
 
     /**
-     * 🔴 Leere Schnittmenge: KEIN `extensions => ''`. FileTree prüft nur,
-     * wenn der Wert wahr ist — ein Leerstring schaltete die Prüfung ab und
-     * ließe jede Datei zu. Das Feld verschwindet stattdessen.
+     * 🔴 Empty intersection: NO `extensions => ''`. FileTree only checks if the
+     * value is truthy — an empty string would switch the check off and allow
+     * any file. Instead, the field disappears.
      */
     public function testOhneErlaubtenTypVerschwindetDasFeldStattJedeDateiZuzulassen(): void
     {
@@ -56,9 +56,9 @@ class InvoiceLogoFieldListenerTest extends TestCase
     }
 
     /**
-     * Der Ablageordner: `files => false` ist die Bedingung, mit der Contao
-     * serverseitig „nur Ordner" prüft (FileTree::checkValue, strikt auf
-     * false). Ohne sie filtert nur der Auswahldialog.
+     * The storage folder: `files => false` is the condition under which Contao
+     * checks "folders only" on the server side (FileTree::checkValue, strictly
+     * on false). Without it only the picker dialog filters.
      */
     public function testDerAblageordnerNimmtServerseitigNurOrdner(): void
     {

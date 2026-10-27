@@ -1,7 +1,7 @@
 {#
   "Dashboard" (block Dashboard), rendered inside the back end frame by
   DashboardBackendController. A header, then one block per shop, at most two
-  side by side (Michael, 2026-10-07, D2): figures, threshold, open points.
+  side by side (D2): figures, threshold, open points.
   The stock below them: stock belongs to an article, not to a shop.
 
   Contao's colour variables, so the page follows the back end's look and its
@@ -10,7 +10,7 @@
 {% set l = lang %}
 <div class="tl_listing_container consho-dashboard">
     {#- The header bar and, to its right, warnings and notes as two counting
-        boxes (Michael, 2026-10-09, DB1–DB3: "rechts vom Headerbalken"): grey at
+        boxes (DB1–DB3): grey at
         0 and nothing to open, red or blue from 1; the list opens in a dialog
         (backend-tabs.js, [data-consho-dialog]). The boxes stand also at 0, so
         the page does not jump — like the tiles. #}

@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Voucher;
 use Brick\Math\BigDecimal;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Symfony\Component\Intl\Currencies;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderDraft;
 
@@ -37,7 +38,7 @@ class VoucherRedemption
     public function redeem(int $orderId, OrderDraft $draft, int $now): void
     {
         /*
-         * All of them locked first, in id order (review WG-7, L1): two baskets
+         * All of them locked first, in id order (WG-7): two baskets
          * paying with A and B in opposite order would otherwise each hold one
          * and wait for the other — a deadlock instead of the second click
          * simply waiting and finding the balance gone.
@@ -62,6 +63,9 @@ class VoucherRedemption
                 throw VoucherChangedAtPurchase::for($voucher['id']);
             }
 
+            // EZ-4: what a single-purpose voucher pays was taxed at its sale.
+            $singlePurpose = SinglePurpose::of($row);
+
             $this->connection->insert('tl_consho_payment', [
                 'pid' => $orderId,
                 'tstamp' => $now,
@@ -69,6 +73,9 @@ class VoucherRedemption
                 'amount' => (string) $amount->toScale(4),
                 'method' => mb_substr($this->label((string) $row['code'], $draft->language), 0, 64),
                 'reference' => 'voucher:'.$voucher['id'],
+                'prepaidTaxRate' => $singlePurpose->taxRate ?? '0.0000',
+                'prepaidTaxCountry' => $singlePurpose->taxCountry ?? '',
+                'prepaidTax' => null === $singlePurpose ? '0.0000' : $singlePurpose->taxIn((string) $amount, Currencies::getFractionDigits($draft->currency)),
             ]);
 
             $paymentId = (int) $this->connection->lastInsertId();

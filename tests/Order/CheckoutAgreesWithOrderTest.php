@@ -64,23 +64,24 @@ use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherLedger;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherRedemption;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
+use Webwerkwien\ContaoConshoBundle\Voucher\CoverablePots;
 
 require_once __DIR__.'/../Checkout/CheckoutCalculatorTest.php';
 
 /**
- * Checkout und Bestellung, gegeneinander (Fable-Review C-12, Befund 1).
+ * Checkout and order, against each other (C-12).
  *
- * Bis C-12 prüfte jede Seite nur sich selbst: Der Controller-Test mockt den
- * Kauf, der Kauf-Test mockt den Placer. So hielt sich der Fehler, dass jede
- * Reverse-Charge-Bestellung scheiterte, von C-7 bis zur Abnahme. Hier laufen
- * der ECHTE CheckoutCalculator, der ECHTE PurchaseHandler und die ECHTE
- * OrderFactory über dieselben Preis- und Steuerquellen — die Bestellung muss
- * auf den Betrag über dem Knopf kommen, sonst wirft OrderFactory
+ * Until C-12 each side only checked itself: the controller test mocks the
+ * purchase, the purchase test mocks the placer. That is how the bug that
+ * made every reverse-charge order fail survived from C-7 onwards. Here the
+ * REAL CheckoutCalculator, the REAL PurchaseHandler and the REAL
+ * OrderFactory run over the same price and tax sources — the order has to
+ * arrive at the amount above the button, otherwise OrderFactory throws
  * TotalDisagreesWithCheckout.
  *
- * Der Warenkorb ist absichtlich unbequem: zwei Steuerklassen, ein Netto mit
- * vier Stellen und Menge 3, anteiliger Versand über beide Sätze, ein Nachlass
- * der Zahlungsart.
+ * The basket is deliberately awkward: two tax classes, a net price with
+ * four decimal places and quantity 3, proportional shipping over both
+ * rates, a discount of the payment method.
  */
 class CheckoutAgreesWithOrderTest extends TestCase
 {
@@ -96,7 +97,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
     private array $drafts = [];
 
     /**
-     * DL4: die Art je Artikel — 7 Tee, 8 Buch, 9 Beratungspaket.
+     * DL4: the kind per product — 7 tea, 8 book, 9 consulting package.
      *
      * @var array<int, string>
      */
@@ -107,7 +108,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
      */
     public static function faelle(): iterable
     {
-        // Lieferland, UID des Kunden geprüft, UID des Shops, Reverse Charge erwartet
+        // Delivery country, customer's VAT ID checked, shop's VAT ID, reverse charge expected
         yield 'Inland' => ['AT', false, 'ATU12345678', false];
         yield 'Deutschland ohne UID' => ['DE', false, 'ATU12345678', false];
         yield 'Deutschland mit UID: Reverse Charge' => ['DE', true, 'ATU12345678', true];
@@ -122,13 +123,13 @@ class CheckoutAgreesWithOrderTest extends TestCase
         $state = $this->state($country, $verifiedVatId, $shopVatId);
 
         self::assertTrue($state->isReady(), 'der Checkout muss kaufbereit sein, sonst prüft dieser Test nichts');
-        // Seit Abo-2 mit einer Abo-Zeile desselben Buchs: Kasse und Bestellung
-        // müssen beide den Preis der Regel nehmen, nicht den Einmalkauf.
+        // Since Abo-2 with a subscription line of the same book: checkout and order
+        // must both take the rule's price, not the one-off purchase.
         self::assertCount(3, $state->cart->lines);
         self::assertSame([], $state->cart->unpriced);
         self::assertSame($reverseCharge, $state->reverseCharge);
 
-        // Würde die Bestellung anders summieren, würfe OrderFactory hier.
+        // If the order summed differently, OrderFactory would throw here.
         $this->purchase($state, $shopVatId);
 
         self::assertCount(1, $this->orders);
@@ -146,10 +147,10 @@ class CheckoutAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * DL4, Regel 24 — der ganze Weg statt eines Einzelteils: AT-Shop,
-     * deutscher Verbraucher, Ware + E-Book + Beratungspaket. Die Ware und das
-     * E-Book tragen deutsche Steuer, die Dienstleistung österreichische —
-     * in der Kasse wie in der Bestellung, sonst würfe OrderFactory.
+     * DL4 — the whole path instead of a single part: AT shop, German
+     * consumer, goods + e-book + consulting package. The goods and the e-book
+     * carry German tax, the service Austrian — in the checkout as in the
+     * order, otherwise OrderFactory would throw.
      */
     public function testDieDienstleistungTraegtDieSteuerDesShops(): void
     {
@@ -157,11 +158,11 @@ class CheckoutAgreesWithOrderTest extends TestCase
         $state = $this->state('DE', false, 'ATU12345678', $this->dreiArten(), taxAtDestination: true);
 
         self::assertTrue($state->isReady());
-        // Kasse: 100,00 netto Beratung zu 20 % AT, nicht 19 % DE.
+        // Checkout: 100.00 net consulting at 20 % AT, not 19 % DE.
         self::assertSame('120.0000', $state->cart->lines[2]->lineGross);
-        // Review DL: die Zeile trägt ihr Land weiter — der Bedingungstext der
-        // Prüfseite (CheckoutController::reviewLines) rechnet damit, wie
-        // OrderFactory beim Einfrieren.
+        // DL: the line carries its country on — the condition text of the
+        // review page (CheckoutController::reviewLines) relies on it, as does
+        // OrderFactory when freezing.
         self::assertSame(['DE', 'DE', 'AT'], array_map(static fn ($line): string => $line->taxCountry, $state->cart->lines));
 
         $this->purchase($state, 'ATU12345678');
@@ -172,19 +173,19 @@ class CheckoutAgreesWithOrderTest extends TestCase
         self::assertSame(['physical', 'digital', 'service'], array_column($products, 'kind'));
         self::assertSame($state->grossTotal, $this->orders[0]['grandTotal']);
 
-        // Der Versand folgt der Lieferung; der Nachlass dem Land der Leistung,
-        // die er mindert (Review H, S1) — in Klasse 1 also auch AT.
+        // Shipping follows the delivery; the discount follows the country of the
+        // service it reduces (H) — so in class 1 also AT.
         $shipping = array_filter($this->items, static fn (array $item): bool => 'shipping' === $item['lineType']);
         self::assertSame(['DE'], array_values(array_unique(array_column($shipping, 'taxCountry'))));
         self::assertSame(['1|AT', '1|DE', '2|DE'], $this->keysOf('paymentDiscount'));
     }
 
     /**
-     * Block R (O1, R2, R4): ohne „Steuer im Bestimmungsland" ist alles, was
-     * nach Deutschland reist, ein Fernverkauf unter der Schwelle — Ware zu
-     * 20 % und 10 % AT, der Versand mit ihr; die Dienstleistung ohnehin AT.
-     * Kasse und Bestellung rechnen gleich, und jede Zeile hält fest, wohin
-     * die Leistung ging.
+     * Block R (O1, R2, R4): without "tax in the country of destination"
+     * everything that travels to Germany is a distance sale below the
+     * threshold — goods at 20 % and 10 % AT, shipping with them; the service
+     * is AT anyway. Checkout and order compute the same, and every line
+     * records where the supply went.
      */
     public function testOhneSchalterVersteuertDerShopImEigenenLand(): void
     {
@@ -206,11 +207,11 @@ class CheckoutAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Review H, S1: Rabatt und Vorkasse-Nachlass auf eine Dienstleistung, Kunde
-     * in DE. Tee (DE 19 %) und Beratung (AT 20 %) teilen die Klasse 1, aber
-     * nicht das Land — ein Nachlass mindert das Entgelt jeder Leistung zu ihrem
-     * eigenen Satz. 10 %: Tee 59,50 → −5,95 (netto 5,00, DE), Beratung 120,00
-     * → −12,00 (netto 10,00, AT); zusammen genau, was der Kunde liest.
+     * H: discount and prepayment discount on a service, customer in DE. Tea
+     * (DE 19 %) and consulting (AT 20 %) share class 1, but not the country —
+     * a discount reduces the consideration of each supply at its own rate.
+     * 10 %: tea 59.50 → −5.95 (net 5.00, DE), consulting 120.00 → −12.00
+     * (net 10.00, AT); together exactly what the customer reads.
      */
     public function testRabattUndNachlassFolgenDemLandDerLeistung(): void
     {
@@ -233,19 +234,19 @@ class CheckoutAgreesWithOrderTest extends TestCase
         $discount = $this->linesOf('discount');
         self::assertSame([['1', 'DE', '19.0000', '-5.0000', '-5.9500'], ['1', 'AT', '20.0000', '-10.0000', '-12.0000']], array_values(array_filter($discount, static fn (array $line): bool => '1' === $line[0])));
 
-        // Der Vorkasse-Nachlass ebenso: in Klasse 1 eine Zeile je Land, zum Satz der Leistung.
+        // The prepayment discount likewise: in class 1 one line per country, at the rate of the supply.
         $payment = array_values(array_filter($this->linesOf('paymentDiscount'), static fn (array $line): bool => '1' === $line[0]));
         self::assertSame(['AT', 'DE'], array_column($payment, 1), 'der größere Anteil zuerst');
         self::assertSame(['20.0000', '19.0000'], array_column($payment, 2));
 
-        // Und die Warenzeilen tragen ihren Anteil am Rabatt.
+        // And the goods lines carry their share of the discount.
         $products = array_values(array_filter($this->items, static fn (array $item): bool => 'product' === $item['lineType']));
         self::assertSame(['5.0000', '10.0000'], [$products[0]['discountNet'], $products[2]['discountNet']]);
     }
 
     /**
-     * Review H, P2 (W2): Ein Kunde der Nettogruppe liest netto — 7,77 € gehen
-     * netto ab, und die Rabattzeilen der Bestellung ergeben genau das.
+     * H (W2): a customer of the net group reads net — €7.77 come off net, and
+     * the order's discount lines add up to exactly that.
      */
     public function testFuerNettoKundenGehtDerBetragNettoBisInDieBestellung(): void
     {
@@ -297,9 +298,9 @@ class CheckoutAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Gegenprobe: Geschäftskunde mit geprüfter UID — Reverse Charge für den
-     * ganzen Korb, auch für die Dienstleistung (§ 3a Abs. 2 UStG, § 3a Abs. 6
-     * UStG 1994: an Unternehmer, wo der Empfänger sein Unternehmen betreibt).
+     * Control case: business customer with a checked VAT ID — reverse charge
+     * for the whole basket, also for the service (§ 3a Abs. 2 UStG, § 3a
+     * Abs. 6 UStG 1994: to businesses, where the recipient runs his business).
      */
     public function testMitUidReverseChargeAuchFuerDieDienstleistung(): void
     {
@@ -336,11 +337,11 @@ class CheckoutAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Block H (H-4), Regel 24 — der ganze Weg mit einem Rabattcode: Die
-     * Bestellung muss auf den Betrag über dem Knopf kommen, die Rabattzeilen
-     * sind die Anteile der Kasse, und versandkostenfrei hinterlässt keine
-     * Versandzeile. Zwei Steuersätze, ein Nachlass der Zahlungsart obendrauf,
-     * eine Abo-Zeile, die der Rabatt nie berührt (H8).
+     * Block H (H-4) — the whole path with a discount code: the order has to
+     * arrive at the amount above the button, the discount lines are the
+     * checkout's shares, and free shipping leaves no shipping line. Two tax
+     * rates, a payment method discount on top, a subscription line the
+     * discount never touches (H8).
      *
      * @dataProvider rabatte
      *
@@ -366,7 +367,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
 
         self::assertSame($state->grossTotal, $this->orders[0]['grandTotal']);
         self::assertSame($state->netTotal, $this->orders[0]['netTotal']);
-        // Der Placer zählt die Einlösung an diesem Entwurf (W5) — auch für versandkostenfrei.
+        // The placer counts the redemption on this draft (W5) — for free shipping too.
         self::assertSame([1, 'Herbst'], [$this->drafts[0]->discountRule, $this->drafts[0]->discountCode]);
 
         $discountLines = array_values(array_filter($this->items, static fn (array $item): bool => 'discount' === $item['lineType']));
@@ -387,7 +388,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
         );
         self::assertSame(['Herbstrabatt (Herbst)'], array_values(array_unique(array_column($discountLines, 'productName'))));
 
-        // H-5 (R1): die Warenzeilen tragen ihren Anteil, und zusammen genau die Rabattzeile ihrer Klasse.
+        // H-5 (R1): the goods lines carry their share, and together exactly the discount line of their class.
         foreach ($discountLines as $discountLine) {
             $frozen = BigDecimal::zero();
 
@@ -402,20 +403,20 @@ class CheckoutAgreesWithOrderTest extends TestCase
     }
 
     /**
-     * Spec Wertgutscheine, offene Punkte (K16): Kasse, Kaufklick und Buchung
-     * waren je für sich getestet; dass die Gutscheinzahlungen die Bestellsumme
-     * treffen und die Bestellung damit bezahlt ist, belegte nur die Abnahme
-     * auf c5. Hier läuft der ganze Weg: echte Wallet im Rechner, echter
-     * Kauf, echte OrderFactory, echte Einlösung, echter Saldo.
+     * Spec gift cards, open points (K16): checkout, purchase click and booking
+     * were each tested on their own; that the gift card payments meet the
+     * order total and the order is thereby paid, no test proved. Here the
+     * whole path runs: real wallet in the calculator, real purchase, real
+     * OrderFactory, real redemption, real balance.
      *
-     * Nachlese K7: auch ein Geschäftskunde unter Reverse Charge — der Gutschein
-     * zahlt dann den Nettobetrag, der zugleich die Bestellsumme ist.
+     * Nachlese K7: also a business customer under reverse charge — the gift
+     * card then pays the net amount, which is also the order total.
      *
      * @return iterable<string, array{string, bool, string, bool}>
      */
     public static function gutscheine(): iterable
     {
-        // Wert des Gutscheins, deckt er die Bestellung ganz? Lieferland, UID des Kunden geprüft
+        // Value of the gift card, does it cover the order fully? Delivery country, customer's VAT ID checked
         yield 'deckt alles' => ['1000', true, 'AT', false];
         yield 'deckt einen Teil' => ['20', false, 'AT', false];
         yield 'Reverse Charge, deckt alles' => ['1000', true, 'DE', true];
@@ -436,7 +437,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
         WithdrawalSchema::create($db);
         $db->insert('tl_consho_voucher', ['id' => 1, 'code' => 'AAAABBBBCCCCMDSN', 'shop' => 1, 'currency' => 'EUR', 'faceValue' => $value, 'balance' => $value]);
 
-        // Ohne Abo-Zeile: über einer Abo-Zeile deckt ein Gutschein nie alles (E1).
+        // Without a subscription line: above a subscription line a gift card never covers everything (E1).
         $state = $this->state($country, $verifiedVatId, 'ATU12345678', [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(2, 8, '3.0000', 1)], vouchers: new VoucherWallet($db), voucherCodes: ['AAAABBBBCCCCMDSN']);
 
         self::assertTrue($state->isReady());
@@ -455,7 +456,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
         self::assertSame($state->grossTotal, $grandTotal);
         self::assertCount(1, $draft->vouchers);
 
-        // Die Bestellung, wie OrderFactory sie schrieb, in die Datenbank der Einlösung.
+        // The order as OrderFactory wrote it, into the redemption's database.
         $db->insert('tl_consho_order', ['id' => 1, 'orderNumber' => 'WEB-00001', 'shop' => 1, 'grandTotal' => $grandTotal]);
         (new VoucherRedemption($db, new VoucherLedger($db), new VoucherWallet($db)))->redeem(1, $draft, self::NOW);
 
@@ -474,6 +475,32 @@ class CheckoutAgreesWithOrderTest extends TestCase
         }
     }
 
+    /**
+     * EZ-1, F2: a single-purpose voucher of class 1 (20 % AT) pays the book
+     * and nothing else — not the other class, not the shipping, though its
+     * balance would. The purchase books exactly that.
+     */
+    public function testEinEinzweckGutscheinZahltNurSeineArtikel(): void
+    {
+        $db = SqliteWithoutRowLocks::connection();
+
+        foreach (['tl_consho_voucher', 'tl_consho_voucher_booking', 'tl_consho_payment'] as $table) {
+            DcaSchema::create($db, $table);
+        }
+
+        $db->insert('tl_consho_voucher', ['id' => 1, 'code' => 'AAAABBBBCCCCMDSN', 'shop' => 1, 'currency' => 'EUR', 'faceValue' => '500', 'balance' => '500', 'taxClass' => 1, 'taxRate' => '20.0000', 'taxCountry' => 'AT']);
+
+        $state = $this->state('AT', false, 'ATU12345678', [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(2, 8, '3.0000', 1)], vouchers: new VoucherWallet($db), voucherCodes: ['AAAABBBBCCCCMDSN'], pots: new CoverablePots($this->taxes()));
+
+        self::assertTrue($state->isReady());
+        self::assertFalse($state->coveredByVouchers);
+        self::assertSame(['60.00'], array_map(static fn ($voucher): string => $voucher->applied, $state->payingVouchers()));
+        self::assertEquals(BigDecimal::of($state->grossTotal)->minus('60'), BigDecimal::of($state->toPay()));
+
+        $this->purchase($state, 'ATU12345678');
+        self::assertSame('60.00', $this->drafts[0]->vouchers[0]['amount']);
+    }
+
     private function dreiArten(): array
     {
         return [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(2, 8, '1.0000', 1), new CartItemRow(3, 9, '1.0000', 1)];
@@ -483,7 +510,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
      * @param list<CartItemRow>|null $items
      * @param list<string>           $voucherCodes
      */
-    private function state(string $country, bool $verifiedVatId, string $shopVatId, array|null $items = null, string $code = '', CartDiscounts|null $discounts = null, bool $netAudience = false, bool $taxAtDestination = false, VoucherWallet|null $vouchers = null, array $voucherCodes = []): CheckoutState
+    private function state(string $country, bool $verifiedVatId, string $shopVatId, array|null $items = null, string $code = '', CartDiscounts|null $discounts = null, bool $netAudience = false, bool $taxAtDestination = false, VoucherWallet|null $vouchers = null, array $voucherCodes = [], CoverablePots|null $pots = null): CheckoutState
     {
         $data = (new CheckoutData())
             ->withBilling(new Address(lastname: 'Muster', street: 'Hauptstr. 1', postal: '1100', city: 'Wien', country: 'AT', email: 'eva@example.org'))
@@ -505,6 +532,7 @@ class CheckoutAgreesWithOrderTest extends TestCase
             $this->kindsOf(),
             discounts: $discounts,
             vouchers: $vouchers,
+            pots: $pots,
         );
 
         return $calculator->calculate(
@@ -588,8 +616,8 @@ class CheckoutAgreesWithOrderTest extends TestCase
             9 => ['EUR' => [new PriceRow('100.0000', 'EUR', null, '1.0000')]],
         ]);
 
-        // Abo-2: Das Buch gibt es auch im Monatsabo (Regel 5) zu 4,1667 netto
-        // — vier Stellen wie der Einmalkauf, damit die Rundung mitspielt.
+        // Abo-2: the book also comes as a monthly subscription (rule 5) at 4.1667 net
+        // — four decimal places like the one-off purchase, so that rounding plays along.
         $prices = new class($oneTime) implements PriceRepositoryInterface {
             public function __construct(private readonly InMemoryPriceRepository $oneTime)
             {

@@ -21,8 +21,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block R (R6, R7): die Seite „Steuermeldung" mit den echten deutschen Texten
- * und der Export als Link.
+ * Block R (R6, R7): the page "Steuermeldung" (tax report) with the real
+ * German texts and the export as a link.
  */
 class TaxReportBackendControllerTest extends TestCase
 {
@@ -60,15 +60,15 @@ class TaxReportBackendControllerTest extends TestCase
         self::assertStringContainsString('ATU12345678', $html);
         self::assertStringContainsString('Steuer im Bestimmungsland: ausgeschaltet', $html);
 
-        // Abnahme R-5: ein Shop ohne UID heißt nur einmal so.
+        // R-5: a shop without a VAT ID is named that only once.
         $this->connection->insert('tl_consho_shop', ['id' => 2, 'tstamp' => 1, 'title' => 'Ohne UID', 'country' => 'AT', 'vatId' => '']);
         self::assertSame(1, substr_count($this->controller('/contao?do=consho_dashboard&view=taxReport')(), 'Ohne UID'));
         self::assertStringContainsString('85 %', $html, '8.500 € von 10.000 €');
-        // Der Abstand vor dem Zeichen kommt aus ICU, je nach Gebietsschema ein geschütztes Leerzeichen.
+        // The space before the symbol comes from ICU, a non-breaking space depending on the locale.
         self::assertMatchesRegularExpression('/Lieferschwelle von 10\.000,00[\s\x{00A0}\x{202F}]€/u', $html);
         self::assertStringContainsString('export=summary', $html);
         self::assertStringContainsString('export=records', $html);
-        // DB6: eine Ansicht des Dashboards, der Export bleibt dort.
+        // DB6: a view of the dashboard, the export stays there.
         self::assertStringContainsString('do=consho_dashboard&amp;view=taxReport&amp;business=ATU12345678', $html);
         self::assertStringContainsString('class="header_back"', $html);
     }
@@ -87,7 +87,7 @@ class TaxReportBackendControllerTest extends TestCase
 
         self::assertSame('text/csv; charset=UTF-8', $response->headers->get('Content-Type'));
         self::assertStringContainsString(\sprintf('oss-atu12345678-%d-q%d-belege.csv', $year, $quarter), (string) $response->headers->get('Content-Disposition'));
-        // Schalter aus: nichts im Land des Kunden versteuert — nur die Kopfzeile.
+        // Switch off: nothing taxed in the customer's country — only the header row.
         self::assertStringStartsWith("\u{FEFF}Bestellung;Beleg;Art;", (string) $response->getContent());
         self::assertSame(1, substr_count((string) $response->getContent(), "\n"));
     }
@@ -100,8 +100,8 @@ class TaxReportBackendControllerTest extends TestCase
     }
 
     /**
-     * Review A1: Contao prüft nur das Dashboard-Recht. Seite und Export der
-     * Einzelsätze sind Bestelldaten.
+     * Contao only checks the dashboard right. Page and export of the single
+     * records are order data.
      */
     public function testOhneBestellrechtKeineSeiteUndKeinExport(): void
     {

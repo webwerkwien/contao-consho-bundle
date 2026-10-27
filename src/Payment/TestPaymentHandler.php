@@ -21,8 +21,8 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
  *     the body signed by the method's secret. So a test runs through the real
  *     route, the real signature check and the real lock.
  *   - The return carries its result signed as well. handleReturn() reports
- *     `succeeded` only when that signature holds (Michael, 2026-09-26: the
- *     page says only what it can prove) — a hand-typed ?result=paid is
+ *     `succeeded` only when that signature holds — the
+ *     page says only what it can prove — a hand-typed ?result=paid is
  *     `pending`, and pending shows the neutral sentence.
  *
  * The signature is HMAC-SHA256 with the secret from the method's settings,
@@ -35,7 +35,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
  *
  * ── Follow-up payments (Abo-4b, P100) ────────────────────────────────────
  *
- * It can charge follow-up orders, so the acceptance has something to charge
+ * It can charge follow-up orders, so a test run has something to charge
  * with: an order with subscription lines (OrderView::$recurring) carries
  * `recurring` in the signed session, the test page puts a mandate
  * `test-mandate-<attempt>` into its paid notification, and the core keeps it
@@ -158,7 +158,7 @@ final class TestPaymentHandler implements RecurringPaymentHandlerInterface
 
         /*
          * A paid message without a usable amount is refused, not thrown
-         * (review C-11, finding 3): paid() would throw, the processor would
+         * (C-11): paid() would throw, the processor would
          * answer 500, and a provider resends a 5xx forever. A message no
          * provider would send is a 400.
          */

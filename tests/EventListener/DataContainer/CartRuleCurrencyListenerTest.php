@@ -10,8 +10,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CartRuleCurrencyListener;
 
 /**
- * Review H, L5: Betrag oder Mindestbestellwert ohne Währung — die Regel gälte
- * nirgends. Abgelehnt am Feld, aus dem abgeschickten Formular gelesen.
+ * H: amount or minimum order value without a currency — the rule would
+ * apply nowhere. Rejected at the field, read from the submitted form.
  */
 final class CartRuleCurrencyListenerTest extends TestCase
 {
@@ -49,14 +49,14 @@ final class CartRuleCurrencyListenerTest extends TestCase
 
     public function testBeimAutomatischenAbschickenKeinePruefung(): void
     {
-        // Zweites Review H, L-A: der Wechsel auf „Betrag" schickt ab, bevor die Währung getippt ist.
+        // H: switching to "Amount" submits before the currency has been typed.
         self::assertSame('', $this->listener(['effect' => 'amount', 'minimumOrder' => '50', 'SUBMIT_TYPE' => 'auto'])->save('', $this->createStub(DataContainer::class)));
     }
 
     public function testOhneAbgeschicktesFormularKeinePruefung(): void
     {
         self::assertSame('', (new CartRuleCurrencyListener(new RequestStack()))->save('', $this->createStub(DataContainer::class)));
-        // Mehrere bearbeiten: die Felder heißen dort je Datensatz anders.
+        // Edit multiple: there the fields are named differently per record.
         self::assertSame('', $this->listener(['effect_12' => 'amount'])->save('', $this->createStub(DataContainer::class)));
     }
 

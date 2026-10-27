@@ -6,7 +6,7 @@ use Doctrine\DBAL\Connection;
 
 /**
  * Carries the translations inside the parent record's own Contao version —
- * docs/mehrsprachigkeit.md, 7.4 and 7.5.
+ * Block M, 7.4 and 7.5.
  *
  * ── Why the callbacks and not something simpler ───────────────────────────
  *

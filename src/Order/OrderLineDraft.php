@@ -47,7 +47,7 @@ final class OrderLineDraft
         public readonly int $renews = 0,
         // The net the cart rule gave this product line (H-5), positive; frozen on the order line.
         public readonly string $discountNet = '0',
-        // A reduction's country (review H, S1): '' = the delivery's, as for every other charge.
+        // A reduction's country (H): '' = the delivery's, as for every other charge.
         public readonly string $taxCountry = '',
     ) {
     }

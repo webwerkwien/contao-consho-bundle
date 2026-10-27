@@ -12,10 +12,9 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\MethodInUseDelete
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Michael, 2026-09-25: Der graue Löschknopf an „Paket" sah nach fehlenden
- * Rechten aus. Er sagt jetzt, warum — mit seiner Formulierung: „Das Element
- * ist mit mind. einer Bestellung verknüpft und darf nicht mehr gelöscht
- * werden."
+ * The grey delete button on „Paket" looked like missing permissions. It now
+ * says why: „Das Element ist mit mind. einer Bestellung verknüpft und darf
+ * nicht mehr gelöscht werden."
  */
 class MethodInUseDeleteTitleListenerTest extends TestCase
 {
@@ -42,13 +41,13 @@ class MethodInUseDeleteTitleListenerTest extends TestCase
 
         self::assertSame('Das Element ist mit mind. einer Bestellung verknüpft und darf nicht mehr gelöscht werden.', $operation['title']);
 
-        // Hover shows the TITLE of the icon, not its alt (seen on c5).
+        // Hover shows the TITLE of the icon, not its alt (seen on a real installation).
         self::assertStringContainsString('title="Das Element ist mit mind. einer Bestellung verknüpft', (string) $operation['iconAttributes']);
     }
 
     /**
-     * Gesperrt aus einem anderen Grund (fehlendes Recht): Dann stimmt der Satz
-     * nicht, und er darf nicht dastehen.
+     * Disabled for another reason (missing permission): then the sentence is
+     * not true, and it must not be there.
      */
     public function testOhneVerwendungBleibtDerTitelContaos(): void
     {

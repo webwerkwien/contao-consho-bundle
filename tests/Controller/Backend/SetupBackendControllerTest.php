@@ -37,7 +37,7 @@ use Webwerkwien\ContaoConshoBundle\Setup\ShopPageSetup;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block I (I5): die Seite „Einrichtung" mit den echten deutschen Texten.
+ * Block I (I5): the page "Einrichtung" (setup) with the real German texts.
  */
 final class SetupBackendControllerTest extends TestCase
 {
@@ -75,8 +75,8 @@ final class SetupBackendControllerTest extends TestCase
         $html = $this->controller()();
 
         self::assertStringContainsString('Es gibt noch keine Shop-Konfiguration.', $html);
-        // Mit Anfrage-Token (Abnahme Stufe 2, 2026-10-17): ohne fragte Contao mit
-        // „Ungültiges Token" nach — act=create prüft es, act=edit nicht.
+        // With a request token: without one Contao asked back with
+        // "Ungültiges Token" — act=create checks it, act=edit does not.
         self::assertStringContainsString('href="/contao?do=consho_shop&amp;act=create&amp;rt=token-value"', $html, 'I3a: über die Maske, nicht selbst angelegt');
         self::assertStringNotContainsString('consho-setup__step', $html);
     }
@@ -95,7 +95,7 @@ final class SetupBackendControllerTest extends TestCase
         self::assertMatchesRegularExpression('/consho-setup__step--open">.*?Mailversand.*?Kein Postausgang in „Testshop"\./s', $html);
         $first = substr($html, (int) strpos($html, 'id="shop-1"'), (int) strpos($html, 'id="shop-2"') - (int) strpos($html, 'id="shop-1"'));
         self::assertSame(7, substr_count($first, 'consho-setup__step--done'), 'alle anderen Schritte von Shop 1 erledigt');
-        self::assertStringContainsString('href="/contao?do=page&amp;act=edit&amp;id=5">Startpunkt „Shop (DE)&quot; bearbeiten</a>', $html, 'Contaos kodierte Klammern als Text (Review I, L4)');
+        self::assertStringContainsString('href="/contao?do=page&amp;act=edit&amp;id=5">Startpunkt „Shop (DE)&quot; bearbeiten</a>', $html, 'Contaos kodierte Klammern als Text');
         self::assertStringContainsString('<h3 class="consho-dashboard__shop-title">Shop (2)</h3>', $html);
         self::assertStringContainsString('href="/contao?do=consho_shop&amp;table=tl_consho_number_range&amp;id=1"', $html);
         self::assertStringContainsString('id="shop-1"', $html, 'Sprungziel der Operation an der Shop-Konfiguration');
@@ -103,7 +103,7 @@ final class SetupBackendControllerTest extends TestCase
 
     public function testOhneStartpunktIstDerErsteSchrittOffen(): void
     {
-        // I7: kein Befund, und trotzdem nicht bereit.
+        // I7: no issue, and still not ready.
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
 
         $html = $this->controller()();
@@ -123,8 +123,8 @@ final class SetupBackendControllerTest extends TestCase
 
     public function testDieGruendeNurFuerWerSieBehebenDarf(): void
     {
-        // H2 wie im Dashboard: der Zustand für alle, der Satz nur mit Recht
-        // auf das Modul, in dem er behoben wird.
+        // H2 as on the dashboard: the state for everyone, the sentence only with
+        // the right on the module where it is fixed.
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
         $this->connection->insert('tl_page', ['id' => 5, 'title' => 'Shop DE', 'type' => 'root', 'consho_shop' => 1, 'published' => 1]);
         $GLOBALS['TL_LANG']['CONSHO']['findings']['paymentMethodMissing'] = 'Keine Zahlungsart.';
@@ -140,10 +140,10 @@ final class SetupBackendControllerTest extends TestCase
     }
 
     /**
-     * Abnahme N1 auf c5 (2026-10-17): „Bereit — dieser Shop verkauft" und
-     * darunter „… und der Checkout dieses Shops ist gesperrt" — der Satz
-     * stammt von der Startseite und stimmt für einen Befund, der nur
-     * unveröffentlichte Startpunkte betrifft, nicht. Michael: „1 ja".
+     * N1: "Bereit — dieser Shop verkauft" (ready — this shop sells) and below
+     * it "… und der Checkout dieses Shops ist gesperrt" (and this shop's
+     * checkout is blocked) — the sentence comes from the start page and is not
+     * true for an issue that only concerns unpublished start points.
      */
     public function testEinBefundNurAusUnveroeffentlichtenStartpunktenSagtDass(): void
     {
@@ -157,8 +157,8 @@ final class SetupBackendControllerTest extends TestCase
         $html = $this->controller([], setupIssues: [$prepared])();
         self::assertStringContainsString('Ohne Warenkorb: Entwurf. '.$note, $html);
 
-        // Gegenprobe: Meldet die Startseite denselben Befund für den Shop
-        // (ein veröffentlichter Startpunkt ist dabei), stimmt der Satz.
+        // Counter-check: if the start page reports the same issue for the shop
+        // (a published start point is among them), the sentence is true.
         $live = new ConfigurationIssue(ConfigurationFinding::CartPageMissing, ['count' => '1', 'pages' => 'Shop DE'], 1);
         $mixed = new ConfigurationIssue(ConfigurationFinding::CartPageMissing, ['count' => '2', 'pages' => 'Shop DE, Entwurf'], 1);
         self::assertStringNotContainsString($note, $this->controller([$live], setupIssues: [$mixed])());
@@ -171,7 +171,7 @@ final class SetupBackendControllerTest extends TestCase
 
         $html = $this->controller($issues)();
         self::assertStringContainsString('name="consho_setup_action" value="ranges"', $html);
-        // Turbo folgt der Weiterleitung per fetch und verliert #shop-N (c5, 2026-10-08).
+        // Turbo follows the redirect via fetch and loses #shop-N.
         self::assertStringContainsString('class="consho-setup__action" data-turbo="false">', $html);
         self::assertStringNotContainsString('class="consho-setup__action">', $html, 'kein Formular ohne');
         self::assertStringContainsString('Fehlende Nummernkreise anlegen', $html);
@@ -224,9 +224,9 @@ final class SetupBackendControllerTest extends TestCase
     }
 
     /**
-     * N1 (Nachlese Stufe 2): Ein Shop in Vorbereitung hat nur unveröffentlichte
-     * Startpunkte — bis 0.1.2 bekamen sie weder Befund noch Knopf, und die
-     * Einrichtungsseite meldete „erledigt". Jetzt bekommen sie beides.
+     * N1 (Nachlese stage 2): a shop in preparation has only unpublished start
+     * points — up to 0.1.2 they got neither an issue nor a button, and the
+     * setup page reported "done". Now they get both.
      */
     public function testEinUnveroeffentlichterStartpunktBekommtSeineSeiten(): void
     {
@@ -245,8 +245,8 @@ final class SetupBackendControllerTest extends TestCase
     }
 
     /**
-     * Was kein Startpunkt eines Shops ist, bekommt nichts: Der Shop wird aus
-     * dem Startpunkt gelesen, nicht aus dem Formular.
+     * Whatever is not a start point of a shop gets nothing: the shop is read
+     * from the start point, not from the form.
      */
     public function testEineSeiteOhneShopBekommtNichts(): void
     {
@@ -258,10 +258,9 @@ final class SetupBackendControllerTest extends TestCase
     }
 
     /**
-     * Fable-Review (2026-10-17): Seit N1 darf der Seiten-Knopf an einem
-     * unveröffentlichten Startpunkt handeln — der Cache-Knopf nicht, die Seite
-     * bietet ihn dort nicht an. Bis hierher prüfte das nur SetupGuideTest, der
-     * Controller nie.
+     * Since N1 the page button may act on an unpublished start point — the
+     * cache button may not; the page does not offer it there. SetupGuideTest
+     * checks that too; this test checks it at the controller.
      */
     public function testDerCacheKnopfHandeltNichtAnEinemUnveroeffentlichtenStartpunkt(): void
     {
@@ -304,7 +303,7 @@ final class SetupBackendControllerTest extends TestCase
 
     public function testNachDemZeitbudgetWirdNichtMehrGemessen(): void
     {
-        // Zweites Review I, Punkt 3: der Zweig war unerreichbar.
+        // I: the branch must be reachable.
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
         $this->connection->insert('tl_page', ['id' => 5, 'title' => 'Shop DE', 'type' => 'root', 'consho_shop' => 1, 'published' => 1]);
         $this->connection->insert('tl_page', ['id' => 7, 'pid' => 5, 'title' => 'Home', 'published' => 1]);

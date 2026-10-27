@@ -49,8 +49,8 @@ class NumberRangeSetupTest extends TestCase
 
     public function testEinBelegtesPraefixBekommtDieShopId(): void
     {
-        // Sonst begänne der zweite Shop mit dem Hinweis „gleiches Belegpräfix".
-        // Bestellnummern zählen dort nicht mit, also auch hier nicht.
+        // Otherwise the second shop would start with the notice "same document
+        // prefix". Order numbers do not count there, so not here either.
         $this->connection->insert('tl_consho_number_range', ['pid' => 1, 'type' => 'invoice', 'prefix' => 're-']);
         $this->connection->insert('tl_consho_number_range', ['pid' => 1, 'type' => 'order', 'prefix' => 'B-']);
 

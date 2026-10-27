@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 
 /**
- * DL1, DL5: die Art am Produkttyp und was aus ihr folgt.
+ * DL1, DL5: the kind on the product type and what follows from it.
  */
 class ProductKindTest extends TestCase
 {
@@ -17,7 +17,7 @@ class ProductKindTest extends TestCase
                 'physical' => [true, false, ''],
                 'digital' => [false, true, 'content'],
                 'service' => [false, true, 'service'],
-                // WG3: kein Versand, kein Abo, keine Zustimmung zum vorzeitigen Beginn.
+                // WG3: no shipping, no subscription, no consent to the early start.
                 'voucher' => [false, false, ''],
             ],
             array_combine(
@@ -50,8 +50,8 @@ class ProductKindTest extends TestCase
     }
 
     /**
-     * DL1, DL7: Bestellzeile und Abo frieren die Art ein; die alten Spalten
-     * gibt es nicht mehr.
+     * DL1, DL7: order line and subscription freeze the kind; the old columns
+     * no longer exist.
      */
     public function testBestellzeileUndAboTragenDieArt(): void
     {

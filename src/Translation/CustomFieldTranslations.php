@@ -8,7 +8,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\CustomFieldValues;
 
 /**
  * The text values of a product's custom fields in a translation language
- * (ZW-3, Z1; Michael 2026-10-14: „ja, alles wie empfohlen") — for the mask
+ * (ZW-3, Z1) — for the mask
  * and a command alike.
  *
  * Only text fields: a number, a date and yes/no read the same in every

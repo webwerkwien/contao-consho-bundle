@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ArticleShippingDataInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Was die Bestellzeile vom Produkt einfriert — mit echtem CartTitles, denn
- * der Name kommt bewusst von dort (Prüfungsnotiz, Regel 25).
+ * What the order line freezes from the product — with the real CartTitles,
+ * not a stand-in, because the name deliberately comes from there.
  */
 class DbalOrderProductRepositoryTest extends TestCase
 {
@@ -20,8 +20,8 @@ class DbalOrderProductRepositoryTest extends TestCase
 
     public function testDieBestellzeileFriertDenNamenMitDenWertenDerVarianteEin(): void
     {
-        // E2: „Wanderstock, rot" steht als Text in productName — Rechnung,
-        // Mails und Backend lesen ihn von dort.
+        // E2: "Wanderstock, rot" is stored as text in productName — invoice,
+        // mails and backend read it from there.
         $this->createCatalogSchema(DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]));
         $this->insertProduct(['id' => 1, 'title' => 'Wanderstock']);
         $this->insertProduct(['id' => 2, 'pid' => 1, 'title' => 'rot', 'sku' => 'WS-ROT']);
@@ -42,8 +42,8 @@ class DbalOrderProductRepositoryTest extends TestCase
 
     public function testEinLangerNamePasstInDieSpalte(): void
     {
-        // Review E2, S1: ein 250 Zeichen langer Titel plus Werte sprengte
-        // productName (255) — auf MariaDB im Strict-Modus scheitert der Kauf.
+        // E2: a 250-character title plus values overflowed
+        // productName (255) — on MariaDB in strict mode the purchase fails.
         $this->createCatalogSchema(DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]));
         $this->insertProduct(['id' => 1, 'title' => str_repeat('ä', 250)]);
         $this->insertProduct(['id' => 2, 'pid' => 1]);
@@ -61,8 +61,8 @@ class DbalOrderProductRepositoryTest extends TestCase
     }
 
     /**
-     * Block GARAN (GA6): Dauer und Label, wie sie vor dem Knopf standen —
-     * aus derselben Quelle wie der Checkout, die Variante erbt.
+     * Block GARAN (GA6): duration and label as they stood before the button —
+     * from the same source as the checkout, the variant inherits.
      */
     public function testDieGarantieDesHauptproduktsWirdEingefroren(): void
     {

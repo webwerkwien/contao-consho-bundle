@@ -19,7 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Security\DeliveryLockVoter;
 use Webwerkwien\ContaoConshoBundle\Security\PaymentLockVoter;
 
 /**
- * Gesperrte Zahlungen, Lieferungen und ihre Positionen (D-1, A2; Review S2, S3).
+ * Locked payments, deliveries and their lines (D-1, A2).
  */
 final class LockedRecordVoterTest extends TestCase
 {
@@ -28,7 +28,7 @@ final class LockedRecordVoterTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy: a hand-written schema goes stale with the next column.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_delivery');
 
@@ -45,9 +45,9 @@ final class LockedRecordVoterTest extends TestCase
     }
 
     /**
-     * Öffnen und das Speichern der schreibgeschützten Maske bringen nichts
-     * Neues — beides bleibt erlaubt, sonst würde das Neuladen nach dem
-     * sperrenden Speichern zur Fehlerseite.
+     * Opening and saving the read-only mask bring nothing new — both stay
+     * allowed, otherwise the reload after the locking save would end on the
+     * error page.
      */
     public function testOeffnenUndSpeichernOhneNeueWerteBleibenErlaubt(): void
     {
@@ -60,8 +60,8 @@ final class LockedRecordVoterTest extends TestCase
     }
 
     /**
-     * Review S2: „Mehrere bearbeiten" schickt neue Werte, die schreibgeschützte
-     * Maske deckt nur act=edit ab.
+     * "Edit multiple" sends new values; the read-only mask only covers
+     * act=edit.
      */
     public function testNeueWerteFuerEineGesperrteZahlungWerdenVerweigert(): void
     {
@@ -72,9 +72,8 @@ final class LockedRecordVoterTest extends TestCase
     }
 
     /**
-     * Review 2, S-c: In „Mehrere bearbeiten" fällt ein gesperrter Satz aus
-     * der Maske, statt editierbar zu erscheinen und beim Speichern still
-     * übersprungen zu werden.
+     * In "Edit multiple" a locked record drops out of the mask instead of
+     * appearing editable and being silently skipped on save.
      */
     public function testInMehrereBearbeitenIstEinGesperrterSatzNichtDabei(): void
     {
@@ -108,8 +107,8 @@ final class LockedRecordVoterTest extends TestCase
     }
 
     /**
-     * Review S3: DC_Table::cut() fragt UpdateAction mit dem neuen pid — die
-     * Position darf nicht in ein gemeldetes Paket wandern.
+     * DC_Table::cut() asks UpdateAction with the new pid — the line must not
+     * move into a parcel that has already been reported.
      */
     public function testVerschiebenInEinGemeldetesPaketWirdVerweigert(): void
     {

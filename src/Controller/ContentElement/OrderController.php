@@ -22,6 +22,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Digital\OrderPageDownloads;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherDocument;
 use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityLabelImages;
+use Webwerkwien\ContaoConshoBundle\Customer\AccountFromOrder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentDeliveryInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\InvoiceView;
@@ -106,6 +107,8 @@ class OrderController extends AbstractContentElementController
         'changed', 'notOpen', 'statusLocks', 'alreadyChanged', 'methodUnavailable', 'confirmMissing', 'paymentFailed', 'afterWithdrawal', 'overdue',
         // D-2
         'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing',
+        // K1
+        'accountRequested', 'accountTooMany', 'accountUnavailable',
     ];
 
     public function __construct(
@@ -136,6 +139,8 @@ class OrderController extends AbstractContentElementController
         // Block GARAN (GA3, GA6): the labels frozen on the lines. Optional
         // like the above.
         private readonly DurabilityLabelImages|null $durability = null,
+        // K1: "Kundenkonto anlegen" on a guest order. Optional like the above.
+        private readonly AccountFromOrder|null $account = null,
     ) {
     }
 
@@ -169,8 +174,8 @@ class OrderController extends AbstractContentElementController
         }
 
         /*
-         * The link from the mail, opened for the first time (acceptance
-         * C-10, Michael 2026-09-25): a single button "show order" before the
+         * The link from the mail, opened for the first time (C-10): a
+         * single button "show order" before the
          * order. Mailbox scanners follow links but submit no forms, so the
          * click — a POST — is the reader, and it confirms the address. Just
          * reading without a click would otherwise leave every customer
@@ -225,6 +230,7 @@ class OrderController extends AbstractContentElementController
         // was opened with, which the address already carries.
         $template->set('withdrawal_token', $token);
         $template->set('order_url', $this->addressOf($page, $request, $token));
+        $template->set('account', $this->account?->offered($order) ?? false);
 
         $response = $template->getResponse();
         $response->setPrivate();
@@ -302,6 +308,15 @@ class OrderController extends AbstractContentElementController
             throw new RedirectResponseException($this->addressOf($page, $request, $token, $declared['notice'], $declared['form']));
         }
 
+        // "Kundenkonto anlegen" (K1): the mail goes to the address of the
+        // order, never to one from the request.
+        if ('createAccount' === $action) {
+            $order = $this->orders->order($orderId) ?? throw new PageNotFoundException('Order not found.');
+            $outcome = $this->account?->request($order, (string) $request->getClientIp(), $now) ?? throw new PageNotFoundException('Action not found.');
+
+            throw new RedirectResponseException($this->addressOf($page, $request, $token, $outcome->value));
+        }
+
         /*
          * "Try again" (7.4, C-11): a new attempt of the same method. Checked
          * again here, not trusted from the rendered page — the notification
@@ -361,7 +376,7 @@ class OrderController extends AbstractContentElementController
     }
 
     /**
-     * The payments and what is still open (acceptance WG-7: a customer who
+     * The payments and what is still open (WG-7: a customer who
      * paid part with a voucher read only "partly paid"). Labelled like the
      * invoice; the open amount only where something was paid and something
      * is left — a fresh unpaid order says it in its payment block.
@@ -383,7 +398,7 @@ class OrderController extends AbstractContentElementController
      * nothing to say: no attempt (orders before C-11), or an attempt that
      * started complete — prepayment, whose block is the payment notice.
      *
-     * Only what is proven (Michael, 2026-09-26): `confirmed` needs the booked
+     * Only what is proven: `confirmed` needs the booked
      * notification, `reported` a return the handler VERIFIED; everything
      * else open is `none`.
      *
@@ -395,7 +410,7 @@ class OrderController extends AbstractContentElementController
         $order = $this->orders->order($orderId);
 
         // An attempt of ANOTHER method is the one a change of method cancelled
-        // (review C-11, finding 4): if the new method could not start, saying
+        // (C-11): if the new method could not start, saying
         // "the payment was cancelled" would be about the old one.
         if (null === $latest || null === $order || $latest->methodId !== (int) ($order['paymentMethod'] ?? 0)) {
             return null;
@@ -541,7 +556,7 @@ class OrderController extends AbstractContentElementController
      *
      * Also the answer to an ACTION whose token expired while the page was
      * open (a redirect token lives a day): the action is not carried out,
-     * and the form appears in its place (Fable review D-6, K5).
+     * and the form appears in its place (D-6).
      */
     private function linkRequest(FragmentTemplate $template, PageModel $page, Request $request, int $shopId): Response
     {
@@ -582,12 +597,10 @@ class OrderController extends AbstractContentElementController
             $head->setMetaRobots('noindex,nofollow');
 
             /*
-             * The policy in the DOCUMENT as well (acceptance on c5,
-             * 2026-09-25): the web server there sets its own Referrer-Policy
-             * header and overrides the one above. A meta referrer applies to
-             * the document whatever the server says, so the token reaches
-             * neither another site nor the shop's own logs and statistics
-             * (Michael: „wenn 2 Vorteile hat, dann ja").
+             * The policy in the DOCUMENT as well: a web server may set its own
+             * Referrer-Policy header and override the one above. A meta referrer
+             * applies to the document whatever the server says, so the token reaches
+             * neither another site nor the shop's own logs and statistics.
              */
             $head->removeMetaTag('name', 'referrer');
             $head->addMetaTag(new HtmlAttributes(['name' => 'referrer', 'content' => 'no-referrer']));

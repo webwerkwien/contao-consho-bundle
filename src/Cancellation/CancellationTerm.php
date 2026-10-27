@@ -74,7 +74,7 @@ class CancellationTerm
         return match (RenewalKind::from((string) $subscription['renewal'])) {
             RenewalKind::Ends => $termEndsAt,
             // A rule from before variant A billed otherwise than monthly ends
-            // with the term (SubscriptionLifecycle::openEnded(), review S1).
+            // with the term (SubscriptionLifecycle::openEnded()).
             RenewalKind::Indefinite => 1 === (int) $subscription['billingInterval'] ? $afterNotice : $termEndsAt,
             RenewalKind::SameTerm => $this->nextRoundEnd($subscription, $termEndsAt, $notice, $receivedAt),
         };

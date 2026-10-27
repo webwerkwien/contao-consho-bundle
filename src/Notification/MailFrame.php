@@ -8,7 +8,7 @@ use Symfony\Component\Mime\Email;
  * Head and foot of a mail to a customer (block GARAN, part 2, L1–L4): the
  * shop's logo above, who sends it below.
  *
- * Consho sets no legal wording (Michael, 2026-09-22). § 14 Abs. 1 UGB asks a
+ * Consho sets no legal wording. § 14 Abs. 1 UGB asks a
  * registered business for "die Firma, die Rechtsform, den Sitz und die
  * Firmenbuchnummer … sowie das Firmenbuchgericht" on its business letters,
  * § 63 Abs. 1 GewO a sole trader for name and location. The frame carries

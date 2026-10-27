@@ -25,9 +25,9 @@ class ConfirmationBeforeMailMigrationTest extends TestCase
     }
 
     /**
-     * Erster Durchlauf des Updates auf C-9: Die Spalte, die C-9 anlegt, fehlt
-     * noch. Die alten Bestellungen bekommen 0 — „keine Bestätigung fällig",
-     * weder ein Datum noch das NULL, das „gescheitert" heißt.
+     * First pass of the update to C-9: the column that C-9 creates is still
+     * missing. The old orders get 0 — "no confirmation due", neither a date
+     * nor the NULL that means "failed".
      */
     public function testVorC9AngelegteBestellungenBekommenNull(): void
     {
@@ -41,9 +41,9 @@ class ConfirmationBeforeMailMigrationTest extends TestCase
     }
 
     /**
-     * 🔴 Die Zusicherung, an der alles hängt: Steht die C-9-Spalte, läuft die
-     * Migration nie wieder. Sonst räumte jedes Deploy die Warnung zu jeder
-     * seither gescheiterten Bestätigung still ab.
+     * 🔴 The assertion everything hinges on: once the C-9 column exists, the
+     * migration never runs again. Otherwise every update would silently clear
+     * the warning for every confirmation that has failed since.
      */
     public function testNachDemSchemaUpdateLaeuftSieNieWieder(): void
     {

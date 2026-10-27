@@ -18,8 +18,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\DbalPinRepository;
  * DC_Table's constructor writes findPtable() into `config.ptable` — the row's
  * ptable when a record is edited, the `ptable` query parameter when one is
  * created in the children view — so DataContainer::addPtableTags() already
- * adds the listing's tag. Read in Contao 5.7 (DC_Table.php:229, 374) on
- * 2026-09-13, after an earlier version of this class had added it a second time.
+ * adds the listing's tag. Read in Contao 5.7 (DC_Table.php:229, 374),
+ * after an earlier version of this class had added it a second time.
  *
  * The recycle bin is the exception B-6 found: DC_Table::undo() invalidates the
  * tags of tl_undo, never those of the restored record.

@@ -15,10 +15,10 @@ use Webwerkwien\ContaoConshoBundle\Document\ArchiveFolderProtector;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block Lizenz, LZ-1 (Michael, 2026-10-12: „ja, bei 4 nur so lange aktiv"):
- * Was ein Modul ausgeliefert hat, auf der Bestellseite — Text, Download,
- * Knopf. Nur für eine nutzbare Berechtigung der eigenen Bestellung (E4), nur
- * was das Modul an genau diesem Eintrag anbietet (E1, E2).
+ * Block Lizenz, LZ-1:
+ * What a module has delivered, on the order page — text, download,
+ * button. Only for a usable entitlement of one's own order (E4), only what
+ * the module offers on exactly this entry (E1, E2).
  */
 class PresentableDeliveryTest extends TestCase
 {
@@ -40,7 +40,7 @@ class PresentableDeliveryTest extends TestCase
         $this->connection->insert('tl_consho_order_item', ['id' => 10, 'pid' => 5, 'productName' => 'Connect', 'quantity' => 1]);
 
         $base = ['pid' => 5, 'orderItem' => 10, 'product' => 1, 'quantity' => '1', 'validFrom' => 1_000];
-        // 1 aktiv, 2 ruht, 3 gesperrt, 4 fremde Bestellung, 5 andere Auslieferungsart
+        // 1 active, 2 suspended, 3 blocked, 4 foreign order, 5 other delivery type
         $this->connection->insert('tl_consho_entitlement', ['id' => 1, 'deliveryType' => 'testlicence'] + $base);
         $this->connection->insert('tl_consho_entitlement', ['id' => 2, 'deliveryType' => 'testlicence', 'suspendedAt' => 1_500] + $base);
         $this->connection->insert('tl_consho_entitlement', ['id' => 3, 'deliveryType' => 'testlicence', 'revoked' => 1] + $base);

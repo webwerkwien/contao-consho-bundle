@@ -35,7 +35,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductSort;
  *
  * InputBag::get() throws BadRequestException for a non-scalar value, so ?cq[]=x
  * would answer 400. FilterStateCodec::decode() never throws on bad input, and
- * the way to it must not either (docs/block-b-katalog-frontend.md, 10).
+ * the way to it must not either (Block B, 10).
  */
 final class ListingAddressResolver implements ResetInterface
 {

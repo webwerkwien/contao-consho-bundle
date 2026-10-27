@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block GARAN, GA7 und Review: ein Label, das den Kunden nicht erreicht.
- * Typ 1 körperlich, 2 digital.
+ * Block GARAN, GA7: a label that does not reach the customer.
+ * Type 1 physical, 2 digital.
  */
 class DurabilityGuaranteeIssueSourceTest extends TestCase
 {
@@ -33,9 +33,9 @@ class DurabilityGuaranteeIssueSourceTest extends TestCase
         $this->product(2, 'Wanderstock', ['durabilityLabel' => str_repeat('a', 16)]);
         $this->product(3, 'Rucksack', ['durabilityYears' => 3, 'durabilityLabel' => str_repeat('b', 16)]);
         $this->product(4, 'Seil');
-        // Review 7: zwei Jahre mit Label — keine Garantie im Sinne von Z 12a.
+        // Two years with a label — no guarantee within the meaning of Z 12a.
         $this->product(5, 'Zelt', ['durabilityYears' => 2, 'durabilityLabel' => str_repeat('c', 16)]);
-        // Zwei Jahre ohne Label: gar kein Fall von Z 12a, kein Befund.
+        // Two years without a label: no case of Z 12a at all, no issue.
         $this->product(6, 'Hering', ['durabilityYears' => 2]);
 
         self::assertSame(
@@ -52,7 +52,7 @@ class DurabilityGuaranteeIssueSourceTest extends TestCase
 
     public function testNurVeroeffentlichteWaren(): void
     {
-        // Ohne Typ ist es eine Ware (DbalArticleShippingData).
+        // Without a type it is goods (DbalArticleShippingData).
         $this->product(1, 'Ohne Typ', ['durabilityYears' => 5, 'productType' => 0]);
         $this->product(2, 'Entwurf', ['durabilityYears' => 5, 'published' => 0]);
         $this->product(3, 'E-Book', ['durabilityYears' => 5, 'productType' => 2]);
@@ -61,7 +61,7 @@ class DurabilityGuaranteeIssueSourceTest extends TestCase
     }
 
     /**
-     * Review GARAN, 2: an der Variante wirkt der Wert nicht.
+     * GARAN: on the variant the value has no effect.
      */
     public function testEinWertAnDerVariante(): void
     {
@@ -73,7 +73,7 @@ class DurabilityGuaranteeIssueSourceTest extends TestCase
     }
 
     /**
-     * Abnahme c5 und Review 5: nicht öffentlich, zu schwer für eine Mail.
+     * Not public, too heavy for an email.
      */
     public function testDieDateiSelbst(): void
     {
@@ -97,8 +97,8 @@ class DurabilityGuaranteeIssueSourceTest extends TestCase
     }
 
     /**
-     * GA8: ein geschachteltes Label, das nie erscheint — ohne volles Label,
-     * ohne gültige Dauer, aus einem nicht öffentlichen Ordner. Ein Hinweis.
+     * GA8: a nested label that never appears — without a full label,
+     * without a valid duration, from a non-public folder. A notice.
      */
     public function testEinGeschachteltesLabelDasNieErscheint(): void
     {
@@ -120,8 +120,8 @@ class DurabilityGuaranteeIssueSourceTest extends TestCase
             $byProduct[$context['product']][] = $finding;
         }
 
-        // Je Produkt genau EIN Befund (Review GA8, 4): wo das volle Label
-        // einen eigenen hat, deckt der den geschachtelten mit.
+        // Exactly ONE issue per product (GA8): where the full label
+        // has one of its own, it covers the nested one too.
         self::assertSame([
             'Geschützt' => [ConfigurationFinding::DurabilityNestedUnused],
             'Label geschützt' => [ConfigurationFinding::DurabilityLabelNotPublic],

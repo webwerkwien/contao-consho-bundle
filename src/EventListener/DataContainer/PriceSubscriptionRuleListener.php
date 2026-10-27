@@ -66,7 +66,7 @@ final class PriceSubscriptionRuleListener
          * Digits only. `(int) 'Monatsabo'` is 0, and 0 — the one-time sale —
          * is on offer at most products: a label arriving as the value would
          * pass as a one-time price. That is what the mask did before the field
-         * was marked isAssociative (Abo-1 acceptance).
+         * was marked isAssociative (Abo-1).
          */
         if (!\is_scalar($value) || 1 !== preg_match('/^\d+$/', (string) $value) || !\array_key_exists((int) $value, $this->options($dc))) {
             throw new \RuntimeException((string) ($GLOBALS['TL_LANG']['tl_consho_price']['ruleNotOffered'] ?? 'Not offered.'));
@@ -82,7 +82,7 @@ final class PriceSubscriptionRuleListener
     public function label(array $row, string $label): string
     {
         // From the row, not the DCA's format: that printed decimal(10,4) raw,
-        // "EUR 25.0000 netto ab 1.0000" (Prüfungsnotiz, Fall 30).
+        // "EUR 25.0000 netto ab 1.0000" (MySQL returns the trailing zeros).
         $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
         $label = \sprintf(
             '%s netto <span class="tl_gray">ab %s</span>',

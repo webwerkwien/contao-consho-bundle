@@ -5,8 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Confirmation;
 /**
  * What an address is confirmed FOR (D-4, K3a).
  *
- * Michael, 2026-09-28: „baue die Funktion für die Bestätigungsmail so, dass
- * sie von mehreren Diensten in Anspruch genommen werden kann". A new use is a
+ * Built so that several services can use the confirmation mail. A new use is a
  * new case here, with its texts under CONSHO.mail.confirmEmail.<value> — the
  * token, the mail and the check stay EmailConfirmation's.
  *
@@ -22,8 +21,7 @@ enum ConfirmationPurpose: string
 
     /**
      * Block G (G15): the link in "wieder lieferbar" confirms the account's
-     * address — Michael, 2026-10-05: "der Rücklink kann zur Verifizierung der
-     * E-Mail-Adresse genutzt werden". No mail of EmailConfirmation's own: the
+     * address: the link back verifies the e-mail address. No mail of EmailConfirmation's own: the
      * token rides in the notification (EmailConfirmation::issue()).
      */
     case StockNotice = 'stockNotice';

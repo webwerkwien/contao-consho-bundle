@@ -16,9 +16,9 @@ class ShopCurrenciesTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Nur die beiden Spalten, um die es hier geht. Das gemeinsame
-        // Katalogschema bildet die ganze Tabelle nach; für diesen Dienst wäre
-        // das mehr Kulisse als Aussage.
+        // Only the two columns that matter here. The shared catalogue schema
+        // reproduces the whole table; for this service that would be more
+        // scenery than statement.
         DcaSchema::create($this->connection, 'tl_consho_shop');
     }
 
@@ -30,11 +30,11 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * Kleinschreibung gehört hierher, nicht nur in den Listener-Test: Nach
-     * Task 3 sieht dieser Dienst **migrierte** Werte, die nie durch den
-     * Speicher-Callback gelaufen sind. Ein Kleinbuchstabe aus der alten Spalte
-     * `currency` würde sonst als unbekannter Code verworfen — und der Shop
-     * stünde ohne Währung da.
+     * Lower case belongs here, not only in the listener test: after task 3
+     * this service sees **migrated** values that never ran through the save
+     * callback. A lower-case letter from the old column `currency` would
+     * otherwise be discarded as an unknown code — and the shop would be left
+     * without a currency.
      */
     public function testKleingeschriebeneCodesZaehlen(): void
     {
@@ -44,11 +44,11 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * Der Kern dieser Klasse: kein stiller Vorgabewert.
+     * The core of this class: no silent default.
      *
-     * Ein Shop ohne Auswahl liefert eine leere Liste, ausdrücklich nicht
-     * ['EUR'] — sonst verkaufte eine Fehlkonfiguration stillschweigend in Euro.
-     * Siehe docs/block-a-fundament.md, Abschnitt 7.
+     * A shop without a selection returns an empty list, explicitly not
+     * ['EUR'] — otherwise a misconfiguration would silently sell in euros.
+     * See Block A, section 7.
      */
     public function testEinLeererBlobErgibtKeineWaehrung(): void
     {
@@ -66,9 +66,9 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * Ein abgeschnittener oder gar nicht serialisierter Blob ist kein Wert.
-     * StringUtil::deserialize() macht daraus sonst eine einelementige Liste mit
-     * dem Rohtext darin — die käme als „Währung" durch.
+     * A truncated or not serialised blob at all is not a value.
+     * StringUtil::deserialize() would otherwise turn it into a one-element list
+     * with the raw text in it — which would come through as a "currency".
      */
     public function testEinUnlesbarerBlobErgibtKeineWaehrung(): void
     {
@@ -80,7 +80,7 @@ class ShopCurrenciesTest extends TestCase
 
         self::assertSame([], $shopCurrencies->of(1));
         self::assertSame([], $shopCurrencies->of(2));
-        // Nur der gültige Code bleibt übrig.
+        // Only the valid code remains.
         self::assertSame(['EUR'], $shopCurrencies->of(3));
     }
 
@@ -92,9 +92,9 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * Je Request einmal gelesen: die Maske fragt aus mehreren Callbacks.
-     * Gemessen an der Wirkung statt an der Anzahl der Abfragen — nach einer
-     * Änderung in der DB muss die alte Antwort stehen bleiben.
+     * Read once per request: the form asks from several callbacks.
+     * Measured by the effect rather than by the number of queries — after a
+     * change in the DB the old answer must remain.
      */
     public function testDieShopsWerdenJeRequestNurEinmalGelesen(): void
     {
@@ -123,10 +123,10 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * Die Auflösungsregel — dieselbe drei Zeilen wie
-     * `HomeCountries::resolve()`, und aus demselben Grund am Dienst statt am
-     * DCA-Listener: Die Migration aus C-1c Schritt 3 und der Befund aus
-     * Schritt 7 brauchen sie genauso.
+     * The resolution rule — the same three lines as
+     * `HomeCountries::resolve()`, and for the same reason on the service rather
+     * than on the DCA listener: the migration from C-1c step 3 and the finding
+     * from step 7 need it just as much.
      */
     public function testEineEinzigeWaehrungGiltOhneZutun(): void
     {
@@ -134,7 +134,7 @@ class ShopCurrenciesTest extends TestCase
 
         self::assertSame('CHF', $this->shopCurrencies()->resolve(1, ''));
 
-        // Auch gegen eine gespeicherte, die der Shop nicht mehr führt.
+        // Also against a stored one that the shop no longer carries.
         self::assertSame('CHF', $this->shopCurrencies()->resolve(1, 'EUR'));
     }
 
@@ -146,10 +146,10 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * ⚠️ Der Kern: Wo der Shop eine Wahl lässt, wählt der Dienst **nicht**.
-     * Ein stilles `$currencies[0]` wäre die Rückfall-Vorgabe, die Abschnitt 7
-     * ausschließt — hier entschiede die alphabetische Sortierung, in welcher
-     * Währung ein Startpunkt verkauft.
+     * ⚠️ The core: where the shop leaves a choice, the service does **not**
+     * choose. A silent `$currencies[0]` would be the fallback default that
+     * section 7 rules out — here the alphabetical sorting would decide in
+     * which currency a start point sells.
      */
     public function testBeiMehrerenWaehrungenWirdNichtStillGewaehlt(): void
     {
@@ -165,9 +165,9 @@ class ShopCurrenciesTest extends TestCase
     }
 
     /**
-     * Der Titel für die Fehlermeldung. Leer für einen unbekannten Shop — daran
-     * unterscheidet der Listener „Shop nimmt die Währung nicht an" von „diese
-     * Seite hat gar keinen Shop".
+     * The title for the error message. Empty for an unknown shop — that is how
+     * the listener tells "the shop does not accept the currency" from "this
+     * page has no shop at all".
      */
     public function testDerTitelKommtAusDerselbenAbfrage(): void
     {

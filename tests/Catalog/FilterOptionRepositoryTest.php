@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\FilterOptionRepository;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen eine echte Datenbank — die Klasse ist eine SQL-Abfrage, und eine
- * Zusicherung über den Abfragetext bewiese nichts über ihr Ergebnis.
+ * Against a real database — the class is an SQL query, and an
+ * assertion about the query text would prove nothing about its result.
  */
 class FilterOptionRepositoryTest extends TestCase
 {
@@ -21,22 +21,22 @@ class FilterOptionRepositoryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Aus contao/dca/tl_consho_property_group.php und
-        // tl_consho_property_option.php gebaut, nicht abgeschrieben.
+        // Built from contao/dca/tl_consho_property_group.php and
+        // tl_consho_property_option.php, not copied.
         DcaSchema::create($this->connection, 'tl_consho_property_group');
         DcaSchema::create($this->connection, 'tl_consho_property_option');
 
-        // tl_consho_translation legt erst translations() an: Der Test für die
-        // Standardsprache läuft bewusst OHNE diese Tabelle.
+        // Only translations() creates tl_consho_translation: the test for the
+        // default language deliberately runs WITHOUT this table.
     }
 
-    // ── Standardsprache ──────────────────────────────────────────────────
+    // ── Default language ─────────────────────────────────────────────────
 
     public function testInTheDefaultLanguageNoJoinIsBuilt(): void
     {
-        // 🔴 Die Tabelle tl_consho_translation existiert hier nicht. Entstünde ein
-        // Join, bräche die Abfrage mit „no such table" ab — der Test belegt also,
-        // dass ein einsprachiger Shop exakt die Abfrage ohne Übersetzung bekommt.
+        // 🔴 The table tl_consho_translation does not exist here. If a join were
+        // created, the query would abort with "no such table" — so the test proves
+        // that a single-language shop gets exactly the query without translation.
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
 
@@ -48,17 +48,17 @@ class FilterOptionRepositoryTest extends TestCase
         }
     }
 
-    // ── Übersetzte Beschriftungen ────────────────────────────────────────
+    // ── Translated labels ────────────────────────────────────────────────
 
     public function testTheOptionLabelIsTranslatedButItsAliasIsNot(): void
     {
-        // Der Kern von Mehrsprachigkeit 6.1: cq bleibt in jeder Sprache gleich,
-        // nur die Anzeige wechselt.
+        // The core of multilingualism 6.1: cq stays the same in every language,
+        // only the display changes.
         //
-        // Die Übersetzungszeile trägt hier bewusst einen eigenen Alias. M-4
-        // speichert für Eigenschaften keinen, aber eine alte oder von Hand
-        // angelegte Zeile kann einen haben — und nur mit ihm fällt auf, wenn der
-        // Alias durch coalesce() liefe. Mit NULL käme derselbe Wert heraus.
+        // The translation row deliberately carries an alias of its own here. M-4
+        // stores none for properties, but an old or hand-made
+        // row can have one — and only with it does it show if the
+        // alias ran through coalesce(). With NULL the same value would come out.
         $this->translations();
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'rot');
@@ -97,9 +97,9 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testATranslationRowWithAnEmptyTitleFallsBack(): void
     {
-        // Eine Übersetzungszeile mit leerem Titel ist keine Übersetzung — ohne
-        // NULLIF nähme COALESCE die leere Zeichenkette und die Beschriftung
-        // verschwände.
+        // A translation row with an empty title is no translation — without
+        // NULLIF, COALESCE would take the empty string and the label would
+        // disappear.
         $this->translations();
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
@@ -114,8 +114,8 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testATranslationOfAnotherTableWithTheSameIdDoesNotApply(): void
     {
-        // Gruppe 1 und Option 1 teilen die ID. Ohne ptable im Join trüge die
-        // Gruppe den Titel der Option oder umgekehrt.
+        // Group 1 and option 1 share the ID. Without ptable in the join the
+        // group would carry the option's title or the other way round.
         $this->translations();
         $this->group(1, 'Farbe', 'colour');
         $this->option(1, group: 1, title: 'Rot', alias: 'red');
@@ -137,13 +137,13 @@ class FilterOptionRepositoryTest extends TestCase
         self::assertSame('Rot', $this->english()[0]->options[0]->label);
     }
 
-    // ── Was fehlt ────────────────────────────────────────────────────────
+    // ── What is missing ──────────────────────────────────────────────────
 
     public function testAGroupThatIsNotFilterableIsLeftOut(): void
     {
-        // Auch bei ausdrücklicher Auswahl: Das Element kann eine Gruppe nennen,
-        // die der Redakteur später auf nicht filterbar gestellt hat. Ein Link
-        // darauf würde beim Klicken still verworfen (FilterResolver::resolve()).
+        // Even with an explicit selection: the element can name a group
+        // that the editor later set to not filterable. A link
+        // to it would be silently discarded on click (FilterResolver::resolve()).
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
         $this->group(2, 'Interne Markierung', 'intern', filterable: false);
@@ -155,7 +155,7 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testAnOptionWithoutAliasIsLeftOut(): void
     {
-        // Sie könnte nie in cq stehen.
+        // It could never appear in cq.
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
         $this->option(12, group: 1, title: 'Unfertig', alias: '');
@@ -177,10 +177,10 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testAnOptionWhoseAliasTheAddressCannotCarryIsLeftOut(): void
     {
-        // Übergabe aus Task 5 und 8. Contaos Alias-Prüfung lässt Großbuchstaben,
-        // Umlaute, Punkt und Unterstrich zu, FilterStateCodec::decode() verwirft
-        // sie still. Ein Link auf „0,5 l" führte also auf einen anderen Zustand
-        // als angezeigt — meist zurück auf die ungefilterte Liste.
+        // Contao's alias check allows upper case,
+        // umlauts, dot and underscore; FilterStateCodec::decode() silently
+        // discards them. A link to "0,5 l" would thus lead to a different state
+        // than shown — usually back to the unfiltered list.
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
         $this->option(12, group: 1, title: 'Blau', alias: 'Blau');
@@ -196,8 +196,8 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testAGroupWhoseAliasTheAddressCannotCarryIsLeftOut(): void
     {
-        // Auch bei ausdrücklicher Auswahl — der Codec verwirft den Gruppenschlüssel
-        // genauso wie den Wert.
+        // Even with an explicit selection — the codec discards the group key
+        // just like the value.
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
         $this->group(2, 'Füllmenge', 'füllmenge');
@@ -209,11 +209,11 @@ class FilterOptionRepositoryTest extends TestCase
         self::assertSame([1], $this->ids($this->repository()->forGroups([3, 2, 1])));
     }
 
-    // ── Auswahl und Reihenfolge ──────────────────────────────────────────
+    // ── Selection and order ──────────────────────────────────────────────
 
     public function testASelectionReturnsOnlyThoseGroupsInTheGivenOrder(): void
     {
-        // Die Reihenfolge der Auswahl ist die des Redakteurs, nicht das Alphabet.
+        // The order of the selection is the editor's, not the alphabet's.
         $this->group(1, 'Farbe', 'colour');
         $this->option(11, group: 1, title: 'Rot', alias: 'red');
         $this->group(2, 'Volumen', 'volume');
@@ -239,8 +239,8 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testWithoutASelectionTheOrderFollowsTheTranslatedLabel(): void
     {
-        // Sortiert wird, was der Besucher liest: „Colour" vor „Size" vor „Volume",
-        // obwohl die deutschen Titel anders stehen.
+        // What the visitor reads is sorted: "Colour" before "Size" before "Volume",
+        // although the German titles are ordered differently.
         $this->translations();
         $this->group(1, 'Volumen', 'volume');
         $this->option(11, group: 1, title: '250 ml', alias: '250ml');
@@ -257,8 +257,8 @@ class FilterOptionRepositoryTest extends TestCase
 
     public function testOptionsComeBySortingThenId(): void
     {
-        // sorting kollidiert nach dem Einfügen aus der Zwischenablage — dann
-        // entscheidet id, nicht die Laune der Datenbank.
+        // sorting collides after pasting from the clipboard — then
+        // id decides, not the mood of the database.
         $this->group(1, 'Farbe', 'colour');
         $this->option(14, group: 1, title: 'Grün', alias: 'green', sorting: 64);
         $this->option(12, group: 1, title: 'Blau', alias: 'blue', sorting: 128);
@@ -276,7 +276,7 @@ class FilterOptionRepositoryTest extends TestCase
         self::assertSame([], $this->repository()->forGroups([7]));
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     /**
      * @return list<FilterGroupView>
@@ -303,8 +303,8 @@ class FilterOptionRepositoryTest extends TestCase
 
     private function translations(): void
     {
-        // Aus contao/dca/tl_consho_translation.php: alias und die Textfelder
-        // sind dort `notnull => false`, title NOT NULL DEFAULT ''.
+        // From contao/dca/tl_consho_translation.php: alias and the text fields
+        // are `notnull => false` there, title NOT NULL DEFAULT ''.
         DcaSchema::create($this->connection, 'tl_consho_translation');
     }
 
@@ -331,8 +331,8 @@ class FilterOptionRepositoryTest extends TestCase
 
     private function translation(string $ptable, int $pid, string $language, string $title, ?string $alias = null): void
     {
-        // Eigenschaften haben keinen übersetzten Alias (Mehrsprachigkeit 6.1) —
-        // er bleibt NULL, wie ihn M-4 speichert. Nur die Alias-Tests setzen einen.
+        // Properties have no translated alias (multilingualism 6.1) —
+        // it stays NULL, as M-4 stores it. Only the alias tests set one.
         $this->connection->insert('tl_consho_translation', [
             'ptable' => $ptable,
             'pid' => $pid,

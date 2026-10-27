@@ -10,11 +10,11 @@ use Webwerkwien\ContaoConshoBundle\Pricing\PriceRow;
 use Webwerkwien\ContaoConshoBundle\Pricing\PriceSource;
 
 /**
- * Block H, H-1: Aktion, Gleichstand, Aktion gegen Staffel und Gruppe
- * (docs/block-h-preise.md, H1–H3, A, B).
+ * Block H, H-1: promotion, tie, promotion against scale and group
+ * (Block H, H1–H3, A, B).
  *
- * Jeder Fall in beiden Zeilenreihenfolgen, wo die Reihenfolge etwas ändern
- * könnte — die Datenbank liefert ohne ORDER BY.
+ * Every case in both row orders, wherever the order could change
+ * something — the database delivers without ORDER BY.
  */
 class PromotionPriceTest extends TestCase
 {
@@ -44,7 +44,7 @@ class PromotionPriceTest extends TestCase
     #[DataProvider('orders')]
     public function testEineTeurereBefristeteZeileIstDerNeuePreisOhneAktion(bool $reversed): void
     {
-        // B: geplante Preiserhöhung — gilt, aber kein Störer.
+        // B: a planned price increase — applies, but does not interfere.
         $price = $this->calculate([
             $this->standing('10.0000'),
             $this->windowed('12.0000', from: self::NOW - 100),
@@ -78,7 +78,7 @@ class PromotionPriceTest extends TestCase
     #[DataProvider('orders')]
     public function testDieAktionGiltAuchUeberEineTeurereStaffel(bool $reversed): void
     {
-        // A: sonst zahlte, wer 10 kauft, je Stück mehr als wer 1 kauft.
+        // A: otherwise whoever buys 10 would pay more per piece than whoever buys 1.
         $price = $this->calculate([
             $this->standing('10.0000'),
             $this->standing('9.5000', '10.0000'),
@@ -104,7 +104,7 @@ class PromotionPriceTest extends TestCase
 
     public function testEineTeurereBefristeteZeileWirktNichtUeberDieStaffel(): void
     {
-        // Eine Preiserhöhung ist keine Aktion — A gilt nur für Aktionen.
+        // A price increase is not a promotion — A applies only to promotions.
         $price = $this->calculate([
             $this->standing('10.0000'),
             $this->standing('9.5000', '10.0000'),
@@ -118,7 +118,7 @@ class PromotionPriceTest extends TestCase
     #[DataProvider('orders')]
     public function testEineAktionFuerAlleSchlaegtEinenTeurerenGruppenpreis(bool $reversed): void
     {
-        // H3: Ein Mitglied zahlt wegen einer Aktion nie mehr als ein Gast.
+        // H3: a member never pays more than a guest because of a promotion.
         $price = $this->calculate([
             $this->standing('10.0000'),
             $this->windowed('7.0000', from: self::NOW - 100),
@@ -146,7 +146,7 @@ class PromotionPriceTest extends TestCase
 
     public function testEinStehenderListenpreisTrittWeiterNichtGegenDieGruppeAn(): void
     {
-        // Unverändert seit C-4: Spezifität in der Beziehung — nur die Aktion tritt an.
+        // Unchanged since C-4: specificity within the relation — only the promotion competes.
         $price = $this->calculate([
             $this->standing('7.0000'),
             $this->standing('8.0000', group: 5),
@@ -189,7 +189,7 @@ class PromotionPriceTest extends TestCase
     {
         $repository = $this->createStub(PriceRepositoryInterface::class);
 
-        // Wie die Datenbank: der Gast bekommt keine Gruppenzeilen.
+        // Like the database: the guest gets no group rows.
         $rows = array_values(array_filter($rows, static fn (PriceRow $row): bool => null === $row->customerGroup || \in_array($row->customerGroup, $groups, true)));
         $repository->method('findCandidates')->willReturn($reversed ? array_reverse($rows) : $rows);
 

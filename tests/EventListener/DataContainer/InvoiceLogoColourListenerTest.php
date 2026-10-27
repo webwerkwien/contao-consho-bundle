@@ -8,8 +8,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\InvoiceLogoColourListener;
 
 /**
- * Ein CMYK-Logo wird schon beim Speichern abgelehnt — am Feld, mit dem Grund,
- * statt später als Rechnung ohne Logo (C-8, 2026-09-24).
+ * A CMYK logo is rejected on save already — at the field, with the reason,
+ * instead of later as an invoice without a logo (C-8).
  */
 class InvoiceLogoColourListenerTest extends TestCase
 {

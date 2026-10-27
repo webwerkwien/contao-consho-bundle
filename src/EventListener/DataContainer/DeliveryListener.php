@@ -56,7 +56,7 @@ class DeliveryListener
         /*
          * Only reported deliveries count in the balance, so a second delivery
          * not yet reported was filled with the same open quantities — and the
-         * first report then refused "more than open" (spec D, review 1, K3).
+         * first report then refused "more than open" (Block D).
          * What other unreported deliveries of this order already carry is
          * subtracted; nothing left, no line.
          */
@@ -154,7 +154,7 @@ class DeliveryListener
 
     /**
      * "2 × Wanderstock" — the raw decimal(10,4) would read "Wanderstock ×
-     * 2.0000" (Prüfungsnotiz, Fall 30).
+     * 2.0000" (MySQL returns the trailing zeros, SQLite does not).
      *
      * @param array<string, mixed> $row
      */

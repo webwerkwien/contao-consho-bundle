@@ -5,12 +5,12 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Tax;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxRateRepositoryInterface;
 
 /**
- * Ein fester Satz je Land — gleich, welche Steuerklasse gefragt wird.
+ * One fixed rate per country — whichever tax class is asked.
  *
- * Für Tests, in denen die Steuer nicht das Thema ist: Die Katalog-Fixtures
- * legen Produkte ohne Steuerklasse an (0), und keine Tabelle der Steuersätze.
- * Welche Klasse zählt, prüft DbalArticleTaxClassesTest; wie der Satz gefunden
- * wird, ContaoTaxRateRepositoryTest.
+ * For tests in which tax is not the subject: the catalogue fixtures create
+ * products without a tax class (0), and no table of tax rates. Which class
+ * counts is checked by DbalArticleTaxClassesTest; how the rate is found, by
+ * ContaoTaxRateRepositoryTest.
  */
 final class FixedTaxRates implements TaxRateRepositoryInterface
 {

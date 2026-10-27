@@ -19,22 +19,23 @@ use Webwerkwien\ContaoConshoBundle\Catalog\CatalogRefreshQueue;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Kopiert ein Produkt, meldet die Kopie ihr NEUES Produkt — gegen den echten
- * DC_Table::copyChildren() geprüft.
+ * When a product is copied, the copy reports its NEW product — checked
+ * against the real DC_Table::copyChildren().
  *
- * Die Warteschlange aus A-4b steht auf zwei Annahmen über den Kern, beide aus
- * vendor/contao/core-bundle/contao/drivers/DC_Table.php gelesen:
+ * The queue from A-4b rests on two assumptions about the core, both read
+ * from vendor/contao/core-bundle/contao/drivers/DC_Table.php:
  *
- * 1. copyChildren() ruft den oncopy_callback der KINDtabelle auf, nicht nur den
- *    des kopierten Produkts — sonst bekäme die Kopie nie eine Projektionszeile.
- * 2. Beim Aufruf ist die neue Zeile schon eingefügt — sonst fände der Listener
- *    ihren pid nicht.
+ * 1. copyChildren() calls the oncopy_callback of the CHILD table, not just
+ *    the one of the copied product — otherwise the copy would never get a
+ *    projection row.
+ * 2. At the time of the call the new row is already inserted — otherwise the
+ *    listener would not find its pid.
  *
- * Und weil der Kern je kopierter Preiszeile einmal aufruft: Das Produkt steht
- * danach trotzdem nur einmal in der Warteschlange.
+ * And because the core calls once per copied price row: the product is
+ * still in the queue only once afterwards.
  *
- * Aufbau wie FacetPageCascadeTest; geladen werden die echten DCA-Dateien von
- * Produkt und Preis, die Übersetzungstabelle nur mit dem, was copyChildren liest.
+ * Set up like FacetPageCascadeTest; the real DCA files of product and price
+ * are loaded, the translation table only with what copyChildren reads.
  */
 class PriceCopyCascadeTest extends TestCase
 {
@@ -76,7 +77,7 @@ class PriceCopyCascadeTest extends TestCase
 
         $GLOBALS['TL_DCA']['tl_consho_translation'] = ['config' => ['dynamicPtable' => true]];
 
-        // Wie #[AsCallback] ihn eintrüge — der Kern ruft ihn mit ($insertId, $dc).
+        // As #[AsCallback] would register it — the core calls it with ($insertId, $dc).
         $this->queue = new CatalogRefreshQueue();
         $listener = new PriceRefreshTriggerListener($this->connection, $this->queue);
         $GLOBALS['TL_DCA']['tl_consho_price']['config']['oncopy_callback'] = [
@@ -87,8 +88,8 @@ class PriceCopyCascadeTest extends TestCase
             'dcaFiles' => array_fill_keys(array_keys($GLOBALS['TL_DCA']), true),
         ]);
 
-        // Database::fieldExists() fragt MySQL mit SHOW FULL COLUMNS. copyChildren()
-        // braucht davon nur, ob es eine sorting-Spalte gibt — beide Tabellen haben keine.
+        // Database::fieldExists() asks MySQL with SHOW FULL COLUMNS. copyChildren()
+        // only needs to know from it whether there is a sorting column — neither table has one.
         $this->setStatic(Database::class, 'objInstance', null);
         $this->setProperty(Database::getInstance(), 'arrCache', [
             'tl_consho_price' => [['name' => 'id', 'type' => 'int'], ['name' => 'pid', 'type' => 'int']],
@@ -112,7 +113,7 @@ class PriceCopyCascadeTest extends TestCase
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000']);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '9.0000', 'minQuantity' => '10.0000']);
 
-        // copy() hat Produkt 20 schon angelegt und ruft dann copyChildren(Tabelle, neue id, alte id, neue id).
+        // copy() has already created product 20 and then calls copyChildren(table, new id, old id, new id).
         (new \ReflectionMethod(DC_Table::class, 'copyChildren'))->invoke($this->dataContainer(), 'tl_consho_product', 20, 1, 20);
 
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_price WHERE pid = 20'), 'Der Kern hat die Preise nicht kopiert.');

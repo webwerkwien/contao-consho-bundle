@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
 use Webwerkwien\ContaoConshoBundle\Privacy\CustomerExport;
 
 /**
- * D-5, L1 — die Auskunft als ZIP: `daten.json` und die Beleg-PDFs, alles zu
- * dieser Person und nichts darüber hinaus.
+ * D-5, L1 — the data access request as a ZIP: `daten.json` and the record
+ * PDFs, everything about this person and nothing beyond.
  */
 final class CustomerExportTest extends TestCase
 {
@@ -35,11 +35,11 @@ final class CustomerExportTest extends TestCase
         $this->connection->insert('tl_consho_document', ['id' => 2, 'pid' => 9, 'type' => 'invoice', 'documentNumber' => 'RE-2']);
 
         $this->connection->insert('tl_consho_payment_attempt', ['pid' => 7, 'tokenHash' => 'x', 'methodType' => 'test', 'providerReference' => 'pi_1']);
-        // Block H (H-5): ein Code zu ihrer Bestellung, einer zu einer fremden.
+        // Block H (H-5): one code for her order, one for someone else's.
         $this->connection->insert('tl_consho_cart_rule', ['id' => 2, 'title' => 'Herbstrabatt', 'code' => 'Herbst']);
         $this->connection->insert('tl_consho_cart_rule_redemption', ['rule' => 2, 'orderId' => 7, 'member' => 5, 'email' => 'erika@example.org', 'code' => 'Herbst', 'cancelled' => 1]);
         $this->connection->insert('tl_consho_cart_rule_redemption', ['rule' => 2, 'orderId' => 9, 'email' => 'fremd@example.org', 'code' => 'Herbst']);
-        // WG-6: ein gekaufter Gutschein (Bestellung 7) und einer von Hand.
+        // WG-6: a purchased voucher (order 7) and one made by hand.
         $this->connection->insert('tl_consho_voucher', ['code' => 'AAAABBBBCCCCMDSN', 'shop' => 1, 'currency' => 'EUR', 'faceValue' => '25', 'balance' => '20', 'source' => 'purchase', 'orderId' => 7]);
         $this->connection->insert('tl_consho_voucher', ['code' => 'AAAABBBBCCCCZZZZ', 'shop' => 1, 'currency' => 'EUR', 'faceValue' => '10', 'balance' => '10', 'source' => 'manual', 'orderId' => 7]);
         $this->connection->insert('tl_consho_cart', ['id' => 30, 'member' => 5, 'checkoutData' => json_encode(['dateOfBirth' => '1980-01-01']), 'updatedAt' => 1]);
@@ -48,7 +48,7 @@ final class CustomerExportTest extends TestCase
 
     public function testAllesZuDieserPersonUndNichtsDarueberHinaus(): void
     {
-        // Block G (G12): ihr Wunsch, benachrichtigt zu werden — der fremde nicht.
+        // Block G (G12): her wish to be notified — not someone else's.
         $this->connection->insert('tl_consho_product', ['id' => 40, 'title' => 'Wanderstock &amp; Hülle']);
         $this->connection->insert('tl_consho_stock_notice', ['article' => 40, 'main' => 40, 'member' => 5, 'createdAt' => strtotime('2026-09-27 08:00')]);
         $this->connection->insert('tl_consho_stock_notice', ['article' => 40, 'main' => 40, 'member' => 6, 'createdAt' => strtotime('2026-09-27 09:00')]);
@@ -84,13 +84,13 @@ final class CustomerExportTest extends TestCase
 
         self::assertStringNotContainsString('fremd@example.org', $files['daten.json']);
 
-        // Fable-Review D-5: auch Zahlungsversuche, offene Körbe, offene Bestätigungen.
+        // D-5: payment attempts, open carts, open confirmations too.
         self::assertSame('pi_1', $data['orders'][1]['paymentAttempts'][0]['providerReference']);
         self::assertSame([['code' => 'Herbst', 'title' => 'Herbstrabatt', 'cancelled' => 1]], array_map(static fn (array $row): array => ['code' => $row['code'], 'title' => $row['title'], 'cancelled' => (int) $row['cancelled']], $data['orders'][1]['discountCodes']));
         self::assertSame([], $data['orders'][0]['discountCodes']);
 
-        // WG-6: die gekauften Gutscheine, nur mit der letzten Gruppe — der
-        // Code ist Geld, und die Auskunft ist eine Datei, die weitergeht.
+        // WG-6: the purchased vouchers, only with the last group — the
+        // code is money, and the data export is a file that gets passed on.
         $vouchers = $data['orders'][1]['vouchers'];
         self::assertCount(1, $vouchers);
         self::assertSame('…MDSN', $vouchers[0]['code']);
@@ -102,8 +102,9 @@ final class CustomerExportTest extends TestCase
     }
 
     /**
-     * Abo-DSGVO, P84 (K4 aus F): Berechtigungen mit Downloads und Schlüsseln
-     * im Klartext, die Abos mit ihren Kündigungen — nicht die fremden.
+     * Abo-DSGVO, P84 (K4 from F): entitlements with downloads and keys
+     * in plain text, the subscriptions with their cancellations — not
+     * other people's.
      */
     public function testAbosBerechtigungenDownloadsSchluessel(): void
     {
@@ -132,17 +133,17 @@ final class CustomerExportTest extends TestCase
 
         self::assertCount(1, $data['subscriptions']);
         $subscription = $data['subscriptions'][0];
-        // Abnahme Abo-DSGVO: Contaos Eingabekodierung gehört nicht in die Kopie.
+        // Abo-DSGVO: Contao's input encoding does not belong in the copy.
         self::assertSame(['WEB-7-1', 'WEB-7', 'Monatsabo (Kurs)', '1,20 € / Monat', 'cancelled'], [$subscription['subscriptionNumber'], $subscription['purchaseOrder'], $subscription['ruleTitle'], $subscription['terms'], $subscription['state']]);
         self::assertArrayNotHasKey('reminderSentAt', $subscription, '0 heißt nie — kein Zeitpunkt, keine Auskunft');
         self::assertSame(date(\DATE_ATOM, strtotime('2026-10-31')), $subscription['endsAt']);
         self::assertSame('Umzug', $subscription['cancellations'][0]['reason']);
         self::assertArrayNotHasKey('member', $subscription, 'interne IDs bleiben draußen');
 
-        // Abo pausieren (P111): die Pausen des Abos.
+        // Pause a subscription (P111): the subscription's pauses.
         self::assertSame([['months' => 2, 'pauseFrom' => date(\DATE_ATOM, strtotime('2026-10-01')), 'pauseUntil' => date(\DATE_ATOM, strtotime('2026-12-01')), 'source' => 'account', 'requestedAt' => date(\DATE_ATOM, strtotime('2026-09-15'))]], $subscription['pauses']);
 
-        // P98: nur die Zahlungsart, nie der Wert des Mandats.
+        // P98: only the payment method, never the value of the mandate.
         self::assertSame('Kreditkarte', $subscription['followUpPayment']);
         self::assertArrayNotHasKey('mandate', $subscription);
         self::assertArrayNotHasKey('mandateMethod', $subscription);
@@ -153,8 +154,8 @@ final class CustomerExportTest extends TestCase
     }
 
     /**
-     * WA, A6: Erklärungen über das Formular ohne passende Bestellung — über
-     * die eingegebene Adresse, nur im eigenen Shop.
+     * WA, A6: declarations via the form without a matching order — via
+     * the address entered, only in one's own shop.
      */
     public function testNichtZugeordneteWiderrufeUeberDieAdresse(): void
     {

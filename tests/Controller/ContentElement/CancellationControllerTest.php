@@ -30,8 +30,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * „Verträge hier kündigen" (Abo-7, P58, P61; § 312k BGB). Echte Dienste auf
- * SQLite, nur die Mail ist ein Doppel.
+ * "Verträge hier kündigen" (cancel contracts here; Abo-7, P58, P61; § 312k
+ * BGB). Real services on SQLite, only the mail is a double.
  */
 final class CancellationControllerTest extends TestCase
 {
@@ -58,7 +58,7 @@ final class CancellationControllerTest extends TestCase
             DcaSchema::create($this->connection, $table);
         }
 
-        // Kauf mit der alten Adresse, Folgebestellung mit der neuen.
+        // Purchase with the old address, follow-up order with the new one.
         $this->connection->insert('tl_consho_order', ['id' => 7, 'shop' => self::SHOP, 'orderNumber' => 'WEB-00073', 'email' => 'Alt@Example.org', 'createdAt' => 1]);
         $this->connection->insert('tl_consho_order', ['id' => 9, 'shop' => self::SHOP, 'subscription' => 1, 'orderNumber' => 'WEB-00091', 'email' => 'neu@example.org', 'createdAt' => 2]);
         $this->connection->insert('tl_consho_order', ['id' => 8, 'shop' => self::OTHER_SHOP, 'orderNumber' => 'WEB-00080', 'email' => 'neu@example.org', 'createdAt' => 1]);
@@ -87,8 +87,9 @@ final class CancellationControllerTest extends TestCase
     }
 
     /**
-     * Gefunden über die Adresse irgendeiner Bestellung des Abos — bestätigt
-     * wird an die des Abos (die neueste), nie an die eingegebene.
+     * Found via the address of any order of the subscription — the
+     * confirmation goes to the subscription's address (the newest), never to
+     * the one entered.
      */
     public function testGefundenWirdGespeichertUndZurSigniertenErgebnisseiteUmgeleitet(): void
     {
@@ -105,7 +106,7 @@ final class CancellationControllerTest extends TestCase
         self::assertSame(['source' => 'form', 'kind' => 'ordinary', 'name' => 'Erika Muster', 'email' => 'neu@example.org', 'state' => 'effective'], $row);
         self::assertSame([9], $this->confirmed);
 
-        // § 312k Abs. 3: die Ergebnisseite zeigt die Erklärung mit Zeitpunkt.
+        // § 312k (3): the result page shows the declaration with its point in time.
         $result = $this->render(substr($location, \strlen(self::URL)))['result'];
         self::assertIsArray($result);
         self::assertSame('WEB-00073-1-K1', $result['number']);
@@ -116,8 +117,8 @@ final class CancellationControllerTest extends TestCase
     }
 
     /**
-     * L4 (Michael, 2026-09-30: „90 Tage"): danach sagt die Seite, dass sie
-     * abgelaufen ist, statt die Erklärung zu zeigen.
+     * The result link lives 90 days; afterwards the page says that it has
+     * expired instead of showing the declaration.
      */
     public function testNach90TagenAbgelaufen(): void
     {
@@ -129,7 +130,7 @@ final class CancellationControllerTest extends TestCase
         self::assertNull($data['result']);
         self::assertTrue($data['expired']);
 
-        // Noch gültig: die Erklärung, nicht „abgelaufen".
+        // Still valid: the declaration, not "expired".
         $valid = $this->signer->sign(self::URL.'?consho_cancellation=1', time() + 60);
         $data = $this->render(substr($valid, \strlen(self::URL)));
         self::assertIsArray($data['result']);

@@ -70,7 +70,7 @@ final class DashboardBackendController
         // DB8: the figures are order data.
         $sales = $this->may('consho_order') ? $this->sales->byShop($now) : [];
 
-        // Order data like the figures (DB8, review A1).
+        // Order data like the figures (DB8).
         $tax = $this->may('consho_order') ? $this->tax($now) : [];
 
         $shops = [];
@@ -86,11 +86,11 @@ final class DashboardBackendController
                 // DB9: the dashboard says that a shop cannot sell; since
                 // block I the line leads to the setup page, and "cannot sell"
                 // is that page's "not ready" — the start point and its
-                // currency included (review I, S2: three definitions before).
+                // currency included (I: three definitions before).
                 'incomplete' => !$ready,
                 // H2: the status stays for everyone, the reasons only for who
                 // may put them right — then the line says so. The reasons are
-                // the same findings "ready" counts (second review I, point 4);
+                // the same findings "ready" counts (I);
                 // a missing start point has no finding, the setup page says it.
                 'reasonsHidden' => !$ready && [] !== $stopping && [] === array_filter($stopping, $this->findings->maySee(...)),
                 'tiles' => $this->tiles($shopId, $work, $lang, $language),
@@ -100,8 +100,7 @@ final class DashboardBackendController
         $stock = null;
 
         if ($this->may('consho_stock')) {
-            // What to reorder, by name and quantity left (Michael, 2026-10-07:
-            // "den Teil wo nachbestellt werden sollte") — the first ten, the
+            // What to reorder, by name and quantity left — the first ten, the
             // rest behind the filtered list.
             $low = $this->stock->low();
             $stock = [] === $low ? null : [
@@ -117,9 +116,9 @@ final class DashboardBackendController
             // DB7: one shop needs no heading.
             'showShopTitles' => \count($shops) > 1,
             'stock' => $stock,
-            // Two counting boxes at the top, each list in a dialog (Michael,
-            // 2026-10-09, DB1–DB3). The HTML is built by the listener, which
-            // escapes every value it inserts.
+            // Two counting boxes at the top, each list in a dialog (DB1–DB3).
+            // The HTML is built by the listener, which escapes every value it
+            // inserts.
             'findings' => $summary,
             'figuresShown' => $this->may('consho_order'),
             'taxUrl' => $this->router->generate('contao_backend', TaxReportBackendController::ROUTE),
@@ -191,8 +190,8 @@ final class DashboardBackendController
 
     /**
      * From 90 % the threshold is close, from 100 % it is crossed — then the
-     * tax of the destination country applies (Michael, 2026-10-07: "oranger
-     * Text ab 90%, rot und dick ab 100%").
+     * tax of the destination country applies: orange text from 90 %, red and
+     * bold from 100 %.
      */
     public static function level(int $percent): string
     {
@@ -205,7 +204,7 @@ final class DashboardBackendController
 
     /**
      * The four tiles stand always, so the grid does not jump; a 0 is grey and
-     * links nowhere (Michael, 2026-10-07, D1). Complaints are rare and appear
+     * links nowhere (D1). Complaints are rare and appear
      * only when there is one (D3). A tile of a module the user may not open
      * is left out (DB8, D4).
      *

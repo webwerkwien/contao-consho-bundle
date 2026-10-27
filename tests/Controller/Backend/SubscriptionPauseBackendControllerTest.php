@@ -26,9 +26,9 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo pausieren (P101, P107): der Betreiber pausiert im Backend, auch über
- * das Kontingent hinaus, und nimmt eine angekündigte Pause zurück. Echte
- * Pause, echte Vorlage.
+ * Pausing a subscription (P101, P107): the operator pauses in the back end,
+ * also beyond the allowance, and takes back an announced pause. Real
+ * pause, real template.
  */
 final class SubscriptionPauseBackendControllerTest extends TestCase
 {
@@ -67,7 +67,7 @@ final class SubscriptionPauseBackendControllerTest extends TestCase
     {
         $html = $this->controller(Request::create('/contao?do=consho_subscription&key=pauseSubscription&id=1'))($this->dc());
 
-        // Die Regel erlaubt keine Pause (0), der Betreiber bis zu einem Jahr.
+        // The rule allows no pause (0), the operator up to a year.
         self::assertSame(12, substr_count($html, '<option value='));
         self::assertStringContainsString('name="REQUEST_TOKEN" value="tok"', $html);
         self::assertStringContainsString('WEB-00096-1', $html);
@@ -112,7 +112,7 @@ final class SubscriptionPauseBackendControllerTest extends TestCase
     }
 
     /**
-     * Zweites Review, H-10: in der Kindtabelle ist die Id eine Pause.
+     * In the child table the id is a pause.
      */
     public function testNurInDerAbotabelle(): void
     {
@@ -124,8 +124,8 @@ final class SubscriptionPauseBackendControllerTest extends TestCase
     }
 
     /**
-     * Zweites Review, S-A: nach einer Kündigung steht die Pause noch da,
-     * aber ohne „zurücknehmen".
+     * After a cancellation the pause is still there, but without "zurücknehmen"
+     * (take back).
      */
     public function testNachDerKuendigungSichtbarAberNichtZuruecknehmbar(): void
     {
@@ -154,7 +154,7 @@ final class SubscriptionPauseBackendControllerTest extends TestCase
         $requests->push($request);
 
         // Asked for the module, not for an update of the table: that one
-        // Contao denies to everybody — the table is notEditable (review B2).
+        // Contao denies to everybody — the table is notEditable.
         $security = $this->createMock(Security::class);
         $security->method('isGranted')->willReturnCallback(static fn (mixed $attribute, mixed $subject = null): bool => $granted
             && ContaoCorePermissions::USER_CAN_ACCESS_MODULE === $attribute && 'consho_subscription' === $subject);

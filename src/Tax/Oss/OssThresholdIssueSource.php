@@ -20,7 +20,7 @@ final class OssThresholdIssueSource implements ConfigurationIssueSource
     private const NEAR = 80;
 
     /**
-     * An hour (review R, F8): the start page asks on every call, and a year
+     * An hour (R): the start page asks on every call, and a year
      * of orders is read for it. A note that reports, not warns, may be an
      * hour behind — the page "Steuermeldung" counts afresh.
      */
@@ -28,7 +28,7 @@ final class OssThresholdIssueSource implements ConfigurationIssueSource
 
     public function __construct(
         private readonly OssReport $report,
-        // Explicit, like OverdueInvoiceIssueSource (second review R, B7).
+        // Explicit, like OverdueInvoiceIssueSource (R).
         #[Autowire(service: 'cache.app')]
         private readonly CacheInterface|null $cache = null,
         // For the tests; the container leaves it at "now".

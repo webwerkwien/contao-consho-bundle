@@ -10,7 +10,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * REST rather than SOAP, so the package does not impose ext-soap on the people
  * installing it. VIES offers two ways of asking, and they are not variations
- * of one another — measured against the live service on 2026-09-09:
+ * of one another — measured against the live service:
  *
  * | | simple (GET) | qualified (POST) |
  * |---|---|---|

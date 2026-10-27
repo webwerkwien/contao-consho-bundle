@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block G, Deploy auf c5: Produkte von vor G bekommen ihre Bestandszeilen —
- * ein Schlüsselvorrat aus F zählte sonst bis zum nächsten Speichern als
- * unbegrenzt.
+ * Block G, upgrade: products from before G get their stock rows —
+ * otherwise a key pool from F would count as unlimited until the next
+ * save.
  */
 class StockRowsMigrationTest extends TestCase
 {
@@ -27,13 +27,13 @@ class StockRowsMigrationTest extends TestCase
         }
 
         $this->connection->insert('tl_consho_product_type', ['id' => 1, 'kind' => 'digital']);
-        // Schlüssel am Hauptprodukt, Schlüssel nur an der Variante, Datei, digitales mit Häkchen (ergibt keine Zeile).
+        // Keys on the main product, keys only on the variant, file, digital with the checkbox (yields no row).
         $this->connection->insert('tl_consho_product', ['id' => 1, 'productType' => 1, 'digitalDelivery' => 'key']);
         $this->connection->insert('tl_consho_product', ['id' => 2, 'productType' => 1]);
         $this->connection->insert('tl_consho_product', ['id' => 3, 'pid' => 2, 'digitalDelivery' => 'key']);
         $this->connection->insert('tl_consho_product', ['id' => 4, 'productType' => 1, 'digitalDelivery' => 'file']);
         $this->connection->insert('tl_consho_product', ['id' => 5, 'productType' => 1, 'stockTracked' => 1]);
-        // Körperlich mit Bestand, körperlich ohne.
+        // Physical with stock, physical without.
         $this->connection->insert('tl_consho_product', ['id' => 6, 'stockTracked' => 1]);
         $this->connection->insert('tl_consho_product', ['id' => 7]);
     }

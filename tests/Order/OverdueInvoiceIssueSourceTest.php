@@ -14,8 +14,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * E-2, Z5: Eine Rechnung über dem Zahlungsziel und nicht bezahlt ist ein
- * Hinweis auf der Startseite — keine Mahnung, kein Statuswechsel.
+ * E-2, Z5: an invoice past its payment term and unpaid is a notice on the
+ * start page — no reminder, no status change.
  */
 class OverdueInvoiceIssueSourceTest extends TestCase
 {
@@ -29,7 +29,7 @@ class OverdueInvoiceIssueSourceTest extends TestCase
         WithdrawalSchema::create($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -53,8 +53,8 @@ class OverdueInvoiceIssueSourceTest extends TestCase
     }
 
     /**
-     * „Zahlbar bis" schließt den Tag ein: Bis zur letzten Sekunde ist nichts
-     * überfällig.
+     * "Payable by" includes the day: up to the last second nothing is
+     * overdue.
      */
     public function testAmLetztenTagNochNicht(): void
     {
@@ -77,8 +77,8 @@ class OverdueInvoiceIssueSourceTest extends TestCase
     }
 
     /**
-     * Ein angenommener Widerruf senkt die Forderung. Die blanke Summe sähe
-     * „20 offen", der Saldo weiß es besser — deshalb entscheidet er.
+     * An accepted withdrawal lowers the claim. The bare sum would see
+     * "20 open", the balance knows better — so the balance decides.
      */
     public function testEinWiderrufSenktDieForderung(): void
     {

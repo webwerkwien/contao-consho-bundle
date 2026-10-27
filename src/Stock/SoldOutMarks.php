@@ -46,7 +46,7 @@ class SoldOutMarks
 
     /**
      * Runs $work and marks what it asked for afterwards, once and in
-     * ascending article order (review Verfügbarkeit, 2).
+     * ascending article order (Verfügbarkeit).
      *
      * A purchase books line by line, in the order of the basket; marking each
      * line at once took the locks on tl_consho_sold_out in that order, while
@@ -164,7 +164,7 @@ class SoldOutMarks
     /**
      * Rows of articles that are gone. Deleting a main product takes its
      * variants along as child records, and nobody reports them one by one
-     * (review Verfügbarkeit, 3). Cheap: the table holds only what is sold out.
+     * (Verfügbarkeit). Cheap: the table holds only what is sold out.
      *
      * @return bool whether a row was removed
      */

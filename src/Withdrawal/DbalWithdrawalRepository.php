@@ -47,8 +47,8 @@ class DbalWithdrawalRepository
          * early start leaves the right standing and only owes the value of
          * what was rendered (§ 357a Abs. 2 BGB). Its release uses nothing up
          * — for a consumer. For a business customer it does, as for content
-         * (F-4); the release of a service changed nothing there (review
-         * Abo-8, S1).
+         * (F-4); the release of a service changed nothing there
+         * (Abo-8).
          *
          * Until it is fully rendered (Dienstleistung, DL3): "Leistung
          * erbracht" (ServicePerformed) with the consumer's consent to the
@@ -78,7 +78,7 @@ class DbalWithdrawalRepository
 
         /*
          * "Die ganze Bestellung" names no positions, so it uses up everything
-         * (acceptance Abo-8: without this the order page went on offering the
+         * (Abo-8: without this the order page went on offering the
          * withdrawal). Counted in every state, as positions are; a part in free
          * text names no quantity and uses up nothing.
          */

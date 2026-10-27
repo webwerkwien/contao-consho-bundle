@@ -11,10 +11,10 @@ use Webwerkwien\ContaoConshoBundle\Config\DbalShopScopeIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Shop 1 „Kräuterhaus" nimmt EUR und CHF an; ein Startpunkt „Österreich" in EUR.
+ * Shop 1 "Kräuterhaus" accepts EUR and CHF; a start point "Österreich" in EUR.
  *
- * Geprüft wird, was an der Maske vorbei entstehen kann: ein Startpunkt ohne
- * Währung und einer in einer Währung, die der Shop nicht (mehr) annimmt.
+ * Checked is what can come about past the form: a start point without a
+ * currency and one in a currency the shop does not (or no longer) accept.
  */
 class DbalShopScopeIssueSourceTest extends TestCase
 {
@@ -24,9 +24,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Nur die Spalten, um die es hier geht — die Typen wie in der DB:
-        // `currencies` ist ein blob, `consho_currency` ein varchar(3) mit
-        // leerem Vorgabewert (contao/dca/tl_consho_shop.php, tl_page.php).
+        // Only the columns that matter here — the types as in the DB:
+        // `currencies` is a blob, `consho_currency` a varchar(3) with an
+        // empty default (contao/dca/tl_consho_shop.php, tl_page.php).
         DcaSchema::create($this->connection, 'tl_consho_shop');
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', title TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, consho_currency TEXT NOT NULL DEFAULT '')",
@@ -44,8 +44,8 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testEinStartpunktOhneWaehrungWirdBeimNamenGenannt(): void
     {
-        // An der Maske vorbei: ein Pflichtfeld, das über Import oder SQL leer
-        // bleiben kann. Unter dieser Seite zeigt der Shop keinen Preis.
+        // Past the form: a mandatory field that can stay empty via import or
+        // SQL. Below this page the shop shows no price.
         $this->root(7, 'Österreich', shop: 1, currency: '');
 
         self::assertEquals(
@@ -56,9 +56,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testEineWaehrungDieDerShopNichtMehrAnnimmtWirdGemeldet(): void
     {
-        // Der lautlose Fall: Shop ['EUR','CHF'], Startpunkt CHF, der Betreiber
-        // streicht CHF → der Shop hat nur noch eine Währung → das Feld wird
-        // ausgeblendet, save() läuft nie mehr. Bis hierher merkt es niemand.
+        // The silent case: shop ['EUR','CHF'], start point CHF, the operator
+        // removes CHF → the shop has only one currency left → the field is
+        // hidden, save() never runs again. Up to here nobody notices.
         $this->root(7, 'Schweiz', shop: 1, currency: 'CHF');
         $this->shop(1, 'Kräuterhaus', ['EUR']);
 
@@ -70,9 +70,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testDerLeereFallFaelltNichtUnterDieNichtAngenommeneWaehrung(): void
     {
-        // Die leere Währung ist in keiner Liste erlaubter Währungen enthalten —
-        // ohne die Fallunterscheidung meldete sie RootCurrencyNotSold und der
-        // Text spräche von einer Währung „", die niemand streichen kann.
+        // The empty currency is in no list of allowed currencies — without the
+        // case distinction it would report RootCurrencyNotSold and the text
+        // would speak of a currency "" that nobody can remove.
         $this->root(7, 'Österreich', shop: 1, currency: '');
 
         self::assertSame(
@@ -83,9 +83,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testDieWaehrungWirdUnabhaengigVonGrossKleinschreibungVerglichen(): void
     {
-        // Task 3 migriert den alten Shop-Wert an die Startpunkte, ohne dass er
-        // je durch einen Speicher-Callback gelaufen wäre. Ein kleingeschriebenes
-        // „eur" ist dieselbe Währung, kein Befund.
+        // Task 3 migrates the old shop value to the start points without it
+        // ever having run through a save callback. A lower-case "eur" is the
+        // same currency, not a finding.
         $this->root(7, 'Österreich', shop: 1, currency: 'eur');
 
         self::assertSame([], $this->issues());
@@ -93,9 +93,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testEineWaehrungAusLauterLeerzeichenGiltAlsKeine(): void
     {
-        // varchar(3) aus einem Import: „   " ist keine Währung, sondern eine
-        // fehlende. Ohne trim() meldete der Befund eine Währung namens „   ",
-        // die niemand am Shop wieder zulassen kann.
+        // varchar(3) from an import: "   " is not a currency but a missing
+        // one. Without trim() the finding would report a currency named "   "
+        // that nobody can re-allow on the shop.
         $this->root(7, 'Österreich', shop: 1, currency: '   ');
 
         self::assertEquals(
@@ -106,8 +106,8 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testEineUngueltigeWaehrungAmShopZaehltNichtAlsAngenommen(): void
     {
-        // CurrencySelection verwirft, was kein ISO-4217-Code ist — der Shop
-        // nimmt „XYZ" nicht an, auch wenn es am Shop gespeichert steht.
+        // CurrencySelection discards whatever is not an ISO 4217 code — the shop
+        // does not accept "XYZ", even if it is stored on the shop.
         $this->shop(1, 'Kräuterhaus', ['XYZ']);
         $this->root(7, 'Fantasien', shop: 1, currency: 'XYZ');
 
@@ -119,8 +119,8 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testSeitenOhneShopWerdenNichtGeprueft(): void
     {
-        // Ein Startpunkt ohne Shop-Konfiguration schaltet die Shop-Funktionen
-        // ab (Block A, Abschnitt 7) — dort gilt gar keine Währung.
+        // A start point without a shop configuration switches the shop functions
+        // off (Block A, section 7) — no currency applies there at all.
         $this->root(7, 'Verein', shop: 0, currency: '');
 
         self::assertSame([], $this->issues());
@@ -128,8 +128,8 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testNurStartpunkteWerdenGeprueft(): void
     {
-        // Eine gewöhnliche Seite trägt das Feld nicht in der Palette; ein Rest
-        // in der Spalte ist kein Befund.
+        // An ordinary page does not carry the field in its palette; a leftover
+        // in the column is not a finding.
         $this->connection->insert('tl_page', ['id' => 7, 'type' => 'regular', 'title' => 'Impressum', 'consho_shop' => 1, 'consho_currency' => '']);
 
         self::assertSame([], $this->issues());
@@ -137,9 +137,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testEinStartpunktMitGeloeschtemShopErzeugtKeinenWaehrungsbefund(): void
     {
-        // Es gibt keinen Shop, der eine Währung annehmen oder ablehnen könnte —
-        // die Meldung nennte einen Shop ohne Namen. Derselbe Fall wie oben:
-        // ohne Shop-Konfiguration keine Shop-Funktionen.
+        // There is no shop that could accept or reject a currency — the message
+        // would name a shop without a name. The same case as above: no shop
+        // configuration, no shop functions.
         $this->root(7, 'Verwaist', shop: 99, currency: 'CHF');
         $this->root(8, 'Auch verwaist', shop: 99, currency: '');
 
@@ -148,9 +148,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testJederBetroffeneStartpunktBekommtSeinenEigenenBefund(): void
     {
-        // Titel ohne Umlaut, damit die erwartete Reihenfolge unmittelbar
-        // lesbar bleibt: sortiert wird byteweise, „Österreich" stünde hinter
-        // „Schweiz".
+        // Titles without umlauts, so that the expected order stays directly
+        // readable: sorting is bytewise, "Österreich" would come after
+        // "Schweiz".
         $this->root(7, 'Alpenseite', shop: 1, currency: '');
         $this->root(8, 'Bergseite', shop: 1, currency: 'GBP');
 
@@ -165,11 +165,11 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testDieReihenfolgeFolgtDemSeitentitelNichtDerId(): void
     {
-        // Die Titel widersprechen absichtlich der id-Reihenfolge. PRAGMA
-        // reverse_unordered_selects: ohne ORDER BY läse SQLite die Tabelle
-        // sonst ohnehin aufsteigend nach id — zufällig nicht die erwartete
-        // Reihenfolge, aber eben nur zufällig. Erst mit der PRAGMA scheitert
-        // ein fehlendes ORDER BY zuverlässig.
+        // The titles deliberately contradict the id order. PRAGMA
+        // reverse_unordered_selects: without ORDER BY, SQLite would otherwise
+        // read the table in ascending id order anyway — by chance not the
+        // expected order, but only by chance. Only with the PRAGMA does a
+        // missing ORDER BY fail reliably.
         $this->connection->executeStatement('PRAGMA reverse_unordered_selects = ON');
 
         $this->root(7, 'Mitte', shop: 1, currency: '');
@@ -184,8 +184,8 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testBeideStartpunktbefundeSindWarnungen(): void
     {
-        // Beide Male zeigt der Startpunkt Preise, die niemand kassieren kann —
-        // nichts zum Wegklicken, und nach 11.2 sperrt das den Checkout.
+        // Both times the start point shows prices nobody can collect —
+        // nothing to click away, and after 11.2 that blocks the checkout.
         self::assertTrue(ConfigurationFinding::RootWithoutCurrency->isWarning());
         self::assertTrue(ConfigurationFinding::RootCurrencyNotSold->isWarning());
     }
@@ -210,8 +210,8 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testEinDritterShopIstEinNeuerFall(): void
     {
-        // Der Fingerabdruck enthält den Kontext: Wer die Lage mit zwei Shops
-        // zur Kenntnis genommen hat, hat über den dritten nichts gesagt.
+        // The fingerprint includes the context: whoever acknowledged the
+        // situation with two shops has said nothing about the third.
         $this->shop(2, 'Almhütte', ['EUR']);
         $zwei = $this->issues()[0];
 
@@ -223,9 +223,9 @@ class DbalShopScopeIssueSourceTest extends TestCase
 
     public function testDerHinweisZuGeteiltenMitgliedernIstNieEineWarnung(): void
     {
-        // 🔴 Mehrere Shops sind erlaubt und gewollt. Eine Warnung sperrte den
-        // Checkout des Shops (Block C, 11.2) — dieser Befund sperrt nichts,
-        // er sagt nur, worauf sich der Betreiber einlässt.
+        // 🔴 Several shops are allowed and intended. A warning would block the
+        // shop's checkout (Block C, 11.2) — this finding blocks nothing,
+        // it only says what the operator is getting into.
         self::assertFalse(ConfigurationFinding::MultipleShopsShareMembers->isWarning());
     }
 

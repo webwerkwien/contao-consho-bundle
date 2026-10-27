@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherLedger;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
 
 /**
- * WG-6 (6.6, WG7, WG11, D1, D2): Geld zurück auf Gutscheine, Gutscheine
- * zurückgenommen.
+ * WG-6 (6.6, WG7, WG11, D1, D2): Money back onto vouchers, vouchers
+ * taken back.
  */
 class VoucherReturnTest extends TestCase
 {
@@ -42,8 +42,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * Aus den Bewegungen, nicht aus dem Verweis an der Zahlung — den leert
-     * die Anonymisierung.
+     * From the movements, not from the reference on the payment — the
+     * anonymisation clears that one.
      */
     public function testWasEinGutscheinBezahltHatStehtInDenBewegungen(): void
     {
@@ -52,8 +52,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * WG11: zurück in der Reihenfolge, in der sie zahlten, jeder bis zu
-     * seinem Bezahlten — Zahlung an der Bestellung und Bewegung mit Verweis.
+     * WG11: back in the order in which they paid, each up to what it
+     * paid — a payment on the order and a movement with a reference.
      */
     public function testErstattungGehtInReihenfolgeAufDieGutscheine(): void
     {
@@ -71,8 +71,76 @@ class VoucherReturnTest extends TestCase
         self::assertSame((int) $rows[0]['id'], (int) $booking['paymentId']);
         self::assertSame('WEB-00077-W1', $booking['note']);
 
-        // Und was zurück ist, zählt nicht noch einmal.
+        // And what is back does not count a second time.
         self::assertTrue($this->return()->paidTotal(77)->isEqualTo(5));
+    }
+
+    /**
+     * EZ-4: money back onto a single-purpose voucher takes its tax along —
+     * its share of what still stands on the order, and on the last refund
+     * all that is left, so no rounding cent remains. The correction is
+     * issued before the refund is booked and reads the same plan.
+     */
+    public function testDieSteuerGehtAnteiligMitAufDenEinzweckGutscheinZurueck(): void
+    {
+        $this->connection->update('tl_consho_order', ['currency' => 'EUR'], ['id' => 77]);
+        $this->connection->insert('tl_consho_payment', ['pid' => 77, 'amount' => '30.0000', 'method' => 'Gutschein …AAAA', 'reference' => 'voucher:1', 'prepaidTaxRate' => '20.0000', 'prepaidTaxCountry' => 'AT', 'prepaidTax' => '5.0000']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 77, 'amount' => '10.0000', 'method' => 'Gutschein …BBBB', 'reference' => 'voucher:2']);
+
+        self::assertSame(
+            [['label' => 'Gutschein …AAAA', 'country' => 'AT', 'rate' => '20.0000', 'net' => '-8.3300', 'tax' => '-1.6700', 'gross' => '-10.0000']],
+            $this->return()->prepaidFor(77, '10', 'de'),
+        );
+
+        // 5 × 10 / 30 = 1.666… → 1.67
+        $this->return()->refund(77, '10', self::NOW, 'WEB-00077-W1', 'de');
+        // The rest of A, then B, which carries no tax.
+        $this->return()->refund(77, '25', self::NOW, 'WEB-00077-W2', 'de');
+
+        $rows = $this->connection->fetchAllAssociative('SELECT amount, prepaidTaxRate, prepaidTaxCountry, prepaidTax FROM tl_consho_payment WHERE amount < 0 ORDER BY id');
+        self::assertEquals([[-10, 20, 'AT', -1.67], [-20, 20, 'AT', -3.33], [-5, 0, '', 0]], array_map('array_values', $rows));
+        self::assertEquals(0, $this->connection->fetchOne("SELECT SUM(prepaidTax) FROM tl_consho_payment WHERE reference = 'voucher:1'"));
+    }
+
+    /**
+     * On a half cent the share's net is rounded and its tax is the rest, as
+     * the credited line is split: 11.25 of 22.50 at 20 % gives 9.38 net and
+     * 1.87 tax, not 1.88 — else the credit note's rate keeps a cent of tax on
+     * no basis and its e-invoice has no XML.
+     */
+    public function testDerSteueranteilRundetDasNettoWieDieZeile(): void
+    {
+        $this->connection->update('tl_consho_order', ['currency' => 'EUR'], ['id' => 77]);
+        $this->connection->insert('tl_consho_payment', ['pid' => 77, 'amount' => '22.5000', 'method' => 'Gutschein …AAAA', 'reference' => 'voucher:1', 'prepaidTaxRate' => '20.0000', 'prepaidTaxCountry' => 'AT', 'prepaidTax' => '3.7500']);
+
+        self::assertSame(
+            [['label' => 'Gutschein …AAAA', 'country' => 'AT', 'rate' => '20.0000', 'net' => '-9.3800', 'tax' => '-1.8700', 'gross' => '-11.2500']],
+            $this->return()->prepaidFor(77, '11.25', 'de'),
+        );
+
+        $this->return()->refund(77, '11.25', self::NOW, 'WEB-00077-W1', 'de');
+        $this->return()->refund(77, '11.25', self::NOW, 'WEB-00077-W2', 'de');
+
+        self::assertEquals([-1.87, -1.88], array_map('floatval', $this->connection->fetchFirstColumn('SELECT prepaidTax FROM tl_consho_payment WHERE amount < 0 ORDER BY id')));
+    }
+
+    /**
+     * EZ-4 (F2): with the lines of a withdrawal each single-purpose voucher
+     * takes back at most what its pot credits. A returned discount at the
+     * same country and rate is shared among the pots by what they credit,
+     * not taken whole from each: 30 − 8 × 30/40 = 24 and 10 − 8 × 10/40 = 8.
+     */
+    public function testJederEinzweckGutscheinNurAusSeinemTopf(): void
+    {
+        $this->connection->update('tl_consho_voucher', ['taxClass' => 3, 'taxRate' => '20.0000', 'taxCountry' => 'AT'], ['id' => 1]);
+        $this->connection->update('tl_consho_voucher', ['taxClass' => 4, 'taxRate' => '20.0000', 'taxCountry' => 'AT'], ['id' => 2]);
+        $line = static fn (string $total, string $type, string $class): array => ['lineTotal' => $total, 'lineType' => $type, 'taxClass' => $class, 'taxCountry' => 'AT', 'taxRate' => '20.0000', 'kind' => 'physical'];
+
+        self::assertSame('32.0000', (string) $this->return()->onVouchers(77, '40', [$line('-30.0000', 'product', '3'), $line('-10.0000', 'product', '4'), $line('8.0000', 'discount', '0')]));
+        // Only class 4 withdrawn: voucher 1 takes nothing, voucher 2 its 10.
+        self::assertSame('10.0000', (string) $this->return()->onVouchers(77, '40', [$line('-30.0000', 'product', '4')]));
+        // Without lines (a cancellation) all of it.
+        self::assertSame('40.0000', (string) $this->return()->onVouchers(77, '40'));
     }
 
     public function testNieMehrAlsDieGutscheineBezahltHaben(): void
@@ -84,8 +152,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * D1: ein abgelaufener Gutschein wird unbefristet, ein gültiger behält
-     * sein Datum.
+     * D1: an expired voucher becomes unlimited, a valid one keeps
+     * its date.
      */
     public function testAbgelaufenWirdUnbefristetGueltigBleibtGueltig(): void
     {
@@ -99,8 +167,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * 6.6, D2: Storno — was die Gutscheine zahlten, geht zurück; was die
-     * Bestellung kaufte, wird gesperrt, auch teilweise eingelöst.
+     * 6.6, D2: Cancellation — what the vouchers paid goes back; what the
+     * order bought is locked, even if partly redeemed.
      */
     public function testStornoZahltZurueckUndSperrtGekaufte(): void
     {
@@ -116,11 +184,11 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * Review WG-7, P4: Storno nach einem Teilwiderruf bucht nur zurück, was
-     * noch nicht zurück ist — 40 bezahlt, 15 schon erstattet, 25 beim Storno.
+     * WG-7: A cancellation after a partial withdrawal only books back what
+     * is not back yet — 40 paid, 15 already refunded, 25 at the cancellation.
      */
     /**
-     * Review WG-7, L2: der Storno liest unter der Sperre der Bestellung.
+     * WG-7: the cancellation reads under the order's lock.
      */
     public function testStornoSperrtDieBestellung(): void
     {
@@ -143,8 +211,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * WG7, Review S1 (Michael, 2026-10-06): zurückgenommen wird je Stück ein
-     * NICHT eingelöster Gutschein; ein zweiter Widerruf nimmt den nächsten.
+     * WG7: per item, one voucher that has NOT been redeemed is
+     * taken back; a second withdrawal takes the next one.
      */
     public function testWiderrufNimmtNurNichtEingeloesteZurueck(): void
     {
@@ -161,9 +229,9 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * Ein eingelöster Gutschein geht nicht zurück: die Antwort nennt ihn und
-     * die Bestellung, in der er bezahlt hat — und nichts ist gesperrt, auch
-     * nicht der freie daneben.
+     * A redeemed voucher does not go back: the answer names it and the
+     * order it paid in — and nothing is locked, not even the free one
+     * next to it.
      */
     public function testEinEingeloesterGutscheinGehtNichtZurueck(): void
     {
@@ -178,15 +246,15 @@ class VoucherReturnTest extends TestCase
         self::assertSame([['code' => '…DDDD', 'reason' => 'redeemed', 'orders' => 'WEB-00091']], $refused);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_voucher WHERE blocked = 1'));
 
-        // Die Bestellung zurück — der Gutschein ist wieder voll und geht.
+        // The order taken back — the voucher is full again and goes.
         $this->return()->refund(91, '30', self::NOW);
         self::assertSame([], $this->return()->takeBack(90, 12, [7 => '2'], self::NOW));
     }
 
     /**
-     * Zweites Review, L-B und L-C: von Hand gesperrt oder von Hand geändert —
-     * beides entscheidet der Betreiber, je mit eigenem Grund. Eine ganz
-     * zurückgebuchte Einlösung steht nicht mehr im Weg.
+     * Locked by hand or changed by hand — the operator decides both, each
+     * with its own reason. A redemption booked back in full no longer stands
+     * in the way.
      */
     public function testGesperrtUndVonHandGeaendertStehenImWeg(): void
     {
@@ -206,8 +274,7 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * Zweites Review, L-A: die Gutscheine der Zeile unter Sperre, in
-     * Id-Reihenfolge wie der Kaufklick.
+     * The row's vouchers under a lock, in id order like the purchase click.
      */
     public function testLiestDieGutscheineUnterSperre(): void
     {
@@ -231,8 +298,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * Unbezahlt: noch kein Gutschein ausgegeben, nichts im Weg — die Freigabe
-     * gibt ein widerrufenes Stück nie aus.
+     * Unpaid: no voucher issued yet, nothing in the way — the release never
+     * issues a withdrawn item.
      */
     public function testNochNichtAusgegebeneStueckeBrauchenKeinenGutschein(): void
     {
@@ -242,8 +309,8 @@ class VoucherReturnTest extends TestCase
     }
 
     /**
-     * Review S1: auf einen gesperrten Gutschein geht nichts zurück — weder
-     * beim Widerruf noch beim Storno. Sein Anteil bleibt der Zahlungsart.
+     * Nothing goes back onto a locked voucher — neither at a withdrawal nor
+     * at a cancellation. Its share stays with the payment method.
      */
     public function testEinGesperrterGutscheinBekommtNichtsZurueck(): void
     {

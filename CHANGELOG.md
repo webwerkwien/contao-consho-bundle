@@ -5,7 +5,47 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
-## [Unreleased]
+## [0.1.14] – 2026-10-27
+
+### Added
+
+- **Customer account from a guest order.** The order page of a guest order offers "Create customer account". The shop
+  sends a mail to the address of the order with a link to set the password; the account opens with that password, joins
+  the shop's customer group and shows the guest orders under the confirmed address. Billing and delivery address, phone,
+  VAT ID and language come from the order; the username is the e-mail address. An address that already has an account
+  gets a mail naming it, with a link to "Lost password". Accounts without a password are deleted after 24 hours.
+  Needs the new start point field `consho_passwordPage`: a published, unprotected page with Contao's "Lost password"
+  module below that start point. Without it the order page offers no account, and the note `accountPasswordPageMissing`
+  names the start points. Addresses longer
+  than 64 characters get no offer, as the username field holds 64. (K1)
+- **Single-purpose vouchers.** A voucher product has the new switch "Single-purpose voucher". Its sale is taxed in the
+  shop's country at the rate of its tax class, and the voucher keeps that class, rate and country. It pays only for
+  articles of the same tax class, taxed in the shop's country at the same rate, after cart discounts — not shipping,
+  payment fees or other vouchers. Single-purpose vouchers are applied first, multi-purpose ones take the rest. A
+  voucher with nothing to pay for says so in the basket and at checkout, and so does one whose rate has changed since
+  its sale. Without a rate (a "not taxable" class, rate 0) or under reverse charge the voucher is issued as a
+  multi-purpose one; the configuration check warns about a single-purpose voucher in a "not taxable" class. The
+  invoice shows the lines in full and, below the VAT, the tax each single-purpose voucher already carried and the VAT
+  that remains; the e-invoice states it as a document allowance at that rate. Refunds onto such a voucher take their
+  share of the tax back; cancellations and invoice corrections state it with the opposite sign. A withdrawal refunds
+  onto a single-purpose voucher no more than the withdrawn articles it can pay for; the rest goes to the payment method. New columns on
+  `tl_consho_product`, `tl_consho_order_item`, `tl_consho_voucher` and `tl_consho_payment`; run the migration.
+  Snapshot formats 12 and 13; invoices issued earlier print exactly as before. (EZ)
+
+### Changed
+
+- **Invoices paid in advance say so.** An invoice issued before shipping whose customer pays before the goods go out
+  (prepayment, online payment, vouchers) now carries the note that it covers an advance payment and that delivery
+  follows receipt of payment, next to the expected delivery period. Purchases on account and cash on delivery get no
+  note. Snapshot format 11; invoices issued earlier print exactly as before. (L-1)
+
+### Fixed
+
+- **Links in mails find the right start point when the order's language has none.** A shop without a start point in
+  the language of an order now links to its language fallback start point, as Contao serves it, instead of the one
+  with the lowest ID. Published start points come before unpublished ones, so a start point taken offline no longer
+  leads to dead links. Applies to every mail and back-end action that links into the shop for an order or
+  subscription.
 
 ## [0.1.13] – 2026-10-25
 

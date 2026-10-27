@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Versions of order records are history, never a way back (Connect-2, CW-1,
- * E1 — Michael, 2026-10-10: „ja").
+ * E1).
  *
  * Contao's restore writes the whole old row back with a plain UPDATE: the
  * read-only fields, and what Consho set itself — the payment received, the

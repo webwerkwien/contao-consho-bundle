@@ -45,10 +45,10 @@ class DocumentBackendControllerTest extends TestCase
     }
 
     /**
-     * Eine `key`-Aktion ist keine DataContainer-Aktion: Ohne die Frage im
-     * Controller würden die DC-Voter für diesen Datensatz gar nicht gefragt.
-     * ⚠️ Heute entscheidet dort nur der Modulzugriff (kein eigener Voter für
-     * Belege) — der Test sichert, DASS gefragt und ein Nein befolgt wird.
+     * A `key` action is not a DataContainer action: without the question in
+     * the controller, the DC voters would not be asked about this record at all.
+     * ⚠️ Today only the module access decides there (no voter of its own for
+     * documents) — the test ensures THAT the question is asked and a no is obeyed.
      */
     public function testOhneLeserechtGibtEsDenBelegNicht(): void
     {
@@ -65,8 +65,8 @@ class DocumentBackendControllerTest extends TestCase
     }
 
     /**
-     * Die Warnung nennt die BELEGNUMMER — bei der Abnahme stand dort
-     * „RE-00013.pdf", beim HTML sogar nur die ID.
+     * The warning names the DOCUMENT NUMBER — not a file name such as
+     * "RE-00013.pdf", and for HTML not merely the ID.
      */
     public function testDieWarnungNenntDieBelegnummer(): void
     {
@@ -92,9 +92,9 @@ class DocumentBackendControllerTest extends TestCase
     }
 
     /**
-     * 🔴 Die Antwort muss GEWORFEN werden. Zurückgegeben packt Contao ihren
-     * Inhalt in die Backend-Seite (Backend::getBackendModule, Zweig `key`) —
-     * bei der Abnahme auf c5 stand die Rechnung im Backend-Rahmen.
+     * 🔴 The response must be THROWN. Returned, Contao wraps its content in the
+     * back-end page (Backend::getBackendModule, branch `key`) — the invoice then
+     * appears inside the back-end frame.
      */
     private function responseOf(\Closure $action): Response
     {

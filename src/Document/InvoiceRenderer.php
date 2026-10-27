@@ -22,8 +22,8 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 class InvoiceRenderer
 {
     /**
-     * WITH the folder — Contao 5.7 keeps it in the name (debug:contao-twig on
-     * c5, 2026-09-24). Without it the first rendering on c5 was a 500.
+     * WITH the folder — Contao 5.7 keeps it in the name (debug:contao-twig).
+     * Without it the first rendering was a 500.
      */
     public const TEMPLATE = '@Contao/document/consho_invoice.html.twig';
 

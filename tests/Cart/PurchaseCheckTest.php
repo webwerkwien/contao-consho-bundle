@@ -11,25 +11,25 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionOffers;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Gegen SQLite mit dem gemeinsamen Katalog-Testschema — die Sichtbarkeit
- * entscheidet VisibilityCriteria selbst, nicht ein Mock. Genau darum geht es:
- * die Regeln stehen an einer Stelle, und der Warenkorb ist ihr fünfter Leser.
+ * Against SQLite with the shared catalogue test schema — visibility is
+ * decided by VisibilityCriteria itself, not by a mock. That is the whole point:
+ * the rules live in one place, and the cart is their fifth reader.
  *
- * Die Einfüger des Traits liefern keine Id zurück (`insertProduct(): void`),
- * deshalb stehen die Ids hier als Konstanten. Eine Zuordnung zum Shop läuft
- * über `insertProductShop()` — eine Methode `assignToShop()` gibt es nicht.
+ * The trait's inserters return no id (`insertProduct(): void`),
+ * which is why the ids are constants here. Assigning to a shop goes
+ * through `insertProductShop()` — there is no `assignToShop()` method.
  *
- * `check(..., '', '')` bedeutet „frag nicht nach Übersetzungen" (siehe
- * PurchaseCheck::check()) und ist nur dort richtig, wo keine Seite im Spiel
- * ist — die meisten Tests hier prüfen Regeln 1–3, für die das zutrifft. Die
- * Sprach-Tests weiter unten übergeben echte Sprachpaare.
+ * `check(..., '', '')` means "do not ask about translations" (see
+ * PurchaseCheck::check()) and is only right where no page is involved
+ * — most tests here check rules 1–3, for which that holds. The
+ * language tests further down pass real language pairs.
  */
 class PurchaseCheckTest extends TestCase
 {
     use CatalogSchema;
 
-    // Zehnstellig wie ein echter Zeitstempel — start/stop sind varchar(10),
-    // siehe VisibilityCriteria::published().
+    // Ten digits like a real timestamp — start/stop are varchar(10),
+    // see VisibilityCriteria::published().
     private const NOW = 1_700_000_000;
 
     private const SHOP = 1;
@@ -75,7 +75,7 @@ class PurchaseCheckTest extends TestCase
 
     public function testEinHauptproduktMitVariantenWirdAbgelehnt(): void
     {
-        // Es ist keine Ware, sondern die Auswahl davor (VisibilityCriteria).
+        // It is not goods but the choice before them (VisibilityCriteria).
         $this->insertProduct(['id' => self::MAIN, 'published' => 1]);
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN, 'published' => 1]);
         $this->insertProductShop(['pid' => self::MAIN, 'shop' => self::SHOP]);
@@ -92,7 +92,7 @@ class PurchaseCheckTest extends TestCase
         $verdict = $this->check->check(self::VARIANT, self::SHOP, '1', self::NOW, '', '');
 
         self::assertTrue($verdict->allowed);
-        // Mindestmenge und Schrittweite stehen am Hauptprodukt.
+        // Minimum quantity and step size sit on the main product.
         self::assertSame(self::MAIN, $verdict->mainProductId);
     }
 
@@ -107,8 +107,8 @@ class PurchaseCheckTest extends TestCase
 
     public function testDieMindestmengeDerVarianteKommtVomHauptprodukt(): void
     {
-        // Die Variante trägt die Vorgabewerte der Spalte (1/1); maßgeblich
-        // sind die 5 am Hauptprodukt — sonst fiele die falsche Zeile auf.
+        // The variant carries the column's defaults (1/1); what counts
+        // is the 5 on the main product — otherwise the wrong row would stand out.
         $this->insertProduct(['id' => self::MAIN, 'published' => 1, 'minPurchase' => '5.0000', 'purchaseSteps' => '3.0000']);
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN, 'published' => 1]);
         $this->insertProductShop(['pid' => self::MAIN, 'shop' => self::SHOP]);
@@ -125,9 +125,9 @@ class PurchaseCheckTest extends TestCase
     }
 
     /**
-     * Spec F, offene Punkte (K6): 1,5 Lizenzschlüssel ergaben abgerundet
-     * einen. Digitales und Wertgutscheine gibt es nur ganz; eine
-     * Dienstleistung darf 1,5 Stunden sein, Ware 1,5 kg.
+     * Spec F, open points (K6): 1.5 licence keys rounded down to
+     * one. Digital goods and gift vouchers come only whole; a
+     * service may be 1.5 hours, goods 1.5 kg.
      *
      * @return iterable<string, array{string, bool}>
      */
@@ -157,11 +157,11 @@ class PurchaseCheckTest extends TestCase
 
     public function testEinInDieserSpracheUnsichtbaresProduktDarfDortNichtGekauftWerden(): void
     {
-        // Die fünfte Sichtbarkeitsregel: Sicherheitstexte am Produkt, aber
-        // keine Übersetzung — auf der französischen Seite zeigt der Katalog
-        // das Produkt nicht, also darf es von dort auch nicht in den
-        // Warenkorb. Ohne die Sprache prüfte der Warenkorb vier von fünf
-        // Regeln und nähme auf, was die Seite gar nicht anbietet.
+        // The fifth visibility rule: safety texts on the product, but
+        // no translation — on the French page the catalogue does not show
+        // the product, so it must not go into the cart from there either.
+        // Without the language the cart would check four of five
+        // rules and accept what the page does not even offer.
         $this->insertProduct([
             'id' => self::MAIN,
             'published' => 1,
@@ -176,23 +176,23 @@ class PurchaseCheckTest extends TestCase
             $this->check->check(self::MAIN, self::SHOP, '1', self::NOW, 'fr', 'de')->reason,
         );
 
-        // In der Ausgangssprache derselbe Artikel, dieselbe Zeile: erlaubt.
+        // In the source language the same article, the same line: allowed.
         self::assertTrue($this->check->check(self::MAIN, self::SHOP, '1', self::NOW, 'de', 'de')->allowed);
     }
 
     /**
-     * Befund 1 (Code-Review): vor der Pflichtparameter-Änderung bekam ein
-     * Aufrufer, der nur $language übergab und $fallback vergaß, lautlos
-     * $language !== $fallback ('de' !== '') — die Hauptsprache galt dann als
-     * Fremdsprache, VisibilityCriteria verlangte eine Übersetzungszeile für
-     * 'de', die es für die Hauptsprache nie gibt, und ein völlig normales
-     * Produkt ohne jeden Sicherheitstext wurde fälschlich abgelehnt. Das war
-     * mit dem alten Vorgabewert `string $fallback = ''` reproduzierbar (siehe
-     * Git-Historie dieses Tests).
+     * Before the change to required parameters, a caller
+     * that passed only $language and forgot $fallback silently got
+     * $language !== $fallback ('de' !== '') — the main language then counted as a
+     * foreign language, VisibilityCriteria required a translation row for
+     * 'de', which never exists for the main language, and a perfectly normal
+     * product without any safety text was wrongly refused. That was
+     * reproducible with the old default `string $fallback = ''` (see the
+     * git history of this test).
      *
-     * Jetzt sind beide Parameter Pflicht: das Weglassen ist kein stiller
-     * Laufzeitfehler mehr, sondern ein sofortiger ArgumentCountError beim
-     * Aufruf — ein Fehler beim Analysieren, nicht beim Verkauf.
+     * Now both parameters are required: leaving one out is no longer a silent
+     * runtime error but an immediate ArgumentCountError on the
+     * call — an error at analysis time, not at the sale.
      */
     public function testFehlendeFallbackSpracheIstEinFehlerBeimAufruf(): void
     {
@@ -201,7 +201,7 @@ class PurchaseCheckTest extends TestCase
 
         $this->expectException(\ArgumentCountError::class);
 
-        /** @phpstan-ignore-next-line arguments.count (das fehlende Argument ist genau der Punkt dieses Tests) */
+        /** @phpstan-ignore-next-line arguments.count (the missing argument is exactly the point of this test) */
         $this->check->check(self::MAIN, self::SHOP, '1', self::NOW, 'de');
     }
 
@@ -220,8 +220,8 @@ class PurchaseCheckTest extends TestCase
             'ptable' => 'tl_consho_product',
             'language' => 'fr',
             'title' => 'Amer suédois',
-            // Ohne Alias gilt die Übersetzung als unvollständig — die
-            // Variante hätte in dieser Sprache keine eigene Adresse
+            // Without an alias the translation counts as incomplete — the
+            // variant would have no address of its own in this language
             // (VisibilityCriteria::translated()).
             'alias' => 'amer-suedois',
             'safetyWarnings' => 'Contient de l’alcool',
@@ -246,7 +246,7 @@ class PurchaseCheckTest extends TestCase
 
         $check = new PurchaseCheck($this->catalogConnection, new VisibilityCriteria(), $this->offers([5]));
 
-        // Regel 7 hat das Produkt nicht, und als Einmalkauf wird es nicht verkauft.
+        // The product does not have rule 7, and it is not sold as a one-off purchase.
         self::assertSame(PurchaseVerdict::NOT_OFFERED, $check->check(self::MAIN, self::SHOP, '1', self::NOW, '', '', 7)->reason);
         self::assertSame(PurchaseVerdict::NOT_OFFERED, $check->check(self::MAIN, self::SHOP, '1', self::NOW, '', '', 0)->reason);
         self::assertSame(PurchaseVerdict::NOT_OFFERED, $check->check(self::MAIN, self::SHOP, '1', self::NOW, '', '', -1)->reason);
@@ -266,10 +266,10 @@ class PurchaseCheckTest extends TestCase
 
     public function testOhneModellFragtDieMengenaenderungNichtNachDemAngebot(): void
     {
-        // Die Menge einer bestehenden Zeile zu ändern ändert nicht ihr Modell.
-        // Fragte die Prüfung dann nach dem Einmalkauf, ließe sich die Menge
-        // eines reinen Abo-Produkts nie mehr ändern. Ob das Modell noch gilt,
-        // sagt der Warenkorb über den Preis (CartPricer).
+        // Changing the quantity of an existing line does not change its model.
+        // If the check then asked about the one-off purchase, the quantity of
+        // a subscription-only product could never be changed again. Whether the model still applies
+        // is told by the cart through the price (CartPricer).
         $this->visibleProduct();
 
         $offers = $this->createMock(SubscriptionOffers::class);
@@ -287,12 +287,12 @@ class PurchaseCheckTest extends TestCase
     }
 
     /**
-     * Befund 2 (Code-Review): `refuse()` gab bisher `quantity = '0.0000'` und
-     * `mainProductId = 0` aus — beide sehen wie echte Werte aus. Ein Aufrufer,
-     * der sie liest, ohne vorher `allowed` zu prüfen, bekäme keinen Fehler,
-     * sondern eine plausibel aussehende Nullzeile im Warenkorb. Beide sind
-     * jetzt `null`, damit ein fehlender Null-Test ein PHPStan-Fehler ist statt
-     * einer stillen Falle.
+     * `refuse()` used to return `quantity = '0.0000'` and
+     * `mainProductId = 0` — both look like real values. A caller
+     * that reads them without checking `allowed` first would get no error
+     * but a plausible-looking zero line in the cart. Both are
+     * now `null`, so that a missing null check is a PHPStan error instead of
+     * a silent trap.
      */
     public function testEineAblehnungHatWederMengeNochHauptproduktId(): void
     {
@@ -309,7 +309,7 @@ class PurchaseCheckTest extends TestCase
     }
 
     /**
-     * @param list<int> $offered die Modelle, die das Produkt jedem anbietet
+     * @param list<int> $offered the models the product offers to everyone
      */
     private function offers(array $offered): SubscriptionOffers
     {

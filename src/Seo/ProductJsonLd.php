@@ -238,7 +238,7 @@ final class ProductJsonLd
                 '@type' => 'ShippingDeliveryTime',
                 // The shop counts working days, Monday to Friday (shop DCA),
                 // and says so — a bare DAY would read as calendar days
-                // (Fable review Connect-1, H3).
+                // (Connect-1).
                 'businessDays' => [
                     '@type' => 'OpeningHoursSpecification',
                     'dayOfWeek' => array_map(static fn (string $day): string => 'https://schema.org/'.$day, ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']),

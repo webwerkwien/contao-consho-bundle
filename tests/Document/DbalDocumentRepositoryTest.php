@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * C-10 (7.5): Eine stornierte Rechnung steht nicht mehr. Wer „die Rechnung
- * dieser Bestellung" sucht, meint die, die gilt — sonst fände issueOnce nach
- * dem Wechsel der Zahlungsart die alte und stellte keine neue aus.
+ * C-10 (7.5): A cancelled invoice no longer stands. Whoever looks for "the
+ * invoice of this order" means the one that is valid — otherwise issueOnce
+ * would find the old one after a change of payment method and issue no new one.
  */
 class DbalDocumentRepositoryTest extends TestCase
 {

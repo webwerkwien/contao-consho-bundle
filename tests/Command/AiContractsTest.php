@@ -21,14 +21,14 @@ use Webwerkwien\ContaoConshoBundle\Command\VisibilityRebuildCommand;
 use Webwerkwien\ContaoConshoBundle\Command\VisibilityVerifyCommand;
 
 /**
- * Welche Kern-Befehle contao-ai starten darf (CLI-Abdeckung E1, Michael
- * 2026-10-14: „ja, alles wie empfohlen"): die Wartungsbefehle ja, die
- * Entwicklerbefehle und die Abo-Abrechnung nicht, `consho:check` nicht – den
- * deckt `consho:connect:findings` ab (Connect C1).
+ * Which core commands contao-ai may start (CLI coverage E1): the
+ * maintenance commands yes, the developer commands and the subscription
+ * billing no, `consho:check` no – that is covered by
+ * `consho:connect:findings` (Connect C1).
  *
- * Gelesen über getArguments(), nicht newInstance(): Der Kern hängt nicht von
- * contao-ai ab, die Attributklasse gibt es hier nicht – genau so liest
- * contao-ai den Vertrag auch.
+ * Read via getArguments(), not newInstance(): the core does not depend on
+ * contao-ai, the attribute class does not exist here – and that is exactly
+ * how contao-ai reads the contract too.
  */
 final class AiContractsTest extends TestCase
 {
@@ -61,17 +61,17 @@ final class AiContractsTest extends TestCase
         self::assertSame($writes, $contract['writes'] ?? null);
         self::assertNotEmpty($contract['tables'] ?? [], 'die Tabellen, die er liest oder schreibt');
 
-        // contao-ais ContractReader meldet einen schreibenden Vertrag ohne
-        // `trace` als fehlerhaft (Review K) – auch wenn er keine Spur hinterlässt.
+        // contao-ai's ContractReader reports a writing contract without
+        // `trace` as faulty – even if it leaves no trace.
         if ($writes) {
             self::assertArrayHasKey('trace', $contract, 'writes ohne trace');
         }
 
-        // contao-ai hält `tables` gegen die DCA: eine Consho-Tabelle braucht
-        // ihre Datei hier, eine Contao-Tabelle bringt Contao mit. Die
-        // Projektionen stehen in keinem Backend-Modul – damit sehen die
-        // Befehle, die sie nennen, im Chat nur Admins. Gewollt (Review K):
-        // Wartung, und die Tabellen stehen da, weil sie geschrieben werden.
+        // contao-ai checks `tables` against the DCA: a Consho table needs
+        // its file here, a Contao table comes with Contao. The projections
+        // are in no back-end module – so in the chat only admins see the
+        // commands that name them. Intended: maintenance, and the tables are
+        // listed because they are written.
         foreach ($contract['tables'] as $table) {
             if (!\in_array($table, ['tl_page', 'tl_files'], true)) {
                 self::assertFileExists(__DIR__.'/../../contao/dca/'.$table.'.php', 'Tabelle ohne DCA im Kern: '.$table);
@@ -80,10 +80,10 @@ final class AiContractsTest extends TestCase
     }
 
     /**
-     * Endgültig sind das Löschen der alten Adressen und das Nachholen der
-     * Archivierung (`document:verify --retry`, AiContract-Prüfung 2026-10-22:
-     * eine archivierte Datei wird nie überschrieben) – und das muss der
-     * Vertrag sagen. Seit contao-ai backend v0.22.1 laufen sie nicht im Chat.
+     * Final are the deletion of the old addresses and catching up on the
+     * archiving (`document:verify --retry`: an archived file is never
+     * overwritten) – and the contract must say so. Since contao-ai backend
+     * v0.22.1 they do not run in the chat.
      */
     public function testNurDasLoeschenDerAdressenUndDasArchivSindEndgueltig(): void
     {

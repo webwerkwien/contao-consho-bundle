@@ -72,7 +72,7 @@ final class UrlPruneCommand extends Command
         // Strictly a count and a unit: strtotime() reads far more than that,
         // and reads it wrongly without a word — "10y" took the "y" for a time
         // zone and gave a cut-off in the future, so --force would have removed
-        // every address (found on the test server, CLI coverage). A positive
+        // every address (CLI coverage). A positive
         // count of these units always lies in the past.
         $cutoff = 1 === preg_match('/^[1-9][0-9]*\s*(?:day|week|month|year)s?\z/i', trim($age)) ? strtotime('-'.trim($age)) : false;
 

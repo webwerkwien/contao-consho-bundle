@@ -24,9 +24,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     protected function setUp(): void
     {
-        // Seit C-12 liest der Befund die Beschriftung aus TL_LANG; ohne
-        // Sprachdaten fällt er auf den Schlüssel zurück. Andere Tests laden
-        // die Sprachdateien und lassen sie stehen — hier gilt der Rückfall.
+        // Since C-12 the issue reads its label from TL_LANG; without language
+        // data it falls back to the key. Other tests load the language files
+        // and leave them in place — here the fallback applies.
         unset($GLOBALS['TL_LANG']);
 
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
@@ -62,16 +62,12 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         self::assertSame([], $this->issues());
     }
 
-    // ── Gewährleistungs-Mitteilung (§ 4 Abs 1 Z 12 FAGG, ab 27.09.2026) ─────
+    // ── Guarantee notice (§ 4 Abs 1 Z 12 FAGG, from 27.09.2026) ─────────────
 
     /**
-     * Die harmonisierte EU-Mitteilung zum gesetzlichen Gewährleistungsrecht.
-     * Consho bringt die Grafik NICHT mit (Michael, 2026-09-22: „ich bin
-     * dagegen, dass wir Rechtstexte setzen, aber alles technisch Notwendige
-     * müssen wir bereitstellen") — es prüft, ob die Seite da und erreichbar
-     * ist, und verlinkt sie im Checkout.
-     *
-     * Vorbild: ein Partnershop, dort am 2026-09-17 umgesetzt.
+     * The harmonised EU notice on the legal guarantee of conformity.
+     * Consho does NOT ship the graphic — it checks whether the page exists and
+     * is reachable, and links it in the checkout.
      */
     public function testEineFehlendeGewaehrleistungsSeiteWirdGemeldet(): void
     {
@@ -91,8 +87,8 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Die Gegenprobe zur gemeinsamen Abfrage: Datenschutz und Gewährleistung
-     * laufen durch dieselbe Methode, dürfen aber nicht voneinander abhängen.
+     * The control case for the shared query: privacy and guarantee run
+     * through the same method, but must not depend on each other.
      */
     public function testDatenschutzUndGewaehrleistungWerdenGetrenntGemeldet(): void
     {
@@ -105,8 +101,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * C-9: Die Bestätigung muss die Mitteilung enthalten (Art. 8 Abs. 7 lit. a
-     * VRRL, § 7 Abs 3 FAGG) — ohne Datei wäre jede Bestätigung unvollständig.
+     * C-9: the confirmation has to contain the notice (Art. 8(7)(a) CRD,
+     * § 7 Abs 3 FAGG) — without the file every confirmation would be
+     * incomplete.
      */
     public function testOhneGewaehrleistungsDateiWirdGemeldet(): void
     {
@@ -130,8 +127,8 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Seite und Datei sind zwei Felder und zwei Handgriffe — gemeldet wird,
-     * was fehlt, nicht beides.
+     * Page and file are two fields and two steps — what is missing is
+     * reported, not both.
      */
     public function testSeiteUndDateiWerdenGetrenntGemeldet(): void
     {
@@ -143,12 +140,11 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         self::assertNotContains('warrantyNoticeMissing', $findings);
     }
 
-    // ── Startpunkte, die niemanden bedienen ─────────────────────────────────
+    // ── Root pages that serve nobody ────────────────────────────────────────
 
     /**
-     * Dieselbe Regel wie bei der Abnahme von C-5: Ein unveröffentlichter
-     * Startpunkt bedient niemanden, und ein Befund über ihn sperrte einen
-     * Shop, der läuft.
+     * The same rule as in C-5: an unpublished root page serves nobody, and an
+     * issue about it would block a shop that is running.
      */
     public function testEinUnveroeffentlichterStartpunktWirdNichtGemeldet(): void
     {
@@ -160,7 +156,7 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * N1 (Nachlese Stufe 2): für die Einrichtungsseite auch unveröffentlichte.
+     * N1 (Nachlese stage 2): for the setup page also unpublished ones.
      */
     public function testFuerDieEinrichtungZaehltAuchEinUnveroeffentlichterStartpunkt(): void
     {
@@ -187,8 +183,8 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     public function testEinVeroeffentlichterZweiterStartpunktWirdSehrWohlGemeldet(): void
     {
-        // Die Gegenprobe zu den beiden darüber: Er hat weder Datenschutzseite
-        // noch Rechtstexte.
+        // The control case for the two above: it has neither a privacy page
+        // nor legal texts.
         $this->connection->insert('tl_page', [
             'id' => 62, 'title' => 'Zweiter', 'type' => 'root', 'published' => 1, 'consho_shop' => 1,
         ]);
@@ -207,17 +203,17 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     public function testEineUnveroeffentlichteDatenschutzseiteWirdGemeldet(): void
     {
-        // Gewählt und trotzdem unerreichbar — der Link ginge ins Leere.
+        // Chosen and still unreachable — the link would lead nowhere.
         $this->connection->update('tl_page', ['published' => 0], ['id' => 4]);
 
         self::assertSame(ConfigurationFinding::PrivacyPageMissing, $this->only(ConfigurationFinding::PrivacyPageMissing)->finding);
     }
 
-    // ── Welche Texte sperren (D-2, E1) ──────────────────────────────────────
+    // ── Which texts block (D-2, E1) ─────────────────────────────────────────
 
     /**
-     * Michael, 2026-09-27: „Sperre bei AGB ist schon falsch, man muss keine
-     * haben. Sonst nur sperrend, wenn man in der EU Betreiber ist."
+     * Blocking on missing terms and conditions is wrong — a shop does not have
+     * to have any. Otherwise blocking only when the operator is in the EU.
      */
     public function testOhneAgbHaekchenSindKeineAgbKeinBefund(): void
     {
@@ -258,13 +254,13 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         $this->connection->update('tl_consho_shop', ['country' => $country, 'withdrawalDays' => $days], ['id' => 1]);
         $this->connection->update('tl_page', ['consho_withdrawalElement' => 0], ['id' => 1]);
 
-        // Frist 0: keine Funktion — dann fehlt auch das Element nicht.
+        // Period 0: no function — then the element is not missing either.
         $issues = array_values(array_filter($this->issues(), static fn (ConfigurationIssue $i): bool => \in_array($i->finding, [ConfigurationFinding::LegalTextMissing, ConfigurationFinding::LegalTextAdvised], true)));
 
         self::assertSame(null === $expected ? [] : [$expected], array_map(static fn (ConfigurationIssue $i): ConfigurationFinding => $i->finding, $issues));
     }
 
-    // ── Funktion „Vertrag widerrufen" (D-2, Spec D 10) ──────────────────────
+    // ── Function "Withdraw from contract" (D-2, Spec D 10) ──────────────────
 
     /**
      * @return iterable<string, array{string, int, ConfigurationFinding|null}>
@@ -300,15 +296,15 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         yield 'Element unsichtbar' => ['tl_content', ['invisible' => 1], 14];
         yield 'anderes Element' => ['tl_content', ['type' => 'text'], 14];
 
-        // Fable-Review D-2: die erste Fassung prüfte weder Schutz noch Zeitfenster.
+        // D-2: the first version checked neither protection nor time window.
         yield 'Seite geschützt, Gäste bestellen' => ['tl_page', ['protected' => 1], 12];
         yield 'Artikel abgelaufen' => ['tl_article', ['stop' => '1000'], 13];
         yield 'Element noch nicht sichtbar' => ['tl_content', ['start' => '9999999999'], 14];
     }
 
     /**
-     * Ohne Gastbestellung ist jeder Käufer angemeldet — eine geschützte Seite
-     * liest er, wie bei den Rechtstexten.
+     * Without guest orders every buyer is logged in — he reads a protected
+     * page, as with the legal texts.
      */
     public function testEineGeschuetzteSeiteGenuegtOhneGastbestellung(): void
     {
@@ -351,8 +347,8 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * C-12: Im Backend steht die Beschriftung aus der Sprachdatei, nicht der
-     * interne Schlüssel — „betroffen: terms" las der Betreiber vorher.
+     * C-12: the backend shows the label from the language file, not the
+     * internal key — "affected: terms" is what the operator read before.
      */
     public function testDieArtKommtMitIhrerBeschriftung(): void
     {
@@ -367,9 +363,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Der Unterschied, der die beiden Befunde rechtfertigt: Hier IST ein
-     * Element gewählt, es ist nur nicht lesbar. „AGB fehlen" schickte den
-     * Betreiber an ein Feld, in dem sichtbar etwas steht.
+     * 🔴 The difference that justifies the two issues: here an element IS
+     * chosen, it is just not readable. "Terms missing" would send the operator
+     * to a field in which something visibly stands.
      */
     public function testEinUnsichtbaresElementIstUnerreichbarUndNichtFehlend(): void
     {
@@ -402,9 +398,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Ein Rechtstext hinter einer Anmeldung gilt als nicht erteilt (§ 4 Abs. 1
-     * FAGG: „in klarer und verständlicher Weise" — vor dem Vertrag, nicht nach
-     * dem Login).
+     * A legal text behind a login counts as not provided (§ 4 Abs. 1 FAGG:
+     * "in a clear and comprehensible manner" — before the contract, not after
+     * the login).
      */
     public function testEineGeschuetzteRechtstextSeiteIstUnerreichbar(): void
     {
@@ -415,17 +411,16 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     public function testBeideTexteWerdenInEinemBefundZusammengefasst(): void
     {
-        // Ein Befund je Shop, nicht je Text: Sie werden am selben Ort
-        // eingestellt und in einem Zug erledigt.
+        // One issue per shop, not per text: they are set up in the same place
+        // and fixed in one go.
         $this->connection->update('tl_page', ['consho_termsElement' => 0, 'consho_withdrawalElement' => 0], ['id' => 1]);
 
         self::assertSame('terms, withdrawal', $this->only(ConfigurationFinding::LegalTextMissing)->context['kinds']);
     }
 
     /**
-     * 🔴 Von beiden Reviews am 2026-09-22 gefunden, und der wahrscheinlichste
-     * Fall überhaupt: Der AGB-Text liegt in einem Artikel, der noch im
-     * Entwurf steht. Die Seite zeigt ihn nicht, der Checkout blieb offen.
+     * 🔴 The most likely case of all: the terms text sits in an article that
+     * is still a draft. The page does not show it, the checkout stayed open.
      */
     public function testEinUnveroeffentlichterArtikelMachtDenTextUnerreichbar(): void
     {
@@ -436,7 +431,7 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     public function testEinElementAusserhalbSeinesFenstersIstUnerreichbar(): void
     {
-        // Das Inhaltselement hat eigene Start-/Stopp-Felder, nicht nur
+        // The content element has start/stop fields of its own, not just
         // `invisible`.
         $this->connection->update('tl_content', ['stop' => (string) (time() - 60)], ['id' => 10]);
 
@@ -444,10 +439,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * ⚠️ `protected` zählt nur, wo Gäste bestellen dürfen. Ist die
-     * Gastbestellung aus, ist jeder Käufer angemeldet und liest die Seite —
-     * eine Dauersperre dafür wäre ein Befund gegen einen funktionierenden
-     * Shop, genau wie bei der Abnahme von C-5.
+     * ⚠️ `protected` only counts where guests may order. If guest orders are
+     * off, every buyer is logged in and reads the page — a permanent block for
+     * that would be an issue against a working shop, just as in C-5.
      */
     public function testEineGeschuetzteSeiteSperrtNichtWennNiemandAlsGastBestellt(): void
     {
@@ -459,17 +453,17 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     public function testEineGeschuetzteSeiteSperrtSehrWohlBeiGastbestellung(): void
     {
-        // Die Gegenprobe: mit Gastbestellung liest der Käufer die AGB vor dem
-        // Anmelden — oder eben gar nicht.
+        // The control case: with guest orders the buyer reads the terms before
+        // logging in — or not at all.
         $this->connection->update('tl_page', ['protected' => 1], ['id' => 3]);
 
         self::assertSame(ConfigurationFinding::LegalTextUnreachable, $this->only(ConfigurationFinding::LegalTextUnreachable)->finding);
     }
 
     /**
-     * Die Zahl im Satz nennt STARTPUNKTE, nicht Startpunkt-Text-Paare. Bei
-     * einem Startpunkt mit zwei fehlenden Texten stand vorher „2 (Shop DE)" —
-     * zwei angekündigt, einer aufgezählt (Review 2026-09-22).
+     * The number in the sentence counts ROOT PAGES, not root page/text pairs.
+     * With one root page missing two texts it used to read "2 (Shop DE)" —
+     * two announced, one listed.
      */
     public function testDieZahlNenntStartpunkteUndNichtPaare(): void
     {
@@ -495,9 +489,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Die Rechtsform ist freiwillig — in Österreich und Deutschland steckt sie
-     * meist schon im Firmenwortlaut, und sie zweimal zu verlangen wäre öfter
-     * falsch als richtig.
+     * The legal form is optional — in Austria and Germany it is mostly part of
+     * the company name already, and requiring it twice would be wrong more
+     * often than right.
      */
     public function testEineFehlendeRechtsformWirdNichtGemeldet(): void
     {
@@ -514,13 +508,13 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     // ── Nummernkreise ───────────────────────────────────────────────────────
 
     /**
-     * 🔴 Den Bestellnummernkreis braucht JEDER Shop, der bestellen lässt —
-     * unabhängig davon, wann ein Beleg entsteht (F4, 2026-09-23).
+     * 🔴 EVERY shop that takes orders needs the order number range —
+     * regardless of when a document is created.
      *
-     * `OrderFactory` zieht bei jedem Kauf eine Bestellnummer, und C-7 ist der
-     * erste Aufrufer, der das je getan hat. Fehlte der Kreis, bekäme der
-     * Besucher nach Adresse, Versand- und Zahlungsart einen 500er — die
-     * Bereitschaft ist genau dafür da, das vorher zu sagen.
+     * `OrderFactory` draws an order number on every purchase, and C-7 is the
+     * first caller that ever did. If the range were missing, the visitor would
+     * get a 500 after address, shipping and payment method — the readiness
+     * exists precisely to say so beforehand.
      */
     public function testOhneBestellnummernkreisWirdGemeldet(): void
     {
@@ -534,9 +528,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
     public function testDerBestellnummernkreisFehltAuchOhneBelegAusloeser(): void
     {
-        // Die Gegenprobe zur Gegenprobe: Rechnung und Storno hängen am
-        // Auslöser, die Bestellnummer nicht. Ein Shop, der seine Belege erst
-        // bei Zahlung ausstellt, muss trotzdem bestellen können.
+        // The control case for the control case: invoice and cancellation depend
+        // on the trigger, the order number does not. A shop that issues its
+        // documents only on payment must still be able to take orders.
         $this->connection->delete('tl_consho_number_range', ['type' => 'order']);
         $this->connection->update('tl_consho_payment_method', ['type' => 'later'], ['id' => 9]);
 
@@ -551,15 +545,15 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
 
         self::assertSame('invoice', $issue->context['types']);
         self::assertSame(1, $issue->shopId);
-        // Block I: der Knopf der Einrichtung liest die Typen aus diesem Befund.
+        // Block I: the setup button reads the types from this issue.
         self::assertSame(['invoice'], NumberRangeSetup::missing(1, [$issue]));
     }
 
     /**
-     * ⚠️ Der Storno-Kreis zählt mit, obwohl in C nichts storniert wird: Sobald
-     * eine Rechnung entstehen kann, muss auch der Weg zurück bestehen (C-10,
-     * 15.2 „beide Nummernkreise lückenlos"). Das beim Storno zu bemerken hieße,
-     * eine Rechnung zu haben, die sich nicht zurücknehmen lässt.
+     * ⚠️ The cancellation range counts too, although nothing is cancelled in C:
+     * as soon as an invoice can be created, the way back has to exist as well
+     * (C-10, 15.2 "both number ranges without gaps"). Noticing that at the
+     * cancellation would mean having an invoice that cannot be taken back.
      */
     public function testOhneStornoNummernkreisWirdEbenfallsGemeldet(): void
     {
@@ -569,11 +563,11 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * 🔴 E-2: Bis hierher hieß es „löst keine gewählte Zahlungsart bei der
-     * Bestellung aus, braucht der Shop nichts — der Beleg entsteht dann
-     * später". Später heißt seit D-1: bei Zahlung oder beim Versand, und
-     * dann scheiterte der Beleg an der fehlenden Nummer. Mit „Auf Rechnung"
-     * wäre es die Versandmeldung des Betreibers gewesen.
+     * 🔴 E-2: until here it said "if no chosen payment method triggers at the
+     * order, the shop needs nothing — the document is created later". Since
+     * D-1 later means: on payment or on shipping, and then the document failed
+     * for lack of a number. With "on invoice" it would have been the
+     * operator's shipping report.
      */
     public function testAuchEinSpaeterAusloeserBrauchtRechnungUndStorno(): void
     {
@@ -585,8 +579,8 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * Die Gegenprobe: Eine Zahlungsart, deren Modul entfernt wurde, stellt
-     * nichts aus und wird auch nicht angeboten — sie verlangt keinen Kreis.
+     * The control case: a payment method whose module was removed issues
+     * nothing and is not offered either — it requires no range.
      */
     public function testEineArtOhneModulVerlangtKeineBelegkreise(): void
     {
@@ -625,14 +619,14 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     }
 
     /**
-     * `later` steht für einen Beleg, der erst bei Zahlung oder Versand
-     * entsteht — in Block D gibt es solche.
+     * `later` stands for a document that is only created on payment or
+     * shipping — Block D has such ones.
      */
     private function handlers(): PaymentHandlers
     {
-        // Der echte Vorkasse-Handler für den Hauptfall: `documentTrigger()`
-        // IST die Entscheidung, die der Befund liest, und ein Doppel prüfte
-        // nur, dass der Test sie richtig erraten hat.
+        // The real prepayment handler for the main case: `documentTrigger()`
+        // IS the decision the issue reads, and a double would only check
+        // that the test guessed it right.
         $later = $this->createMock(PaymentHandlerInterface::class);
         $later->method('documentTrigger')->willReturn(DocumentTrigger::OnPayment);
 
@@ -669,7 +663,7 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
     {
         $this->connection->insert('tl_consho_shop', [
             'id' => 1, 'title' => 'Testshop', 'paymentMethods' => serialize(['9']),
-            // Beide Texte verlangt (D-2, E1): Häkchen an, Sitz in der EU, Frist 14.
+            // Both texts required (D-2, E1): tick on, seat in the EU, period 14.
             'termsRequired' => 1, 'country' => 'AT', 'withdrawalDays' => 14,
             'invoiceCompany' => 'web.example.net', 'invoiceStreet' => 'Teststraße 1',
             'invoicePostal' => '1100', 'invoiceCity' => 'Wien', 'invoiceCountry' => 'AT',
@@ -683,7 +677,7 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
             'consho_withdrawalFormPage' => 12,
         ]);
 
-        // D-2: die Seite „Vertrag widerrufen" mit ihrem Element.
+        // D-2: the "Withdraw from contract" page with its element.
         $this->connection->insert('tl_page', ['id' => 12, 'title' => 'Vertrag widerrufen']);
         $this->connection->insert('tl_article', ['id' => 13, 'pid' => 12]);
         $this->connection->insert('tl_content', ['id' => 14, 'pid' => 13, 'type' => 'consho_withdrawal']);
@@ -697,9 +691,9 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         $this->connection->insert('tl_content', ['id' => 11, 'pid' => 7, 'type' => 'text']);
 
         $this->connection->insert('tl_consho_payment_method', ['id' => 9, 'type' => 'prepayment', 'published' => 1]);
-        // Drei Kreise: `order` braucht JEDER Shop, der bestellen lässt (F4,
-        // 2026-09-23) — Rechnung und Storno nur dort, wo eine gewählte
-        // Zahlungsart die Rechnung schon bei der Bestellung ausstellt.
+        // Three ranges: EVERY shop that takes orders needs `order` — invoice
+        // and cancellation only where a chosen payment method already issues
+        // the invoice at the order.
         $this->connection->insert('tl_consho_number_range', ['id' => 1, 'pid' => 1, 'type' => 'invoice']);
         $this->connection->insert('tl_consho_number_range', ['id' => 2, 'pid' => 1, 'type' => 'cancellation']);
         $this->connection->insert('tl_consho_number_range', ['id' => 3, 'pid' => 1, 'type' => 'order']);

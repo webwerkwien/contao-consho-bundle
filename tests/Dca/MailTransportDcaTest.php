@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 
 class MailTransportDcaTest extends TestCase
 {
-    // The user name as well (review 2026-09-25): o'brien@… is a legal address.
+    // The user name as well: o'brien@… is a legal address.
     private const SECRETS = ['username', 'password', 'clientSecret'];
 
     protected function setUp(): void
@@ -22,13 +22,12 @@ class MailTransportDcaTest extends TestCase
     }
 
     /**
-     * 🔴 Gefunden bei der Abnahme von C-9 (2026-09-25): Der erste echte
-     * Versand scheiterte mit „535 authentication failed".
+     * 🔴 C-9: the first real sending failed with "535 authentication failed".
      *
-     * Ein Textfeld liest über Input::post() im Modus encodeAll und schreibt
-     * `# < > ( ) \ = " '` in HTML-Entities um — BEVOR TransportSecretListener
-     * verschlüsselt. Ein Passwort mit einem `#` oder `=` kam so nie beim
-     * Mailserver an. Die Geheimnisse müssen roh aus der Anfrage kommen.
+     * A text field reads through Input::post() in encodeAll mode and rewrites
+     * `# < > ( ) \ = " '` into HTML entities — BEFORE TransportSecretListener
+     * encrypts. A password with a `#` or `=` thus never reached the mail
+     * server. The secrets must come raw from the request.
      */
     public function testGeheimnisseKommenRohAusDerAnfrage(): void
     {
@@ -41,8 +40,8 @@ class MailTransportDcaTest extends TestCase
     }
 
     /**
-     * Die Begründung am installierten Contao, nicht aus dem Gedächtnis: So
-     * sähe ein Passwort nach dem gewöhnlichen Weg aus.
+     * The reasoning checked against the installed Contao, not from memory: this
+     * is what a password would look like after the ordinary path.
      */
     public function testContaoKodiertDieseZeichenImGewoehnlichenWeg(): void
     {

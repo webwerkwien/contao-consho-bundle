@@ -19,12 +19,11 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block G, G-5 (G10, G11): Der Schlüsselvorrat ist der Bestand eines
- * digitalen Artikels — freie Codes abzüglich dessen, was bestellt und noch
- * nicht ausgeliefert ist.
+ * Block G, G-5 (G10, G11): The key pool is the stock of a digital
+ * article — free codes minus what is ordered and not yet delivered.
  *
- * Produkt 1: digital, Auslieferung „Schlüssel", Schwelle 1. Produkt 2: digital,
- * Datei — unbegrenzt.
+ * Product 1: digital, delivery "key", threshold 1. Product 2: digital,
+ * file — unlimited.
  */
 class StockKeysTest extends TestCase
 {
@@ -68,13 +67,13 @@ class StockKeysTest extends TestCase
         self::assertSame(StockState::Few, $this->availability()->for(1)->state);
         self::assertSame('3.0000', $this->availability()->of([1], 7)[1]->available, 'die eigene Bestellung zählt nicht');
 
-        // Ausgeliefert: Code vergeben, nicht mehr offen — verfügbar bleibt gleich.
+        // Delivered: code assigned, no longer open — available stays the same.
         $this->connection->insert('tl_consho_delivery', ['id' => 1, 'pid' => 7, 'reportedAt' => 500]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 70, 'quantity' => '2.0000']);
         $this->connection->executeStatement('UPDATE tl_consho_key SET entitlement = 9 WHERE id IN (1, 2)');
         self::assertSame('1.0000', $this->availability()->for(1)->available);
 
-        // Storniert vor der Auslieferung: nicht mehr offen.
+        // Cancelled before delivery: no longer open.
         $this->order(8, '1');
         self::assertSame(StockState::Unavailable, $this->availability()->for(1)->state);
         $this->connection->update('tl_consho_order', ['cancelledAt' => 600], ['id' => 8]);
@@ -91,8 +90,8 @@ class StockKeysTest extends TestCase
     }
 
     /**
-     * Review G, S2: ausgeliefert UND widerrufen zählt nicht minus eins und
-     * verdeckt keine offene Zeile.
+     * G: delivered AND withdrawn does not count minus one and
+     * does not hide an open row.
      */
     public function testJedeZeileZaehltMindestensNull(): void
     {
@@ -111,10 +110,10 @@ class StockKeysTest extends TestCase
     }
 
     /**
-     * Review G, B2 und zweites Review: gesperrt wird nur die Bestandszeile.
-     * Sperrende Lesevorgänge auf Bestellzeilen verklemmen sich mit jedem
-     * gleichzeitigen Kauf (sie sperren die noch nicht festgeschriebenen
-     * Zeilen des anderen). Gesehen wird der Vorgänger über READ COMMITTED
+     * G: only the stock row is locked.
+     * Locking reads on order rows deadlock with every concurrent purchase
+     * (they lock the other one's not yet committed rows). The predecessor
+     * is seen via READ COMMITTED
      * (OrderPlacerTest::testDerKaufklickLaeuftInReadCommitted).
      */
     public function testNurDieBestandszeileWirdGesperrt(): void
@@ -159,18 +158,18 @@ class StockKeysTest extends TestCase
         $tags->method('forProduct')->willReturn(['product.1']);
         $tags->expects(self::once())->method('invalidate')->with(['product.1']);
 
-        // 3 → 2: lieferbar bleibt lieferbar, kein Entwerten.
+        // 3 → 2: deliverable stays deliverable, no invalidation.
         $this->order(7, '1');
         $this->allocation($tags)->bookOrder(7, 1000);
 
-        // 2 → 0: nicht verfügbar.
+        // 2 → 0: not available.
         $this->order(8, '2');
         $this->allocation($tags)->bookOrder(8, 1001);
     }
 
     /**
-     * Block Verfügbarkeit, V1: Der letzte Code verkauft — der Artikel fällt
-     * aus „Nur verfügbare"; ein Storno holt ihn zurück.
+     * Block availability, V1: The last code sold — the article drops out of
+     * "available only"; a cancellation brings it back.
      */
     public function testKaufUndStornoFuehrenDieMarkeNach(): void
     {
@@ -211,7 +210,7 @@ class StockKeysTest extends TestCase
         self::assertCount(1, $issues);
         self::assertSame(ConfigurationFinding::StockLow, $issues[0]->finding);
         self::assertSame(['count' => '1', 'products' => 'Spiel (1)'], $issues[0]->context);
-        // Dieselbe Liste zählt das Dashboard (DB3), nach Artikel.
+        // The dashboard counts the same list (DB3), by article.
         self::assertSame([1 => 'Spiel (1)'], (new StockIssueSource($this->connection, $this->availability()))->low());
 
         $this->connection->update('tl_consho_product', ['published' => 0], ['id' => 1]);

@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalPeriodIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * W4 — Michael, 2026-09-27: „für einen shop in der eu unter dem default eine
- * warnung zeigen". Maßgeblich ist das Lieferland.
+ * W4: A shop in the EU whose period is below the default gets a warning.
+ * The delivery country decides.
  */
 final class WithdrawalPeriodIssueSourceTest extends TestCase
 {

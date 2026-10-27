@@ -61,7 +61,7 @@ class CatalogCoverage
         foreach ($this->startPoints() as $root) {
             /*
              * A website not yet published has no listings yet, and that is no
-             * finding. Measured on c5 on 2026-09-13: two unpublished test
+             * finding. Two unpublished
              * start points made the command fail with five products — an
              * operator building a second site would see it fail for weeks.
              */

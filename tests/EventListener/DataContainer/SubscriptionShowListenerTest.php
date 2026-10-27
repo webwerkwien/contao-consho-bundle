@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SubscriptionShowListener;
 
 /**
- * Abnahme Abo-3 (2026-09-29): Die Details zeigten Menge und Netto als „1.0000".
+ * Abo-3: the details showed quantity and net as "1.0000".
  */
 class SubscriptionShowListenerTest extends TestCase
 {
@@ -16,15 +16,15 @@ class SubscriptionShowListenerTest extends TestCase
     }
 
     /**
-     * Abo-4b, P98: Das Mandat erscheint nur als „vorhanden" oder „keines" —
-     * der Wert ist der Schlüssel des Anbieters zum Konto des Kunden.
+     * Abo-4b, P98: the mandate only appears as "present" or "none" — the value
+     * is the provider's key to the customer's account.
      */
     public function testDasMandatNurAlsVorhandenNieDerWert(): void
     {
-        // Ein anderes Label als der Rückfallwert: so zeigt sich, dass die Übersetzung greift.
+        // A label other than the fallback value: that shows the translation takes effect.
         $GLOBALS['TL_LANG']['tl_consho_subscription'] = ['mandate' => ['Mandate', ''], 'mandatePresent' => 'present', 'mandateAbsent' => 'none'];
 
-        // Contao lässt das Feld weg (doNotShow); die Zeile kommt vom Listener.
+        // Contao leaves the field out (doNotShow); the row comes from the listener.
         $shown = (new SubscriptionShowListener())(['tl_consho_subscription' => [0 => []]], ['mandate' => 'cus_1|pm_2']);
         self::assertSame(['Mandate <small>mandate</small>' => 'present'], $shown['tl_consho_subscription'][0]);
 
@@ -45,7 +45,7 @@ class SubscriptionShowListenerTest extends TestCase
     {
         $GLOBALS['TL_LANGUAGE'] = 'de';
 
-        // So schlüsselt Contao die Zeilen: Beschriftung, dann der Feldname.
+        // This is how Contao keys the rows: label, then the field name.
         $data = ['tl_consho_subscription' => [0 => [
             'Menge <small>quantity</small>' => '2.5000',
             'Netto je Lizenz <small>unitNet</small>' => '1.0000',
@@ -57,7 +57,7 @@ class SubscriptionShowListenerTest extends TestCase
 
         self::assertSame('2,5', $row['Menge <small>quantity</small>']);
         self::assertSame('1,00 €', $row['Netto je Lizenz <small>unitNet</small>']);
-        // Gegenprobe: andere Felder bleiben, wie Contao sie gebaut hat.
+        // Control case: other fields stay as Contao built them.
         self::assertSame('WEB-00084-1', $row['Abonummer <small>subscriptionNumber</small>']);
     }
 }

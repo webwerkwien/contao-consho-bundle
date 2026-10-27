@@ -19,7 +19,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\DbalPinRepository;
  * The other direction the core does not cover — ContentElementNestingVoter
  * looks only at elements whose ptable is tl_content, so a pin created straight
  * in an article, or nested in an accordion without a type list, passed.
- * Measured against Contao 5.7 on 2026-09-13.
+ * Measured against Contao 5.7.
  *
  * Denying CreateAction is enough to take the type out of the choice:
  * ContentElementTypeListener builds the options by asking exactly that, for

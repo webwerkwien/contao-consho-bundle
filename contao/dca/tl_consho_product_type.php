@@ -77,7 +77,7 @@ $GLOBALS['TL_DCA']['tl_consho_product_type'] = [
             'sql' => ['type' => 'string', 'length' => 128, 'default' => ''],
         ],
         /*
-         * Physical, digital or service (docs/block-dienstleistung.md, DL1, DL5).
+         * Physical, digital or service (Block DL, DL1, DL5).
          *
          * The kind sits on the TYPE rather than the product: an operator
          * defines the type once and every product of it inherits the answer —
@@ -104,7 +104,7 @@ $GLOBALS['TL_DCA']['tl_consho_product_type'] = [
         /*
          * The type's own fields on the detail page — a wine's vintage and grape,
          * a glass's nothing. The element owns the layout; this owns a partial for
-         * what only this type has (docs/block-b-katalog-frontend.md, 7.2).
+         * what only this type has (Block B, 7.2).
          *
          * Not overridable per product: a field meant to stay empty gets filled.
          *

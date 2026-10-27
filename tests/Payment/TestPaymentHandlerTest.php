@@ -33,9 +33,9 @@ class TestPaymentHandlerTest extends TestCase
     }
 
     /**
-     * Mit QUERY_PARAMS_ALLOW_LIST streicht Contaos Cache-Kernel jeden
-     * Parameter, den die Liste nicht trifft — auch an Routen. Der Befund
-     * noticeParamStripped empfiehlt „consho_.*"; nur damit überleben diese.
+     * With QUERY_PARAMS_ALLOW_LIST Contao's cache kernel strips every
+     * parameter the list does not match — on routes too. The issue
+     * noticeParamStripped recommends "consho_.*"; only with it do these survive.
      */
     public function testJederAdressparameterTraegtDasPraefix(): void
     {
@@ -74,12 +74,12 @@ class TestPaymentHandlerTest extends TestCase
         self::assertSame('https://shop.test/notify/tok', $session['notify'] ?? null);
         self::assertSame('https://shop.test/return/tok', $session['return'] ?? null);
 
-        // Gegenprobe: ein anderes Geheimnis erkennt die Sitzung nicht.
+        // Control case: a different secret does not recognise the session.
         self::assertNull(TestPaymentHandler::decode($captured[1]['consho_session'], $captured[1]['consho_signature'], ['testSecret' => 'anderes-geheimnis!!']));
     }
 
     /**
-     * Abo-4b, P100: Die Sitzung sagt der Testseite, ob ein Mandat auszugeben ist.
+     * Abo-4b, P100: the session tells the test page whether to issue a mandate.
      */
     public function testDieSitzungSagtObDieBestellungAbosAnlegt(): void
     {
@@ -111,12 +111,12 @@ class TestPaymentHandlerTest extends TestCase
     }
 
     /**
-     * P100: Die Option an der Zahlungsart stellt ein, was die Abbuchung ergibt;
-     * ohne Wahl bezahlt. Ein fremdes Mandat oder kein Geheimnis: fehlgeschlagen.
+     * P100: the option on the payment method sets what the debit results in;
+     * without a choice, paid. A foreign mandate or no secret: failed.
      */
     public function testDieAbbuchungAntwortetWasDieOptionSagt(): void
     {
-        // Der Kern fragt instanceof — der Test-Anbieter muss es sein (P100).
+        // The core asks instanceof — the test provider has to be one (P100).
         self::assertContains(RecurringPaymentHandlerInterface::class, class_implements(TestPaymentHandler::class) ?: []);
         $handler = $this->handler();
 
@@ -139,7 +139,7 @@ class TestPaymentHandlerTest extends TestCase
 
         self::assertSame(AttemptState::Succeeded, $handler->handleReturn(new Request(['consho_result' => 'paid', 'consho_signature' => $signed]), $this->attempt(), self::CONFIG));
 
-        // Von Hand getippt, fremder Versuch, ohne Unterschrift: nichts belegt.
+        // Typed by hand, a foreign attempt, without a signature: nothing proven.
         self::assertSame(AttemptState::Pending, $handler->handleReturn(new Request(['consho_result' => 'paid', 'consho_signature' => 'abc']), $this->attempt(), self::CONFIG));
         self::assertSame(AttemptState::Pending, $handler->handleReturn(new Request(['consho_result' => 'paid', 'consho_signature' => $signed]), $this->attempt(4), self::CONFIG));
         self::assertSame(AttemptState::Pending, $handler->handleReturn(new Request(['consho_result' => 'paid']), $this->attempt(), self::CONFIG));
@@ -164,8 +164,8 @@ class TestPaymentHandlerTest extends TestCase
     }
 
     /**
-     * Review C-11, Befund 3: sonst wirft paid(), der Prozessor antwortet 500,
-     * und ein Anbieter sendet einen 5xx endlos neu.
+     * C-11: otherwise paid() throws, the processor answers 500, and a provider
+     * resends a 5xx endlessly.
      *
      * @return iterable<string, array{mixed}>
      */

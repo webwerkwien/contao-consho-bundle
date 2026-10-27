@@ -14,8 +14,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\FrozenVersionListener;
 
 /**
- * Connect-2, CW-1 (E1): Versionen von Bestellungen und ihren Teilen sind
- * Verlauf — Wiederherstellen ist auf jedem Weg verweigert.
+ * Connect-2, CW-1 (E1): versions of orders and their parts are history —
+ * restoring is refused on every path.
  */
 final class FrozenVersionListenerTest extends TestCase
 {
@@ -35,7 +35,7 @@ final class FrozenVersionListenerTest extends TestCase
     }
 
     /**
-     * contao-ai stellt in einer Transaktion wieder her: Die Ausnahme rollt das UPDATE zurück.
+     * contao-ai restores within a transaction: the exception rolls back the UPDATE.
      */
     #[DataProvider('tables')]
     public function testWiederherstellenWirdAufJedemWegVerweigert(string $table): void
@@ -44,14 +44,14 @@ final class FrozenVersionListenerTest extends TestCase
             $this->listener()->refuseRestore($table, 5, 2, []);
             self::fail('Das Wiederherstellen hätte verweigert werden müssen.');
         } catch (\Throwable $e) {
-            // Genau diese Klasse: contao-ai meldet nur sie als Ablehnung, keine Unterklasse (core 250e844).
+            // Exactly this class: contao-ai reports only it as a rejection, no subclass (core 250e844).
             self::assertSame(\InvalidArgumentException::class, $e::class);
             self::assertStringStartsWith($table.' 5:', $e->getMessage());
         }
     }
 
     /**
-     * Das Backend stellt ohne Transaktion wieder her — deshalb schon das Formular abweisen.
+     * The backend restores without a transaction — hence the form is rejected already.
      */
     public function testDasFormularImBackendWirdVorDemSchreibenAbgewiesen(): void
     {
@@ -65,13 +65,13 @@ final class FrozenVersionListenerTest extends TestCase
             $this->listener($request, $messages)->refuseRestoreForm();
             self::fail('Das Formular hätte abgewiesen werden müssen.');
         } catch (RedirectResponseException $e) {
-            // Zurück auf dieselbe Maske, als GET.
+            // Back to the same form, as a GET.
             self::assertSame($request->getUri(), $e->getResponse()->headers->get('Location'));
         }
     }
 
     /**
-     * Vergleichen (GET `versions`) und das normale Speichern bleiben.
+     * Comparing (GET `versions`) and normal saving remain.
      *
      * @return iterable<string, array{Request|null}>
      */
@@ -91,8 +91,8 @@ final class FrozenVersionListenerTest extends TestCase
     }
 
     /**
-     * Die Liste und die Callbacks laufen nicht auseinander: Jede Tabelle hat
-     * beide Wächter, und es gibt keinen Wächter für eine Tabelle außerhalb der Liste.
+     * The list and the callbacks do not drift apart: every table has both
+     * guards, and there is no guard for a table outside the list.
      */
     public function testJedeTabelleHatBeideWaechter(): void
     {
@@ -110,8 +110,8 @@ final class FrozenVersionListenerTest extends TestCase
     }
 
     /**
-     * Nur Tabellen, die überhaupt Versionen führen — sonst gäbe es nichts zu verweigern,
-     * und eine neu versionierte Bestelltabelle fiele hier auf, wenn sie fehlt.
+     * Only tables that keep versions at all — otherwise there would be nothing
+     * to refuse, and a newly versioned order table would show up here if missing.
      */
     public function testDieListeSindGenauDieVersioniertenBestelltabellen(): void
     {

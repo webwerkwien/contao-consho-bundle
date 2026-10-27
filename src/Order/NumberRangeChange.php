@@ -21,11 +21,10 @@ use Doctrine\DBAL\Connection;
  * a few orders later.
  *
  * A number counts under a prefix when it starts with it and the rest is
- * digits only — "RE-2027-00001" is not under "RE-". Michael, 2026-10-11:
- * „Nächste Nummer frei" in Maske und Befehlen.
+ * digits only — "RE-2027-00001" is not under "RE-". Mask and commands
+ * call it the next free number.
  *
- * The four document types are one space of numbers (Michael, 2026-10-12, CW-6
- * review): a credit note given the prefix "RE-" at 0 would print RE-00001 next
+ * The four document types are one space of numbers (CW-6): a credit note given the prefix "RE-" at 0 would print RE-00001 next
  * to the invoice RE-00001, and a credit note is an invoice for VAT. Order
  * numbers stay a sequence of their own.
  *

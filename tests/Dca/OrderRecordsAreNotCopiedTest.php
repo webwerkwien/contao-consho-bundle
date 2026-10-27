@@ -5,13 +5,12 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Bestellung, Zahlung, Lieferung und Position werden nicht kopiert (D-1,
- * beide Fable-Reviews, S1 und S-a).
+ * Order, payment, delivery and item are not copied (D-1).
  *
- * Zwei Wege, zwei Schalter: `notCopyable` sperrt das Kopieren der Tabelle
- * selbst, `doNotCopyRecords` das Mitkopieren als Kind — DC_Table::copyChildren()
- * fragt nur Letzteres. Eine kopierte Bestellung brachte ihre gesperrten
- * Zahlungen und gemeldeten Lieferungen mit, unlöschbar.
+ * Two paths, two switches: `notCopyable` blocks copying the table itself,
+ * `doNotCopyRecords` copying along as a child — DC_Table::copyChildren()
+ * asks only the latter. A copied order brought along its locked payments
+ * and reported deliveries, undeletable.
  */
 final class OrderRecordsAreNotCopiedTest extends TestCase
 {

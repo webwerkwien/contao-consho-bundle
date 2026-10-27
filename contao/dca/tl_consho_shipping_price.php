@@ -56,7 +56,7 @@ $GLOBALS['TL_DCA']['tl_consho_shipping_price'] = [
         'tstamp' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
         // Same rules as tl_consho_price.currency: options from the shops, no
         // submitOnChange, a currency without a shop is refused on save, and an
-        // empty column default rather than 'EUR' (2026-09-21).
+        // empty column default rather than 'EUR'.
         'currency' => [
             'inputType' => 'select',
             'exclude' => true,

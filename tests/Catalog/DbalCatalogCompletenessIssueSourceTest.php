@@ -13,10 +13,10 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Shop 1 „Kräuterhaus" mit Heimatland AT, ein Startpunkt de in EUR.
+ * Shop 1 "Kräuterhaus" with home country AT, one start point de in EUR.
  *
- * Seit C-1c sagt der Startpunkt, in welcher Währung verkauft wird — der Befund
- * „kein Preis" ist deshalb eine Frage je Währung, nicht je Shop.
+ * Since C-1c the start point says in which currency is sold — the issue
+ * "no price" is therefore a question per currency, not per shop.
  */
 class DbalCatalogCompletenessIssueSourceTest extends TestCase
 {
@@ -56,10 +56,10 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
     public function testDraftsExpiredProductsAndVariantsDoNotCountAsWithoutShop(): void
     {
         $this->product(1, shop: true, price: true);
-        // Eine Variante erbt die Shops ihres Hauptprodukts.
+        // A variant inherits the shops of its main product.
         $this->insertProduct(['id' => 2, 'pid' => 1, 'published' => 1]);
         $this->insertListPrice(['pid' => 2, 'currency' => 'EUR', 'country' => 'AT', 'net' => '1', 'gross' => '1']);
-        // Absichtlich unsichtbar.
+        // Invisible on purpose.
         $this->insertProduct(['id' => 3, 'published' => 0]);
         $this->insertProduct(['id' => 4, 'published' => 1, 'stop' => (string) self::NOW]);
         $this->insertProduct(['id' => 5, 'published' => 1, 'start' => (string) (self::NOW + 60)]);
@@ -71,7 +71,7 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
     {
         $this->product(1, shop: true, price: true);
         $this->product(2, shop: true, price: false);
-        // Ein Preis in einer fremden Währung hilft dem Shop nicht.
+        // A price in a foreign currency does not help the shop.
         $this->product(3, shop: true, price: false);
         $this->insertListPrice(['pid' => 3, 'currency' => 'CHF', 'country' => 'AT', 'net' => '1', 'gross' => '1']);
 
@@ -83,8 +83,8 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testAShopWithoutAHomeCountryIsLeftToItsOwnWarning(): void
     {
-        // Ohne Heimatland hat im Shop nichts ein Brutto — jedes Produkt zählte
-        // als unbepreist. Die Ursache nennt HomeCountryMissing, nicht dieser Befund.
+        // Without a home country nothing in the shop has a gross — every product
+        // would count as unpriced. HomeCountryMissing names the cause, not this issue.
         $this->insertShop(['id' => 2, 'title' => 'Zweitshop', 'fallbackLanguage' => 'de']);
         $this->root(shop: 2, currency: 'EUR');
         $this->insertProduct(['id' => 1, 'published' => 1]);
@@ -95,9 +95,9 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testEinShopOhneWaehrungAnSeinenStartpunktenMeldetDieUrsache(): void
     {
-        // Ohne Währung zeigt der Startpunkt gar nichts an. Jedes Produkt als
-        // unbepreist zu zählen, nennte nur die Wirkung — gemeldet wird der
-        // Shop, genau wie beim fehlenden Heimatland.
+        // Without a currency the start point shows nothing at all. Counting every
+        // product as unpriced would only name the effect — the shop is
+        // reported, just as with the missing home country.
         $this->insertShop(['id' => 2, 'title' => 'Zweitshop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->root(shop: 2, currency: '');
         $this->insertProduct(['id' => 1, 'published' => 1]);
@@ -111,9 +111,9 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testEinShopGanzOhneStartpunkt(): void
     {
-        // Niemand hat ihm einen Startpunkt zugewiesen — auch dann verkauft er
-        // in keiner Währung. RootWithoutCurrency greift hier nicht: Es gibt
-        // keine Seite, die man beim Namen nennen könnte.
+        // Nobody has assigned it a start point — then too it sells
+        // in no currency. RootWithoutCurrency does not apply here: there is
+        // no page that could be named.
         $this->insertShop(['id' => 2, 'title' => 'Zweitshop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
 
         self::assertEquals(
@@ -124,9 +124,9 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testOhneHeimatlandBleibtAuchDerWaehrungsbefundAus(): void
     {
-        // Ein frisch angelegter Shop hat weder das eine noch das andere. Zwei
-        // Warnungen für einen Zustand sind eine zu viel — das Heimatland kommt
-        // zuerst, und HomeCountryMissing nennt es.
+        // A freshly created shop has neither the one nor the other. Two
+        // warnings for one state are one too many — the home country comes
+        // first, and HomeCountryMissing names it.
         $this->insertShop(['id' => 2, 'title' => 'Zweitshop', 'fallbackLanguage' => 'de']);
 
         self::assertSame([], $this->issues());
@@ -134,15 +134,15 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testDerWaehrungsbefundIstEineWarnung(): void
     {
-        // Wie beim fehlenden Heimatland: Der Shop verkauft nichts, da ist
-        // nichts abzuwägen und nichts wegzuklicken.
+        // As with the missing home country: the shop sells nothing, there is
+        // nothing to weigh and nothing to click away.
         self::assertTrue(ConfigurationFinding::CurrencyMissing->isWarning());
     }
 
     public function testJedeWaehrungDesShopsWirdEinzelnGezaehlt(): void
     {
-        // Ein zweiter Startpunkt in Pfund: derselbe Rechnungssteller, zweiter
-        // Markt. Das Produkt hat nur einen Euro-Preis, in GBP fehlt er.
+        // A second start point in pounds: the same invoicing party, a second
+        // market. The product only has a euro price; in GBP it is missing.
         $this->root(shop: 1, currency: 'GBP');
         $this->product(1, shop: true, price: true);
 
@@ -154,10 +154,10 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testDieBefundeStehenNachWaehrungSortiertUndNichtNachStartpunkt(): void
     {
-        // Der englische Startpunkt steht in GBP, der deutsche in EUR — nach
-        // Startpunkt sortiert käme GBP zuerst. Die Reihenfolge der Befunde auf
-        // der Backend-Startseite darf nicht davon abhängen, wie die Startpunkte
-        // im Seitenbaum heißen.
+        // The English start point is in GBP, the German one in EUR — sorted by
+        // start point, GBP would come first. The order of the issues on
+        // the backend start page must not depend on what the start points
+        // are called in the page tree.
         $this->connection->update('tl_page', ['consho_currency' => 'GBP'], ['language' => 'de']);
         $this->root(shop: 1, currency: 'EUR', language: 'en');
         $this->product(1, shop: true, price: false);
@@ -173,7 +173,7 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testEinZweiterStartpunktDerselbenWaehrungZaehltNichtDoppelt(): void
     {
-        // Zweisprachiger Shop, beide Startpunkte in Euro — ein Markt, ein Befund.
+        // Bilingual shop, both start points in euros — one market, one issue.
         $this->root(shop: 1, currency: 'EUR', language: 'en');
         $this->product(1, shop: true, price: false);
 
@@ -185,7 +185,7 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testAPriceOnAVariantCounts(): void
     {
-        // Mit Varianten sitzen die Preise an den Varianten (A-4b, E2).
+        // With variants the prices sit on the variants (A-4b, E2).
         $this->product(1, shop: true, price: false);
         $this->insertProduct(['id' => 2, 'pid' => 1, 'published' => 1]);
         $this->insertListPrice(['pid' => 2, 'currency' => 'EUR', 'country' => 'AT', 'net' => '1', 'gross' => '1']);
@@ -195,9 +195,9 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testTheVisibilityProjectionDoesNotEnterTheCount(): void
     {
-        // B-10: Die Diagnose beschreibt die Quelldaten. Die Projektion bleibt
-        // hier leer — über sie gerechnet stünden 2 statt 1 ohne Preis da, und
-        // ein veralteter Stand erschiene als fehlender Preis.
+        // B-10: the diagnosis describes the source data. The projection stays
+        // empty here — computed from it, 2 instead of 1 would be shown without a
+        // price, and an outdated state would appear as a missing price.
         $this->product(1, shop: true, price: true);
         $this->product(2, shop: true, price: false);
 
@@ -209,7 +209,7 @@ class DbalCatalogCompletenessIssueSourceTest extends TestCase
 
     public function testBothAreNotesThatCanBeAcknowledged(): void
     {
-        // Ein Produkt nur für einen Link an Stammkunden kann gewollt sein.
+        // A product only for a link to regular customers can be intended.
         self::assertFalse(ConfigurationFinding::ProductShopMissing->isWarning());
         self::assertFalse(ConfigurationFinding::ProductPriceMissing->isWarning());
     }

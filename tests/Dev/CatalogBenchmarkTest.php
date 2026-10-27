@@ -45,7 +45,7 @@ class CatalogBenchmarkTest extends TestCase
 
         self::assertSame(array_keys(CatalogBenchmark::situations(true)), array_keys($results));
 
-        // Jede Lage sofort gemeldet — auf c5 kam nach zehn Minuten nichts.
+        // Every situation reported at once — otherwise a large catalogue showed nothing for ten minutes.
         self::assertSame(array_keys($results), $reported);
 
         foreach ($results as $name => $result) {
@@ -56,9 +56,9 @@ class CatalogBenchmarkTest extends TestCase
             self::assertGreaterThanOrEqual($result['selection']['median'], $result['selection']['max'], $name);
             self::assertGreaterThan(0, $result['counts']['median'], $name);
             self::assertNull($result['explain'], $name);
-            // find + count, dazu die Kategorie und je gewählter Gruppe eine Zahlenabfrage — wie FilterPanelBuilder.
+            // find + count, plus the category and one count query per selected group — like FilterPanelBuilder.
             self::assertSame(3 + \count(CatalogBenchmark::situations(true)[$name]['groups']), $result['queries'], $name);
-            // EXPLAIN nur auf MariaDB/MySQL.
+            // EXPLAIN only on MariaDB/MySQL.
             self::assertNull($result['fullScans'], $name);
             self::assertNull($result['catalogueScans'], $name);
         }
@@ -66,13 +66,13 @@ class CatalogBenchmarkTest extends TestCase
 
     public function testAFailingSituationIsReportedAndTheNextOneRuns(): void
     {
-        // Wie eine Abfrage, die an max_statement_time scheitert: gemeldet, nicht abgebrochen.
+        // Like a query that fails on max_statement_time: reported, not aborted.
         $recorder = new QueryRecorder();
         $configuration = new Configuration();
         $configuration->setMiddlewares([new Middleware($recorder)]);
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true], $configuration);
         $this->seed($connection);
-        // Die Tabelle, die ProductQuery seit B-10 liest — die Listenpreise fragt sie nicht mehr.
+        // The table ProductQuery reads since B-10 — it no longer queries the list prices.
         $connection->executeStatement('DROP TABLE tl_consho_product_visibility');
 
         $reported = [];
@@ -87,15 +87,15 @@ class CatalogBenchmarkTest extends TestCase
             self::assertNull($result['selection'], $name);
             self::assertStringContainsString('tl_consho_product_visibility', (string) $result['error'], $name);
 
-            // Die Abfrage selbst schneidet DBAL erst beim Ausführen mit. SQLite scheitert
-            // hier schon beim Vorbereiten; ein Abbruch durch max_statement_time auf MariaDB
-            // kommt nach dem Ausführen und bleibt mitgeschnitten — das prüft die Abnahme.
+            // DBAL only records the query itself on execution. SQLite already fails
+            // here on preparing; an abort by max_statement_time on MariaDB comes
+            // after execution and stays recorded — that needs a real MariaDB to check.
         }
     }
 
     public function testMaintenanceTimesRefreshCronAndAFullRebuild(): void
     {
-        // B-10: was die Projektion im Betrieb kostet.
+        // B-10: what the projection costs in operation.
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->seed($connection);
         $connection->executeStatement('DELETE FROM tl_consho_product_visibility');
@@ -110,14 +110,14 @@ class CatalogBenchmarkTest extends TestCase
         self::assertGreaterThan(0, $result['cron']['median']);
         self::assertGreaterThan(0, $result['rebuild']);
 
-        // Der Neubau hat wirklich stattgefunden: vollständig, Merker gesetzt.
+        // The rebuild really took place: complete, marker set.
         self::assertSame([], $projector->verify(self::NOW + 60));
         self::assertSame(self::NOW + 60, $state->get(ProjectionState::VISIBILITY_BOUNDARIES));
     }
 
     public function testTheSeededCatalogueIsWhatTheListingFinds(): void
     {
-        // Ohne Treffer mäße der Befehl leere Ergebnisse — schnell und wertlos.
+        // Without hits the command would measure empty results — fast and worthless.
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->seed($connection);
 
@@ -163,8 +163,8 @@ class CatalogBenchmarkTest extends TestCase
 
     public function testOnlyScansThatGrowWithTheCatalogueMissTheTarget(): void
     {
-        // B-10, 5.7: EXPLAIN nennt Aliasse, nicht Tabellen — gemessen wird an der
-        // Größe. Halber Katalog oder mehr liest den Katalog; zwölf Gruppen nicht.
+        // B-10, 5.7: EXPLAIN names aliases, not tables — the measure is the
+        // size. Half the catalogue or more reads the catalogue; twelve groups do not.
         $rows = [
             ['table' => 'p', 'type' => 'ALL', 'rows' => 104000],
             ['table' => 'm', 'type' => 'ALL', 'rows' => 50000],
@@ -200,14 +200,14 @@ class CatalogBenchmarkTest extends TestCase
         $writer->writeGroups($plan);
         $writer->write($plan);
 
-        // Die Projektion wie consho:price:rebuild, vereinfacht: der kleinste Einzelpreis je Artikel und Währung.
-        // Brutto aus netto mit den 20 %, von denen der Seed ausgeht — die Preiszeile hat seit C-1b kein Brutto mehr.
+        // The projection like consho:price:rebuild, simplified: the lowest single price per article and currency.
+        // Gross from net with the 20 % the seed assumes — since C-1b the price row has no gross any more.
         $connection->executeStatement(
             'INSERT INTO tl_consho_product_list_price (pid, currency, country, net, gross)
              SELECT pid, currency, \'AT\', MIN(net), ROUND(MIN(net) * 1.2, 4) FROM tl_consho_price WHERE minQuantity <= 1 GROUP BY pid, currency',
         );
 
-        // Und daraus die Projektion der Sichtbarkeit, die ProductQuery seit B-10 liest.
+        // And from that the visibility projection that ProductQuery reads since B-10.
         (new VisibilityProjector(
             $connection,
             new VisibilityRows(new VisibilityCriteria()),

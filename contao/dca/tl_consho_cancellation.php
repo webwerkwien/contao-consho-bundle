@@ -58,7 +58,7 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
         ],
         'tstamp' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
 
-        // "WEB-00084-1-K1" — the subscription number and a count (P59).
+        // "SHOP-00084-1-K1" — the subscription number and a count (P59).
         'number' => [
             'inputType' => 'text',
             'search' => true,
@@ -131,7 +131,7 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
         ],
 
         // The earliest possible end of an ordinary cancellation (P54). Later than
-        // this, periods beginning before the end are billed in full (review S1).
+        // this, periods beginning before the end are billed in full.
         'earliestAt' => [
             'inputType' => 'text',
             'eval' => ['readonly' => true, 'rgxp' => 'datim', 'tl_class' => 'w50'],

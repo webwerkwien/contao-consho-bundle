@@ -7,7 +7,7 @@ use Brick\Math\Exception\MathException;
 
 /**
  * A cart rule that states an amount — a fixed discount or a minimum order
- * value — needs its currency (review H, L5): CartDiscounts compares the
+ * value — needs its currency (H): CartDiscounts compares the
  * rule's currency with the basket's, and '' matches none.
  *
  * The rule itself, without a request (Connect Stufe 2, CW-4b, H3): the mask

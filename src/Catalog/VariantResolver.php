@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Model\ProductModel;
  * Tells main products and variants apart.
  *
  * Both live in tl_consho_product; a variant is a row whose `pid` points at its
- * main product. Variants are never nested — see docs/block-a-fundament.md,
+ * main product. Variants are never nested — see Block A,
  * section 3.1.
  */
 final class VariantResolver

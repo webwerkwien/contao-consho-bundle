@@ -14,12 +14,12 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block Verfügbarkeit, V1: tl_consho_sold_out hält genau die Artikel, die
- * Availability „derzeit nicht verfügbar" nennt.
+ * Block availability, V1: tl_consho_sold_out holds exactly the articles that
+ * Availability calls "currently not available".
  *
- * Produkt 1: physisch, Bestand geführt, ohne Varianten.
- * Produkt 2: physisch, Bestand geführt, Varianten 21 und 22.
- * Produkt 3: physisch, Bestand nicht geführt.
+ * Product 1: physical, stock managed, without variants.
+ * Product 2: physical, stock managed, variants 21 and 22.
+ * Product 3: physical, stock not managed.
  */
 class SoldOutMarksTest extends TestCase
 {
@@ -60,8 +60,8 @@ class SoldOutMarksTest extends TestCase
 
     public function testEinHauptproduktMitVariantenTraegtNieEineZeile(): void
     {
-        // Alle Varianten leer: der Zustand steht an den Varianten (V3), nicht
-        // am Hauptprodukt — das hat selbst keinen Bestand.
+        // All variants empty: the state is on the variants (V3), not on the
+        // main product — that one has no stock of its own.
         $this->stock(22, '0');
         $this->marks()->rebuild(200);
 
@@ -69,9 +69,9 @@ class SoldOutMarksTest extends TestCase
     }
 
     /**
-     * Review Verfügbarkeit, 2: Ein Kauf markiert erst am Ende, einmal und
-     * aufsteigend — in derselben Reihenfolge wie der stündliche Lauf. Bis dahin
-     * schreibt refresh() nichts; scheitert der Kauf, auch danach nicht.
+     * Block availability: A purchase only marks at the end, once and in
+     * ascending order — in the same order as the hourly run. Until then
+     * refresh() writes nothing; if the purchase fails, not afterwards either.
      */
     public function testImKaufErstAmEndeUndNurWennErGelingt(): void
     {
@@ -122,7 +122,7 @@ class SoldOutMarksTest extends TestCase
 
     public function testRefreshMitDemHauptproduktErreichtDieVariantenNicht(): void
     {
-        // Wer Varianten meint, nennt sie — CatalogRefreshListener tut das.
+        // Whoever means variants names them — CatalogRefreshListener does that.
         $this->stock(22, '0');
 
         self::assertFalse($this->marks()->refresh([2], 300));
@@ -158,8 +158,8 @@ class SoldOutMarksTest extends TestCase
 
     public function testEineGleichzeitigGesetzteMarkeReisstNichtsMit(): void
     {
-        // Zwischen Lesen und Schreiben hat ein anderer Vorgang Artikel 1
-        // markiert — die Marke ist da, der Aufrufer (Kauf, Storno) läuft weiter.
+        // Between reading and writing another process has marked article 1 —
+        // the mark is there, the caller (purchase, cancellation) carries on.
         $connection = $this->createMock(Connection::class);
         $connection->method('fetchFirstColumn')->willReturnOnConsecutiveCalls([1], []);
         $connection->expects(self::once())->method('insert')->willThrowException($this->createMock(UniqueConstraintViolationException::class));
@@ -167,16 +167,16 @@ class SoldOutMarksTest extends TestCase
         $availability = $this->createMock(Availability::class);
         $availability->method('of')->willReturn([1 => new ArticleAvailability(StockState::Unavailable, '0.0000')]);
 
-        // Kein Wurf; „geändert" bleibt wahr — die Liste ist so oder so neu zu
-        // entwerten, wer immer die Marke gesetzt hat.
+        // No throw; "changed" stays true — the list has to be invalidated anew
+        // either way, whoever set the mark.
         self::assertTrue((new SoldOutMarks($connection, $availability))->refresh([1], 300));
     }
 
     /**
-     * Review 2026-10-10, W3: Aufsteigend auch über Blockgrenzen hinweg. Innerhalb
-     * eines Blocks sortiert schon soldOutAmong() — die Sortierung in refresh()
-     * entscheidet nur, welcher Block zuerst schreibt. Gelesen wird die
-     * Schreibreihenfolge (`id`), nicht eine nach `article` sortierte Liste.
+     * Ascending across block boundaries too. Within a block soldOutAmong()
+     * already sorts — the sorting in refresh() only decides which block writes
+     * first. What is read is the write order (`id`), not a list sorted by
+     * `article`.
      */
     public function testSchreibtUeberBlockgrenzenAufsteigend(): void
     {

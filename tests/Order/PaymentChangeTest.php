@@ -36,9 +36,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentStart;
 use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
 
 /**
- * 7.5 „Zahlungsart ändern" (C23, C-10) — gegen ein Repository im Speicher und
- * eine gemockte Verbindung: Geprüft wird die REIHENFOLGE in der Transaktion,
- * und SQLite kennt kein FOR UPDATE (wie OrderPlacerTest).
+ * 7.5 "Change payment method" (C23, C-10) — against an in-memory repository
+ * and a mocked connection: the ORDER inside the transaction is checked, and
+ * SQLite has no FOR UPDATE (like OrderPlacerTest).
  */
 class PaymentChangeTest extends TestCase
 {
@@ -85,11 +85,11 @@ class PaymentChangeTest extends TestCase
         self::assertSame(55, $changed->cancellationId);
         self::assertSame(56, $changed->invoiceId);
 
-        // Storno VOR dem Umschreiben, neue Rechnung NACH dem Kopf — sie liest
-        // die Zahlungsart aus der Bestellzeile (DbalDocumentSource), und vor
-        // dem Kopf stünde dort noch die alte Bank (Review C-10, Befund 2).
-        // Alles in einer Transaktion; archiviert wird erst, wenn nichts mehr
-        // zurückrollen kann.
+        // Cancellation BEFORE the rewrite, new invoice AFTER the header — it reads
+        // the payment method from the order row (DbalDocumentSource), and before
+        // the header the old bank would still stand there (C-10).
+        // All in one transaction; archiving only happens once nothing can
+        // roll back any more.
         self::assertSame(['begin', 'cancel-invoice', 'replace-lines', 'update-order', 'issue-invoice', 'commit'], $this->log);
         self::assertSame([55, 56], $archived);
 
@@ -98,8 +98,8 @@ class PaymentChangeTest extends TestCase
         self::assertSame('Vorkasse Bank B', $this->orders->order['paymentMethodTitle']);
         self::assertSame('<p>Bank B</p>', $this->orders->order['paymentInstructions']);
 
-        // Ohne Betrag bleiben die Summen, wie sie sind — aber neu gezählt, nicht
-        // übernommen.
+        // Without an amount the totals stay as they are — but recounted, not
+        // carried over.
         self::assertSame('10.00', $this->orders->order['netTotal']);
         self::assertSame('2.00', $this->orders->order['taxTotal']);
         self::assertSame('12.00', $this->orders->order['grandTotal']);
@@ -116,9 +116,9 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Fable-Review E, S1: Das Zahlungsziel der stornierten Rechnung darf nicht
-     * stehen bleiben — sonst meldete der Hinweis „überfällig" eine Bestellung,
-     * deren einzige Rechnung storniert ist.
+     * E: the payment term of the cancelled invoice must not stay in place —
+     * otherwise the "overdue" notice would report an order whose only invoice
+     * is cancelled.
      */
     public function testDerWechselNimmtDasAlteZahlungszielMit(): void
     {
@@ -147,12 +147,12 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Abnahme C-10 (Michael, 2026-09-25): „nur einmal" je Bestellung — jeder
-     * Wechsel schreibt einen Storno und eine Rechnung.
+     * C-10: "only once" per order — every switch writes a cancellation and an
+     * invoice.
      */
     /**
-     * D-3, Fable-Review B1: Nach einem angenommenen Widerruf baute ein
-     * Wechsel Gebühr oder Rabatt auf Ware, die nicht mehr gekauft wird.
+     * D-3: after an accepted withdrawal a switch built a fee or discount on
+     * goods that are no longer being bought.
      */
     public function testNachEinemWiderrufKeinWechsel(): void
     {
@@ -197,8 +197,8 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * D-1-Review, S4: storniert und dann auf einen Status ohne Flags
-     * („In Klärung") — die Forderung bleibt 0, gewechselt wird nichts.
+     * D-1: cancelled and then moved to a status without flags ("under
+     * clarification") — the claim stays 0, nothing is switched.
      */
     public function testEineStornierteBestellungWechseltNichtsMehr(): void
     {
@@ -221,8 +221,8 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Ein Nachlass wird wie beim Kauf über die Klassen der Ware verteilt, zum
-     * Satz, zu dem die Ware eingefroren ist — nicht zu dem, der heute gilt.
+     * A discount is distributed over the classes of the goods as at purchase,
+     * at the rate the goods are frozen at — not the one that applies today.
      */
     public function testEinNachlassWirdUeberDieKlassenDerWareVerteilt(): void
     {
@@ -244,15 +244,15 @@ class PaymentChangeTest extends TestCase
 
         $this->change(discount: '2.0000')->change(1, 4, 'de', 1_790_000_000);
 
-        // 10 + 10 netto − 2 Nachlass = 18; brutto 12 + 11 − 1,20 − 1,10 = 20,70.
+        // 10 + 10 net − 2 discount = 18; gross 12 + 11 − 1.20 − 1.10 = 20.70.
         self::assertSame('18.00', $this->orders->current()['netTotal']);
         self::assertSame('20.70', $this->orders->current()['grandTotal']);
         self::assertSame('2.70', $this->orders->current()['taxTotal']);
     }
 
     /**
-     * WG8: Auch beim Wechsel trägt ein Gutschein keinen Anteil am Nachlass —
-     * wie beim Kauf. Der ganze Nachlass geht auf die Ware.
+     * WG8: on a switch too, a gift card carries no share of the discount — as
+     * at purchase. The whole discount goes onto the goods.
      */
     public function testEinGutscheinTraegtKeinenAnteilAmNachlass(): void
     {
@@ -266,11 +266,11 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Review H, S1 (vorher DL4, zweites Review S2: „im Lieferland"): Der
-     * Nachlass mindert jede Leistung zu ihrem eigenen Satz, wie beim Kauf. In
-     * derselben Klasse stehen eine Beratung (AT 20 %) und ein E-Book (FR
-     * 5,5 %): je eine Nachlasszeile, mit Land und Satz ihrer Leistung — den
-     * Satz liefern die Zeilen selbst, ein Steuerauflöser ist nicht nötig.
+     * H (previously DL4, "in the delivery country"): the discount reduces each
+     * supply at its own rate, as at purchase. In the same class there are a
+     * consultation (AT 20 %) and an e-book (FR 5.5 %): one discount line each,
+     * with the country and rate of its supply — the lines themselves deliver
+     * the rate, no tax resolver is needed.
      */
     public function testDerNachlassTraegtDasLandDerLeistung(): void
     {
@@ -281,13 +281,13 @@ class PaymentChangeTest extends TestCase
         $lines = $this->option($this->change(discount: '2.0000')->options(1, 'de'), 4)->lines;
 
         self::assertSame(['AT:20.0000', 'FR:5.5000'], array_map(static fn (array $line): string => $line['taxCountry'].':'.$line['taxRate'], $lines));
-        // Block R (R4): wohin die Bestellung ging, an jeder neuen Zeile.
+        // Block R (R4): where the order went, on every new line.
         self::assertSame(['FR', 'FR'], array_column($lines, 'destinationCountry'));
     }
 
     public function testOhneSteuerklassenKeinWechselZuEinerArtMitBetrag(): void
     {
-        // Eine Bestellung von vor C-10.
+        // An order from before C-10.
         $this->orders->items[0]['taxClass'] = '0';
 
         $options = $this->change(discount: '2.0000')->options(1, 'de');
@@ -302,9 +302,9 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Abnahme Abo-4, Michael 2026-09-30: „Zahlungsart ändern" an einer
-     * Folgebestellung — zulassen, aber ohne Gebühr. Der Preis ist
-     * eingefroren (A9); ein Nachlass änderte ihn ebenso wie eine Gebühr.
+     * Abo-4: "Change payment method" on a follow-up order — allowed, but
+     * without a fee. The price is frozen (A9); a discount would change it just
+     * as a fee would.
      *
      * @return iterable<string, array{string, string}>
      */
@@ -333,7 +333,7 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Gegenprobe: an einer gewöhnlichen Bestellung bleibt es bei E-1.
+     * Control case: on an ordinary order E-1 still applies.
      */
     public function testOhneAboBleibtDieGebuehrAusgeschlossen(): void
     {
@@ -343,10 +343,10 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Gefunden beim Messen für Abo-4: Wer nach der Lieferung auf eine Art
-     * wechselt, die bei Lieferung ausstellt, bekam den Storno und nie eine
-     * neue Rechnung — die Lieferung, die sie auslöst, war schon gemeldet.
-     * Eine Folgebestellung ist immer schon geliefert.
+     * Abo-4: whoever switched after delivery to a method that issues on
+     * delivery got the cancellation and never a new invoice — the delivery
+     * that triggers it had already been reported. A follow-up order is always
+     * already delivered.
      */
     public function testNachDerLieferungStelltEineLieferartSofortAus(): void
     {
@@ -359,9 +359,9 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Fable-Review Abo-5, S2: Nach dem Zahlungsziel wechselt eine Bestellung
-     * eines Abos nicht mehr — ein Wechsel auf Vorkasse höbe das Ruhen sonst
-     * ohne Zahlung auf (P39).
+     * Abo-5: after the payment term an order of a subscription no longer
+     * switches — a switch to prepayment would otherwise lift the suspension
+     * without a payment (P39).
      */
     public function testEineUeberfaelligeAboBestellungWechseltNicht(): void
     {
@@ -387,8 +387,8 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * S2, zweite Hälfte: Vor dem Ziel darf gewechselt werden, aber das Ziel
-     * bleibt — sonst geriete die Bestellung nie mehr in Verzug.
+     * The second half: before the term a switch is allowed, but the term
+     * stays — otherwise the order would never fall into arrears again.
      */
     public function testEineAboBestellungBehaeltIhrZahlungsziel(): void
     {
@@ -401,10 +401,10 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Zweites Review Abo-5, S2: Die neue Vorkasse-Rechnung schreibt selbst
-     * `paymentDueAt = 0` (DocumentIssuer, eine Rechnung ohne Ziel). Der
-     * Doppel stellt das jetzt nach — vorher antwortete er nur mit der Id, und
-     * der Test oben blieb grün, während das Loch offen war (Regel 25, Punkt 38).
+     * Abo-5: the new prepayment invoice itself writes `paymentDueAt = 0`
+     * (DocumentIssuer, an invoice without a term). The double now mirrors
+     * that — before, it only answered with the id, and the test above stayed
+     * green while the hole was open.
      */
     public function testAuchNachEinerNeuenRechnungOhneZielBleibtDasAlte(): void
     {
@@ -419,11 +419,11 @@ class PaymentChangeTest extends TestCase
     }
 
     /**
-     * Review Nachlese, B1: Ein Einmalkauf mit digitalen Gütern ruht nach Ziel
-     * und Nachfrist (PurchaseDelinquency). Ein Wechsel auf Vorkasse setzte
-     * das Ziel auf 0, und der nächste Lauf gab die Downloads ohne Zahlung
-     * wieder frei. Jetzt wie beim Abo: nach dem Ziel kein Wechsel, davor
-     * bleibt das Ziel.
+     * Nachlese: a one-off purchase with digital goods is suspended after the
+     * term and the grace period (PurchaseDelinquency). A switch to prepayment
+     * set the term to 0, and the next run released the downloads again
+     * without payment. Now as for subscriptions: no switch after the term,
+     * before it the term stays.
      */
     public function testEinEinmalkaufMitBerechtigungenWieEinAbo(): void
     {

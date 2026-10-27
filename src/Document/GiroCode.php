@@ -12,7 +12,7 @@ use chillerlan\QRCode\QROptions;
 
 /**
  * The Giro-Code (EPC QR code) on an invoice: a banking app scans it and fills
- * in the transfer (Michael, 2026-09-24).
+ * in the transfer.
  *
  * Built after EPC069-12 v3.1 ("Quick Response Code — Guidelines to Enable the
  * Data Capture for the Initiation of an SCT", 19 March 2024), section 2:
@@ -52,7 +52,7 @@ final class GiroCode
          * this AFTER the invoice number is allocated, and DocumentSourceInterface
          * is open to other sources: a number or null reaching trim() under
          * strict_types would be a TypeError there, and a burnt number in a
-         * sequence that must stay unbroken (Fable review, 2026-09-24).
+         * sequence that must stay unbroken.
          */
         $text = static fn (mixed $value): string => \is_string($value) ? $value : '';
 
@@ -125,8 +125,8 @@ final class GiroCode
      * version 13 at level M (payload() keeps it within 331 bytes, so that
      * would be a library change). The caller decides: InvoiceView logs it and
      * prints the invoice without the code, instead of this method swallowing
-     * it (Fable review, 2026-09-24: a code that vanished silently would be
-     * noticed by nobody).
+     * it — a code that vanished silently would be
+     * noticed by nobody.
      */
     public static function dataUri(string $payload): string
     {

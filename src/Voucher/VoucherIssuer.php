@@ -48,7 +48,7 @@ final class VoucherIssuer
         $issued = [];
 
         foreach ($lines as $itemId => $line) {
-            $item = $this->connection->fetchAssociative('SELECT quantity, lineTotal, voucherValue FROM tl_consho_order_item WHERE id = ?', [$itemId]);
+            $item = $this->connection->fetchAssociative('SELECT quantity, lineTotal, voucherValue, voucherSinglePurpose, taxClass, taxRate, taxCountry FROM tl_consho_order_item WHERE id = ?', [$itemId]);
 
             if (false === $item) {
                 continue;
@@ -58,6 +58,11 @@ final class VoucherIssuer
             $value = BigDecimal::of(is_numeric($item['voucherValue']) ? (string) $item['voucherValue'] : '0');
             $value = $value->isPositive() ? $value : $paid;
             $validUntil = $this->validUntil($line['product'], $now);
+
+            // EZ-5: what the line was sold as, not what the product says today.
+            $singlePurpose = (bool) $item['voucherSinglePurpose']
+                ? new SinglePurpose((int) $item['taxClass'], (string) $item['taxRate'], (string) $item['taxCountry'])
+                : null;
 
             $pieces = BigDecimal::of($line['quantity'])->toScale(0, RoundingMode::Down)->toInt();
 
@@ -72,6 +77,7 @@ final class VoucherIssuer
                     $now,
                     (int) $order['id'],
                     $itemId,
+                    singlePurpose: $singlePurpose,
                 );
             }
         }
@@ -96,7 +102,7 @@ final class VoucherIssuer
 
         $today = (new \DateTimeImmutable('@'.$now))->setTimezone(new \DateTimeZone(date_default_timezone_get()));
 
-        // Calendar months without PHP's overflow (review WG-7, L3): 31 January
+        // Calendar months without PHP's overflow (WG-7): 31 January
         // plus one month is 28/29 February, not 3 March.
         $target = $today->modify('first day of this month')->modify(\sprintf('+%d months', $months));
 

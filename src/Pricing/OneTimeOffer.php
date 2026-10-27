@@ -14,13 +14,12 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxRateNotFound;
  * is not sold once (Connect-1, K2).
  *
  * The product page and the catalogue reader both ask here. The rules stood
- * privately in ProductDetailController until 2026-10-10, and a feed that
+ * privately in ProductDetailController before, and a feed that
  * worked them out a second time would be the copy that forgets one of them —
- * Michael's question "gibt es diese Bausteine doppelt?" is why this class
- * exists:
+ * so that no building block exists twice, this class exists:
  *
  * - Not sold once, no offer: a one-time price row left over from before is
- *   no price (Fable review Abo-2, L4a), and a monthly amount is none either.
+ *   no price (Abo-2), and a monthly amount is none either.
  * - Struck through only for a guest's one-time promotion whose projected
  *   figure is the very price shown (ComparePrices).
  *
@@ -47,7 +46,7 @@ final class OneTimeOffer
     /**
      * @param array{unit: string, purchaseUnit: string, referenceUnit: string} $units  the set that applies to this article (ProductDetailAssembler)
      * @param list<int>                                                        $groups member groups; empty for a guest
-     * @param array<int, SubscriptionRule|null>|null                           $offered what SubscriptionOffers::offered() already answered for this article and these groups — a caller that needs it too passes it rather than asking twice (review Connect-1, H5)
+     * @param array<int, SubscriptionRule|null>|null                           $offered what SubscriptionOffers::offered() already answered for this article and these groups — a caller that needs it too passes it rather than asking twice (Connect-1)
      */
     public function of(int $articleId, int $mainId, string $currency, string $market, string $taxCountry, int $now, array $units, array $groups, array|null $offered = null): OneTimePrice|null
     {
@@ -85,7 +84,7 @@ final class OneTimeOffer
     /**
      * What a basket line of `$quantity` pieces costs, bought once — the
      * amount a channel wants for an article with a minimum purchase (idealo:
-     * "der Gesamtpreis für die Mindestabnahmemenge"; review Connect-1, H2).
+     * "der Gesamtpreis für die Mindestabnahmemenge"; Connect-1).
      *
      * Worked out as CartPricer does it, so the feed and the basket cannot
      * name two amounts: the unit net at THIS quantity (a scale price

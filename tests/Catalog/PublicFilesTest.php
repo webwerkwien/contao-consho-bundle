@@ -10,8 +10,8 @@ use Symfony\Component\Uid\Uuid;
 use Webwerkwien\ContaoConshoBundle\Catalog\PublicFiles;
 
 /**
- * Abnahme GARAN auf c5: öffentlich ist ein Ordner mit `.public` — er selbst
- * oder einer darüber (SymlinksCommand), gefragt an der DBAFS vorbei.
+ * GARAN: public is a folder with `.public` — itself or one above it
+ * (SymlinksCommand), asked past the DBAFS.
  */
 class PublicFilesTest extends TestCase
 {
@@ -53,7 +53,7 @@ class PublicFilesTest extends TestCase
         $files->method('get')->willReturn(new FilesystemItem(true, $path));
         $files->method('getFileSize')->willReturn(2048);
         $files->method('fileExists')->willReturnCallback(static function (string $location, int $flags) use ($markers): bool {
-            // Die DBAFS kennt .public nie — ohne BYPASS_DBAFS wäre jede Antwort falsch.
+            // The DBAFS never knows .public — without BYPASS_DBAFS every answer would be wrong.
             self::assertSame(VirtualFilesystemInterface::BYPASS_DBAFS, $flags);
 
             return \in_array($location, $markers, true);

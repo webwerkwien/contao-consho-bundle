@@ -14,11 +14,11 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Block R (O2, R5–R7, R14): was die Schwelle zählt, was die Meldung enthält,
- * und wann ein Umsatz in welches Quartal fällt.
+ * Block R (O2, R5–R7, R14): what the threshold counts, what the return
+ * contains, and when a sale falls into which quarter.
  *
- * Shop 1 (AT, ATU12345678) und Shop 2 (AT, dieselbe UID anders geschrieben)
- * sind ein Unternehmen; Shop 3 hat keine UID und steht für sich.
+ * Shop 1 (AT, ATU12345678) and shop 2 (AT, the same VAT ID written
+ * differently) are one business; shop 3 has no VAT ID and stands alone.
  */
 class OssReportTest extends TestCase
 {
@@ -50,15 +50,15 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * R14: Vorkasse im März, Versand im April — der Umsatz gehört ins erste
-     * Quartal (Art. 65). „Auf Rechnung": Versand im April, Zahlung im Mai —
-     * ins zweite (Art. 63).
+     * R14: Prepayment in March, shipping in April — the sale belongs in the
+     * first quarter (Art. 65). "On account": shipping in April, payment in May
+     * — in the second (Art. 63).
      */
     public function testDasQuartalIstDasFruehereVonZahlungUndLieferung(): void
     {
         $this->order(1, paidAt: $this->at('2026-03-30'), deliveredAt: $this->at('2026-04-02'), items: [$this->goods('DE', 'DE', '19', '100.00')]);
         $this->order(1, paidAt: $this->at('2026-05-10'), deliveredAt: $this->at('2026-04-20'), items: [$this->goods('FR', 'FR', '20', '50.00')]);
-        // Weder bezahlt noch geliefert: noch kein Umsatz.
+        // Neither paid nor delivered: no sale yet.
         $this->order(1, items: [$this->goods('IT', 'IT', '22', '70.00')]);
 
         $q1 = $this->report()->quarter($this->business(), 2026, 1);
@@ -73,8 +73,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * O2: Was zählt und was nicht. Die Meldung enthält nur, was im Land des
-     * Kunden versteuert wurde.
+     * O2: What counts and what does not. The return only contains what was
+     * taxed in the customer's country.
      */
     public function testWasZaehltUndWasGemeldetWird(): void
     {
@@ -82,19 +82,19 @@ class OssReportTest extends TestCase
 
         $this->order(1, paidAt: $paid, items: [
             $this->goods('DE', 'DE', '19', '100.00'),
-            // Versand folgt der Ware.
+            // Shipping follows the goods.
             ['lineType' => 'shipping', 'kind' => '', 'taxCountry' => 'DE', 'destinationCountry' => 'DE', 'taxRate' => '19.0000', 'net' => '5.00', 'priceSource' => 'list'],
-            // Dienstleistung: im Shopland, zählt nicht.
+            // Service: in the shop's country, does not count.
             $this->goods('AT', 'DE', '20', '40.00', kind: 'service'),
         ]);
-        // Schalter aus: im Shopland versteuert — zählt, wird nicht gemeldet.
+        // Switch off: taxed in the shop's country — counts, is not reported.
         $this->order(1, paidAt: $paid, items: [$this->goods('AT', 'DE', '20', '30.00')]);
-        // Reverse Charge, nicht steuerbar, Inland, Drittland: nichts davon.
+        // Reverse charge, not taxable, domestic, third country: none of these.
         $this->order(1, paidAt: $paid, items: [$this->goods('DE', 'DE', '0', '200.00', source: 'reverseCharge')]);
         $this->order(1, paidAt: $paid, items: [$this->goods('', 'DE', '0', '25.00', kind: 'voucher', source: 'notTaxable')]);
         $this->order(1, paidAt: $paid, items: [$this->goods('AT', 'AT', '20', '300.00')]);
         $this->order(1, paidAt: $paid, items: [$this->goods('CH', 'CH', '0', '400.00')]);
-        // Shop 2, gleiche UID: zählt mit.
+        // Shop 2, same VAT ID: counts too.
         $this->order(2, paidAt: $paid, items: [$this->goods('NL', 'NL', '21', '10.00')]);
 
         self::assertSame(['EUR' => '145.00'], $this->report()->threshold($this->business(), 2026));
@@ -104,8 +104,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * Art. 369g Abs. 4: Eine Gutschrift im dritten Quartal über einen Umsatz
-     * des ersten berichtigt das erste — Teil B, nicht Teil A.
+     * Art. 369g Abs. 4: A credit note in the third quarter about a sale of the
+     * first corrects the first — part B, not part A.
      */
     public function testEineSpaetereGutschriftIstEineBerichtigungDesUrsprungsquartals(): void
     {
@@ -122,8 +122,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * Storno nach der Vorkasse im selben Quartal: Umsatz und Berichtigung
-     * heben sich in Teil A auf. Ein Storno vor jeder Zahlung ist kein Umsatz.
+     * Cancellation after prepayment in the same quarter: sale and correction
+     * cancel out in part A. A cancellation before any payment is not a sale.
      */
     public function testEinStornoNimmtDenUmsatzZurueck(): void
     {
@@ -138,8 +138,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * R5: Nur Euro zählt gegen die Schwelle; eine andere Währung steht
-     * daneben, nicht umgerechnet.
+     * R5: Only euro counts against the threshold; another currency stands
+     * beside it, not converted.
      */
     public function testFremdwaehrungZaehltNichtGegenDieSchwelle(): void
     {
@@ -153,8 +153,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * R6: Hinweis ab 80 % und ab 100 %, nur solange der Schalter aus ist,
-     * auch für das Vorjahr.
+     * R6: Notice from 80 % and from 100 %, only as long as the switch is off,
+     * for the previous year too.
      */
     public function testDerBefundMeldetAb80UndAb100Prozent(): void
     {
@@ -167,15 +167,15 @@ class OssReportTest extends TestCase
         $this->order(3, paidAt: $this->at('2025-06-01'), items: [$this->goods('AT', 'FR', '20', '10000.00')]);
         self::assertSame([[ConfigurationFinding::OssThresholdReached, ['business' => 'Klein', 'year' => '2025']]], $this->findings(), 'das höhere Jahr reicht');
 
-        // Shop 1 und 2 versteuern schon im Bestimmungsland: kein Befund.
+        // Shops 1 and 2 already tax in the country of destination: no finding.
         $this->order(1, paidAt: $this->at('2026-02-01'), items: [$this->goods('DE', 'DE', '19', '20000.00')]);
         self::assertCount(1, $this->findings());
     }
 
     /**
-     * Review R, F1: ein voller Widerruf stellt einen STORNO aus, keine
-     * Gutschrift — auch er berichtigt. Der Storno einer Neuausstellung
-     * (Zahlungsartwechsel) dagegen nicht: ihn nennt kein Widerruf.
+     * R: a full withdrawal issues a CANCELLATION, not a credit note — it
+     * corrects too. The cancellation of a reissue (change of payment method),
+     * on the other hand, does not: no withdrawal names it.
      */
     public function testDerVolleWiderrufBerichtigtDerStornoEinerNeuausstellungNicht(): void
     {
@@ -192,8 +192,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * Review R, F2: Teilwiderruf, danach Status „storniert" — der Storno
-     * nimmt nur zurück, was noch nicht zurück war.
+     * R: partial withdrawal, then the status "cancelled" — the cancellation
+     * only takes back what had not been taken back yet.
      */
     public function testNachDerGutschriftNimmtDerStornoNurDenRest(): void
     {
@@ -202,16 +202,16 @@ class OssReportTest extends TestCase
             ['lineType' => 'product', 'kind' => 'physical', 'taxCountry' => 'DE', 'taxRate' => '19.0000', 'taxAmount' => '-3.8000', 'lineTotal' => '-23.8000', 'priceSource' => 'list', 'productName' => 'Tee'],
         ]);
 
-        // 100 − 20 (Gutschrift) − 80 (Rest beim Storno) — vorher −100 − 20.
+        // 100 − 20 (credit note) − 80 (rest at the cancellation) — before, −100 − 20.
         self::assertSame(['EUR' => '0.00'], $this->report()->threshold($this->business(), 2026));
         self::assertSame([['country' => 'DE', 'rate' => '19.0000', 'currency' => 'EUR', 'net' => '0.00', 'tax' => '0.00']], $this->report()->quarter($this->business(), 2026, 1)['a']);
     }
 
     /**
-     * Zweites Review R, B1: erst „storniert", danach der Widerruf erstattet —
-     * der Storno hat schon alles zurückgenommen, die Gutschrift nimmt nichts
-     * mehr. Am selben Zeitpunkt (B5, Grenze): die Gutschrift zählt, der
-     * Storno lässt sie aus — in Summe einmal alles.
+     * R: first "cancelled", then the withdrawal refunded — the cancellation
+     * has already taken everything back, the credit note takes nothing more.
+     * At the same moment (B5, limit): the credit note counts, the
+     * cancellation leaves it out — in sum everything once.
      */
     public function testNachDemStornoNimmtDieGutschriftNichtsMehr(): void
     {
@@ -227,8 +227,8 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * Review R, F11: eine Gutschrift vor dem Umsatz (Teilwiderruf, bevor
-     * geliefert und ganz bezahlt war) gehört in das Quartal des Umsatzes.
+     * R: a credit note before the sale (partial withdrawal before it was
+     * delivered and paid in full) belongs in the quarter of the sale.
      */
     public function testEineGutschriftVorDemUmsatzGehoertInDessenQuartal(): void
     {
@@ -242,16 +242,16 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * Review R, F9 (Regel 43): je Ausschluss ein Fall, in dem nur er greift.
+     * R: for each exclusion a case in which only that exclusion applies.
      */
     public function testJederAusschlussGreiftFuerSich(): void
     {
-        // Storniert, bevor es je ein Umsatz war — und danach doch bezahlt: keine Berichtigung.
+        // Cancelled before it was ever a sale — and paid after all: no correction.
         $this->order(1, paidAt: $this->at('2026-02-10'), cancelledAt: $this->at('2026-02-05'), items: [$this->goods('DE', 'DE', '19', '100.00')]);
         $q1 = $this->report()->quarter($this->business(), 2026, 1);
         self::assertSame([false], array_map(static fn (OssEntry $e): bool => $e->correction, $q1['entries']));
 
-        // Ein Shop außerhalb der EU kennt keine Lieferschwelle.
+        // A shop outside the EU knows no delivery threshold.
         $this->connection->insert('tl_consho_shop', ['id' => 4, 'tstamp' => 1, 'title' => 'Zürich', 'country' => 'CH', 'vatId' => 'CHE123456789']);
         $this->order(4, paidAt: $this->at('2026-02-01'), items: [$this->goods('DE', 'DE', '19', '100.00')]);
         $zurich = $this->report()->business('CHE123456789');
@@ -259,8 +259,8 @@ class OssReportTest extends TestCase
         self::assertSame([], $this->report()->threshold($zurich, 2026));
     }
     /**
-     * Review R, F8: die Startseite zählt höchstens einmal je Stunde — ein
-     * neuer Verkauf ändert den Befund erst, wenn der Eintrag abläuft.
+     * R: the start page counts at most once per hour — a new sale only
+     * changes the finding when the entry expires.
      */
     public function testDerBefundZaehltAusDemCache(): void
     {
@@ -278,7 +278,7 @@ class OssReportTest extends TestCase
     }
 
     /**
-     * Zweites Review R, B5: die Stunde läuft wirklich ab.
+     * R: the hour really does expire.
      */
     public function testDerCacheEintragLaeuftNachEinerStundeAb(): void
     {

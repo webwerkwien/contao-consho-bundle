@@ -6,9 +6,9 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Cart\CartNotice;
 
 /**
- * Was eine Adresse als Hinweis mitbringen darf (C-3c): nur Ablehnungen der
- * Kaufschaltfläche. „Hinzugefügt" und „zu viele Codes" stünden sonst auf jeder
- * Seite, deren Link jemand so weitergibt — und im Seiten-Cache.
+ * What an address may bring along as a notice (C-3c): only refusals of the
+ * buy button. "Added" and "too many codes" would otherwise appear on every
+ * page whose link someone passes on like that — and in the page cache.
  */
 class CartNoticeTest extends TestCase
 {

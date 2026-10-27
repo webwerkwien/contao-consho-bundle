@@ -25,7 +25,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
  *
  * ── Every method gets an attempt ─────────────────────────────────────────
  *
- * Prepayment too (Michael, 2026-09-26: Z1): one rule instead of an exception,
+ * Prepayment too (Z1): one rule instead of an exception,
  * and the order keeps a record of how it was meant to be paid. Its start()
  * is `completed`, which leaves the attempt `pending` — waiting for the
  * transfer the operator will record.
@@ -75,7 +75,7 @@ class PaymentStarter
     public function start(int $orderId, int $now): PaymentStart|null
     {
         /*
-         * Decided and opened under the order's lock (review C-11, finding 1).
+         * Decided and opened under the order's lock (C-11).
          * Two tabs clicking "try again" at once both passed canRetry(), both
          * opened an attempt and both went to the provider — two attempts, so
          * the unique key on the payment could not help, and a real provider
@@ -85,7 +85,7 @@ class PaymentStarter
          * The method is read under the lock as well, so a "try again" racing
          * a change of method in another tab starts the NEW method's attempt,
          * and the change's own start() then finds it open and starts none —
-         * one attempt either way (re-review C-11, B3).
+         * one attempt either way (C-11).
          *
          * Only the decision and the INSERT are inside; the handler is asked
          * after the commit — a provider call cannot be rolled back, and the
@@ -235,7 +235,7 @@ class PaymentStarter
     private function decide(int $orderId, array $order, int $now): array|PaymentStart|null
     {
         /*
-         * Less what accepted withdrawals credit (D-3, Fable review B1): an
+         * Less what accepted withdrawals credit (D-3): an
          * unpaid order whose goods were partly withdrawn owes the rest, not
          * the grand total — 70 €, not 100 €.
          */
@@ -272,8 +272,7 @@ class PaymentStarter
 
     /**
      * An OPEN attempt older than ATTEMPT_LIFETIME: the buyer left the
-     * provider's page, and nothing will come of it (Michael, 2026-09-26:
-     * „ich bin damit einverstanden"). Pending never lapses — that is a
+     * provider's page, and nothing will come of it. Pending never lapses — that is a
      * transfer on its way, and a new attempt would not make it arrive
      * sooner. Without a known start time (0) nothing lapses.
      */

@@ -10,7 +10,7 @@ use Symfony\Component\Uid\Uuid;
 
 /**
  * What the shop needs to know about an image file of the file manager before
- * it shows it (block GARAN, acceptance on c5 and review 5, 2026-10-09).
+ * it shows it (block GARAN).
  *
  * ── Public ───────────────────────────────────────────────────────────────
  *
@@ -18,7 +18,7 @@ use Symfony\Component\Uid\Uuid;
  * `.public` marker (SymlinksCommand: one symlink under public/files per
  * marked folder). A file elsewhere answers 404 in the shop, and nothing in
  * the back end says so — the image component prints its address all the
- * same. Measured on c5: the GARAN label in a new folder `files/consho`
+ * same. A GARAN label in a new folder `files/consho`
  * stood on the product page as a broken image, while the confirmation mail,
  * which reads the file on the server, carried it.
  *
@@ -30,7 +30,7 @@ use Symfony\Component\Uid\Uuid;
  *
  * An image embedded in a mail travels in every one of them, base64-encoded
  * at about 4/3 of its size; a large one makes mails heavy and spam filters
- * suspicious (Michael, 2026-10-09: "Spam-Schutz").
+ * suspicious.
  */
 class PublicFiles
 {

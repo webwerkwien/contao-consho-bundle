@@ -18,8 +18,8 @@ class DbalMiniCartIssueSourceTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
         DcaSchema::create($this->connection, 'tl_consho_shop');
-        // ptable/pid, wie ein echtes tl_content: ein Artikel-Element trägt pid
-        // auf tl_article, ein Layout-Bereich-Element seit Contao 5.7 pid auf
+        // ptable/pid, like a real tl_content: an article element carries pid
+        // on tl_article, a layout-area element since Contao 5.7 pid on
         // tl_theme (ModuleWizard, contao/dca/tl_content.php).
         $this->connection->executeStatement(
             'CREATE TABLE tl_content (id INTEGER PRIMARY KEY AUTOINCREMENT, pid INTEGER NOT NULL DEFAULT 0, ptable TEXT NOT NULL DEFAULT \'\', type TEXT NOT NULL DEFAULT \'\', invisible INTEGER NOT NULL DEFAULT 0)',
@@ -35,7 +35,7 @@ class DbalMiniCartIssueSourceTest extends TestCase
 
     public function testZurueckZurSeiteOhneMiniWarenkorbGibtEinenHinweis(): void
     {
-        // Sonst sieht das Hinzufügen für den Besucher wie nichts aus.
+        // Otherwise adding looks like nothing to the visitor.
         $this->connection->insert('tl_consho_shop', ['title' => 'Shop', 'afterAddToCart' => 'page']);
 
         $issues = $this->source()->issues();
@@ -47,9 +47,9 @@ class DbalMiniCartIssueSourceTest extends TestCase
 
     public function testEinMiniWarenkorbInEinemLayoutBereichGenuegt(): void
     {
-        // Genau der Fall, für den das Element gebaut ist: seit Contao 5.7
-        // stehen Layout-Bereich-Elemente mit ptable='tl_theme' statt an
-        // einem Artikel — eine Abfrage über Artikel würde ihn übersehen.
+        // Exactly the case the element is built for: since Contao 5.7
+        // layout-area elements sit with ptable='tl_theme' instead of on
+        // an article — a query over articles would miss it.
         $this->connection->insert('tl_consho_shop', ['title' => 'Shop', 'afterAddToCart' => 'page']);
         $this->connection->insert('tl_content', ['pid' => 1, 'ptable' => 'tl_theme', 'type' => 'consho_mini_cart', 'invisible' => 0]);
 
@@ -74,10 +74,10 @@ class DbalMiniCartIssueSourceTest extends TestCase
 
     public function testEinNeuerShopBringtDenHinweisZurueck(): void
     {
-        // Der Fingerabdruck entsteht aus dem Befund UND seinem Kontext. Ohne
-        // die Shop-Namen wäre er für jeden Fall derselbe — ein einziges
-        // Quittieren machte den Hinweis für immer stumm, auch für einen Shop,
-        // den es heute noch gar nicht gibt. ConfigurationIssue sagt das selbst.
+        // The fingerprint is built from the finding AND its context. Without
+        // the shop names it would be the same for every case — a single
+        // acknowledgement would silence the notice forever, even for a shop
+        // that does not exist yet today. ConfigurationIssue says so itself.
         $this->connection->insert('tl_consho_shop', ['title' => 'Erster', 'afterAddToCart' => 'page']);
 
         $vorher = $this->source()->issues()[0]->fingerprint();
@@ -89,8 +89,8 @@ class DbalMiniCartIssueSourceTest extends TestCase
 
     public function testNurBetroffeneShopsStehenImKontext(): void
     {
-        // Ein Shop, der direkt zum Warenkorb schickt, braucht keinen
-        // Mini-Warenkorb und gehört deshalb nicht in die Meldung.
+        // A shop that sends straight to the cart needs no
+        // mini cart and therefore does not belong in the message.
         $this->connection->insert('tl_consho_shop', ['title' => 'Mit Rücksprung', 'afterAddToCart' => 'page']);
         $this->connection->insert('tl_consho_shop', ['title' => 'Direkt zum Korb', 'afterAddToCart' => 'cart']);
 
@@ -105,10 +105,10 @@ class DbalMiniCartIssueSourceTest extends TestCase
      */
     public function testDerHinweisNenntDieBetroffenenShops(string $sprache): void
     {
-        // Befund 8: Die Shop-Titel stehen längst im Kontext — dort für den
-        // Fingerabdruck gebraucht —, der Satz nutzte sie nur nicht und begann
-        // mit „Ein Shop". Bei mehreren Shops erfuhr der Betreiber nicht,
-        // welcher gemeint ist. shippingPriceMissing macht es danebenan vor.
+        // The shop titles have long been in the context — needed there for the
+        // fingerprint — but the sentence did not use them and began
+        // with "A shop". With several shops the operator did not learn
+        // which one was meant. shippingPriceMissing next door shows how.
         $this->connection->insert('tl_consho_shop', ['title' => 'Wien', 'afterAddToCart' => 'page']);
         $this->connection->insert('tl_consho_shop', ['title' => 'Zürich', 'afterAddToCart' => 'page']);
 
@@ -116,11 +116,11 @@ class DbalMiniCartIssueSourceTest extends TestCase
 
         self::assertSame(['shops' => 'Wien, Zürich'], $issue->context);
 
-        // Gemessen wird der Satz gegen den Kontext, den die Quelle wirklich
-        // liefert: Jeder Platzhalter muss gefüllt werden können, und jeder
-        // Kontextwert muss im Satz vorkommen. Ein Platzhalter ohne Wert bliebe
-        // als „%shops%" auf der Startseite stehen, ein Wert ohne Platzhalter
-        // ist genau der Befund hier.
+        // The sentence is measured against the context the source really
+        // supplies: every placeholder must be fillable, and every
+        // context value must appear in the sentence. A placeholder without a value would
+        // remain as "%shops%" on the start page, a value without a placeholder
+        // is exactly the gap here.
         self::assertSame(
             array_keys($issue->context),
             $this->platzhalterIn($this->findungstext($sprache, $issue->finding->value)),
@@ -138,9 +138,9 @@ class DbalMiniCartIssueSourceTest extends TestCase
 
     private function findungstext(string $sprache, string $code): string
     {
-        // Wie in ConfigurationFindingLanguageTest isoliert geladen: die Datei
-        // ersetzt den Zweig komplett, ein Rest der vorigen Sprache im Speicher
-        // fiele nicht auf.
+        // Loaded in isolation as in ConfigurationFindingLanguageTest: the file
+        // replaces the branch completely, a remnant of the previous language in memory
+        // would not stand out.
         unset($GLOBALS['TL_LANG']);
 
         require __DIR__.'/../../contao/languages/'.$sprache.'/default.php';

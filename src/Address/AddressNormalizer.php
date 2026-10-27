@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
  * The GDPR principle of accuracy (Art. 5(1)(d)) means factual correctness, not
  * formatting: "hauptstr. 5" and "Hauptstraße 5" are both correct. This class
  * exists for deliverability, carrier interfaces that expect normalised fields,
- * and duplicate avoidance — see docs/block-a-fundament.md, section 5.7.
+ * and duplicate avoidance — see Block A, section 5.7.
  *
  * The rule: what the customer typed is what gets stored. Only lossless changes
  * are applied. Everything else is offered as a suggestion.

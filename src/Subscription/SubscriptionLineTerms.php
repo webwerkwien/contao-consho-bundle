@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  * already shows.
  *
  * Product page, basket, review and order all come through here, so the
- * sentence is built one way. Until variant A (2026-10-08) it also looked up
+ * sentence is built one way. Until variant A it also looked up
  * the current monthly amount for an open-ended rule billed otherwise than
  * monthly (A8); there is no such rule any more — "läuft weiter, jederzeit
  * kündbar" is monthly only.

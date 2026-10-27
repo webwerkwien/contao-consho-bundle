@@ -9,10 +9,10 @@ use Webwerkwien\ContaoConshoBundle\Customer\Customer;
 use Webwerkwien\ContaoConshoBundle\Customer\CustomerDirectory;
 
 /**
- * D-4, K2 — „Kunde ergibt sich aus den Bestellungen" (Michael, 2026-09-25):
- * Mitglieder mit Bestellung, Gäste nach Adresse, dazu die Basisgruppe für
- * Konten ohne Bestellung. Ein Gast mit der Adresse eines Mitglieds desselben
- * Shops gehört zu diesem.
+ * D-4, K2 — "a customer follows from the orders":
+ * members with an order, guests by address, plus the base group for
+ * accounts without an order. A guest with the address of a member of the
+ * same shop belongs to that member.
  */
 final class CustomerDirectoryTest extends TestCase
 {
@@ -20,7 +20,7 @@ final class CustomerDirectoryTest extends TestCase
 
     protected function setUp(): void
     {
-        // The shared D-5 schema: production column names (Fall 31).
+        // The shared D-5 schema: production column names, so the tests hit what the real names break.
         $this->connection = PrivacySchema::create();
 
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Wien', 'customerGroup' => 3]);
@@ -31,23 +31,23 @@ final class CustomerDirectoryTest extends TestCase
         $this->connection->insert('tl_member', ['id' => 7, 'firstname' => 'Intern', 'lastname' => 'Redaktion', 'email' => 'intern@example.org', 'groups' => serialize(['9'])]);
         $this->connection->insert('tl_member', ['id' => 8, 'firstname' => 'Dreizehn', 'lastname' => 'Andere', 'email' => 'x@example.org', 'groups' => serialize(['13'])]);
 
-        // Erika: zwei Bestellungen im Konto, eine als Gast mit derselben Adresse (andere Schreibweise).
+        // Erika: two orders in the account, one as a guest with the same address (different spelling).
         $this->order(1, 1, 5, 'erika@example.org', 'Erika', 'Konto', 100);
         $this->order(2, 1, 5, 'erika@example.org', 'Erika', 'Konto', 300);
         $this->order(3, 1, 0, 'ERIKA@example.org', 'Erika', 'Gast', 200);
 
-        // Ein Gast, zweimal, mit geändertem Namen — der jüngste gilt.
+        // One guest, twice, with a changed name — the most recent applies.
         $this->order(4, 1, 0, 'gast@example.org', 'Max', 'Alt', 150);
         $this->order(5, 1, 0, 'Gast@Example.org', 'Max', 'Neu', 250);
 
-        // Derselbe Gast im anderen Shop ist dort ein eigener Kunde.
+        // The same guest in the other shop is a customer of its own there.
         $this->order(6, 2, 0, 'gast@example.org', 'Max', 'Berlin', 50);
 
-        // Bestellung eines gelöschten Kontos: zählt als Gast.
+        // Order of a deleted account: counts as a guest.
         $this->order(7, 2, 99, 'weg@example.org', 'Weg', 'Gelöscht', 60);
     }
 
-    /** Twig kodiert selbst; ein kodierter Titel erschiene als „&#40;". */
+    /** Twig encodes by itself; an encoded title would appear as "&#40;". */
     public function testDerShopnameKommtDekodiert(): void
     {
         $this->connection->update('tl_consho_shop', ['title' => 'Wien &#40;AT&#41;'], ['id' => 1]);

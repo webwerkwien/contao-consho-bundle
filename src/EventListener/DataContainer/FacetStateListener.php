@@ -32,9 +32,9 @@ use Webwerkwien\ContaoConshoBundle\Seo\FilterStateCodec;
  * whose combination is dropped that way would show the whole category under
  * its own title, so on save every option must exist in a filterable group, the
  * page must carry a listing that follows the address, and the combination must
- * lie within that listing's preset. See docs/block-b-katalog-frontend.md, 4.5.
+ * lie within that listing's preset. See Block B, 4.5.
  *
- * Decision 2026-09-13: the combination must also be narrower than that preset
+ * The combination must also be narrower than that preset
  * — one that matches it exactly would show the very same products as the
  * category page itself and earns no address of its own.
  */
@@ -160,7 +160,7 @@ class FacetStateListener
     }
 
     /**
-     * Decision 2026-09-13: a landing page whose combination is exactly the
+     * A landing page whose combination is exactly the
      * category's own preset would show the same products as the category
      * itself — there is nothing left for it to narrow down.
      *

@@ -12,8 +12,8 @@
     CONSHO.orderPage.notice or null), online ({state: a key of
     CONSHO.orderPage.online, retry: bool} or null — C-11), withdrawal (see
     OrderPageWithdrawal::view(), D-2), withdrawal_token (for the GET form of
-    "Vertrag widerrufen") and order_url (the page without the declaration,
-    token included).
+    "Vertrag widerrufen"), order_url (the page without the declaration,
+    token included) and account (bool: the box "Kundenkonto anlegen", K1).
 
     Every figure arrives formatted — the same view as the invoice and the mail,
     so the page cannot show an amount the documents do not.
@@ -206,7 +206,7 @@
         shop's address (spec 6.2). Nothing at all where there is no function.
 
         A real BUTTON in a GET form, like every other button on this page
-        (acceptance D-2, Michael: "gleiche Maßnahme wie bei anderen Knöpfen"):
+        (D-2):
         Consho ships no front end CSS, so a plain link looked like any link in
         the text, and the theme's button style is what makes it stand out. GET,
         so it changes nothing; the token travels as a field, because a GET
@@ -238,8 +238,8 @@
     {% endif %}
 
     {#
-        The online payment (C-11): one sentence for what is PROVEN, never more
-        (Michael, 2026-09-26). "confirmed" = the provider's notification was
+        The online payment (C-11): one sentence for what is PROVEN, never more.
+        "confirmed" = the provider's notification was
         booked; "reported" = a verified return, the notification still to
         come; "none" = nothing to go by. "Try again" only after a failure or
         cancel — while an attempt may be on its way, a second would pay twice.
@@ -260,8 +260,8 @@
     {#
         ⚠️ The item is a <td>, and every cell carries data-cellheadline — see
         consho_cart.html.twig: themes that turn tables into cards on a phone
-        hide every <th> and print attr(data-cellheadline) instead (acceptance
-        C-10). The totals keep their row headers AND carry the label, so a
+        hide every <th> and print attr(data-cellheadline) instead
+        (C-10). The totals keep their row headers AND carry the label, so a
         wide screen reads a table and a narrow one reads "Label: amount".
     #}
     {% set head_item = 'CONSHO.invoice.item'|trans({}, 'contao_default') %}
@@ -291,7 +291,7 @@
     </table>
 
     <table class="consho-order__totals">
-        {#- Acceptance WG-7: an order of vouchers only is not taxable — said,
+        {#- WG-7: an order of vouchers only is not taxable — said,
             not "USt. 0,00", and without a net line equal to the total. #}
         {% set untaxed = order.taxes|default([]) is not empty and order.taxes|filter(t => not t.notTaxable) is empty %}
         {% set totals = untaxed
@@ -301,7 +301,7 @@
             {% set label = ('CONSHO.invoice.' ~ key)|trans({}, 'contao_default') %}
             <tr{% if 'grandTotal' == key %} class="consho-order__grand"{% endif %}><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ amount }}</td></tr>
         {% endfor %}
-        {#- Acceptance WG-7: the payments, as the invoice states them — a
+        {#- WG-7: the payments, as the invoice states them — a
             customer paying part with a voucher sees what is left. #}
         {% for payment in payments|default([]) %}
             {% set label = (payment.refund ? 'CONSHO.invoice.refunded' : 'CONSHO.invoice.paid')|trans({}, 'contao_default') ~ (payment.label ? ' (' ~ payment.label ~ ')' : '') %}
@@ -499,6 +499,19 @@
                     <label for="consho-order-{{ element_id }}-confirm">{{ 'CONSHO.orderPage.change.confirm'|trans({}, 'contao_default') }}</label>
                 </div>
                 <button type="submit">{{ 'CONSHO.orderPage.change.submit'|trans({}, 'contao_default') }}</button>
+            </form>
+        </section>
+    {% endif %}
+
+    {# K1: a guest order only, and only where the shop names its "Lost password" page. #}
+    {% if account|default(false) %}
+        <section class="consho-order__account">
+            <h3>{{ 'CONSHO.orderPage.account.title'|trans({}, 'contao_default') }}</h3>
+            <p>{{ 'CONSHO.orderPage.account.text'|trans({}, 'contao_default') }}</p>
+            <form method="post" class="consho-order__account-form">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <input type="hidden" name="consho_order_action" value="createAccount">
+                <button type="submit">{{ 'CONSHO.orderPage.account.submit'|trans({}, 'contao_default') }}</button>
             </form>
         </section>
     {% endif %}

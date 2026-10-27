@@ -27,15 +27,15 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Weiterleitungen, wenn sich der Alias eines einzelnen Produkts ändert.
+ * Redirects when the alias of a single product changes.
  *
- * Abschnitt 4.4 der Spezifikation deckt die geänderte Pfadvorlage ab
- * (RedirectRecorderTest); hier geht es um denselben Mechanismus mit anderem
- * Auslöser — vom Maskenfeld über den Recorder bis zum Resolver.
+ * Section 4.4 of the specification covers the changed path template
+ * (RedirectRecorderTest); this is about the same mechanism with a different
+ * trigger — from the mask field through the recorder to the resolver.
  *
- * Aufbau: ein Shop mit zwei Startpunkten (de = Standardsprache, en), jeweils mit
- * Produktseite und verschiedener Vorlage, und ein zweiter Shop, dem das Produkt
- * nicht zugeordnet ist.
+ * Setup: one shop with two start points (de = default language, en), each with
+ * a product page and a different template, and a second shop to which the
+ * product is not assigned.
  */
 class AliasRedirectTest extends TestCase
 {
@@ -73,7 +73,7 @@ class AliasRedirectTest extends TestCase
         $this->page(2, type: 'root', language: 'en', shop: 1, prefix: 'en');
         $this->page(124, pid: 2, alias: 'product', type: 'consho_product', template: '{manufacturer}/{alias}');
 
-        // Ein zweiter Shop, dem Produkt 10 nicht zugeordnet ist.
+        // A second shop to which product 10 is not assigned.
         $this->insertShop(['id' => 2, 'fallbackLanguage' => 'de']);
         $this->page(3, type: 'root', language: 'de', shop: 2);
         $this->page(125, pid: 3, alias: 'artikel', type: 'consho_product', template: '{alias}');
@@ -85,13 +85,13 @@ class AliasRedirectTest extends TestCase
         $this->insertTranslation(['pid' => 11, 'ptable' => 'tl_consho_product', 'language' => 'en', 'title' => 'Melissa Spirit', 'alias' => 'melissa-spirit']);
     }
 
-    // ── Standard-Alias ──────────────────────────────────────────────────
+    // ── Default alias ───────────────────────────────────────────────────
 
     public function testAnAliasChangeRecordsTheOldAddressOncePerAffectedStartpoint(): void
     {
         /*
-         * Nur der deutsche Startpunkt: Der englische adressiert das Produkt über
-         * seinen übersetzten Alias, und Shop 2 führt das Produkt gar nicht.
+         * Only the German start point: the English one addresses the product via
+         * its translated alias, and shop 2 does not carry the product at all.
          */
         $written = $this->recorder()->recordProductAlias(10, 'schwedenbitter-klassik', self::NOW);
 
@@ -108,9 +108,9 @@ class AliasRedirectTest extends TestCase
     public function testOtherProductsStayUntouched(): void
     {
         /*
-         * Eine Zeile aus einer früheren Vorlagenänderung für Produkt 11 bleibt
-         * stehen, und Produkt 11 bekommt keine neue — die Umbenennung eines
-         * Artikels rechnet nicht den ganzen Katalog durch.
+         * A row from an earlier template change for product 11 stays,
+         * and product 11 gets no new one — renaming one
+         * item does not recompute the whole catalogue.
          */
         $this->redirect(1, '/produkt/melissengeist-alt.html', 11);
 
@@ -133,7 +133,7 @@ class AliasRedirectTest extends TestCase
 
     public function testAPageWithoutTemplateUsesTheDefaultOne(): void
     {
-        // Wie der Routenbau: eine leere Vorlage heißt {alias}.
+        // Like the route building: an empty template means {alias}.
         $this->connection->update('tl_page', ['conshoPathTemplate' => ''], ['id' => 123]);
 
         $this->recorder()->recordProductAlias(10, 'schwedenbitter-klassik', self::NOW);
@@ -143,8 +143,8 @@ class AliasRedirectTest extends TestCase
 
     public function testAStartpointWithoutLanguageUsesTheMainAlias(): void
     {
-        // Ein einsprachiger Startpunkt ohne Sprachangabe: TranslationJoin behandelt
-        // '' als Standardsprache, also zeigt er den Alias des Datensatzes.
+        // A single-language start point without a language: TranslationJoin treats
+        // '' as the default language, so it shows the record's alias.
         $this->connection->update('tl_page', ['language' => ''], ['id' => 1]);
 
         self::assertSame(1, $this->recorder()->recordProductAlias(10, 'schwedenbitter-klassik', self::NOW));
@@ -153,10 +153,10 @@ class AliasRedirectTest extends TestCase
     public function testAStartpointInATranslationLanguageWithoutTranslatedAliasIsNotAffected(): void
     {
         /*
-         * Ohne übersetzten Alias fällt TranslationJoin zwar auf den Standard-Alias
-         * zurück — aber VisibilityCriteria::translated() blendet das Produkt in
-         * dieser Sprache ganz aus. Unter /en/… gab es also nie eine Adresse, die
-         * wandern könnte.
+         * Without a translated alias TranslationJoin does fall back to the default
+         * alias — but VisibilityCriteria::translated() hides the product entirely in
+         * this language. So under /en/… there was never an address that
+         * could move.
          */
         $this->connection->delete('tl_consho_translation', ['pid' => 11]);
 
@@ -167,7 +167,7 @@ class AliasRedirectTest extends TestCase
 
     public function testAVariantRecordsNothing(): void
     {
-        // Eine Variante hat keine eigene Adresse — auch nicht mit eigener Shop-Zuordnung.
+        // A variant has no address of its own — not even with its own shop assignment.
         $this->product(13, 'schwedenbitter-250', pid: 10);
 
         self::assertSame(0, $this->recorder()->recordProductAlias(13, 'schwedenbitter-500', self::NOW));
@@ -181,8 +181,8 @@ class AliasRedirectTest extends TestCase
 
     public function testNothingForAProductWithoutAliasSoFar(): void
     {
-        // Ein frisch angelegtes Produkt hatte keine Adresse — sonst entstünde
-        // eine Weiterleitung von der nackten Produktseite /produkt.html.
+        // A freshly created product had no address — otherwise there would be
+        // a redirect from the bare product page /produkt.html.
         $this->product(12, '');
 
         self::assertSame(0, $this->recorder()->recordProductAlias(12, 'neuheit', self::NOW));
@@ -202,11 +202,11 @@ class AliasRedirectTest extends TestCase
         self::assertSame(0, $this->recorder()->recordProductAlias(10, 'schwedenbitter-klassik', self::NOW));
     }
 
-    // ── Idempotenz und Rückkehr ─────────────────────────────────────────
+    // ── Idempotence and return ──────────────────────────────────────────
 
     public function testRecordingTwiceStaysIdempotent(): void
     {
-        // Zweimal derselbe Aufruf, bevor die Datenbank den neuen Wert hat.
+        // The same call twice, before the database has the new value.
         self::assertSame(1, $this->recorder()->recordProductAlias(10, 'schwedenbitter-klassik', self::NOW));
         self::assertSame(0, $this->recorder()->recordProductAlias(10, 'schwedenbitter-klassik', self::NOW + 10));
         self::assertCount(1, $this->recorded());
@@ -215,9 +215,9 @@ class AliasRedirectTest extends TestCase
     public function testReturningToAnEarlierAliasLeavesNoRowOnTodaysAddress(): void
     {
         /*
-         * schwedenbitter → neu → schwedenbitter. Danach ist /produkt/schwedenbitter.html
-         * wieder die heutige Adresse; eine Zeile dafür wäre eine Weiterleitung
-         * des Produkts auf sich selbst.
+         * schwedenbitter → neu → schwedenbitter. Afterwards /produkt/schwedenbitter.html
+         * is today's address again; a row for it would be a redirect
+         * of the product to itself.
          */
         $this->recorder()->recordProductAlias(10, 'neu', self::NOW);
         $this->rename(10, 'neu');
@@ -232,10 +232,10 @@ class AliasRedirectTest extends TestCase
     public function testAnAddressTakenOverFromAnotherProductLosesItsOldRow(): void
     {
         /*
-         * Produkt 11 hieß früher „kraeuter", die Zeile führt noch zu ihm. Nimmt
-         * Produkt 10 den frei gewordenen Alias, gehört die Adresse jetzt 10.
-         * Bliebe die Zeile, führte die alte Adresse von 10 später — wenn 10
-         * wieder umbenannt wird — auf Produkt 11.
+         * Product 11 used to be called "kraeuter", the row still leads to it. If
+         * product 10 takes the freed alias, the address now belongs to 10.
+         * If the row stayed, the old address of 10 would later — when 10
+         * is renamed again — lead to product 11.
          */
         $this->redirect(1, '/produkt/kraeuter.html', 11);
 
@@ -244,7 +244,7 @@ class AliasRedirectTest extends TestCase
         self::assertSame([[1, '/produkt/schwedenbitter.html', 10]], $this->recorded());
     }
 
-    // ── Ende zu Ende ────────────────────────────────────────────────────
+    // ── End to end ──────────────────────────────────────────────────────
 
     public function testTheOldAddressLeadsToTheProductAndTheNewOneAnswersItself(): void
     {
@@ -258,24 +258,24 @@ class AliasRedirectTest extends TestCase
         self::assertSame(1, $target->rootPageId);
         self::assertSame(1, $target->shopId);
 
-        // Was ProductRedirectListener danach fragt: sichtbar, und unter dem neuen Alias zu finden.
+        // What ProductRedirectListener asks afterwards: visible, and findable under the new alias.
         $lookup = new ProductAddressLookup($this->connection, new VisibilityCriteria());
         self::assertTrue($lookup->isVisible(10, 1, self::NOW));
         self::assertSame(10, $lookup->find(['alias' => 'neu'], 1, self::NOW, 'de', 'de'));
         self::assertNull($lookup->find(['alias' => 'schwedenbitter'], 1, self::NOW, 'de', 'de'));
 
-        // Die neue Adresse selbst ist keine Weiterleitung.
+        // The new address itself is not a redirect.
         self::assertNull($this->resolver()->find('/produkt/neu.html', 'example.org'));
     }
 
-    // ── Die Masken ──────────────────────────────────────────────────────
+    // ── The masks ───────────────────────────────────────────────────────
 
     public function testDieProduktmaskeZeichnetEinenGeaendertenAliasBeimSpeichernAuf(): void
     {
         /*
-         * Der save_callback erzeugt nur den Alias. Aufgezeichnet wird für den
-         * ganzen Speichervorgang in ProductAddressListener — sonst entstünde bei
-         * Alias und Hersteller zugleich eine halb neue Adresse
+         * The save_callback only creates the alias. Recording happens for the
+         * whole save in ProductAddressListener — otherwise changing
+         * alias and manufacturer at once would create a half-new address
          * (ProductAddressRedirectTest).
          */
         $alias = $this->productAliasListener()('schwedenbitter-klassik', $this->productDc(10, stored: 'schwedenbitter'));
@@ -294,7 +294,7 @@ class AliasRedirectTest extends TestCase
 
     public function testDerUebersetzungsbereichZeichnetDieAlteAdresseBeimSpeichernAuf(): void
     {
-        // Nur Übersetzungen geändert: kein UPDATE am Produkt, kein onbeforesubmit.
+        // Only translations changed: no UPDATE on the product, no onbeforesubmit.
         $listener = $this->translationListener();
         $listener->save('swedish-bitters', $this->translationDc(10, 'alias__en'));
         $this->submit(10, [], $listener);
@@ -312,14 +312,14 @@ class AliasRedirectTest extends TestCase
         self::assertSame([], $this->recorded());
     }
 
-    // ── Wiederherstellen einer Version ──────────────────────────────────
+    // ── Restoring a version ─────────────────────────────────────────────
 
     public function testEineWiederhergestellteVersionMitAnderemAliasZeichnetDieAlteAdresseAuf(): void
     {
         /*
-         * Versions::restore() schreibt zuerst den UPDATE und ruft danach
-         * onrestore_version_callback. Die alte Adresse steht dann nicht mehr in
-         * der Datenbank — sie kommt aus dem Schnappschuss von onload.
+         * Versions::restore() writes the UPDATE first and calls
+         * onrestore_version_callback afterwards. The old address is then no longer
+         * in the database — it comes from the snapshot taken in onload.
          */
         $listener = $this->restoreListener();
         $listener->onLoad($this->productDc(10, stored: 'schwedenbitter'));
@@ -357,7 +357,7 @@ class AliasRedirectTest extends TestCase
         $listener = $this->restoreListener();
         $listener->onLoad($this->productDc(10, stored: 'schwedenbitter'));
 
-        // TranslationVersioning::restore() hat die Übersetzung schon zurückgeschrieben.
+        // TranslationVersioning::restore() has already written the translation back.
         $this->connection->update('tl_consho_translation', ['alias' => 'swedish-bitters'], ['pid' => 10, 'ptable' => 'tl_consho_product']);
         $listener->onRestoreVersion('tl_consho_product', 10, 3, []);
 
@@ -367,9 +367,9 @@ class AliasRedirectTest extends TestCase
     public function testOhneWiederherstellungsAnfrageEntstehtKeinSchnappschuss(): void
     {
         /*
-         * Versions::restore() ohne Maske davor — ein Befehl, ein Skript. Ohne
-         * den vorigen Alias ist nichts zu rendern; lieber keine Zeile als eine
-         * geratene. Schreibwege am Backend vorbei sind eine bewusste Grenze.
+         * Versions::restore() without a mask before it — a command, a script.
+         * Without the previous alias there is nothing to render; better no row
+         * than a guessed one. Write paths past the backend are a deliberate limit.
          */
         $listener = new AliasRestoreListener($this->connection, new RequestStack(), $this->recorder());
         $listener->onLoad($this->productDc(10, stored: 'schwedenbitter'));
@@ -383,10 +383,10 @@ class AliasRedirectTest extends TestCase
     public function testDieAufzeichnungLaeuftNachDemZurueckschreibenDerUebersetzungen(): void
     {
         /*
-         * TranslationVersionListener schreibt die Übersetzungen in seinem eigenen
-         * onrestore_version-Callback zurück. Liefe dieser hier davor, sähe er den
-         * übersetzten Alias noch im alten Stand. Contao sortiert Callbacks mit
-         * Priorität ≤ 0 absteigend hinter die DCA-eigenen
+         * TranslationVersionListener writes the translations back in its own
+         * onrestore_version callback. If this one ran before it, it would still
+         * see the translated alias in its old state. Contao sorts callbacks
+         * with priority ≤ 0 in descending order behind the DCA's own
          * (DataContainerCallbackListener::addCallbacks()).
          */
         $method = new \ReflectionMethod(AliasRestoreListener::class, 'onRestoreVersion');
@@ -398,7 +398,7 @@ class AliasRedirectTest extends TestCase
         self::assertNotEmpty($method->getAttributes(AsCallback::class));
     }
 
-    // ── Hilfen ──────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────
 
     private function restoreListener(): AliasRestoreListener
     {
@@ -428,9 +428,9 @@ class AliasRedirectTest extends TestCase
     }
 
     /**
-     * Was DC_Table::submit() für einen Datensatz tut: onbeforesubmit, der eine
-     * UPDATE, onsubmit mit Priorität 1, die Übersetzungen (0), onsubmit mit −1.
-     * Ohne geänderte Spalte gibt es keinen UPDATE und kein onbeforesubmit.
+     * What DC_Table::submit() does for a record: onbeforesubmit, the one
+     * UPDATE, onsubmit with priority 1, the translations (0), onsubmit with −1.
+     * Without a changed column there is no UPDATE and no onbeforesubmit.
      *
      * @param array<string, int|string> $columns
      */
@@ -494,7 +494,7 @@ class AliasRedirectTest extends TestCase
     }
 
     /**
-     * Was Contao nach den save_callbacks tut: der eine UPDATE am Ende der Anfrage.
+     * What Contao does after the save_callbacks: the one UPDATE at the end of the request.
      */
     private function rename(int $productId, string $alias): void
     {

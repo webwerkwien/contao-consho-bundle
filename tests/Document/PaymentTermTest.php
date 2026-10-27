@@ -21,12 +21,12 @@ class PaymentTermTest extends TestCase
     }
 
     /**
-     * Kalendertage, nicht Werktage wie beim Lieferzeitraum: 14 Tage sind zwei
-     * Wochen, das Wochenende zählt mit.
+     * Calendar days, not working days as for the delivery period: 14 days are
+     * two weeks, the weekend counts.
      */
     public function testKalendertageAbDemAusstellungstag(): void
     {
-        // Montag, 28.09.2026, 10:00 Wiener Zeit.
+        // Monday, 28.09.2026, 10:00 Vienna time.
         $issuedAt = (new \DateTimeImmutable('2026-09-28 10:00:00'))->getTimestamp();
 
         self::assertSame('2026-10-12', PaymentTerm::of($issuedAt, 14)['date']);
@@ -34,8 +34,8 @@ class PaymentTermTest extends TestCase
     }
 
     /**
-     * „Zahlbar bis zum 12." heißt: Der 12. zählt noch. Überfällig erst ab
-     * der ersten Sekunde danach.
+     * "Payable by the 12th" means: the 12th still counts. Overdue only from
+     * the first second after it.
      */
     public function testDasEndeIstDieLetzteSekundeDesTages(): void
     {
@@ -45,8 +45,8 @@ class PaymentTermTest extends TestCase
     }
 
     /**
-     * 23:30 Wiener Zeit ist in UTC noch derselbe Tag, 00:30 schon nicht mehr.
-     * Gezählt wird in der Zone des Servers, wie der Lieferzeitraum.
+     * 23:30 Vienna time is still the same day in UTC, 00:30 no longer is.
+     * Counting happens in the server's zone, like the delivery period.
      */
     public function testDerTagZaehltInDerZoneDesServers(): void
     {

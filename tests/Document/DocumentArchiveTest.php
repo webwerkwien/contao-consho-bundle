@@ -18,9 +18,9 @@ use Webwerkwien\ContaoConshoBundle\Document\InvoiceRenderer;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Ablage und Auslieferung (8.3), zusammen, weil das eine nur mit dem anderen
- * etwas bedeutet: Abgelegt wird, damit ausgeliefert werden kann, was beim
- * Ausstellen entstand.
+ * Archiving and delivery (8.3), together, because one only means something
+ * with the other: documents are archived so that what came about at issue
+ * can be delivered.
  */
 class DocumentArchiveTest extends TestCase
 {
@@ -67,8 +67,8 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * Ein Shop ohne Ablage: Der Beleg ist KEINE gescheiterte Ablage — sonst
-     * warnte jede Rechnung aus der Zeit vor dem Einschalten für immer.
+     * A shop without an archive: the document is NOT a failed archiving —
+     * otherwise every invoice from before it was switched on would warn forever.
      */
     public function testOhneAblageBleibtDerBelegUnberuehrt(): void
     {
@@ -81,8 +81,8 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * 🔴 In einen öffentlichen Ordner wird NIE geschrieben — auch wenn er erst
-     * nach der Auswahl öffentlich wurde.
+     * 🔴 A public folder is NEVER written to — even if it only became public
+     * after the selection.
      */
     public function testInEinenOeffentlichenOrdnerWirdNichtGeschrieben(): void
     {
@@ -95,9 +95,8 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * Eine vorhandene Datei wird nicht überschrieben — zwei Shops mit
-     * gemeinsamem Ordner und gleichem Präfix ersetzten sonst still einander
-     * die Rechnungen.
+     * An existing file is not overwritten — two shops with a shared folder and
+     * the same prefix would otherwise silently replace each other's invoices.
      */
     public function testEineVorhandeneDateiWirdNichtUeberschrieben(): void
     {
@@ -110,8 +109,8 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * Scheitert das Schreiben, wirft die Ablage NICHT — der Kauf, der die
-     * Rechnung ausgestellt hat, steht. Vermerkt und geloggt wird es.
+     * If writing fails, the archive does NOT throw — the purchase that issued
+     * the invoice stands. It is noted and logged.
      */
     public function testEinFehlerBeimSchreibenWirdVermerktNichtGeworfen(): void
     {
@@ -133,8 +132,8 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * 🔴 Stimmt die Prüfsumme nicht mehr, wird NEU ERZEUGT und so
-     * gekennzeichnet — nie still ersetzt.
+     * 🔴 If the checksum no longer matches, the document is GENERATED ANEW and
+     * marked as such — never silently replaced.
      */
     public function testEineVeraenderteDateiWirdNichtAusgeliefert(): void
     {
@@ -150,9 +149,9 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * D-5 (Fable-Review S2): Nach der Anonymisierung ist die Datei mit Absicht
-     * weg (`removed`). Der Beleg wird aus dem Schnappschuss erzeugt — ohne
-     * Hinweis auf ein Problem, das keines ist.
+     * D-5: After anonymisation the file is gone on purpose
+     * (`removed`). The document is generated from the snapshot — without
+     * pointing to a problem that is none.
      */
     public function testNachDerAnonymisierungKeinArchivproblem(): void
     {
@@ -182,7 +181,7 @@ class DocumentArchiveTest extends TestCase
     }
 
     /**
-     * Ohne Ablage ist das Neuerzeugen der Normalfall (C8) — kein Vermerk.
+     * Without an archive, generating anew is the normal case (C8) — no note.
      */
     public function testOhneAblageWirdUngekennzeichnetErzeugt(): void
     {

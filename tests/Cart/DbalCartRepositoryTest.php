@@ -39,24 +39,24 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEinUmgewandelterWarenkorbWirdNichtMehrGefunden(): void
     {
-        // Nach dem Kauf ist er kein Warenkorb mehr, sondern ein Beleg dafür,
-        // dass dieser Token schon gekauft hat (C-7 braucht ihn noch).
+        // After the purchase it is no longer a cart but proof
+        // that this token has already bought (C-7 still needs it).
         $this->insertCart(['tokenHash' => CartToken::hash('abc'), 'shop' => 3, 'state' => 'converted']);
 
         self::assertNull($this->repository->findByToken('abc', 3));
     }
 
     /**
-     * 🔴 `lockForPurchase()` lief bis zum 2026-09-23 in KEINEM Test.
+     * 🔴 `lockForPurchase()` used to run in NO test.
      *
-     * Der Name stand in Mocks, der SQL-String nie in einer Datenbank: SQLite
-     * kennt kein `FOR UPDATE`, also ist die Methode auf dem Testweg
-     * unerreichbar. Ein Tippfehler im Alias `AS orderId` oder im Quoting wäre
-     * durch 2504 grüne Tests gegangen und beim ersten Klick auf c5
-     * aufgeschlagen (F10 des Fable-Reviews).
+     * The name appeared in mocks, the SQL string never in a database: SQLite
+     * does not know `FOR UPDATE`, so the method cannot be reached on the test
+     * path. A typo in the alias `AS orderId` or in the quoting would have
+     * passed every green test and surfaced on the first click on a real
+     * installation.
      *
-     * Geprüft wird deshalb, was an die Datenbank GEHT — gegen eine gemockte
-     * Verbindung, wie NumberRangeAllocatorTest es für seine Sperre tut.
+     * What is checked is therefore what GOES to the database — against a mocked
+     * connection, as NumberRangeAllocatorTest does for its lock.
      */
     public function testDieSperreFragtNachStatusUndBestellungUndSperrtDieZeile(): void
     {
@@ -76,13 +76,13 @@ class DbalCartRepositoryTest extends TestCase
 
         self::assertSame(['state' => 'open', 'order' => 0], $cart);
 
-        // Die Sperre selbst — ohne sie wartet der zweite Klick nicht, und aus
-        // einem Doppelklick werden zwei Bestellungen.
+        // The lock itself — without it the second click does not wait, and
+        // a double click turns into two orders.
         self::assertStringContainsString('FOR UPDATE', $gesehen);
 
-        // Und der reservierte Spaltenname, gequotet und auf einen Alias
-        // gelegt: `order` roh im SELECT ist ein Syntaxfehler, und der Alias
-        // ist das, was die Methode auslesen will.
+        // And the reserved column name, quoted and mapped to an alias:
+        // a raw `order` in the SELECT is a syntax error, and the alias
+        // is what the method wants to read.
         self::assertStringContainsString('`order` AS orderId', $gesehen);
     }
 
@@ -111,32 +111,32 @@ class DbalCartRepositoryTest extends TestCase
         self::assertSame(77, (int) $row['orderId']);
 
         /*
-         * Der Kern der Sache (offene Punkte, für C-7 entschieden): Der
-         * eindeutige Schlüssel läuft über (tokenHash, shop) und kennt kein
-         * `state`. Bliebe der Hash stehen, liefe der nächste Klick desselben
-         * Cookies im selben Shop in create() und damit in eine
-         * UniqueConstraintViolationException — HTTP 500 statt 303.
+         * The heart of the matter (open points, decided for C-7): the
+         * unique key covers (tokenHash, shop) and knows no
+         * `state`. If the hash stayed, the next click of the same
+         * cookie in the same shop would run into create() and thus into a
+         * UniqueConstraintViolationException — HTTP 500 instead of 303.
          */
         self::assertNull($row['tokenHash']);
         self::assertNull($this->repository->findByToken('abc', 3));
 
-        // Und der Beleg dafür: Derselbe Token darf im selben Shop wieder einen
-        // Warenkorb anlegen. Genau das ging vorher nicht.
+        // And the proof of it: the same token may create a cart again in the
+        // same shop. Exactly that did not work before.
         self::assertGreaterThan(0, $this->repository->create(CartToken::hash('abc'), 0, 3, 1_757_000_100));
     }
 
     public function testEinGastWarenkorbWirdNurImEigenenShopGefunden(): void
     {
-        // Ein Cookie, zwei Shops: derselbe Token trägt je Shop einen Korb.
-        // Ohne den Shop in der Bedingung bekäme Shop 4 den Korb von Shop 3 —
-        // und der Besucher legte einen Artikel in einen fremden Warenkorb.
+        // One cookie, two shops: the same token carries one cart per shop.
+        // Without the shop in the condition, shop 4 would get the cart of shop 3 —
+        // and the visitor would put an article into someone else's cart.
         $inShopThree = $this->insertCart(['tokenHash' => CartToken::hash('abc'), 'shop' => 3, 'state' => 'open']);
         $inShopFour = $this->insertCart(['tokenHash' => CartToken::hash('abc'), 'shop' => 4, 'state' => 'open']);
 
         self::assertSame($inShopThree, $this->repository->findByToken('abc', 3)?->id);
         self::assertSame($inShopFour, $this->repository->findByToken('abc', 4)?->id);
 
-        // Ein dritter Shop hat noch keinen — nicht etwa den erstbesten.
+        // A third shop has none yet — and certainly not the first one at hand.
         self::assertNull($this->repository->findByToken('abc', 5));
     }
 
@@ -150,9 +150,9 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testDerWarenkorbEinesMitgliedsWirdNurImEigenenShopGefunden(): void
     {
-        // Mitglieder sind zentral und gelten für alle Shops (Entscheidung vom
-        // 2026-09-21), ihre Warenkörbe nicht: Ein Mitglied bei zwei
-        // rechnungsstellenden Einheiten hat bei jeder einen eigenen.
+        // Members are central and apply to all shops, their carts do not:
+        // a member with two invoicing entities has a cart of their own
+        // with each.
         $inShopThree = $this->insertCart(['member' => 5, 'shop' => 3, 'state' => 'open']);
         $inShopFour = $this->insertCart(['member' => 5, 'shop' => 4, 'state' => 'open']);
 
@@ -183,15 +183,15 @@ class DbalCartRepositoryTest extends TestCase
         $rows = $this->cartConnection->fetchAllAssociative('SELECT product, quantity FROM tl_consho_cart_item');
 
         self::assertCount(1, $rows);
-        // Numerisch, nicht als Zeichenkette: SQLite liefert aus einer
-        // NUMERIC-Spalte 5 statt '5.0000' (siehe Befunde im Kopf).
+        // Numerically, not as a string: SQLite returns 5 instead of '5.0000'
+        // from a NUMERIC column.
         self::assertSame(5.0, (float) $rows[0]['quantity']);
     }
 
     public function testJedesModellIstEineEigeneZeile(): void
     {
-        // Abo-2, P9: dasselbe Modell zweimal addiert die Lizenzen, ein anderes
-        // Modell desselben Artikels ist eine eigene Zeile.
+        // Abo-2, P9: the same model twice adds up the licences, another
+        // model of the same article is a line of its own.
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
 
         $this->repository->addItem($cartId, 7, '1.0000', 1_000, 5);
@@ -207,8 +207,8 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testDieUebernahmeBehaeltDasModell(): void
     {
-        // Ein Gast legt das Monatsabo ab, das Mitglied hat denselben Artikel
-        // als Einmalkauf — nach dem Anmelden sind es zwei Zeilen, nicht eine.
+        // A guest puts down the monthly subscription, the member has the same article
+        // as a one-off purchase — after logging in there are two lines, not one.
         $guestId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
         $this->repository->addItem($guestId, 7, '1.0000', 1_000, 5);
         $memberCartId = $this->repository->create(null, 42, 3, 1_000);
@@ -223,9 +223,9 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEineVerlaengerungIstEineEigeneZeileUndAddiertNie(): void
     {
-        // Abo-7b (P67): die Menge des alten Abos, fest. Ein zweiter Klick legt
-        // nichts dazu, und das gewöhnliche Hinzufügen desselben Modells landet
-        // in einer eigenen Zeile, nicht auf der Verlängerung.
+        // Abo-7b (P67): the quantity of the old subscription, fixed. A second click adds
+        // nothing, and the ordinary adding of the same model ends up
+        // in a line of its own, not on the renewal.
         $cartId = $this->repository->create(null, 42, 3, 1_000);
 
         $this->repository->addRenewal($cartId, 7, '2.0000', 5, 31, 1_000);
@@ -268,8 +268,8 @@ class DbalCartRepositoryTest extends TestCase
     }
 
     /**
-     * WG-5: Gutscheine sind Geld — die Anmeldung nimmt die als Gast
-     * eingegebenen mit, hinter die eigenen, ohne Doppelte.
+     * WG-5: vouchers are money — logging in takes along those entered as a
+     * guest, behind the member's own, without duplicates.
      */
     public function testDieUebernahmeBehaeltDieGutscheine(): void
     {
@@ -287,14 +287,14 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testDieDatenbankAddiertDieMengeSelbst(): void
     {
-        // Kein Lesen-dann-Schreiben: die zweite Ablage darf die vorhandene
-        // Menge nicht erst nach PHP holen, dort addieren und zurückschreiben —
-        // zwei gleichzeitige Aufrufe läsen sonst denselben Stand und der
-        // zweite überschriebe den ersten.
+        // No read-then-write: the second add must not first fetch the existing
+        // quantity into PHP, add there and write it back —
+        // two simultaneous calls would otherwise read the same state and the
+        // second would overwrite the first.
         //
-        // Belegt wird das an den abgesetzten Anweisungen. Echte Parallelität
-        // ist gegen SQLite im Arbeitsspeicher nicht herstellbar; prüfbar ist,
-        // dass es kein Fenster zwischen Lesen und Schreiben mehr GIBT.
+        // This is proven by the statements sent. Real concurrency cannot be
+        // produced against in-memory SQLite; what can be checked is
+        // that there no longer IS a window between reading and writing.
         $log = $this->mitAufzeichnung();
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
         $this->repository->addItem($cartId, 7, '2.0000', 1_000);
@@ -311,11 +311,11 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEinDazwischengekommenerFremderEintragWirdZurAddition(): void
     {
-        // Der zweite gleichzeitige Aufruf, an der einzigen Stelle simuliert,
-        // an der er noch wehtun kann: zwischen unserem UPDATE (das nichts
-        // findet) und unserem INSERT legt ein anderer Request die Zeile an.
-        // Der Unique-Index auf (pid, product) weist unser INSERT dann ab — das
-        // darf kein Serverfehler werden, sondern muss zur Addition werden.
+        // The second simultaneous call, simulated at the only place
+        // where it can still hurt: between our UPDATE (which finds
+        // nothing) and our INSERT another request creates the row.
+        // The unique index on (pid, product) then rejects our INSERT — that
+        // must not become a server error but must turn into the addition.
         $log = $this->mitAufzeichnung();
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
 
@@ -339,12 +339,12 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEineZwischenzeitlichAngelegteZeileWirdZurAdditionStattZurAblehnung(): void
     {
-        // Die andere Verschränkung derselben zwei Anfragen (Befund 2): Der
-        // fremde Request legt die Zeile NACH unserem UPDATE und VOR unserem
-        // hasLine() an. hasLine() sagt dann „da ist eine Zeile" — was ohne
-        // zweiten Versuch als Deckelung gelesen würde. Der Besucher verlöre
-        // seine Menge und bekäme obendrein „Diese Menge ist nicht möglich"
-        // für eine einwandfreie Menge.
+        // The other interleaving of the same two requests: the
+        // other request creates the row AFTER our UPDATE and BEFORE our
+        // hasLine(). hasLine() then says "there is a row" — which without a
+        // second attempt would be read as the cap. The visitor would lose
+        // their quantity and on top of that get "This quantity is not possible"
+        // for a perfectly fine quantity.
         $log = $this->mitAufzeichnung();
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
 
@@ -365,20 +365,20 @@ class DbalCartRepositoryTest extends TestCase
         self::assertCount(1, $rows);
         self::assertSame(7.0, (float) $rows[0]['quantity'], 'Die 4 des anderen Requests plus unsere 3');
 
-        // Ein zweiter Versuch, keine Schleife: genau zwei Additions-UPDATEs.
+        // One second attempt, not a loop: exactly two addition UPDATEs.
         self::assertCount(2, $log->anweisungenMit('quantity = quantity +'));
 
-        // Und geschrieben heißt auch: die Aufbewahrungsfrist läuft neu.
+        // And written also means: the retention period starts anew.
         self::assertSame(2_000, (int) $this->cartConnection->fetchOne('SELECT updatedAt FROM tl_consho_cart WHERE id = ?', [$cartId]));
     }
 
     public function testDieDeckelungBleibtEineAblehnungAuchNachDemZweitenVersuch(): void
     {
-        // Die Gegenprobe zum Test darüber: Wenn wirklich die Deckelung im
-        // WHERE zugeschlagen hat, scheitert auch der zweite Versuch — und
-        // genau dann ist die Ablehnung richtig. Ohne diese Zusicherung wäre
-        // „einfach noch einmal versuchen" nicht von „immer weiter versuchen"
-        // zu unterscheiden.
+        // The counter-check to the test above: if the cap in the
+        // WHERE really kicked in, the second attempt fails too — and
+        // exactly then the refusal is right. Without this assertion,
+        // "just try once more" could not be told apart from "keep trying
+        // forever".
         $log = $this->mitAufzeichnung();
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
 
@@ -394,17 +394,17 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testDieSummeUeberDerSpaltengrenzeWirdAbgelehnt(): void
     {
-        // Quantity::normalise() weist eine EINZELNE Menge über 999999 ab,
-        // damit decimal(10,4) sie nicht stillschweigend kappt. Mehrere für
-        // sich gültige Additionen dürfen dieselbe Grenze nicht umgehen.
+        // Quantity::normalise() rejects a SINGLE quantity above 999999
+        // so that decimal(10,4) does not silently cap it. Several additions,
+        // each valid on its own, must not get around the same limit.
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
 
         self::assertTrue($this->repository->addItem($cartId, 7, '999999.0000', 1_000));
         self::assertFalse($this->repository->addItem($cartId, 7, '1.0000', 2_000));
 
         self::assertSame(999999.0, (float) $this->cartConnection->fetchOne('SELECT quantity FROM tl_consho_cart_item'));
-        // Abgelehnt heißt: nichts ist passiert. Auch die Aufbewahrungsfrist
-        // darf eine folgenlose Ablage nicht verlängern.
+        // Refused means: nothing happened. The retention period
+        // must not be extended by an add without effect either.
         self::assertSame(1_000, (int) $this->cartConnection->fetchOne('SELECT updatedAt FROM tl_consho_cart WHERE id = ?', [$cartId]));
     }
 
@@ -431,9 +431,9 @@ class DbalCartRepositoryTest extends TestCase
     }
 
     /**
-     * Spec C, offene Punkte (C-5, Punkt 3): Wer den Warenkorb leert, glaubt
-     * aufgeräumt zu haben — die Adresse aus der Kasse geht mit der letzten
-     * Zeile. Gegenprobe: solange eine Zeile bleibt, bleibt auch sie.
+     * Spec C, open points (C-5): whoever empties the cart believes they have
+     * cleaned up — the address from the checkout goes with the last
+     * line. Counter-check: as long as a line remains, the address remains too.
      */
     public function testDieLetzteZeileNimmtDieCheckoutDatenMit(): void
     {
@@ -452,7 +452,7 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEinePositionAusEinemFremdenWarenkorbBleibtUnberuehrt(): void
     {
-        // Sonst räumt eine erratene Positions-Id fremde Warenkörbe leer.
+        // Otherwise a guessed line item id empties other people's carts.
         $mine = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
         $other = $this->repository->create(CartToken::hash('abc'), 0, 3, 1_000);
         $this->repository->addItem($other, 7, '1.0000', 1_000);
@@ -465,9 +465,9 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEineMengeInEinemFremdenWarenkorbBleibtUnberuehrt(): void
     {
-        // Schwester zu testEinePositionAusEinemFremdenWarenkorbBleibtUnberuehrt:
-        // auch setQuantity() nimmt Warenkorb- UND Positions-Id, sonst schreibt
-        // eine erratene Positions-Id in fremde Warenkörbe.
+        // Sister to testEinePositionAusEinemFremdenWarenkorbBleibtUnberuehrt:
+        // setQuantity() also takes cart AND line item id, otherwise
+        // a guessed line item id writes into other people's carts.
         $mine = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
         $other = $this->repository->create(CartToken::hash('abc'), 0, 3, 1_000);
         $this->repository->addItem($other, 7, '1.0000', 1_000);
@@ -489,9 +489,9 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testDieNotizVerlaengertDieAufbewahrungNicht(): void
     {
-        // Die Notiz ist Anzeigezustand, keine Benutzung des Warenkorbs. Würde
-        // sie updatedAt vorschieben, hielte ein vergessener Tab, der die
-        // Warenkorbseite offen hat, die Personendaten beliebig lange am Leben.
+        // The notice is display state, not use of the cart. If it
+        // pushed updatedAt forward, a forgotten tab that keeps the
+        // cart page open would keep the personal data alive indefinitely.
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
 
         $this->repository->setNotice($cartId, CartNotice::Added);
@@ -502,7 +502,7 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEineUnbekannteNotizGiltAlsKeine(): void
     {
-        // Ein Wert aus einer älteren Version darf keine Ausnahme werfen.
+        // A value from an older version must not throw an exception.
         $cartId = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
         $this->cartConnection->update('tl_consho_cart', ['notice' => 'was_auch_immer'], ['id' => $cartId]);
 
@@ -520,11 +520,11 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testDerArtikelEinerPositionWirdNurImEigenenWarenkorbGefunden(): void
     {
-        // Dritte Schwester zu den beiden Tests weiter oben: Auch das LESEN des
-        // Artikels nimmt das Id-Paar. Sonst prüfte das Warenkorb-Element eine
-        // fremde Position und schriebe die Menge anschließend ins Leere — oder,
-        // schlimmer, die Notiz auf den eigenen Warenkorb, als wäre etwas
-        // geschehen.
+        // Third sister to the two tests further up: READING the
+        // article also takes the id pair. Otherwise the cart element would check
+        // someone else's line item and then write the quantity into the void — or,
+        // worse, the notice onto its own cart, as if something had
+        // happened.
         $mine = $this->repository->create(CartToken::hash('xyz'), 0, 3, 1_000);
         $other = $this->repository->create(CartToken::hash('abc'), 0, 3, 1_000);
         $this->repository->addItem($other, 7, '1.0000', 1_000);
@@ -556,7 +556,7 @@ class DbalCartRepositoryTest extends TestCase
 
     public function testEinWarenkorbOhneCheckoutDatenLiestSichAlsLeerUndNichtAlsFehler(): void
     {
-        // Die Spalte ist seit C-3 da und war bis C-5 immer NULL.
+        // The column has existed since C-3 and was always NULL until C-5.
         $id = $this->repository->create(CartToken::hash('abc'), 0, 3, 1_000);
 
         self::assertEquals(new CheckoutData(), $this->repository->checkoutDataOf($id));
@@ -564,9 +564,9 @@ class DbalCartRepositoryTest extends TestCase
     }
 
     /**
-     * Eine Adresse einzugeben ist eine Handlung. Zählte sie nicht, könnte der
-     * Aufräum-Cron einem langen Checkout den Warenkorb unter den Händen
-     * wegräumen — 30 Tage sind lang, aber der Zähler stünde still.
+     * Entering an address is an action. If it did not count, the
+     * clean-up cron could clear away the cart from under a long checkout
+     * — 30 days are long, but the counter would stand still.
      */
     public function testDasSpeichernDerCheckoutDatenSetztDenZeitstempelNeu(): void
     {
@@ -586,9 +586,9 @@ class DbalCartRepositoryTest extends TestCase
     }
 
     /**
-     * Baut Verbindung und Repository neu auf, diesmal mit der Logging-
-     * Middleware von DBAL dazwischen. Das Schema-Anlegen wird nicht
-     * mitgezählt — der Mitschnitt beginnt leer.
+     * Rebuilds connection and repository, this time with DBAL's logging
+     * middleware in between. Creating the schema is not
+     * counted — the recording starts empty.
      */
     private function mitAufzeichnung(): CartStatementLog
     {
@@ -607,16 +607,16 @@ class DbalCartRepositoryTest extends TestCase
 }
 
 /**
- * Hängt sich per Logging-Middleware zwischen DBAL und die Datenbank: schreibt
- * jede abgesetzte Anweisung mit und kann genau einmal dazwischenfunken, bevor
- * eine Position eingefügt wird.
+ * Hooks in between DBAL and the database via logging middleware: records
+ * every statement sent and can interfere exactly once before
+ * a line item is inserted.
  *
- * Das Dazwischenfunken ist der Platzhalter für einen zweiten, gleichzeitigen
- * Request. Ein SQLite-Trigger könnte es nicht: SQLite macht bei einem
- * Constraint-Fehler die GANZE Anweisung rückgängig, also auch das, was der
- * Trigger geschrieben hat — die fremde Zeile wäre danach wieder weg. Hier
- * läuft der fremde INSERT als eigene, abgeschlossene Anweisung, bevor unserer
- * überhaupt startet.
+ * The interference stands in for a second, simultaneous
+ * request. An SQLite trigger could not do it: on a constraint error SQLite
+ * rolls back the WHOLE statement, including what the
+ * trigger wrote — the other row would be gone again afterwards. Here
+ * the other INSERT runs as a separate, completed statement before ours
+ * even starts.
  */
 final class CartStatementLog extends AbstractLogger
 {
@@ -631,9 +631,9 @@ final class CartStatementLog extends AbstractLogger
     public \Closure|null $vorDemEinfuegen = null;
 
     /**
-     * Derselbe Haken eine Anweisung früher: vor dem hasLine()-SELECT, also
-     * nachdem das erste UPDATE schon nichts gefunden hat. Das ist die zweite
-     * mögliche Verschränkung zweier gleichzeitiger Aufrufe (Befund 2).
+     * The same hook one statement earlier: before the hasLine() SELECT, that is
+     * after the first UPDATE has already found nothing. That is the second
+     * possible interleaving of two simultaneous calls.
      *
      * @var (\Closure(): void)|null
      */
@@ -665,7 +665,7 @@ final class CartStatementLog extends AbstractLogger
             return;
         }
 
-        // Genau einmal, sonst funkt der Haken in den Wiederholungsversuch.
+        // Exactly once, otherwise the hook interferes with the retry.
         $this->vorDemEinfuegen = null;
         $this->vorDemNachsehen = null;
         $this->imHaken = true;
@@ -683,7 +683,7 @@ final class CartStatementLog extends AbstractLogger
     }
 
     /**
-     * Alle mitgeschnittenen Anweisungen, die den Ausdruck enthalten.
+     * All recorded statements that contain the expression.
      *
      * @return list<string>
      */

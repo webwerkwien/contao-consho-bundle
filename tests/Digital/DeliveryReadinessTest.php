@@ -18,9 +18,9 @@ use Webwerkwien\ContaoConshoBundle\Setup\SetupGuide;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block Lizenz, D7 (Michael, 2026-10-13: „ja, A"): Ein Liefertyp eines Moduls
- * meldet, warum er nicht ausliefern kann; der Kern macht daraus seine
- * Befunde — wie laut und für wen, entscheidet er.
+ * Block Lizenz, D7: A delivery type of a module reports why it cannot
+ * deliver; the core turns that into its issues — how loud and for whom,
+ * it decides.
  */
 class DeliveryReadinessTest extends TestCase
 {
@@ -40,7 +40,7 @@ class DeliveryReadinessTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         DcaSchema::create($this->connection, 'tl_consho_product');
 
-        // 1: Lizenz; 2: Variante, erbt; 3: Lizenz, unveröffentlicht; 4: Datei.
+        // 1: licence; 2: variant, inherits; 3: licence, unpublished; 4: file.
         $c = $this->connection;
         $c->insert('tl_consho_product', ['id' => 1, 'title' => 'Plugin A', 'published' => 1, 'digitalDelivery' => 'testready']);
         $c->insert('tl_consho_product', ['id' => 2, 'pid' => 1, 'title' => 'Plugin A Agentur', 'published' => 1]);
@@ -67,7 +67,7 @@ class DeliveryReadinessTest extends TestCase
         self::assertSame(
             [
                 ['deliveryTypeNotReady', ['count' => '2', 'reason' => 'Lizenz: kein Schlüsselpaar.']],
-                // Ohne Übersetzung der nackte Code — sichtbar falsch statt leer.
+                // Without a translation the bare code — visibly wrong instead of empty.
                 ['deliveryTypeNotReady', ['count' => '2', 'reason' => 'testready: hostMissing']],
             ],
             self::shape($issues),
@@ -80,8 +80,8 @@ class DeliveryReadinessTest extends TestCase
         $this->articleProblems = [
             1 => ['productMissing'],
             2 => ['productMissing', 'productMissing'],
-            3 => ['productMissing'], // unveröffentlicht, nicht gefragt
-            99 => ['productMissing'], // gibt es nicht
+            3 => ['productMissing'], // unpublished, not asked
+            99 => ['productMissing'], // does not exist
         ];
 
         $issues = $this->issues();

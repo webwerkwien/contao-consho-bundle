@@ -9,7 +9,7 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 
 /**
- * "Einkauf" and "Einkaufslisten" (Block G, G-7; Michael, 2026-10-05, E1–E4).
+ * "Einkauf" and "Einkaufslisten" (Block G, G-7, E1–E4).
  *
  * ── The proposal ─────────────────────────────────────────────────────────
  *
@@ -227,14 +227,14 @@ class PurchaseLists
                 }
 
                 // "Rest nicht lieferbar" with the whole rest entered as come
-                // contradicts itself (review G-7, S2): the prefilled field
+                // contradicts itself (G-7): the prefilled field
                 // would have booked goods that never came.
                 if (($unavailable[$itemId] ?? false) && $rest->isPositive() && $amount->isEqualTo($rest)) {
                     return 'unavailableWithRest';
                 }
 
                 // A line whose article keeps no stock row cannot be booked
-                // (review G-7, L2) — said, not silently marked as received.
+                // (G-7) — said, not silently marked as received.
                 if ($amount->isPositive() && false === $this->connection->fetchOne('SELECT id FROM tl_consho_stock WHERE article = ?', [(int) $item['article']])) {
                     return 'noStock';
                 }

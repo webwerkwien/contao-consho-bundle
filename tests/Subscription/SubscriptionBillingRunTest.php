@@ -28,10 +28,10 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-4 (A14, P28, P32): der Lauf über die fälligen Abos — für den Cron
- * stündlich und für `consho:subscription:bill`. Der Biller selbst ist in
- * SubscriptionBillerTest geprüft; hier zählt, WEN der Lauf fragt, wie oft,
- * und dass die Mail erst nach der Abrechnung kommt.
+ * Abo-4 (A14, P28, P32): the run over the due subscriptions — hourly for the cron
+ * and for `consho:subscription:bill`. The biller itself is tested in
+ * SubscriptionBillerTest; what counts here is WHOM the run asks, how often,
+ * and that the mail comes only after billing.
  */
 class SubscriptionBillingRunTest extends TestCase
 {
@@ -61,13 +61,13 @@ class SubscriptionBillingRunTest extends TestCase
         $this->subscription(1, $due);
         $this->subscription(2, ['nextBillingAt' => self::NOW + 60] + $due);
         $this->subscription(3, ['state' => 'cancelled'] + $due);
-        // P28: ab dem Ende der Mindestlaufzeit ist Abo-6 zuständig.
+        // P28: from the end of the minimum term Abo-6 is responsible.
         $this->subscription(4, ['minimumEndsAt' => self::NOW - 60] + $due);
-        // Eine Zahlung für die ganze Laufzeit hat keine Folgebestellung.
-        // Wie der Recorder sie schreibt: nächste Abrechnung = Ende der Laufzeit.
+        // A payment for the whole term has no follow-up order.
+        // As the recorder writes it: next billing = end of the term.
         $this->subscription(5, ['billingInterval' => 0, 'minimumEndsAt' => self::NOW - 60] + $due);
         $this->subscription(6, $due);
-        // Review Abo-5, S1 (P36): ruhend wird weiter abgerechnet.
+        // Abo-5 (P36): suspended keeps being billed.
         $this->subscription(7, ['state' => 'suspended'] + $due);
 
         foreach ([91, 92, 93] as $id) {
@@ -99,7 +99,7 @@ class SubscriptionBillingRunTest extends TestCase
 
         $this->billing()->run(self::NOW);
 
-        // P28 sagt zwölf — als Zahl, nicht als Konstante (Review L7).
+        // P28 says twelve — as a number, not as a constant.
         self::assertCount(12, array_filter($this->steps, static fn (string $s): bool => 'bill 1' === $s));
     }
 
@@ -124,8 +124,8 @@ class SubscriptionBillingRunTest extends TestCase
     }
 
     /**
-     * Review L6: Scheitert der Link zur Bestellseite, steht die Bestellung
-     * trotzdem, und die weiteren Perioden laufen.
+     * If the link to the order page fails, the order still
+     * stands, and the further periods run.
      */
     public function testEinFehlerBeimLinkHaeltDieAbrechnungNichtAuf(): void
     {
@@ -138,9 +138,9 @@ class SubscriptionBillingRunTest extends TestCase
     }
 
     /**
-     * Abo-5, Abo-6: Erinnerung, Abrechnung, Übergang, Abrechnung, Zahlungsstand
-     * — mit derselben Uhr. Der Übergang wartet auf die Abrechnung, und die
-     * erste Periode danach ist sofort fällig.
+     * Abo-5, Abo-6: reminder, billing, transition, billing, payment state
+     * — with the same clock. The transition waits for billing, and the
+     * first period after it is due immediately.
      */
     public function testDerCronInSeinerReihenfolge(): void
     {
@@ -160,8 +160,8 @@ class SubscriptionBillingRunTest extends TestCase
 
         (new SubscriptionCron($run, $delinquency, $this->lifecycleRun(), $this->charger(), $this->fallback(), $this->pauses(), static fn (): int => self::NOW))();
 
-        // Abo-4b (Review S4): nachholen und nach 7 Tagen umstellen, vor dem Verzug.
-        // Abo pausieren (P106): Pausen zuerst — wer aus der Pause kommt, wird im selben Lauf abgerechnet.
+        // Abo-4b: catch up and switch after 7 days, before delinquency.
+        // Pausing a subscription (P106): pauses first — whoever comes out of the pause is billed in the same run.
         self::assertSame(['pauses', 'remind', 'bill', 'transition', 'bill', 'catch up', 'lapse', 'delinquency'], $this->steps);
     }
 
@@ -263,7 +263,7 @@ class SubscriptionBillingRunTest extends TestCase
         $tester = new CommandTester(new RunSubscriptionsCommand($framework, $run, $delinquency, $this->lifecycleRun(), $charger, $fallback, $pauses));
 
         self::assertSame(0, $tester->execute([]));
-        // Review Abo-4b, S3: jede Stufe des Crons, auch die Abbuchungen — und die Pausen.
+        // Abo-4b: every stage of the cron, the charges too — and the pauses.
         self::assertSame(['initialize', 'pauses', 'remind', 'bill', 'transition', 'bill', 'catch up', 'lapse', 'delinquency'], $this->steps);
         self::assertStringContainsString('Pauses begun: 1 (WEB-00007-1)', $tester->getDisplay());
         self::assertStringContainsString('Pauses ended: 0', $tester->getDisplay());
@@ -276,9 +276,9 @@ class SubscriptionBillingRunTest extends TestCase
     }
 
     /**
-     * Abo-3, S1: Die Periodengrenzen sind Wandzeit in der Zone der
-     * Installation — Contao setzt sie bei der Initialisierung. Der Befehl
-     * initialisiert also, BEVOR er rechnet.
+     * Abo-3: the period boundaries are wall time in the installation's
+     * zone — Contao sets it on initialisation. The command therefore
+     * initialises BEFORE it calculates.
      */
     public function testDerBefehlInitialisiertContaoVorDemLauf(): void
     {

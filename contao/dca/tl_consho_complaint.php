@@ -1,8 +1,7 @@
 <?php declare(strict_types=1);
 
 /*
- * A complaint as a note on the order (D-3, decision U2, 2026-09-27: "nur
- * Merker"): when it came in, what it was about, when it was dealt with. No
+ * A complaint as a note on the order (D-3, U2): when it came in, what it was about, when it was dealt with. No
  * positions, no documents — a warranty case with its own handling is a later
  * block.
  *

@@ -8,7 +8,7 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxPlace;
 
 /**
- * Block R (O1, R2): wo eine Leistung versteuert wird, die zum Kunden reist.
+ * Block R (O1, R2): where a supply that travels to the customer is taxed.
  */
 class TaxPlaceTest extends TestCase
 {
@@ -44,8 +44,8 @@ class TaxPlaceTest extends TestCase
     }
 
     /**
-     * Die Art entscheidet zuerst: eine Dienstleistung immer im Shopland (DL4),
-     * alles andere nach dem Schalter.
+     * The kind decides first: a service always in the shop's country (DL4),
+     * everything else according to the switch.
      */
     public function testDieArtUndDerSchalter(): void
     {
@@ -58,5 +58,16 @@ class TaxPlaceTest extends TestCase
                 array_map(static fn (ProductKind $kind): array => [$land($kind, false), $land($kind, true)], ProductKind::cases()),
             ),
         );
+    }
+
+    /**
+     * EZ-2, F5: a single-purpose voucher is the shop's country whatever the
+     * switch says; the flag means nothing for any other kind.
+     */
+    public function testEinEinzweckGutscheinImmerImLandDesShops(): void
+    {
+        self::assertSame('AT', ProductKind::Voucher->taxCountry('DE', 'AT', true, true));
+        self::assertSame('DE', ProductKind::Physical->taxCountry('DE', 'AT', true, true));
+        self::assertSame('DE', ProductKind::Digital->taxCountry('DE', 'AT', true, true));
     }
 }

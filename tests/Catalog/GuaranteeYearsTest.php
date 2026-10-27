@@ -7,7 +7,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\GuaranteeYears;
 
 /**
- * Block GARAN, GA9: ganze oder halbe Jahre (Leitlinien der Kommission, 3.1 vi).
+ * Block GARAN, GA9: whole or half years (Commission guidelines, 3.1 vi).
  */
 class GuaranteeYearsTest extends TestCase
 {

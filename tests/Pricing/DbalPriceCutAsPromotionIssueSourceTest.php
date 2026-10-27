@@ -11,10 +11,10 @@ use Webwerkwien\ContaoConshoBundle\Pricing\DbalPriceCutAsPromotionIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Eine billigere Zeile mit Beginn und ohne Ende neben dem Basispreis zeigt
- * PriceCalculator dauerhaft als Aktion — gemeint ist meist eine Senkung.
- * Gemeldet wird nur die Zeile, die auf Dauer gewinnt (spätester Beginn, kein
- * Gleichstand), und nur wenn sie billiger ist als jeder Basispreis.
+ * A cheaper row with a start and no end next to the base price is shown by
+ * PriceCalculator permanently as a promotion — what is usually meant is a price cut.
+ * Only the row that wins permanently is reported (latest start, no
+ * tie), and only if it is cheaper than every base price.
  */
 class DbalPriceCutAsPromotionIssueSourceTest extends TestCase
 {
@@ -38,8 +38,8 @@ class DbalPriceCutAsPromotionIssueSourceTest extends TestCase
 
     public function testDerRichtigeWegMeldetNichts(): void
     {
-        // Alte Zeile mit „Gültig bis", neue mit „Gültig ab": kein Basispreis
-        // ohne Zeitraum mehr, also keine Aktion.
+        // Old row with "valid until", new one with "valid from": no base price
+        // without a period any more, so no promotion.
         $this->price(1, '100.0000', validTo: 1000);
         $this->price(1, '80.0000', validFrom: 1000);
 
@@ -56,7 +56,7 @@ class DbalPriceCutAsPromotionIssueSourceTest extends TestCase
 
     public function testTeurereZeileOhneEndeIstEinNeuerPreis(): void
     {
-        // B: teurer ist sie der neue Preis, keine Aktion.
+        // B: if more expensive, it is the new price, not a promotion.
         $this->price(1, '100.0000');
         $this->price(1, '120.0000', validFrom: 1000);
 
@@ -65,8 +65,8 @@ class DbalPriceCutAsPromotionIssueSourceTest extends TestCase
 
     public function testSpaetereTeurereZeileOhneEndeGewinntAufDauer(): void
     {
-        // Review 0.1.13: H2 — die später beginnende Zeile gewinnt; sie ist
-        // teurer, also bleibt auf Dauer kein Streichpreis.
+        // H2: the row starting later wins; it is
+        // more expensive, so in the long run no strike-through price remains.
         $this->price(1, '100.0000');
         $this->price(1, '80.0000', validFrom: 1000);
         $this->price(1, '120.0000', validFrom: 2000);
@@ -85,7 +85,7 @@ class DbalPriceCutAsPromotionIssueSourceTest extends TestCase
 
     public function testGleicherBeginnIstEinGleichstandUndKeinHinweis(): void
     {
-        // Welche Zeile gewinnt, ist dann offen — das meldet priceTie.
+        // Which row wins is then open — priceTie reports that.
         $this->price(1, '100.0000');
         $this->price(1, '120.0000', validFrom: 1000);
         $this->price(1, '80.0000', validFrom: 1000);
@@ -95,8 +95,8 @@ class DbalPriceCutAsPromotionIssueSourceTest extends TestCase
 
     public function testNurBilligerAlsEinerVonZweiBasispreisenZaehltNicht(): void
     {
-        // winnerOf() vergleicht mit dem ersten Basispreis; welcher das ist,
-        // ist bei zweien offen (priceTie). Kein Rat zu einer Änderung.
+        // winnerOf() compares with the first base price; which one that is
+        // is open with two of them (priceTie). No advice to change anything.
         $this->price(1, '100.0000');
         $this->price(1, '70.0000');
         $this->price(1, '80.0000', validFrom: 1000);

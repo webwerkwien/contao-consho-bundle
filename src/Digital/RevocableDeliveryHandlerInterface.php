@@ -4,7 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Digital;
 
 /**
  * A delivery handler that wants to hear when an entitlement is revoked
- * (Nachlese E6, spec F; Michael, 2026-10-09: "wie empfohlen"). Optional, like
+ * (Nachlese E6, spec F). Optional, like
  * RecurringPaymentHandlerInterface: a handler without it learns of a
  * revocation only by asking `isActive()` or EntitlementQuery, as before.
  *
@@ -14,7 +14,7 @@ namespace Webwerkwien\ContaoConshoBundle\Digital;
  * token, tell a licence server.
  *
  * Called through EntitlementRevocations at the end of the request or the
- * command, after the revocation was committed (review Nachlese, S1). A
+ * command, after the revocation was committed (Nachlese). A
  * handler that throws is logged and changes nothing in Consho; it should be
  * idempotent all the same.
  */

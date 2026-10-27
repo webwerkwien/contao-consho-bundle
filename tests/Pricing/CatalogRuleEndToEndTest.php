@@ -21,8 +21,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Block H, H-3, Ende zu Ende: Eine Katalogregel erreicht über den Resolver
- * Warenkorb, Staffel, Projektion und Streichpreis — und nicht das Abo.
+ * Block H, H-3, end to end: a catalogue rule reaches, via the resolver,
+ * cart, scale, projection and strike-through price — and not the subscription.
  */
 class CatalogRuleEndToEndTest extends TestCase
 {

@@ -52,11 +52,17 @@ class VoucherWallet
      * pays of $coverable. $coverable '0' (the basket, where the shipping is
      * not known yet) shows the balances and applies nothing.
      *
-     * @param list<string> $codes stored codes, already normalised
+     * A single-purpose voucher (EZ-1) pays only of the pot that fits it,
+     * and the single-purpose ones pay first (F3) — a multi-purpose voucher
+     * would otherwise take the articles only they can pay for. Where no pot
+     * fits at all it reads `NotApplicable`. The list keeps the typed order.
+     *
+     * @param list<string>       $codes stored codes, already normalised
+     * @param list<CoverablePot> $pots  what single-purpose vouchers may pay
      *
      * @return list<AppliedVoucher>
      */
-    public function apply(array $codes, int $shopId, string $currency, string $coverable, int $digits, int $now): array
+    public function apply(array $codes, int $shopId, string $currency, string $coverable, int $digits, int $now, array $pots = []): array
     {
         if ([] === $codes) {
             return [];
@@ -69,9 +75,56 @@ class VoucherWallet
         }
 
         $left = BigDecimal::of($coverable)->toScale($digits, RoundingMode::Down);
+        $potsLeft = array_map(static fn (CoverablePot $pot): BigDecimal => BigDecimal::of($pot->amount)->toScale($digits, RoundingMode::Down), $pots);
+        $takes = [];
+        $statuses = [];
+
+        // Single-purpose first (F3), then the rest — each pass in typed order.
+        foreach ([true, false] as $singlePass) {
+            foreach ($codes as $index => $code) {
+                $row = $rows[$code] ?? null;
+                $singlePurpose = null === $row ? null : SinglePurpose::of($row);
+
+                if ($singlePass !== (null !== $singlePurpose)) {
+                    continue;
+                }
+
+                $takes[$index] = BigDecimal::zero()->toScale($digits);
+                $statuses[$index] = null === $row ? VoucherStatus::Unknown : $this->statusOf($row, $shopId, $currency, $now);
+
+                if (null === $row || VoucherStatus::Usable !== $statuses[$index]) {
+                    continue;
+                }
+
+                // Never more than the balance holds, on the currency's places.
+                $can = BigDecimal::min($left, BigDecimal::of((string) $row['balance'])->toScale($digits, RoundingMode::Down));
+
+                if (null !== $singlePurpose) {
+                    $pot = $this->potFor($singlePurpose, $pots);
+
+                    if (null === $pot) {
+                        $statuses[$index] = VoucherStatus::NotApplicable;
+
+                        continue;
+                    }
+
+                    $can = BigDecimal::min($can, $potsLeft[$pot]);
+                }
+
+                if ($can->isPositive()) {
+                    $takes[$index] = $can;
+                    $left = $left->minus($can);
+
+                    if (null !== $singlePurpose) {
+                        $potsLeft[$pot] = $potsLeft[$pot]->minus($can);
+                    }
+                }
+            }
+        }
+
         $applied = [];
 
-        foreach ($codes as $code) {
+        foreach ($codes as $index => $code) {
             $row = $rows[$code] ?? null;
 
             if (null === $row) {
@@ -81,26 +134,36 @@ class VoucherWallet
             }
 
             $balance = BigDecimal::of((string) $row['balance'])->toScale(4);
-            $status = $this->statusOf($row, $shopId, $currency, $now);
-            $takes = BigDecimal::zero()->toScale($digits);
-
-            if (VoucherStatus::Usable === $status && $left->isPositive()) {
-                // Never more than the balance holds, on the currency's places.
-                $takes = BigDecimal::min($left, $balance->toScale($digits, RoundingMode::Down));
-                $left = $left->minus($takes);
-            }
 
             $applied[] = new AppliedVoucher(
                 (int) $row['id'],
                 $code,
-                $status,
+                $statuses[$index],
                 (string) $balance,
-                (string) $takes,
-                (string) $balance->minus($takes)->toScale(4),
+                (string) $takes[$index],
+                (string) $balance->minus($takes[$index])->toScale(4),
+                null !== SinglePurpose::of($row),
             );
         }
 
         return $applied;
+    }
+
+    /**
+     * The index of the pot a single-purpose voucher pays of; null where none
+     * fits or the fitting ones held nothing to begin with.
+     *
+     * @param list<CoverablePot> $pots
+     */
+    private function potFor(SinglePurpose $voucher, array $pots): int|null
+    {
+        foreach ($pots as $index => $pot) {
+            if ($pot->fits($voucher) && BigDecimal::of($pot->amount)->isPositive()) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -76,17 +76,17 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WindowState;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 
 /**
- * Eine Abo-Periode von Anfang bis Ende (Review Abo-4, S3): echte
- * Bestellfabrik, echte Lieferungsmeldung, echte Rechnung, echter Zeilen-Lock —
- * die Nähte, die SubscriptionBillerTest mit Doppeln überbrückt.
+ * A subscription period from start to end (Abo-4): real
+ * order factory, real delivery report, real invoice, real row lock —
+ * the seams that SubscriptionBillerTest bridges with doubles.
  *
- * Gedoppelt ist nur, was nicht zur Frage gehört: Katalog und Produktdaten
- * (die eingefrorene Zeile darf sie nie fragen — beide werfen, wenn doch),
- * Steuersätze (20 % AT, 19 % DE), Mail und Bestellseite, die Archiv-Datei.
+ * Doubled is only what is not part of the question: catalogue and product data
+ * (the frozen line must never ask them — both throw if it does),
+ * tax rates (20 % AT, 19 % DE), mail and order page, the archive file.
  *
- * FOR UPDATE wie in AfterSaleAgreesWithOrderTest: eine DBAL-Middleware
- * streicht die zwei Wörter und merkt sich die Anweisung. Alle Tabellen aus
- * den DCAs (DcaSchema).
+ * FOR UPDATE as in AfterSaleAgreesWithOrderTest: a DBAL middleware
+ * strips the two words and remembers the statement. All tables from
+ * the DCAs (DcaSchema).
  */
 final class SubscriptionBillingEndToEndTest extends TestCase
 {
@@ -182,60 +182,60 @@ final class SubscriptionBillingEndToEndTest extends TestCase
 
         self::assertNotNull($billed);
 
-        // Die Folgebestellung: Nummernkreis, Rechnungsart, eingefrorener Zeitraum.
+        // The follow-up order: number range, invoice payment method, frozen period.
         $order = $this->connection->fetchAssociative('SELECT * FROM tl_consho_order WHERE id = ?', [$billed->orderId]);
         self::assertIsArray($order);
         self::assertSame(['WEB-00091', 1, 6, 'Auf Rechnung'], [$order['orderNumber'], (int) $order['subscription'], (int) $order['paymentMethod'], $order['paymentMethodTitle']]);
         self::assertSame(['2026-02-28 10:15', '2026-03-31 10:15'], [$this->local($order['servicePeriodFrom']), $this->local($order['servicePeriodUntil'])]);
         self::assertNull($order['digitalConsentAt']);
 
-        // Reverse Charge eingefroren: 2 × 4,1667 netto, 0 %, brutto = netto.
+        // Reverse charge frozen: 2 × 4.1667 net, 0 %, gross = net.
         self::assertEqualsWithDelta(8.33, (float) $order['grandTotal'], 0.001);
         $item = $this->connection->fetchAssociative('SELECT * FROM tl_consho_order_item WHERE pid = ?', [$billed->orderId]);
         self::assertIsArray($item);
         self::assertSame(['E-Book Kräuterkunde', 'EB-001', 'reverseCharge', 1, 'Monatsabo, 1 Jahr'], [$item['productName'], $item['sku'], $item['priceSource'], (int) $item['subscriptionRule'], $item['subscriptionTerms']]);
         self::assertEqualsWithDelta(0.0, (float) $item['taxRate'], 0.0001);
 
-        // Geliefert gemeldet → Rechnung „bei Versand", mit Zahlungsziel.
+        // Reported as delivered → invoice "on shipping", with a payment term.
         self::assertNotNull($this->connection->fetchOne('SELECT reportedAt FROM tl_consho_delivery WHERE pid = ?', [$billed->orderId]));
         $invoice = $this->connection->fetchAssociative("SELECT * FROM tl_consho_document WHERE pid = ? AND type = 'invoice'", [$billed->orderId]);
         self::assertIsArray($invoice, 'die Folgebestellung hat eine Rechnung');
         self::assertSame('RE-00001', $invoice['documentNumber']);
-        // Zahlungsziel aus der Rechnungsart (14 Tage ab Ausstellung, E-2).
+        // Payment term from the invoice payment method (14 days from issue, E-2).
         self::assertGreaterThan($now + 13 * 86_400, (int) $order['paymentDueAt']);
 
         $payload = json_decode((string) $invoice['payload'], true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame(10, $payload['formatVersion']);
-        // Block R: der Testshop stellt keine E-Rechnungen aus.
+        self::assertSame(13, $payload['formatVersion']);
+        // Block R: the test shop issues no e-invoices.
         self::assertFalse($payload['eInvoice']);
-        // Nichts vorher bezahlt: weder Zahlungen noch offener Betrag (WG12).
+        // Nothing paid beforehand: neither payments nor an open amount (WG12).
         self::assertArrayNotHasKey('outstanding', $payload['payment']);
         self::assertSame(['number' => 'WEB-00090-1', 'from' => '2026-02-28', 'to' => '2026-03-31'], $payload['subscription']);
 
-        // PDF erst nach dem Commit (S2).
+        // PDF only after the commit.
         self::assertSame([[(int) $invoice['id'], 0]], $this->archived->getArrayCopy());
 
-        // Die Berechtigung reicht weiter, keine neue (P27).
+        // The entitlement extends, no new one (P27).
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_entitlement'));
         self::assertSame('2026-03-31 10:15', $this->local($this->connection->fetchOne('SELECT validUntil FROM tl_consho_entitlement WHERE id = 30')));
 
-        // Das Abo wurde gesperrt, bevor es gelesen wurde (FOR UPDATE).
+        // The subscription was locked before it was read (FOR UPDATE).
         self::assertContains('SELECT * FROM tl_consho_subscription WHERE id = ?', self::$rowLocks);
 
-        // A12: kein Widerrufsfenster für die Folgebestellung.
+        // A12: no withdrawal window for the follow-up order.
         $window = (new WithdrawalWindowReader($this->connection, $this->balances()))->of($billed->orderId);
         self::assertNotNull($window);
         self::assertSame(WindowState::Off, $window->state);
 
-        // Derselbe Zeitpunkt noch einmal: nichts mehr fällig.
+        // The same point in time once more: nothing due any more.
         self::assertNull($this->biller()->billDue(1, $now));
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_order WHERE subscription = 1'));
     }
 
     /**
-     * Abo-5 (Lehre aus Fall 44): Verzug mit echten Bausteinen — echte
-     * Folgebestellung und Rechnung, echtes Zahlungsziel, echter Saldo, echter
-     * Lock, echte Zahlungsmeldung. Gedoppelt sind nur Mail und Bestellseite.
+     * Abo-5: delinquency with real building blocks, because the doubled ones are where
+     * bugs hide — real follow-up order and invoice, real payment term, real balance, real
+     * lock, real payment report. Only mail and order page are doubled.
      */
     public function testVerzugRuhtUndDieZahlungWecktEsWieder(): void
     {
@@ -243,9 +243,9 @@ final class SubscriptionBillingEndToEndTest extends TestCase
         $billed = $this->biller()->billDue(1, $this->at('2026-02-28 11:00'));
         self::assertNotNull($billed);
 
-        // Das Zahlungsziel kommt aus der echten Rechnung. DocumentIssuer stellt
-        // mit der Uhr des Servers aus, nicht mit dem $now des Billers — im
-        // Betrieb dasselbe, hier nicht; also ab dem Ziel gerechnet, das dasteht.
+        // The payment term comes from the real invoice. DocumentIssuer issues
+        // with the server's clock, not with the biller's $now — in
+        // operation the same, here not; so counted from the term that is there.
         $dueAt = (int) $this->connection->fetchOne('SELECT paymentDueAt FROM tl_consho_order WHERE id = ?', [$billed->orderId]);
         self::assertSame('23:59:59', (new \DateTimeImmutable('@'.$dueAt))->setTimezone(new \DateTimeZone(self::ZONE))->format('H:i:s'), 'Tagesende');
 
@@ -255,15 +255,15 @@ final class SubscriptionBillingEndToEndTest extends TestCase
         $query = new EntitlementQuery($this->connection);
         $graceEnds = (new SubscriptionCalendar(self::ZONE))->addDays($dueAt, 14);
 
-        // Aus demselben Grund läge das Ziel nach dem Periodenende; hier zählt
-        // nur das Ruhen, also dauerhaft.
+        // For the same reason the term would lie after the end of the period; here
+        // only the suspension counts, so permanently.
         $this->connection->update('tl_consho_entitlement', ['validUntil' => null], ['id' => 30]);
 
-        // In der Nachfrist: nichts.
+        // Within the grace period: nothing.
         self::assertSame([], $run->run($graceEnds - 3_600));
         self::assertTrue($query->isActive(30, $graceEnds - 3_600));
 
-        // Danach ruht es — mit Lock, Mail und offenem Betrag aus dem echten Saldo.
+        // After that it is suspended — with lock, mail and open amount from the real balance.
         $restingAt = $graceEnds + 3_600;
         self::assertCount(1, $run->run($restingAt));
         self::assertSame('suspended', $this->connection->fetchOne('SELECT state FROM tl_consho_subscription WHERE id = 1'));
@@ -275,14 +275,14 @@ final class SubscriptionBillingEndToEndTest extends TestCase
         self::assertSame($billed->orderId, $mails[0][1]);
         self::assertEqualsWithDelta(8.33, (float) $mails[0][2], 0.001);
 
-        // Der Kauf selbst (Vorkasse, ohne Zahlungsziel) zählt nicht mit.
+        // The purchase itself (prepayment, without a payment term) does not count.
         self::assertSame([$billed->orderId], $this->connection->fetchFirstColumn('SELECT id FROM tl_consho_order WHERE paymentDueAt > 0'));
 
-        // Ein zweiter Lauf schickt nichts mehr.
+        // A second run sends nothing more.
         self::assertSame([], $run->run($restingAt + 3_600));
         self::assertCount(1, $mails);
 
-        // Die Zahlung kommt: begleicht die Bestellung und weckt das Abo sofort.
+        // The payment arrives: settles the order and wakes the subscription immediately.
         $paidAt = $restingAt + 4 * 86_400;
         $this->connection->insert('tl_consho_payment', ['pid' => $billed->orderId, 'amount' => (string) $this->connection->fetchOne('SELECT grandTotal FROM tl_consho_order WHERE id = ?', [$billed->orderId]), 'tstamp' => $paidAt]);
         $this->paymentRecorded($run)->handle($billed->orderId, false, $paidAt);
@@ -294,10 +294,10 @@ final class SubscriptionBillingEndToEndTest extends TestCase
     }
 
     /**
-     * Zweites Review Abo-5, S2 — mit dem ECHTEN DocumentIssuer, weil das Loch
-     * genau an seinem Doppel vorbeiging: Die Vorkasse-Rechnung schreibt selbst
-     * `paymentDueAt = 0`. Vor dem Ziel darf gewechselt werden, das Ziel bleibt;
-     * danach nicht mehr.
+     * Abo-5 — with the REAL DocumentIssuer, because the hole
+     * went exactly past its double: the prepayment invoice itself writes
+     * `paymentDueAt = 0`. Before the term a switch is allowed, the term stays;
+     * after it no longer.
      */
     public function testZahlungsartwechselHebtDenVerzugNichtAuf(): void
     {
@@ -312,16 +312,16 @@ final class SubscriptionBillingEndToEndTest extends TestCase
         self::assertSame(2, (int) $this->connection->fetchOne('SELECT paymentMethod FROM tl_consho_order WHERE id = ?', [$billed->orderId]));
         self::assertSame($dueAt, (int) $this->connection->fetchOne('SELECT paymentDueAt FROM tl_consho_order WHERE id = ?', [$billed->orderId]), 'das alte Ziel steht noch');
 
-        // Und nach dem Ziel: kein Wechsel mehr (die Sperre „einmal" käme
-        // zuerst — also an einer frischen Periode geprüft).
+        // And after the term: no more switching (the "once" lock would come
+        // first — so checked on a fresh period).
         $this->connection->update('tl_consho_order', ['paymentChangedAt' => null], ['id' => $billed->orderId]);
         self::assertSame(PaymentChangeBlock::Overdue, $this->paymentChange()->options($billed->orderId, 'de', $dueAt + 1)->block);
     }
 
     /**
-     * Abo-6 (P46): Am Ende der Mindestlaufzeit geht das Monatsabo in
-     * Unbefristet über — echter Lebenszyklus, danach echter Biller mit echter
-     * Fabrik, Lieferung und Rechnung über die alte Grenze hinweg.
+     * Abo-6 (P46): at the end of the minimum term the monthly subscription becomes
+     * open-ended — real lifecycle, then a real biller with a real
+     * factory, delivery and invoice across the old boundary.
      */
     public function testNachDerMindestlaufzeitWeiterMonatlich(): void
     {
@@ -331,7 +331,7 @@ final class SubscriptionBillingEndToEndTest extends TestCase
 
         $now = $this->at('2027-01-31 11:00');
 
-        // Innerhalb der Mindestlaufzeit ist nichts mehr fällig.
+        // Within the minimum term nothing is due any more.
         self::assertNull($this->biller()->billDue(1, $now));
 
         self::assertSame(LifecycleChange::OpenEnded, $this->lifecycle()->transition(1, $now));
@@ -345,10 +345,10 @@ final class SubscriptionBillingEndToEndTest extends TestCase
     }
 
     /**
-     * Variante A (2026-10-08) mit echten Bausteinen: Eine Altregel
-     * „jederzeit kündbar" mit einer Zahlung je Laufzeit wird nicht mehr in
-     * den Monatspreis umgewandelt — sie endet, und der echte Biller rechnet
-     * danach nichts mehr ab.
+     * Variant A with real building blocks: a legacy rule
+     * "cancellable at any time" with one payment per term is no longer converted into
+     * the monthly price — it ends, and the real biller bills
+     * nothing more afterwards.
      */
     public function testEineAltregelOhneMonatlicheZahlungEndetUndWirdNichtWeiterAbgerechnet(): void
     {
@@ -368,8 +368,8 @@ final class SubscriptionBillingEndToEndTest extends TestCase
     }
 
     /**
-     * P45: Eine Zahlung je Laufzeit, gleiche Laufzeit — nach der Verlängerung
-     * rechnet der echte Biller die ganze neue Laufzeit ab.
+     * P45: one payment per term, same term — after the renewal
+     * the real biller bills the whole new term.
      */
     public function testGleicheLaufzeitMitEinerZahlungJeLaufzeit(): void
     {
@@ -389,11 +389,11 @@ final class SubscriptionBillingEndToEndTest extends TestCase
     }
 
     /**
-     * Abo-7 (P54–P56): rechtzeitig ordentlich gekündigt — echter Recorder mit
-     * echtem Lock, dann echter Biller und Lebenszyklus: Das Abo endet am Ende
-     * der Mindestlaufzeit, statt unbefristet weiterzulaufen, und nichts wird
-     * mehr abgerechnet. Die Berechtigung reicht bis zum Ende der bezahlten
-     * Periode (P55).
+     * Abo-7 (P54–P56): cancelled regularly in time — real recorder with
+     * real lock, then real biller and lifecycle: the subscription ends at the end
+     * of the minimum term instead of continuing open-ended, and nothing is
+     * billed any more. The entitlement extends to the end of the paid
+     * period (P55).
      */
     public function testRechtzeitigGekuendigtEndetMitDerMindestlaufzeit(): void
     {
@@ -416,15 +416,15 @@ final class SubscriptionBillingEndToEndTest extends TestCase
     }
 
     /**
-     * Abo-7 (P54, P55): nach dem Stichtag gekündigt — unbefristet heißt dann
-     * Eingang + Frist. Die Periode, die davor beginnt, wird noch ganz
-     * abgerechnet (keine Anteilsrechnung), danach nichts mehr; am Ende `ended`.
+     * Abo-7 (P54, P55): cancelled after the cut-off date — open-ended then means
+     * receipt + notice period. The period that begins before that is still billed
+     * in full (no pro-rata invoice), nothing after that; at the end `ended`.
      */
     public function testZuSpaetGekuendigtLaeuftBisEingangPlusFrist(): void
     {
         $this->lastMonthOfTheTerm();
 
-        // Stichtag 31.01. − 14 Tage = 17.01. 10:15 — vorbei.
+        // Cut-off date 31.01. − 14 days = 17.01. 10:15 — passed.
         $result = $this->cancellationRecorder()->record(new CancellationDeclaration(1, CancellationSource::Account, CancellationKind::Ordinary, 'John Muster'), $this->at('2027-01-25 12:00'));
 
         self::assertSame('2027-02-08 12:00', $this->local($result->effectiveAt));
@@ -443,7 +443,7 @@ final class SubscriptionBillingEndToEndTest extends TestCase
     }
 
     /**
-     * Die letzte Periode der Mindestlaufzeit, 14 Tage Frist.
+     * The last period of the minimum term, 14 days' notice.
      */
     private function lastMonthOfTheTerm(): void
     {
@@ -591,7 +591,7 @@ final class SubscriptionBillingEndToEndTest extends TestCase
         $countries = $this->createStub(Countries::class);
         $countries->method('getCountryCodes')->willReturn(['AT', 'DE']);
 
-        // Der Katalog darf nie gefragt werden (P25).
+        // The catalogue must never be asked (P25).
         $prices = $this->createMock(CartLinePriceSource::class);
         $prices->expects(self::never())->method(self::anything());
         $products = $this->createMock(OrderProductRepositoryInterface::class);

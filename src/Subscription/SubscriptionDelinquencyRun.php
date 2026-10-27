@@ -21,7 +21,7 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
  * cancellation, which no payment announces — and every running one with an
  * order past its term that still owes something — the same narrowing as
  * OverdueInvoiceIssueSource, not `paymentSettledAt`: that is set once, and a
- * refund after it opens the order again (review Abo-5, L2). The grace period
+ * refund after it opens the order again (Abo-5). The grace period
  * and the balance are SubscriptionDelinquency's to judge; this only narrows.
  *
  * Mails after the change has committed; one subscription failing does not
@@ -75,7 +75,7 @@ class SubscriptionDelinquencyRun
             $purchases = [];
         }
 
-        // One mail failing does not stop the others (second review, K-7).
+        // One mail failing does not stop the others.
         foreach ($purchases as $orderId => $resting) {
             try {
                 $this->notifyPurchase($orderId, $resting);
@@ -138,7 +138,7 @@ class SubscriptionDelinquencyRun
     }
 
     /**
-     * Nachlese E5 (Michael, 2026-10-09: "E5 Infomail umsetzen"): the
+     * Nachlese E5: the
      * customer hears when the digital goods of a one-time purchase rest, and
      * when they are back. Not when a cancellation lifted the rest — the goods
      * end with the order then, and "available again" would be untrue.

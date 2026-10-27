@@ -26,7 +26,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\SitemapCacheTags;
  * one tries again.
  *
  * No marker at all means nobody ever built the projection: then everything is
- * built, which sets the marker. See docs/block-b-katalog-frontend.md, 5.7.
+ * built, which sets the marker. See Block B, 5.7.
  */
 #[AsCronJob('minutely')]
 class VisibilityBoundaryCron

@@ -6,8 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Config\BackendDate;
 
 /**
- * Das Datumsformat aus den Einstellungen der Installation (Michael,
- * 2026-09-30), nicht fest `d.m.Y`.
+ * The date format from the installation's settings, not a fixed `d.m.Y`.
  */
 final class BackendDateTest extends TestCase
 {

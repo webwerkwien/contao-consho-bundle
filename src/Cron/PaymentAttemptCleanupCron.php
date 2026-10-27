@@ -12,8 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentStarter;
 
 /**
- * Closes open payment attempts nobody came back to (C-11, Michael 2026-09-26:
- * „ja zur doku und aufräumen").
+ * Closes open payment attempts nobody came back to (C-11).
  *
  * An open attempt lapses after PaymentStarter::ATTEMPT_LIFETIME, but until
  * now that only mattered at the next "try again". A buyer who left the

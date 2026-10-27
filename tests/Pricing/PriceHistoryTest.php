@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Pricing\PriceHistory;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Block H, H-2: der Bezugspreis nach § 9a PrAG / § 11 PAngV — der niedrigste
- * Preis der 30 Tage VOR Beginn der Ermäßigung.
+ * Block H, H-2: the reference price under § 9a PrAG / § 11 PAngV — the lowest
+ * price of the 30 days BEFORE the start of the reduction.
  */
 class PriceHistoryTest extends TestCase
 {
@@ -41,8 +41,8 @@ class PriceHistoryTest extends TestCase
 
     public function testDerFallAusDerSpec(): void
     {
-        // 10 € seit langem, vor fünf Tagen auf 12 € erhöht, heute Aktion 9 €:
-        // gestrichen werden 10 €, nicht 12 €.
+        // €10 for a long time, raised to €12 five days ago, today a €9 promotion:
+        // €10 is struck through, not €12.
         $this->at(-40, '10.0000');
         $this->at(-5, '12.0000');
         $this->at(0, '9.0000', promotion: true);
@@ -52,7 +52,7 @@ class PriceHistoryTest extends TestCase
 
     public function testDerBezugspreisBleibtWaehrendDerAktionStehen(): void
     {
-        // Vom heutigen Tag zurückgerechnet wäre die Aktion selbst bald der niedrigste Preis.
+        // Counted back from today, the promotion itself would soon be the lowest price.
         $this->at(-40, '10.0000');
         $this->at(0, '9.0000', promotion: true);
 
@@ -61,8 +61,8 @@ class PriceHistoryTest extends TestCase
 
     public function testEineAktionUeberDreissigTageBehaeltIhrenBezugspreis(): void
     {
-        // Das Fenster hängt am Beginn der Aktion, nicht am heutigen Tag —
-        // sonst fiele der Preis davor nach 30 Tagen heraus.
+        // The window hangs on the start of the promotion, not on today —
+        // otherwise the price before it would drop out after 30 days.
         $this->at(-40, '10.0000');
         $this->at(0, '9.0000', promotion: true);
 
@@ -71,7 +71,7 @@ class PriceHistoryTest extends TestCase
 
     public function testEinPreisDerInDasFensterHineinreichtZaehlt(): void
     {
-        // 8 € galt bis Tag −29, also innerhalb der 30 Tage vor dem Beginn.
+        // €8 applied until day −29, so within the 30 days before the start.
         $this->at(-45, '8.0000');
         $this->at(-29, '11.0000');
         $this->at(0, '9.0000', promotion: true);
@@ -90,7 +90,7 @@ class PriceHistoryTest extends TestCase
 
     public function testSchrittweiseAnsteigendeErmaessigungVergleichtMitDemPreisDavor(): void
     {
-        // § 9a Abs. 1 Satz 2: der Preis vor der ersten Stufe.
+        // § 9a para. 1 sentence 2: the price before the first stage.
         $this->at(-40, '10.0000');
         $this->at(0, '9.0000', promotion: true);
         $this->at(5, '8.0000', promotion: true);
@@ -99,9 +99,9 @@ class PriceHistoryTest extends TestCase
     }
 
     /**
-     * Review H, S3: Eine Stufe, die TEURER ist als die vorige, ist keine
-     * ansteigende Ermäßigung mehr — für sie gilt der Grundsatz, der
-     * niedrigste Preis der 30 Tage vor ihr: 7,00, nicht 10,00.
+     * H: a stage that is MORE EXPENSIVE than the previous one is no longer
+     * a rising reduction — for it the general principle applies, the
+     * lowest price of the 30 days before it: 7.00, not 10.00.
      */
     public function testEineTeurereStufeVergleichtMitDerVorigen(): void
     {
@@ -114,7 +114,7 @@ class PriceHistoryTest extends TestCase
 
     public function testNachEinerTeurerenStufeBeginntDieFolgeDort(): void
     {
-        // 10 → 7 → 8 → 6: die 6er-Stufe senkt ohne Unterbrechung ab der 8er.
+        // 10 → 7 → 8 → 6: the 6 stage lowers the price without interruption from the 8 stage.
         $this->at(-40, '10.0000');
         $this->at(0, '7.0000', promotion: true);
         $this->at(5, '8.0000', promotion: true);
@@ -179,7 +179,7 @@ class PriceHistoryTest extends TestCase
     {
         $reference = $this->history->reference(1, 'EUR', 'AT', self::T0 + $day * self::DAY);
 
-        // SQLite gibt NUMERIC ohne Nullen zurück (Fall 30) — verglichen wird der Betrag.
+        // SQLite returns NUMERIC without trailing zeros — the amount is compared.
         return null === $reference ? null : array_map(static fn (string $v): string => (string) \Brick\Math\BigDecimal::of($v)->toScale(4), $reference);
     }
 }

@@ -13,7 +13,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
         'dataContainer' => Contao\DC_Table::class,
         'ptable' => 'tl_consho_order',
         /*
-         * 🔴 Same finding as in tl_consho_number_range (2026-09-23): no
+         * 🔴 Same as in tl_consho_number_range: no
          * delete operation only hides the button, `notDeletable` is what
          * forbids the act — and "select multiple" offered it.
          *
@@ -24,7 +24,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
          */
         'notDeletable' => true,
         'enableVersioning' => true,
-        // destinationCountry (block R, review F8): the OSS threshold asks for
+        // destinationCountry (block R): the OSS threshold asks for
         // orders that went abroad on every call of the start page.
         'sql' => ['keys' => ['id' => 'primary', 'pid' => 'index', 'destinationCountry' => 'index']],
     ],
@@ -59,7 +59,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],
@@ -171,8 +171,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
         ],
 
         /*
-         * The customer group this line's price came from, 0 for a list price
-         * (decision with Michael, 2026-09-23).
+         * The customer group this line's price came from, 0 for a list price.
          *
          * It belongs to the LINE, not to the order: a member holds a set of
          * groups (C-4), the resolution runs per group and the cheapest offer
@@ -247,8 +246,7 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
          * from before stock was kept gives back nothing (G9). Never changed
          * afterwards: it is the cap of both ways back.
          *
-         * stockCancelled: what the cancellation gave back (second review G,
-         * S1). Kept apart so a return corrected AFTER the cancellation still
+         * stockCancelled: what the cancellation gave back. Kept apart so a return corrected AFTER the cancellation still
          * books right in both directions: its cap is stockBooked less this.
          */
         'stockBooked' => ['sql' => ['type' => 'decimal', 'precision' => 10, 'scale' => 4, 'default' => '0.0000']],
@@ -267,6 +265,8 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
         // before the money arrives. 0 on every other line, and on a voucher
         // without a value: then it is worth what was paid for it.
         'voucherValue' => ['sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000']],
+        // EZ-5: sold as a single-purpose voucher; its class, rate and country are the line's.
+        'voucherSinglePurpose' => ['sql' => ['type' => 'boolean', 'default' => false]],
         // Block GARAN (GA6): the manufacturer's durability guarantee and its
         // label as the customer saw them before the button — the confirmation
         // and the order page show these, not today's product (§ 7 Abs. 3

@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentContext;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentStartOutcome;
 
 /**
- * „Auf Rechnung" (E-2, Z1): Rechnung beim Versand, ein Zahlungsziel, die
- * üblichen Grenzen gegen das Ausfallrisiko — und keine Gebühr (Z4).
+ * "On invoice" (E-2, Z1): invoice on shipping, a payment term, the usual
+ * limits against the default risk — and no fee (Z4).
  */
 class InvoicePaymentHandlerTest extends TestCase
 {
@@ -29,8 +29,8 @@ class InvoicePaymentHandlerTest extends TestCase
     }
 
     /**
-     * Nachlese E5b (Michael, 2026-10-09: „Nicht anbieten"): mit dem Schalter
-     * nicht für einen Korb mit digitalen Inhalten oder Gutscheinen.
+     * Nachlese E5b: with the switch on,
+     * not for a basket with digital content or gift cards.
      */
     public function testNichtFuerSofortNutzbareGueter(): void
     {
@@ -43,7 +43,7 @@ class InvoicePaymentHandlerTest extends TestCase
     }
 
     /**
-     * Nachlese E5a: die Nachfrist, leer 14 Tage wie das Zahlungsziel.
+     * Nachlese E5a: the grace period, empty means 14 days like the payment term.
      */
     public function testNachfrist(): void
     {
@@ -61,7 +61,7 @@ class InvoicePaymentHandlerTest extends TestCase
     public function testMitGruppenNurFuerDieseGruppenUndNichtFuerGaeste(): void
     {
         $handler = new InvoicePaymentHandler();
-        // So speichert Contao eine Mehrfachauswahl im JSON: als Zeichenketten.
+        // This is how Contao stores a multiple choice in JSON: as strings.
         $config = ['allowedGroups' => ['3', '5']];
 
         self::assertTrue($handler->isAvailable($this->context(groups: [1, 5]), $config), 'eine der Gruppen reicht');
@@ -88,8 +88,8 @@ class InvoicePaymentHandlerTest extends TestCase
     }
 
     /**
-     * Ein Höchstbetrag in EUR sagt nichts über CHF. Eine Grenze, die sich
-     * nicht vergleichen lässt, darf nicht zu „keine Grenze" werden.
+     * A maximum amount in EUR says nothing about CHF. A limit that cannot be
+     * compared must not turn into "no limit".
      */
     public function testInEinerAnderenWaehrungGibtEsKeinAngebot(): void
     {

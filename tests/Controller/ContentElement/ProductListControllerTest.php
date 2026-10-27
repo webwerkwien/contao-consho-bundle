@@ -7,11 +7,11 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Controller\ContentElement\ProductListController;
 
 /**
- * Nur die Übersetzung der gespeicherten Kachelvorlage in einen Twig-Pfad.
+ * Only the translation of the stored tile template into a Twig path.
  *
- * getResponse() selbst hat keinen Unit-Test (FragmentTemplate ist final) —
- * geprüft in der Abnahme. Diese eine Regel aber entscheidet, welche Datei die
- * Liste einbindet, und ein falscher Pfad reißt die ganze Seite mit.
+ * getResponse() itself has no unit test (FragmentTemplate is final) — it is
+ * checked in the browser. But this one rule decides which file the list
+ * includes, and a wrong path takes the whole page down with it.
  */
 class ProductListControllerTest extends TestCase
 {
@@ -22,7 +22,7 @@ class ProductListControllerTest extends TestCase
 
     public function testAVariantOfTheTileBecomesATwigPath(): void
     {
-        // So speichert TileTemplateOptionsListener seit B-5: die volle Kennung.
+        // This is how TileTemplateOptionsListener stores it since B-5: the full identifier.
         self::assertSame(
             '@Contao/content_element/consho_product_tile/special.html.twig',
             ProductListController::tileTemplate('content_element/consho_product_tile/special'),
@@ -34,15 +34,15 @@ class ProductListControllerTest extends TestCase
      */
     public static function notAVariantOfTheTile(): iterable
     {
-        // Die Form, die Controller::getTemplateGroup() geliefert hätte, hätte die
-        // Maske sich öffnen lassen.
+        // The form Controller::getTemplateGroup() would have delivered, had the
+        // mask been able to open.
         yield 'alte Form ohne Präfix' => ['consho_product_tile/special'];
 
-        // Die Grundvorlage ist „leer" — die Liste nimmt sie ohnehin.
+        // The base template is "empty" — the list takes it anyway.
         yield 'Grundvorlage' => ['content_element/consho_product_tile'];
         yield 'Präfix ohne Namen' => ['content_element/consho_product_tile/'];
 
-        // Eine fremde Vorlage bekäme `product` und würde etwas anderes rendern.
+        // A foreign template would get `product` and render something else.
         yield 'fremdes Element' => ['content_element/text/special'];
         yield 'ähnlicher Name' => ['content_element/consho_product_tiles/special'];
     }
@@ -55,7 +55,7 @@ class ProductListControllerTest extends TestCase
 
     public function testTheCacheLivesUntilTheEarlierOfPinAndProduct(): void
     {
-        // B-7b: Anheftung und Produkt verkürzen beide, das frühere gilt.
+        // B-7b: pin and product both shorten, the earlier one applies.
         self::assertSame(300, ProductListController::earliest(600, 300));
         self::assertSame(600, ProductListController::earliest(600, null));
         self::assertSame(300, ProductListController::earliest(null, 300));

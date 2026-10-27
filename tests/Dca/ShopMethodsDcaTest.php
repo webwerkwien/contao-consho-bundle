@@ -18,13 +18,13 @@ class ShopMethodsDcaTest extends TestCase
 
     public function testVersandLinksZahlungRechtsSortierbarAngehakt(): void
     {
-        // C2: wie die Stylesheets im Seitenlayout — Checkboxen, Ziehen, oberste = Standard.
+        // C2: like the stylesheets in the page layout — checkboxes, dragging, topmost = default.
         $dca = $GLOBALS['TL_DCA']['tl_consho_shop'];
 
         self::assertStringContainsString('{methods_legend},shippingMethods,paymentMethods', $dca['palettes']['default']);
 
-        // Exakt geprüft, nicht nur auf 'w50' hin: zweimal 'w50 clr' würde
-        // beide Felder in eine neue Zeile werfen, statt sie nebeneinanderzustellen.
+        // Checked exactly, not just for 'w50': 'w50 clr' twice would throw
+        // both fields onto a new line instead of placing them side by side.
         self::assertSame('w50 clr', $dca['fields']['shippingMethods']['eval']['tl_class']);
         self::assertSame('w50', $dca['fields']['paymentMethods']['eval']['tl_class']);
 

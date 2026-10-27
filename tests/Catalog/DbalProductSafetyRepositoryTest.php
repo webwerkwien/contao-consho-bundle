@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ProductSafetyResolver;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityCriteria;
 
 /**
- * Gegen SQLite mit dem Schema der echten DB (CatalogSchema): Ob ein deutscher
- * Warnhinweis auf eine französische Seite durchrutscht, ist eine Frage an das
- * SQL, nicht an einen Mock.
+ * Against SQLite with the schema of the real DB (CatalogSchema): whether a
+ * German warning slips through onto a French page is a question for the
+ * SQL, not for a mock.
  */
 class DbalProductSafetyRepositoryTest extends TestCase
 {
@@ -36,7 +36,7 @@ class DbalProductSafetyRepositoryTest extends TestCase
         unset($GLOBALS['TL_LANGUAGE']);
     }
 
-    // ── Produkt ──────────────────────────────────────────────────────────
+    // ── Product ──────────────────────────────────────────────────────────
 
     public function testWithoutALanguageTheMainRowIsReadAsBefore(): void
     {
@@ -70,16 +70,16 @@ class DbalProductSafetyRepositoryTest extends TestCase
 
         self::assertNotNull($row);
         self::assertSame('Contient de l\'alcool', $this->text($row['safetyWarnings']));
-        // Die übrigen Spalten sind sprachneutral und kommen wie bisher.
+        // The remaining columns are language-neutral and come as before.
         self::assertSame(5, (int) $row['manufacturer']);
         self::assertTrue((bool) $row['physical']);
     }
 
     public function testATranslationRowWithoutTheWarningNeverYieldsTheGermanOne(): void
     {
-        // 🔴 Der Kern von Mehrsprachigkeit 4.1: kein Rückfall. Ein deutscher
-        // Warnhinweis auf der französischen Seite ist ein Verstoß, der wie ein
-        // gepflegtes Produkt aussieht.
+        // 🔴 The core of multilingualism 4.1: no fallback. A German
+        // warning on the French page is a violation that looks like a
+        // well-maintained product.
         $this->insertProduct(['id' => 1, 'productType' => 1, 'safetyWarnings' => 'Enthält Alkohol']);
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'alias' => 'amer', 'safetyWarnings' => '']);
         $this->insertProduct(['id' => 2, 'productType' => 1, 'safetyWarnings' => 'Enthält Alkohol']);
@@ -113,9 +113,9 @@ class DbalProductSafetyRepositoryTest extends TestCase
 
     public function testTheRowSaysWhetherTheDefaultLanguageCarriesOwnTexts(): void
     {
-        // Die Vererbung Variante → Hauptprodukt fragt „hat die Variante
-        // EIGENE Texte?" — und zwar in der Standardsprache, wie
-        // VisibilityCriteria::variant(). NULL zählt wie leer.
+        // The inheritance variant → main product asks "does the variant have
+        // texts of its OWN?" — and in the default language, like
+        // VisibilityCriteria::variant(). NULL counts as empty.
         $this->insertProduct(['id' => 1, 'productType' => 1]);
         $this->insertProduct(['id' => 2, 'pid' => 1, 'productType' => 1, 'safetyWarnings' => 'Nicht für Kinder', 'safetyInformation' => '']);
 
@@ -134,7 +134,7 @@ class DbalProductSafetyRepositoryTest extends TestCase
         self::assertNull($this->repository()->product(99, 'fr', 'de'));
     }
 
-    // ── Hersteller ───────────────────────────────────────────────────────
+    // ── Manufacturer ─────────────────────────────────────────────────────
 
     public function testTheManufacturerTitleIsTranslated(): void
     {
@@ -149,8 +149,8 @@ class DbalProductSafetyRepositoryTest extends TestCase
 
     public function testTheManufacturerTitleFallsBackToTheDefaultLanguage(): void
     {
-        // Der Name ist Rückfallklasse (TranslatableFields), anders als die
-        // Warnhinweise: ein fehlender Name wäre ein leerer Herstellerblock.
+        // The name is a fallback class (TranslatableFields), unlike the
+        // warnings: a missing name would be an empty manufacturer block.
         $this->insertManufacturer(['id' => 5, 'title' => 'Kräuterhaus Steiermark']);
         $this->insertManufacturer(['id' => 6, 'title' => 'Zweiter']);
         $this->insertTranslation(['pid' => 6, 'ptable' => 'tl_consho_manufacturer', 'language' => 'fr', 'title' => '', 'alias' => 'zweiter']);
@@ -168,7 +168,7 @@ class DbalProductSafetyRepositoryTest extends TestCase
         self::assertNull($this->repository()->manufacturer(99, 'fr', 'de'));
     }
 
-    // ── Anzeige und Sichtbarkeit sagen dasselbe ──────────────────────────
+    // ── Display and visibility say the same ──────────────────────────────
 
     public function testAVariantWithoutOwnTextsShowsItsMainProductsTextInThatLanguage(): void
     {
@@ -192,11 +192,11 @@ class DbalProductSafetyRepositoryTest extends TestCase
     public function testAVariantTheVisibilityHidesShowsNoWarningEither(): void
     {
         /*
-         * Frage 3, Empfehlung: eigener deutscher Warnhinweis, keine eigene
-         * französische Zeile → die Variante ist auf Französisch unsichtbar.
-         * Die Anzeige darf dann nicht den Hinweis des Hauptprodukts einsetzen —
-         * sonst stünde auf der Seite eine Aussage, die für diese Variante nicht
-         * stimmt, und die Sichtbarkeit hätte anders geurteilt als die Anzeige.
+         * Own German warning, no French row of its own → the variant is
+         * invisible in French.
+         * The display must then not substitute the main product's warning —
+         * otherwise the page would carry a statement that is not true for this
+         * variant, and visibility would have judged differently from the display.
          */
         $this->shopWithVariant(variantWarnings: 'Nicht für Kinder');
         $this->insertTranslation(['pid' => 1, 'ptable' => 'tl_consho_product', 'language' => 'fr', 'alias' => 'amer', 'safetyWarnings' => 'Contient de l\'alcool']);

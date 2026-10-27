@@ -11,7 +11,7 @@ namespace Webwerkwien\ContaoConshoBundle\Subscription;
  * - Indefinite: it goes on for an indefinite time and can be cancelled at any
  *   moment with at most one month's notice (§ 309 Nr. 9 b BGB).
  *
- * docs/block-abo.md, sections 4.2 and 5.
+ * Block Abo, sections 4.2 and 5.
  */
 enum RenewalKind: string
 {

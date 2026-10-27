@@ -26,8 +26,8 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
 use Webwerkwien\ContaoConshoBundle\Token\TokenRepositoryInterface;
 
 /**
- * Die Rückkehr bucht nie Geld (Abschnitt 12) und vermerkt nur, was der
- * Handler belegt hat (Michael, 2026-09-26).
+ * The return never books money (section 12) and records only what the
+ * handler has proven.
  */
 class PaymentReturnTest extends TestCase
 {
@@ -55,7 +55,7 @@ class PaymentReturnTest extends TestCase
         self::assertSame(AttemptState::Succeeded, $this->attempts->attempts[3]->returned);
         self::assertSame([], $this->attempts->payments);
 
-        // Ein frisches Anzeige-Token, das die Adresse NICHT bestätigt.
+        // A fresh display token that does NOT confirm the address.
         self::assertSame([[1, TokenPurpose::ViewOrder, false]], $this->issued);
     }
 

@@ -26,8 +26,8 @@ use Symfony\Bundle\SecurityBundle\Security;
  * | no ptable, no tree | `act=copy` — duplicate right here |
  * | ptable or tree | `act=paste&mode=copy` — clipboard, then pick a target |
  *
- * All five have a ptable, so naming them would swap one click for two. On
- * c5 on 2026-09-23, measured on tl_consho_tax_rate and tl_consho_order_status:
+ * All five have a ptable, so naming them would swap one click for two. Measured
+ * on tl_consho_tax_rate and tl_consho_order_status:
  *
  * - the clipboard takes the "new record" button out of the list for as long
  *   as it is filled (`$canAddNew = !$blnClipboard` in DC_Table::parentView),

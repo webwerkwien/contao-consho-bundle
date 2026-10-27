@@ -19,26 +19,25 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
  * The page findings are read from the start points. A shop that no start
  * point names produces none of them, so CheckoutReadiness finds nothing that
  * blocks it — and a guide that trusted it alone would call a shop nobody can
- * reach "ready". Measured at the spec (2026-10-08), not assumed.
+ * reach "ready". Measured, not assumed.
  */
 final class SetupGuide
 {
     /**
      * Warnings that are not in CheckoutReadiness::BLOCKING and still count
-     * against "ready" (review I, S1).
+     * against "ready" (I).
      *
      * - CurrencyMissing, RootWithoutCurrency: measured — without a currency
      *   basket, mini basket and checkout answer empty (`'' === $currency` in
      *   CartController, MiniCartController, CheckoutController). The checkout
      *   needs no block for that, it has nothing to show; "ready" does, or it
      *   would vouch for an empty checkout.
-     * - RootCurrencyNotSold: a decision, not a measurement (second review I,
-     *   S2). The elements still render in that currency; but the shop no
+     * - RootCurrencyNotSold: a decision, not a measurement (I). The elements still render in that currency; but the shop no
      *   longer takes it, and shipping amounts in it do not exist. A shop
      *   selling in a currency it has given up is not "set up".
      *
      * Only for the shop the finding names — shop 0 does NOT mean "all" here
-     * (second review I, B1: one shop's missing currency made every shop "not
+     * (I: one shop's missing currency made every shop "not
      * ready"). The three sources carry the shop since then.
      *
      * Conservative with several start points of one shop: one without a

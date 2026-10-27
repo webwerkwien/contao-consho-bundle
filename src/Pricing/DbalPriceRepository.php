@@ -36,7 +36,7 @@ final class DbalPriceRepository implements PriceRepositoryInterface
          *
          * subscriptionRule = 0 since Abo-1: a row with a subscription rule is
          * the price of another contract, not a cheaper offer for the same one
-         * (docs/block-abo.md, A2). Counted here, the monthly amount would win
+         * (Block Abo, A2). Counted here, the monthly amount would win
          * as the cheapest and become the list price of a product sold for
          * good at twenty times that. Since Abo-2 the rule is asked for rather
          * than fixed: a subscription line gets the rows of its own contract.

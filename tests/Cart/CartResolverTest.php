@@ -14,13 +14,13 @@ use Webwerkwien\ContaoConshoBundle\Cart\CartToken;
 use Webwerkwien\ContaoConshoBundle\Cart\DbalCartRepository;
 
 /**
- * Ein echter `Contao\FrontendUser` lässt sich ohne laufendes Framework nicht
- * über `new` bauen — der Konstruktor ist protected, wie bei jedem
- * Contao-Singleton (`getInstance()`). Per Reflection
- * `newInstanceWithoutConstructor()` geht es aber, ganz ohne Container und
- * ohne Datenbank (geprüft beim Umsetzen dieses Tasks). Der Test nimmt deshalb
- * die echte Klasse statt eines anonymen Doubles — das prüft auch den
- * `instanceof FrontendUser`-Zweig in CartResolver wirklich.
+ * A real `Contao\FrontendUser` cannot be built with `new` without a running
+ * framework — the constructor is protected, as with every
+ * Contao singleton (`getInstance()`). Via reflection
+ * `newInstanceWithoutConstructor()` it works, though, entirely without a
+ * container and without a database. The test therefore
+ * takes the real class instead of an anonymous double — that also really
+ * exercises the `instanceof FrontendUser` branch in CartResolver.
  */
 class CartResolverTest extends TestCase
 {
@@ -34,8 +34,8 @@ class CartResolverTest extends TestCase
 
     public function testOhneCookieUndOhneMitgliedGibtEsKeinenWarenkorb(): void
     {
-        // Kein leerer Datensatz je Besucher: der entsteht erst beim ersten
-        // Hinzufügen (Spezifikation 12).
+        // No empty record per visitor: it is created only on the first
+        // add (specification 12).
         self::assertNull($this->resolver(0)->resolve(new Request(), 3));
     }
 
@@ -57,14 +57,14 @@ class CartResolverTest extends TestCase
         $withRightToken = $this->resolver(0)->resolve($request, 3);
         self::assertSame($id, $withRightToken?->id);
 
-        // Derselbe Token, anderer Shop: kein Warenkorb — nicht etwa der von
-        // Shop 3. Das ist die Zusicherung, die C-3b trägt.
+        // The same token, another shop: no cart — and certainly not the one of
+        // shop 3. That is the assertion C-3b rests on.
         self::assertNull($this->resolver(0)->resolve($request, 4));
     }
 
     public function testDerWarenkorbDesMitgliedsSchlaegtDasCookie(): void
     {
-        // Angemeldet zählt das Konto, nicht das Gerät.
+        // Logged in, the account counts, not the device.
         $repository = new DbalCartRepository($this->cartConnection);
         $token = CartToken::generate();
         $repository->create(CartToken::hash($token), 0, 3, 1_000);
@@ -78,8 +78,8 @@ class CartResolverTest extends TestCase
 
     public function testEinMitgliedBeiZweiShopsBekommtJeShopSeinenWarenkorb(): void
     {
-        // Das Konto gilt für alle Shops, der Warenkorb nicht: ein Shop ist
-        // eine rechnungsstellende Einheit (Entscheidung 2026-09-21).
+        // The account applies to all shops, the cart does not: a shop is
+        // an invoicing entity.
         $repository = new DbalCartRepository($this->cartConnection);
         $inShopThree = $repository->create(null, 5, 3, 1_000);
         $inShopFour = $repository->create(null, 5, 4, 1_000);
@@ -100,11 +100,11 @@ class CartResolverTest extends TestCase
     }
 
     /**
-     * Baut einen echten FrontendUser ohne Contao-Framework: der Konstruktor
-     * ist protected (Singleton-Pattern), newInstanceWithoutConstructor()
-     * umgeht ihn, ohne Container oder Datenbank zu brauchen. Der Benutzername
-     * ist nur gesetzt, weil UsernamePasswordToken ihn beim Bau abfragt
-     * (getUserIdentifier() wirft sonst).
+     * Builds a real FrontendUser without the Contao framework: the constructor
+     * is protected (singleton pattern), newInstanceWithoutConstructor()
+     * bypasses it without needing a container or a database. The username
+     * is set only because UsernamePasswordToken asks for it on construction
+     * (getUserIdentifier() throws otherwise).
      */
     private function frontendUser(int $memberId): FrontendUser
     {

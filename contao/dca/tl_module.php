@@ -9,8 +9,7 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
  * `disable = 1`); the account opens through the activation mail or by hand.
  * A shop needs the customer in at once — a subscription is bought with an
  * account (P12), and a customer who registers in order to buy does not wait
- * for a mail first (Michael, 2026-10-01: "das sollte das Shop-System von sich
- * aus mitbringen"). Consho\Customer\RegistrationActivation does the work in the
+ * for a mail first. Consho\Customer\RegistrationActivation does the work in the
  * `createNewUser` hook; Contao stays the way in.
  *
  * In the e-mail legend, AFTER `reg_activate`, and that order is functional: the

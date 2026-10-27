@@ -27,7 +27,7 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Das Statusfeld der Bestellung (D-1, Entscheidung A1).
+ * The status field of the order (D-1, A1).
  */
 final class OrderStatusListenerTest extends TestCase
 {
@@ -51,7 +51,7 @@ final class OrderStatusListenerTest extends TestCase
         WithdrawalSchema::create($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -113,11 +113,11 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * Michaels Fall: storniert, nie versandt, Geld zurück — abschließbar.
+     * The case: cancelled, never shipped, money back — closable.
      *
-     * Über den echten Weg: Status speichern, dann onsubmit. Mit der
-     * Stornierung nur im Status scheiterte genau dieser Fall — der
-     * abschließende Status schuldete wieder den vollen Betrag.
+     * Along the real path: save the status, then onsubmit. With the
+     * cancellation only in the status, exactly this case failed — the closing
+     * status owed the full amount again.
      */
     public function testStorniertUndErstattetLaesstSichAbschliessen(): void
     {
@@ -141,7 +141,7 @@ final class OrderStatusListenerTest extends TestCase
     {
         $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '100.0000']);
 
-        // Stornieren prüft nur, ob etwas versandt ist.
+        // Cancelling only checks whether anything has been shipped.
         $this->storeStatus(self::CANCELLED);
 
         $this->expectExceptionMessageMatches('/100,00\s€ sind zu erstatten/u');
@@ -165,8 +165,8 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * Eine Rückbuchung nach „Bezahlt" darf das Speichern anderer Felder
-     * nicht blockieren — geprüft wird nur ein Wechsel.
+     * A chargeback after "Paid" must not block saving other fields — only a
+     * change is checked.
      */
     public function testUnveraenderterStatusWirdNichtGeprueft(): void
     {
@@ -176,8 +176,8 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * Abo-7b, Review S1: Die Stornierung im Backend gibt eine übernommene
-     * Lizenz zurück — mit dem echten Rückbau, nicht einem Doppel.
+     * Abo-7b: cancelling in the backend returns a taken-over licence — with the
+     * real rollback, not a double.
      */
     public function testDieStornierungEinerVerlaengerungGibtDieLizenzZurueck(): void
     {
@@ -202,20 +202,20 @@ final class OrderStatusListenerTest extends TestCase
         self::assertSame([40, 500], array_map('intval', array_values($this->connection->fetchAssociative('SELECT subscription, validUntil FROM tl_consho_entitlement') ?: [])));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT renewedBy FROM tl_consho_subscription WHERE id = 40'));
 
-        // Ein zweites Speichern storniert nicht noch einmal und baut nichts zurück.
+        // A second save does not cancel again and rolls nothing back.
         $this->connection->update('tl_consho_subscription', ['renewedBy' => 99], ['id' => 40]);
         $listener->recordCancellation($this->dc());
         self::assertSame(99, (int) $this->connection->fetchOne('SELECT renewedBy FROM tl_consho_subscription WHERE id = 40'));
     }
 
     /**
-     * Block G (G9): Die Stornierung gibt die Ware zurück — einmal, auch wenn
-     * der Status zweimal gespeichert wird.
+     * Block G (G9): the cancellation returns the goods — once, even if the
+     * status is saved twice.
      */
     public function testDieStornierungGibtDenBestandEinmalZurueck(): void
     {
         $stock = $this->createMock(StockReturn::class);
-        // Mit dem Backend-Benutzer, der den Status gesetzt hat (Abnahme G-8).
+        // With the backend user who set the status (G-8).
         $stock->expects(self::once())->method('afterCancellation')->with(self::ORDER, self::anything(), 5);
 
         $user = $this->createStub(BackendUser::class);
@@ -238,8 +238,8 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * Block H (H-5): Die Stornierung gibt die Einlösung eines Rabattcodes
-     * zurück — einmal.
+     * Block H (H-5): the cancellation returns the redemption of a discount
+     * code — once.
      */
     public function testDieStornierungGibtDieEinloesungZurueck(): void
     {
@@ -260,8 +260,8 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * WG-6 (6.6, D2): Die Stornierung bucht die Gutscheinzahlungen zurück und
-     * sperrt gekaufte Gutscheine — einmal.
+     * WG-6 (6.6, D2): the cancellation reverses the voucher payments and locks
+     * purchased vouchers — once.
      */
     public function testDieStornierungNimmtDieGutscheineMit(): void
     {
@@ -282,8 +282,8 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * Zweites Review, S-3: Scheitert der Rückbau, bleibt auch die Stornierung
-     * aus — sonst ließe die Bedingung `cancelledAt IS NULL` ihn nie wieder laufen.
+     * If the rollback fails, the cancellation does not happen either —
+     * otherwise the condition `cancelledAt IS NULL` would never let it run again.
      */
     public function testScheitertDerRueckbauBleibtDieStornierungAus(): void
     {
@@ -310,8 +310,8 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * dev#1: Storniert die Bestellung die offene Rechnung mit, darf der Status
-     * nur stehen, wenn der Stornobeleg auch ausgestellt werden kann.
+     * dev#1: if the order cancels the open invoice along with it, the status
+     * may only stand if the cancellation document can be issued as well.
      */
     public function testStornoMitRechnungskorrekturWirdAbgelehnt(): void
     {
@@ -340,7 +340,7 @@ final class OrderStatusListenerTest extends TestCase
         $this->invoiceSchema();
         $this->connection->insert('tl_consho_document', ['id' => 30, 'pid' => self::ORDER, 'shop' => 1, 'type' => 'invoice', 'documentNumber' => 'R-1']);
 
-        // Der Speicher-Callback prüft nur; ausgestellt wird erst im onsubmit (OrderCancellation).
+        // The save callback only checks; issuing happens only in onsubmit (OrderCancellation).
         self::assertSame(self::CANCELLED, $this->listener($this->invoiceNeverCancelled())->save(self::CANCELLED, $this->dc()));
     }
 
@@ -364,7 +364,7 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
-     * Wie DC_Table: Speicher-Callback, Schreiben, dann onsubmit.
+     * Like DC_Table: save callback, writing, then onsubmit.
      */
     private function storeStatus(int $status): void
     {

@@ -23,7 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingTaxMode;
  *
  * ⚠️ The SHARES land on the currency's places; the AMOUNT does not.
  *
- * Both halves were learned the hard way on 2026-09-22. Splitting on four
+ * Both halves were learned the hard way. Splitting on four
  * places gave 2,4750 twice for a 4,95 charge, which the totals rounded to
  * 2,48 each — a bill of 4,96 for a charge quoted at 4,95. But rounding the
  * amount ITSELF broke the other end: a shipping price typed as 4,95 GROSS is
@@ -45,7 +45,7 @@ final class ShippingTaxSplitter
     /**
      * @param list<CartLine> $lines     the priced basket
      * @param int            $digits    the currency's decimal places
-     * @param bool           $byCountry a reduction (review H, S1): one share per tax class AND
+     * @param bool           $byCountry a reduction (H): one share per tax class AND
      *                                  country of the lines, each carrying that country — shipping
      *                                  and fees follow the delivery and stay per class
      *

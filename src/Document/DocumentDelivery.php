@@ -51,8 +51,7 @@ final class DocumentDelivery implements DocumentDeliveryInterface
         }
 
         // `removed`: the file went with the anonymisation after the retention
-        // period (D-5, OrderAnonymizer) — on purpose, not a problem (Fable
-        // review D-5, S2).
+        // period (D-5, OrderAnonymizer) — on purpose, not a problem (D-5).
         $problem = '' !== $state && 'removed' !== $state;
         $rendered = $this->renderer->pdf($document, $problem);
 

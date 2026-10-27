@@ -24,7 +24,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
  * A product is honestly in several categories. Putting one of them in the
  * address forces somebody to nominate the real one, and every shop that tried
  * had to invent a "main category" afterwards — see
- * docs/block-b-katalog-frontend.md, section 4.2. One page, one canonical
+ * Block B, section 4.2. One page, one canonical
  * address per product, and moving an article between categories breaks no link.
  *
  * ── Why the route is built here and not declared in the attribute ─────────
@@ -150,7 +150,7 @@ class ProductPageController extends AbstractPageController implements DynamicRou
          * alias and skipped the translation rule in VisibilityCriteria: under
          * a French start point the German alias answered 200, and a product
          * whose safety notices were never translated was shown anyway. M-3
-         * had changed the lookup but not this caller; found in B-5.
+         * had changed the lookup but not this caller, until B-5.
          */
         $productId = $this->lookup->find(
             $this->segmentsOf($request),

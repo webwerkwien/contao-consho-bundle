@@ -24,13 +24,13 @@ use Webwerkwien\ContaoConshoBundle\Document\Pdf\PdfRendererInterface;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
- * 13.1 „Snapshot-Versionen": Ein Beispiel-Schnappschuss JEDER formatVersion
- * rendert, mit Nummer, Summen und Steuer je Satz.
+ * 13.1 "Snapshot versions": a sample snapshot of EVERY formatVersion
+ * renders, with number, totals and tax per rate.
  *
- * Gegen die echte Vorlage und die echten Sprachdateien — eine Abschrift
- * enthielte den Fehler des Originals nicht (Regel 24). Der Übersetzer liest
- * $GLOBALS['TL_LANG'] wie Contaos eigener, damit ein fehlender Schlüssel als
- * Schlüssel im HTML stehen bleibt und der Test ihn findet.
+ * Against the real template and the real language files — a transcript
+ * would not contain the original's error. The translator reads
+ * $GLOBALS['TL_LANG'] like Contao's own, so that a missing key stays in
+ * the HTML as a key and the test finds it.
  */
 class InvoiceRendererTest extends TestCase
 {
@@ -66,15 +66,15 @@ class InvoiceRendererTest extends TestCase
         self::assertStringContainsString('Rechnung RE-00007', $html);
         self::assertStringContainsString('82,00', $html);
         self::assertStringContainsString('12,00', $html);
-        // ICU trennt mit geschütztem Leerzeichen, damit „20 %" nicht umbricht.
+        // ICU separates with a non-breaking space, so that "20 %" does not wrap.
         self::assertMatchesRegularExpression('/10[\x{00A0}\x{202F} ]%/u', $html);
         self::assertMatchesRegularExpression('/20[\x{00A0}\x{202F} ]%/u', $html);
         self::assertStringContainsString('Schwedenbitter', $html);
     }
 
     /**
-     * Jeder Schlüssel der Vorlage steht in der Sprachdatei. Fehlt einer,
-     * druckte die Rechnung „CONSHO.invoice.…" — sichtbar für den Kunden.
+     * Every key of the template is in the language file. If one is missing,
+     * the invoice would print "CONSHO.invoice.…" — visible to the customer.
      */
     #[DataProvider('everyVersion')]
     public function testKeinUnuebersetzterSchluesselBleibtStehen(array $payload): void
@@ -85,9 +85,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * C-10: Der Storno JEDER Fassung rendert — er übernimmt die Form der
-     * Rechnung, die er storniert, also auch eine von vor C-8. Er nennt sie,
-     * trägt ihre Beträge mit umgekehrtem Vorzeichen und fordert keine Zahlung.
+     * C-10: The cancellation of EVERY version renders — it takes on the shape
+     * of the invoice it cancels, so also one from before C-8. It names it,
+     * carries its amounts with the opposite sign and demands no payment.
      *
      * @param array<string, mixed> $payload
      */
@@ -109,9 +109,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Abnahme D-3: „Rechnungsnummer GS-00001" über „Korrigiert Rechnung
-     * RE-00037" las sich widersprüchlich. Michael, 2026-09-27: eigene
-     * Beschriftung „nur für die Korrektur" — der Storno behält sie.
+     * D-3: "Rechnungsnummer GS-00001" above "Korrigiert Rechnung RE-00037"
+     * read as a contradiction. Hence a label of its own, only for the
+     * correction — the cancellation keeps the old one.
      */
     public function testDieKorrekturHatEigeneNummerUndDatumBeschriftung(): void
     {
@@ -138,7 +138,7 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Und dasselbe für Englisch: Beide Sprachdateien tragen alle Schlüssel.
+     * And the same for English: both language files carry all keys.
      */
     public function testAuchEnglischIstVollstaendig(): void
     {
@@ -160,8 +160,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Fassung 1 wird NIE aus dem heutigen Shop ergänzt: Kein Absender, weil
-     * keiner im Schnappschuss steht.
+     * Version 1 is NEVER completed from today's shop: no issuer, because there
+     * is none in the snapshot.
      */
     public function testFassungEinsBleibtOhneAbsender(): void
     {
@@ -182,7 +182,7 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Der Hinweis „neu erzeugt" (8.3) steht nur, wenn er gilt.
+     * The "generated anew" note (8.3) appears only when it applies.
      */
     public function testNeuErzeugtStehtNurWennEsGilt(): void
     {
@@ -191,9 +191,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Fassung 1 speicherte die Steuer je Satz roh vierstellig. Die Ansicht
-     * rechnet sie nach der Regel von C-8 neu — sonst stünde neben 3,32 eine
-     * Übersicht mit 3,33.
+     * Version 1 stored the tax per rate raw with four decimals. The view
+     * recomputes it by the rule of C-8 — otherwise a summary with 3.33 would
+     * stand next to 3.32.
      */
     public function testFassungEinsRechnetDieSteuerJeSatzNachDerNeuenRegel(): void
     {
@@ -214,10 +214,10 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * C-8, Liefertag: Der Zeitraum steht als Datum im Schnappschuss und wird
-     * so gedruckt — in einer Zeitzone gelesen und geschrieben. Wien liegt vor
-     * UTC; ein Datum, das als Wiener Mitternacht gelesen und in UTC gedruckt
-     * wird, wäre der Vortag.
+     * C-8, delivery date: The period is in the snapshot as a date and is
+     * printed as such — read and written in one time zone. Vienna is ahead of
+     * UTC; a date read as Viennese midnight and printed in UTC would be the
+     * day before.
      */
     public function testDerLieferzeitraumStehtMitDenDatenDesSchnappschusses(): void
     {
@@ -238,8 +238,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Michael, 2026-09-24: Die UID des Empfängers steht auf der Rechnung —
-     * außer VIES hat sie als ungültig gemeldet. Nicht erreichbar: gedruckt.
+     * The recipient's VAT ID is on the invoice — unless VIES reported it as
+     * invalid. Not reachable: printed.
      */
     public function testDieUidDesEmpfaengersNurWennVIESSieNichtAbgelehntHat(): void
     {
@@ -255,8 +255,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * E-2: „Auf Rechnung" nennt den Tag, bis zu dem zu zahlen ist — als
-     * Datum aus dem Schnappschuss (Fassung 4), in derselben Zone gedruckt.
+     * E-2: "On account" names the day by which payment is due — as a date
+     * from the snapshot (version 4), printed in the same zone.
      */
     public function testDasZahlungszielStehtAlsDatumAufDerRechnung(): void
     {
@@ -272,9 +272,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * WG12 (Fassung 9): Was vor der Rechnung bezahlt war, steht unter dem
-     * Gesamtbetrag, dazu der offene Betrag — und neben dem Giro-Code steht
-     * der Betrag, den er verlangt, nicht der ganze.
+     * WG12 (version 9): What was paid before the invoice is shown below the
+     * total, with the open amount — and next to the giro code stands the
+     * amount it asks for, not the whole one.
      */
     public function testZahlungenUndOffenerBetragStehenUnterDerSumme(): void
     {
@@ -293,8 +293,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * E-6b: Nach dem Versand das Lieferdatum statt des Zeitraums — bei einer
-     * Teillieferung mit dem Tag, an dem der Rest voraussichtlich folgt.
+     * E-6b: After shipping, the delivery date instead of the period — for a
+     * partial delivery with the day on which the rest is expected to follow.
      */
     public function testNachDemVersandDasLieferdatum(): void
     {
@@ -316,8 +316,33 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Abo-2 (P13): Die Bedingungen eines Abos stehen an seiner Zeile — so,
-     * wie sie beim Kauf eingefroren wurden.
+     * L-1: An invoice paid in advance and issued before shipping says that it
+     * covers an advance payment (formatVersion 11). An older snapshot with the
+     * same data stays as it was printed; a purchase on account has no note.
+     */
+    public function testDieVorauszahlungsrechnungSagtEsAb11(): void
+    {
+        $payload = self::versionTwo();
+        $payload['formatVersion'] = 11;
+        $payload['delivery'] = ['from' => '2026-09-28', 'to' => '2026-10-01', 'kind' => 'expected', 'advance' => true];
+        $note = 'Diese Rechnung rechnet über eine Vorauszahlung ab, die Lieferung erfolgt nach Zahlungseingang.';
+
+        self::assertStringContainsString($note, $this->renderer()->html($this->document($payload))['html']);
+
+        $payload['formatVersion'] = 10;
+        self::assertStringNotContainsString($note, $this->renderer()->html($this->document($payload))['html']);
+
+        $payload['formatVersion'] = 11;
+        unset($payload['delivery']['advance']);
+        self::assertStringNotContainsString($note, $this->renderer()->html($this->document($payload))['html']);
+
+        $payload['delivery'] = ['from' => '2026-10-01', 'to' => '2026-10-01', 'kind' => 'delivered', 'advance' => true];
+        self::assertStringNotContainsString($note, $this->renderer()->html($this->document($payload))['html']);
+    }
+
+    /**
+     * Abo-2 (P13): The terms of a subscription stand at its line — as they
+     * were frozen at purchase.
      */
     public function testDieAbobedingungenStehenAnDerZeile(): void
     {
@@ -332,8 +357,40 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Abo-4 (P31): Die Rechnung einer Folgebestellung nennt Abo und
-     * Leistungszeitraum — Fassung 7. Ohne: keine Zeile.
+     * EZ-3 (version 12): a line that sold a single-purpose voucher says so;
+     * the others and older snapshots do not.
+     */
+    public function testDerEinzweckGutscheinStehtAnDerZeile(): void
+    {
+        $payload = self::versionTwo();
+        $payload['formatVersion'] = 12;
+        $payload['items'][0]['voucherSinglePurpose'] = 1;
+
+        self::assertStringContainsString('<small class="consho-invoice__terms">Einzweck-Gutschein</small>', $this->renderer()->html($this->document($payload))['html']);
+        self::assertStringNotContainsString('Einzweck-Gutschein', $this->renderer()->html($this->document(self::versionTwo()))['html']);
+    }
+
+    /**
+     * EZ-4 (version 13): below the VAT, the tax a single-purpose voucher
+     * already carried, with its name and rate, and what remains. Without
+     * one neither line.
+     */
+    public function testDieBereitsVersteuerteSteuerStehtUnterDerUmsatzsteuer(): void
+    {
+        $payload = self::versionTwo();
+        $payload['formatVersion'] = 13;
+        $payload['prepaid'] = [['label' => 'Gutschein …MDSN', 'country' => 'AT', 'rate' => '20.0000', 'net' => '20.0000', 'tax' => '4.0000', 'gross' => '24.0000']];
+
+        $html = $this->renderer()->html($this->document($payload))['html'];
+
+        self::assertMatchesRegularExpression('~davon mit Gutschein …MDSN bereits versteuert \(20\s?%\)</th><td class="num">4,00~u', $html);
+        self::assertMatchesRegularExpression('~Verbleibende Umsatzsteuer</th><td class="num">8,00~u', $html);
+        self::assertStringNotContainsString('Verbleibende Umsatzsteuer', $this->renderer()->html($this->document(self::versionTwo()))['html']);
+    }
+
+    /**
+     * Abo-4 (P31): The invoice of a follow-up order names subscription and
+     * service period — version 7. Without: no line.
      */
     public function testDieFolgerechnungNenntAboUndLeistungszeitraum(): void
     {
@@ -352,8 +409,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * DL4, Fassung 8: Mit zwei Steuerländern steht das Land vor dem Satz — an
-     * der Zeile und in der Übersicht. Mit einem Land wie bisher.
+     * DL4, version 8: With two tax countries the country stands before the
+     * rate — at the line and in the summary. With one country as before.
      */
     public function testZweiSteuerlaenderStehenMitLandAufDerRechnung(): void
     {
@@ -374,9 +431,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * WG3: Ein Gutschein, der nicht steuerbar verkauft wurde, steht nicht als
-     * „0 %" auf der Rechnung, sondern als „nicht steuerbar" — als eigene Zeile
-     * der Übersicht nach den Sätzen, an der Position ohne Satz.
+     * WG3: A voucher sold as not taxable does not appear on the invoice as
+     * "0 %" but as "not taxable" — as a summary line of its own after the
+     * rates, at the item without a rate.
      */
     public function testDerGutscheinStehtAlsNichtSteuerbarAufDerRechnung(): void
     {
@@ -388,7 +445,7 @@ class InvoiceRendererTest extends TestCase
 
         self::assertStringContainsString('<th scope="row">nicht steuerbar</th>', $html);
         self::assertStringNotContainsString('<th scope="row">0 %</th>', $html);
-        // Nach den beiden Sätzen.
+        // After the two rates.
         self::assertGreaterThan(strpos($html, '<th scope="row">20 %</th>'), strpos($html, 'nicht steuerbar'));
     }
 
@@ -405,8 +462,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * dev#2: Der Lieferschein hat eine eigene Vorlage — was im Paket ist, was
-     * separat folgt, kein Betrag. Die Adresse ist die Lieferadresse.
+     * dev#2: The delivery note has a template of its own — what is in the
+     * parcel, what follows separately, no amount. The address is the delivery
+     * address.
      */
     public function testDerLieferscheinNenntPaketUndRestOhnePreise(): void
     {
@@ -487,14 +545,14 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Und als PDF — mit dem echten Renderer, einmal.
+     * And as a PDF — with the real renderer, once.
      */
     public function testDieRechnungWirdZumPdf(): void
     {
         $cache = sys_get_temp_dir().'/consho-invoice-'.bin2hex(random_bytes(4));
 
         try {
-            // Fassung 3 mit Giro-Code: das PNG muss durch den PDF/A-Modus.
+            // Version 3 with giro code: the PNG has to get through PDF/A mode.
             $pdf = $this->renderer(new DompdfRenderer($cache))->pdf($this->document(self::versionThree()))['pdf'];
         } finally {
             foreach (glob($cache.'/*') ?: [] as $file) {
@@ -514,7 +572,7 @@ class InvoiceRendererTest extends TestCase
          * 🔴 The ROOT of contao/templates, not the document/ folder. Pointed at
          * the folder, the loader found the template under exactly the wrong
          * name the renderer used — the test agreed with the mistake it should
-         * have caught, and c5 answered with a 500 (2026-09-24). Contao keeps
+         * have caught, and a real installation answered with a 500. Contao keeps
          * the folder in the name; so does this loader now.
          */
         $loader->addPath(__DIR__.'/../../contao/templates', 'Contao');
@@ -535,8 +593,8 @@ class InvoiceRendererTest extends TestCase
                 /*
                  * vsprintf, like Contao's own translator for contao_default —
                  * NOT strtr. With strtr this test rendered "vom %date%" happily
-                 * while c5 threw "The arguments array must contain 2 items"
-                 * on every cancellation (acceptance C-10, 2026-09-25): the
+                 * while a real installation threw "The arguments array must contain
+                 * 2 items" on every cancellation (C-10): the
                  * "%d" in "%date%" is a format for vsprintf.
                  */
                 if (!\is_string($value)) {
@@ -579,8 +637,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Wie die sieben Rechnungen auf c5 vor C-8: ohne formatVersion, ohne
-     * lineType, Steuer je Satz roh vierstellig.
+     * Like the invoices issued before C-8: without formatVersion, without
+     * lineType, tax per rate raw with four decimals.
      *
      * @return array<string, mixed>
      */
@@ -588,7 +646,7 @@ class InvoiceRendererTest extends TestCase
     {
         return [
             'order' => [
-                'orderNumber' => 'WEB-00042', 'currency' => 'EUR', 'firstname' => 'Michael', 'lastname' => 'Morgenbesser',
+                'orderNumber' => 'WEB-00042', 'currency' => 'EUR', 'firstname' => 'Eva', 'lastname' => 'Example',
                 'billingStreet' => 'Musterstraße 1', 'billingPostal' => '1100', 'billingCity' => 'Wien', 'billingCountry' => 'AT',
                 'netTotal' => '70.0000', 'taxTotal' => '12.0000', 'grandTotal' => '82.0000',
             ],
@@ -622,8 +680,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Fassung 3: wie 2, dazu der fertige Giro-Code-Inhalt — so, wie
-     * DocumentIssuer ihn nach der Nummernvergabe einfriert.
+     * Version 3: like 2, plus the finished giro code content — as
+     * DocumentIssuer freezes it after assigning the number.
      *
      * @return array<string, mixed>
      */
@@ -636,10 +694,10 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Giro-Code (C-8): Das Bild steht neben denselben Angaben im Klartext —
-     * Betrag und Verwendungszweck eingeschlossen (EPC069-12). Und 🔴 der
-     * gedruckte Verwendungszweck ist der, den das Bild beim Scannen liefert:
-     * Das Bild wird aus dem HTML geholt und zurückgelesen.
+     * Giro code (C-8): The image stands next to the same details in plain
+     * text — amount and remittance information included (EPC069-12). And 🔴
+     * the printed remittance information is the one the image yields when
+     * scanned: the image is taken from the HTML and read back.
      */
     public function testFassungDreiDrucktDenGiroCodeNebenDemKlartext(): void
     {
@@ -658,9 +716,9 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Fable-Review: Lässt sich der eingefrorene Code nicht zeichnen, erscheint
-     * die Rechnung ohne ihn — mit den Bankdaten im Klartext — und das
-     * Systemlog sagt es. Vorher verschwand er wortlos.
+     * If the frozen code cannot be drawn, the invoice appears without it —
+     * with the bank details in plain text — and the system log says so.
+     * Before, it disappeared without a word.
      */
     public function testEinUnzeichenbarerCodeFehltUndStehtImLog(): void
     {
@@ -677,8 +735,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Für Screenreader ist die Beschriftung der Alternativtext des Bildes; die
-     * sichtbare Zeile darunter ist ausgeblendet, sonst käme sie doppelt.
+     * For screen readers the label is the image's alternative text; the
+     * visible line below is hidden, otherwise it would come twice.
      */
     public function testDerCodeHatDieBeschriftungAlsAlternativtext(): void
     {
@@ -689,12 +747,11 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Michael, 2026-09-24: „Kann der Block Payment unten sitzen?" — im PDF
-     * ja: Zahlung und Fußzeile stehen am Fuß der Seite, eine unsichtbare
-     * Kopie im Fluss hält ihnen den Platz frei. Die HTML-Fassung hat keine
-     * Seite und behält sie im Fluss, ohne Kopie (ein Screenreader läse sonst
-     * alles zweimal). Geprüft am HTML, das der Renderer dem PDF-Werkzeug
-     * wirklich übergibt.
+     * The payment block sits at the bottom — in the PDF: payment and footer
+     * stand at the foot of the page, an invisible copy in the flow keeps their
+     * space free. The HTML version has no page and keeps them in the flow,
+     * without a copy (a screen reader would otherwise read everything twice).
+     * Checked on the HTML the renderer really hands to the PDF tool.
      */
     public function testImPdfSitztDerAbschlussUntenInDerHtmlFassungImFluss(): void
     {
@@ -722,8 +779,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Ohne Zahlungsangaben und Fußzeile gibt es keinen Abschluss — auch
-     * keine leere unsichtbare Kopie, die Platz belegte.
+     * Without payment details and footer there is no closing part — not even
+     * an empty invisible copy that would take up space.
      */
     public function testOhneZahlungUndFusszeileKeinAbschluss(): void
     {
@@ -748,8 +805,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Block R (R9): Jedes PDF eines Belegs geht durch die E-Rechnung — sie
-     * entscheidet am Schnappschuss, ob sie das XML einbettet.
+     * Block R (R9): Every PDF of a document goes through the e-invoice — it
+     * decides on the snapshot whether it embeds the XML.
      */
     public function testDasPdfGehtDurchDieERechnung(): void
     {
@@ -776,8 +833,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Der Block mit Rechnungsnummer und Daten sitzt rechtsbündig wie Absender
-     * und Summen (Michael, 2026-09-24).
+     * The block with invoice number and dates is right-aligned like issuer
+     * and totals.
      */
     public function testDieRechnungsdatenSitzenRechtsbuendig(): void
     {
@@ -788,8 +845,8 @@ class InvoiceRendererTest extends TestCase
     }
 
     /**
-     * Gegenprobe: Fassung 2 kennt keinen Giro-Code — keine zweite Grafik,
-     * keine Zeile „Verwendungszweck", die Bankangaben wie bisher.
+     * Control case: version 2 knows no giro code — no second graphic, no
+     * "Verwendungszweck" line, the bank details as before.
      */
     public function testOhneGiroCodeBleibtDieBankverbindungWieBisher(): void
     {

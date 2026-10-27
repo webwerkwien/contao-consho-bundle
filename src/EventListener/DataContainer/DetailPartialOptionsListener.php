@@ -17,8 +17,8 @@ use Contao\DataContainer;
  * Limit, stated where it is felt: the Finder looks at one theme at a time, so a
  * partial that exists only in a theme is not offered.
  *
- * Not unit tested: Finder is final with an internal constructor. Checked in the
- * acceptance on the test server.
+ * Not unit tested: Finder is final with an internal constructor. Checked by hand
+ * in a running installation.
  */
 class DetailPartialOptionsListener
 {

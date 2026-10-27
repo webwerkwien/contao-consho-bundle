@@ -116,7 +116,7 @@ final class OrderConfirmation implements OrderConfirmationInterface
             $files[$cid] = $file;
 
             // Its own width up to the column's 300 px — never stretched
-            // (review GARAN, 6); 300 when the bytes say nothing.
+            // (GARAN); 300 when the bytes say nothing.
             $size = @getimagesizefromstring($file['contents']);
             $width = false === $size ? 300 : min(300, max(1, (int) $size[0]));
 
@@ -236,7 +236,7 @@ final class OrderConfirmation implements OrderConfirmationInterface
         $outcome = $this->toCustomer($orderId, $order, $payload, $invoice, $pdf, $rootId, $viewUrl, $withdrawalUrl, $transport, $from, $now);
 
         /*
-         * Not over a transport that just failed (review 2026-09-25, F6): the
+         * Not over a transport that just failed: the
          * same server gives the same answer, and a second attempt would cost
          * the buyer another timeout in the purchase request.
          */
@@ -328,7 +328,7 @@ final class OrderConfirmation implements OrderConfirmationInterface
         }
 
         /*
-         * Sent, and only the record of it failed (review 2026-09-25, F5). Its
+         * Sent, and only the record of it failed. Its
          * own message, because "could not be sent" would send the operator to
          * "Erneut senden" — and the customer would have it twice.
          */

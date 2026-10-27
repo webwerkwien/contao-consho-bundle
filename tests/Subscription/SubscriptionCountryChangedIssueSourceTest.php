@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCountryChangedIssueS
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-Nachlese, Review S1: Abo-Kunden mit anderem Land im Konto als auf der
- * letzten Rechnung des Abos.
+ * Abo-Nachlese: subscription customers with a different country in the account than on the
+ * subscription's last invoice.
  */
 final class SubscriptionCountryChangedIssueSourceTest extends TestCase
 {
@@ -29,20 +29,20 @@ final class SubscriptionCountryChangedIssueSourceTest extends TestCase
 
     public function testNurLaufendeAbosMitAnderemLandAlsAufDerLetztenRechnung(): void
     {
-        // 1: Kauf AT, Folgebestellung DE, Konto DE → gleich, kein Befund.
+        // 1: purchase AT, follow-up order DE, account DE → the same, no finding.
         $this->case(1, 'DE', ['AT', 'DE']);
-        // 2: Kauf AT, Konto DE → Befund.
+        // 2: purchase AT, account DE → finding.
         $this->case(2, 'DE', ['AT']);
-        // 3: wie 2, aber beendet → kein Befund.
+        // 3: like 2, but ended → no finding.
         $this->case(3, 'DE', ['AT'], 'ended');
-        // 4: Konto mit Unterteilung, 5: Konto leer → keine Änderung, die Consho übernähme.
+        // 4: account with a subdivision, 5: account empty → no change Consho would take over.
         $this->case(4, 'GB-ENG', ['AT']);
         $this->case(5, '', ['AT']);
-        // 6: ruhend, Konto kleingeschrieben → Befund.
+        // 6: suspended, account in lower case → finding.
         $this->case(6, 'it', ['AT'], 'suspended');
-        // 7: wie 2, aber eine Dienstleistung — Steuerland bleibt der Shop (DL4).
+        // 7: like 2, but a service — the tax country stays the shop's (DL4).
         $this->case(7, 'DE', ['AT'], kind: 'service');
-        // 8: pausiert (P106) → Befund, die nächste Rechnung kommt.
+        // 8: paused (P106) → finding, the next invoice is coming.
         $this->case(8, 'DE', ['AT'], 'paused');
 
         $issues = (new SubscriptionCountryChangedIssueSource($this->connection))->issues();

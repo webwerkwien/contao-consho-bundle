@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityGuarantees;
 use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityLabelImages;
 
 /**
- * Block GARAN, GA3: das Label als Bild — unverkleinert, eine gelöschte Datei
- * fällt still weg, ein Label für zwei Artikel wird einmal gebaut.
+ * Block GARAN, GA3: the label as an image — not downscaled, a deleted file
+ * silently drops out, a label for two items is built once.
  */
 class DurabilityLabelImagesTest extends TestCase
 {
@@ -53,8 +53,8 @@ class DurabilityLabelImagesTest extends TestCase
     }
 
     /**
-     * GA8: Für die Kacheln nur Artikel mit geschachteltem UND vollem Bild —
-     * das geschachtelte verlinkt aufs volle.
+     * GA8: for the tiles only items with a nested AND a full image —
+     * the nested one links to the full one.
      */
     public function testGeschachteltNurMitBeidenBildern(): void
     {
@@ -93,8 +93,8 @@ class DurabilityLabelImagesTest extends TestCase
     }
 
     /**
-     * GA6: Die Bestellseite zeigt, was an den Positionen eingefroren ist —
-     * das heutige Produkt wird nicht gefragt.
+     * GA6: the order page shows what is frozen on the order lines —
+     * today's product is not asked.
      */
     public function testDieEingefrorenenPositionen(): void
     {
@@ -121,7 +121,7 @@ class DurabilityLabelImagesTest extends TestCase
                 ['lineType' => 'product', 'productName' => 'Akkuschrauber &amp; Bits', 'durabilityYears' => 5, 'durabilityLabel' => $label],
                 ['lineType' => 'product', 'productName' => 'Bohrer', 'durabilityYears' => '5', 'durabilityLabel' => $label],
                 ['lineType' => 'product', 'productName' => 'Seil', 'durabilityYears' => 0, 'durabilityLabel' => null],
-                // Review GARAN, 4: zwei Jahre sind keine Garantie im Sinne von Z 12a.
+                // GARAN: two years are not a guarantee within the meaning of Z 12a.
                 ['lineType' => 'product', 'productName' => 'Zelt', 'durabilityYears' => 2, 'durabilityLabel' => $label],
                 ['lineType' => 'shipping', 'productName' => 'Paket', 'durabilityYears' => 5, 'durabilityLabel' => $label],
             ]),

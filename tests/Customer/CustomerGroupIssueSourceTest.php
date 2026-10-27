@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Customer\CustomerGroupIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * D-4 (K5): Das Pflichtfeld greift erst beim Speichern — ein Shop von vor
- * D-4 hat bis dahin keine Basisgruppe. Ein Hinweis, der nichts sperrt.
+ * D-4 (K5): The mandatory field only takes effect on saving — a shop from
+ * before D-4 has no base group until then. A notice that blocks nothing.
  */
 final class CustomerGroupIssueSourceTest extends TestCase
 {

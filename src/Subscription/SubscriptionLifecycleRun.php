@@ -18,7 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\ProductUrlGenerator;
  *
  * SQL narrows, SubscriptionLifecycle decides again under the lock. A reminder
  * is mailed after its commit; one that did not leave is unmarked again and
- * tried the next hour (review Abo-6, S2) — before a renewal it is a legal
+ * tried the next hour (Abo-6) — before a renewal it is a legal
  * notice, not a courtesy. OrderEventMail answers false only when the customer's
  * mail did not go out, so a retry does not send it twice. One subscription
  * failing does not stop the others.
@@ -87,7 +87,7 @@ class SubscriptionLifecycleRun
             }
 
             /*
-             * Review Abo-6, S2: before a renewal the reminder is the notice
+             * Abo-6: before a renewal the reminder is the notice
              * § 6 Abs. 1 Z 2 KSchG asks for — a mail that did not leave must
              * not count as sent. Unmarked again (only this run's mark), so the
              * next hour tries anew; the log says why each time.

@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\ListingPageRepository;
 
 class ListingPageRepositoryTest extends TestCase
 {
-    // Zehnstellig wie ein echter Zeitstempel: start und stop sind in Contao
-    // varchar(10), der Vergleich läuft also als Zeichenkette.
+    // Ten digits like a real timestamp: start and stop are varchar(10) in
+    // Contao, so the comparison runs as a string.
     private const NOW = 1_700_000_000;
 
     private Connection $connection;
@@ -19,8 +19,8 @@ class ListingPageRepositoryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Typen und Vorgabewerte wie in core-bundle 5.7 (tl_page, tl_article,
-        // tl_content) und in Consho's tl_content-DCA.
+        // Types and defaults as in core-bundle 5.7 (tl_page, tl_article,
+        // tl_content) and in Consho's tl_content DCA.
         $this->connection->executeStatement(
             "CREATE TABLE tl_page (
                 id INTEGER PRIMARY KEY,
@@ -77,8 +77,8 @@ class ListingPageRepositoryTest extends TestCase
 
     public function testTakesTheFirstByArticleOrderThenElementOrder(): void
     {
-        // Das zweite Element steht im ERSTEN Artikel — die Artikelreihenfolge
-        // entscheidet vor der Elementreihenfolge, wie auf der Seite.
+        // The second element is in the FIRST article — the article order
+        // decides before the element order, as on the page.
         $this->article(101, page: 12, sorting: 256);
         $this->article(100, page: 12, sorting: 128);
         $this->listing(640, article: 101, sorting: 64);
@@ -90,8 +90,8 @@ class ListingPageRepositoryTest extends TestCase
 
     public function testSkipsAListingThatDoesNotFollowTheAddress(): void
     {
-        // Eine kuratierte Liste vor der Kategorieliste darf den Filter nicht
-        // an sich ziehen.
+        // A curated list before the category list must not take the filter
+        // for itself.
         $this->article(100, page: 12);
         $this->listing(640, article: 100, sorting: 64, follows: false);
         $this->listing(641, article: 100, sorting: 128);
@@ -170,9 +170,9 @@ class ListingPageRepositoryTest extends TestCase
 
     public function testDoesNotTakeAnArticleIdForAPageId(): void
     {
-        // Ein Element in einem Layout-Bereich hat ptable tl_theme, seine pid
-        // ist die ID des Layouts. Stimmt sie zufällig mit einer Artikel-ID
-        // überein, gehört das Element trotzdem zu keiner Seite.
+        // An element in a layout section has ptable tl_theme, its pid
+        // is the ID of the layout. If it happens to match an article ID,
+        // the element still belongs to no page.
         $this->article(100, page: 12);
         $this->listing(640, article: 100, ptable: 'tl_theme');
 
@@ -189,7 +189,7 @@ class ListingPageRepositoryTest extends TestCase
 
     public function testFindsAListingByIdEvenIfItDoesNotFollowTheAddress(): void
     {
-        // Der Aufrufer entscheidet, was eine nicht folgende Liste für ihn heißt.
+        // The caller decides what a non-following list means for it.
         $this->article(100, page: 12);
         $this->listing(99, article: 100, preset: serialize(['11']), follows: false);
 
@@ -279,17 +279,17 @@ class ListingPageRepositoryTest extends TestCase
 
     public function testAllVisibleListingsInArticlesLayoutSectionsAndNestedElements(): void
     {
-        // B-8, consho:catalog:verify: jede sichtbare Liste zählt, wo immer sie steht.
+        // B-8, consho:catalog:verify: every visible list counts, wherever it is.
         $this->article(100, page: 12);
         $this->article(101, page: 13, published: false);
         $this->connection->insert('tl_content', ['id' => 1, 'pid' => 100, 'type' => 'consho_product_list', 'tstamp' => self::NOW, 'conshoFilter' => serialize(['11'])]);
-        // Artikel unveröffentlicht.
+        // Article unpublished.
         $this->connection->insert('tl_content', ['id' => 2, 'pid' => 101, 'type' => 'consho_product_list', 'tstamp' => self::NOW]);
-        // Layout-Bereich: gehört zu keiner Seite, reicht also überallhin.
+        // Layout section: belongs to no page, so it reaches everywhere.
         $this->connection->insert('tl_content', ['id' => 3, 'pid' => 7, 'ptable' => 'tl_theme', 'type' => 'consho_product_list', 'tstamp' => self::NOW, 'conshoPinsOnly' => 1]);
         $this->connection->insert('tl_content', ['id' => 4, 'pid' => 100, 'type' => 'consho_product_list', 'tstamp' => self::NOW, 'invisible' => 1]);
         $this->connection->insert('tl_content', ['id' => 5, 'pid' => 100, 'type' => 'text', 'tstamp' => self::NOW]);
-        // Nie gespeichert (#2708).
+        // Never saved (#2708).
         $this->connection->insert('tl_content', ['id' => 6, 'pid' => 100, 'type' => 'consho_product_list', 'tstamp' => 0]);
         $this->connection->insert('tl_content', ['id' => 7, 'pid' => 100, 'type' => 'consho_product_list', 'tstamp' => self::NOW, 'start' => (string) (self::NOW + 60)]);
 

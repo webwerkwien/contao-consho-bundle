@@ -24,8 +24,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 
 /**
- * Abo-7b (P66, P67): welches Abo „Lizenz verlängern" anbietet, und zu welchem
- * Preis.
+ * Abo-7b (P66, P67): which subscription "renew licence" offers, and at what
+ * price.
  */
 final class SubscriptionRenewalTest extends TestCase
 {
@@ -67,31 +67,31 @@ final class SubscriptionRenewalTest extends TestCase
     }
 
     /**
-     * P68 mit P55: Die Lizenz endet mit der Periode, die das Vertragsende
-     * enthält — dort beginnt die Verlängerung, nicht am Vertragsende selbst.
-     * Monatsabo ab 20.12.2025 08:00.
+     * P68 with P55: the licence ends with the period that contains the end of the
+     * contract — the renewal begins there, not at the end of the contract itself.
+     * Monthly subscription from 20.12.2025 08:00.
      */
     public function testDieLizenzEndetMitDerPeriodeUmDasVertragsende(): void
     {
         $calendar = new SubscriptionCalendar('Europe/Vienna');
         $monthly = ['renewal' => 'indefinite', 'billingInterval' => 1, 'termLength' => 1, 'termUnit' => 'year', 'startedAt' => $this->at('2025-12-20 08:00'), 'minimumEndsAt' => $this->at('2026-12-20 08:00')];
 
-        // Gekündigt zum 25.02., abgerechnet bis 20.02. → die Periode bis 20.03. kommt noch, voll (P55).
+        // Cancelled as of 25.02., billed until 20.02. → the period until 20.03. still comes, in full (P55).
         self::assertSame($this->at('2026-03-20 08:00'), SubscriptionRenewal::licenceEndOf(['endsAt' => $this->at('2026-02-25 12:00'), 'periodUntil' => $this->at('2026-02-20 08:00')] + $monthly, $calendar));
 
-        // Gekündigt genau zur Grenze: dort.
+        // Cancelled exactly at the boundary: there.
         self::assertSame($this->at('2026-02-20 08:00'), SubscriptionRenewal::licenceEndOf(['endsAt' => $this->at('2026-02-20 08:00'), 'periodUntil' => $this->at('2026-01-20 08:00')] + $monthly, $calendar));
 
-        // Außerordentlich mitten in einer schon bezahlten Periode: bis zu deren Ende.
+        // Extraordinarily in the middle of an already paid period: until its end.
         self::assertSame($this->at('2026-03-20 08:00'), SubscriptionRenewal::licenceEndOf(['endsAt' => $this->at('2026-03-01 00:00'), 'periodUntil' => $this->at('2026-03-20 08:00')] + $monthly, $calendar));
 
-        // Läuft weiter: kein Ende.
+        // Continues: no end.
         self::assertSame(0, SubscriptionRenewal::licenceEndOf(['endsAt' => null, 'periodUntil' => $this->at('2026-03-20 08:00')] + $monthly, $calendar));
     }
 
     public function testEndetMitEinerZahlungJeLaufzeit(): void
     {
-        // Jahresabo, eine Zahlung, *Endet*: die Laufzeit ist die Periode.
+        // Yearly subscription, one payment, *ends*: the term is the period.
         $row = ['renewal' => 'ends', 'billingInterval' => 0, 'termLength' => 12, 'termUnit' => 'month', 'startedAt' => $this->at('2025-03-01 09:00'),
             'minimumEndsAt' => $this->at('2026-03-01 09:00'), 'periodUntil' => $this->at('2026-03-01 09:00'), 'endsAt' => null];
 
@@ -116,14 +116,14 @@ final class SubscriptionRenewalTest extends TestCase
         self::assertFalse($renewal->renewable($this->subscription(['endsAt' => self::NOW + 86_400, 'renewedBy' => 4]), self::NOW), 'schon verlängert');
         self::assertFalse($renewal->renewable($this->subscription(['state' => 'paused', 'endsAt' => self::NOW + 86_400]), self::NOW), 'pausiert (P106)');
 
-        // Beendet, aber die Berechtigung ruht noch (P64): eine offene Rechnung.
+        // Ended, but the entitlement is still suspended (P64): an open invoice.
         $this->connection->insert('tl_consho_entitlement', ['id' => 30, 'pid' => 90, 'subscription' => 1, 'suspendedAt' => self::NOW - 10]);
         self::assertFalse($renewal->renewable($this->subscription(['state' => 'ended', 'endsAt' => self::NOW - 86_400]), self::NOW), 'Berechtigung ruht');
     }
 
     public function testEinAboMitStornierterKaufbestellungIstNichtVerlaengerbar(): void
     {
-        // Abnahme 2026-10-01: die zurückgebaute Verlängerung WEB-00091-1.
+        // A renewal that was rolled back: its purchase order is cancelled.
         $row = $this->subscription(['state' => 'ended', 'endsAt' => self::NOW - 60]);
         self::assertTrue($this->renewal()->renewable($row, self::NOW), 'Gegenprobe');
 
@@ -133,8 +133,8 @@ final class SubscriptionRenewalTest extends TestCase
 
     public function testUeberfaelligZaehltSchonVorDerNachfrist(): void
     {
-        // Folgebestellung, Ziel gestern, offen — die Nachfrist (14 Tage) läuft
-        // noch, das Abo ruht also nicht. Verlängert wird trotzdem nicht.
+        // Follow-up order, term yesterday, open — the grace period (14 days) is still
+        // running, so the subscription is not suspended. It is still not renewed.
         $this->connection->insert('tl_consho_order', ['id' => 91, 'orderNumber' => 'WEB-00091', 'subscription' => 1, 'grandTotal' => '1.2000', 'paymentDueAt' => self::NOW - 86_400]);
         $this->outstanding[91] = '1.2000';
 
@@ -171,15 +171,15 @@ final class SubscriptionRenewalTest extends TestCase
 
     public function testDasAngebotNenntDenHeutigenPreisFuerDieAlteMenge(): void
     {
-        // Eingefroren 0,50 netto; heute kostet das Modell 1,00 netto, 20 %.
+        // Frozen at 0.50 net; today the model costs 1.00 net, 20 %.
         $offer = $this->renewal()->offer($this->subscription(['endsAt' => self::NOW + 86_400, 'unitNet' => '0.5000', 'quantity' => '2.0000']), $this->context(), 'de', self::NOW);
 
         self::assertNotNull($offer);
         self::assertSame([1, 7, 5, '2.0000'], [$offer->subscriptionId, $offer->articleId, $offer->ruleId, $offer->quantity]);
-        // 1,00 × 2 = 2,00 netto → 2,40 brutto.
+        // 1.00 × 2 = 2.00 net → 2.40 gross.
         self::assertSame('Regel 5 zu 2.4000', $offer->terms);
-        // Gefragt mit den Gruppen, die der Kunde HEUTE hat, nicht nach dem
-        // eingefrorenen Stand des alten Vertrags (Review S2).
+        // Asked with the groups the customer has TODAY, not with the
+        // frozen state of the old contract.
         self::assertSame([[7, 5, [3]]], $this->asked);
     }
 

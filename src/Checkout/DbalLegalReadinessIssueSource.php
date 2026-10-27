@@ -18,8 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
  * cleared by different people — the first by whoever builds the site, the
  * second by whoever answers for its terms.
  *
- * The basket and order pages started out here and moved next door after the
- * review of 2026-09-22: a missing page is a site that is not finished, not a
+ * The basket and order pages started out here and moved next door: a missing page is a site that is not finished, not a
  * shop that may not sell. The line has to hold, or the split is decoration.
  *
  * ── Only counting queries, again ──────────────────────────────────────────
@@ -36,7 +35,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
  *
  * ── Published only, same as C-5 ───────────────────────────────────────────
  *
- * Every query here filters root pages the way the acceptance of C-5 taught:
+ * Every query here filters root pages the way C-5 taught:
  * unpublished or outside its start/stop window serves nobody, and a finding
  * about it would block a shop that works. The rule is applied to the TARGET
  * pages too — an unpublished terms page is a missing terms page.
@@ -170,8 +169,8 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
      * to log in to read the terms has not been given them (§ 4 Abs. 1 FAGG).
      *
      * 🔴 The first version checked the PAGE alone and claimed all of it in its
-     * message ("außerhalb seines Zeitfensters"). Both reviews of 2026-09-22
-     * found it. A terms element in an unpublished article — the likeliest case
+     * message ("außerhalb seines Zeitfensters").
+     * A terms element in an unpublished article — the likeliest case
      * of the lot — left the checkout open while the link led to a page the
      * text does not appear on: § 4 FAGG not met, and the right of withdrawal
      * extended by twelve months (§ 12 FAGG).
@@ -235,8 +234,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
             /*
              * ⚠️ `protected` counts only where guests may order.
              *
-             * Found in the review of 2026-09-22, and it is the C-5 acceptance
-             * mistake in a new dress: with guest checkout switched off every
+             * It is the mistake of C-5 in a new dress: with guest checkout switched off every
              * buyer is signed in, so a protected terms page is perfectly
              * readable — and blocking that shop for ever would be a finding
              * against a shop that works, with no way to clear it but to
@@ -247,9 +245,8 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                 $entry = ['id' => $row['id'], 'title' => $row['title'], 'shop' => $row['shop'], 'kind' => $kind->value];
 
                 /*
-                 * D-2, E1 — only a REQUIRED text blocks (ShopLegalRequirements).
-                 * Michael: "Sperre bei AGB ist schon falsch, man muss keine
-                 * haben." Until then both texts blocked, always.
+                 * D-2, E1 — only a REQUIRED text blocks (ShopLegalRequirements):
+                 * a shop need not have terms at all. Until then both texts blocked, always.
                  *
                  * A text that is not required but not right either is a
                  * notice: terms picked and unreachable (the operator meant to
@@ -293,7 +290,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
      * article of the page, or one level down in a container element. Article
      * and elements have to be shown and inside their start/stop windows, and
      * where guests may order the page must not be protected — a withdrawal
-     * behind a login is not "leicht zugänglich" (Fable review D-2: the first
+     * behind a login is not "leicht zugänglich" (D-2: the first
      * version checked neither, unlike the legal texts above).
      *
      * @return list<ConfigurationIssue>
@@ -362,7 +359,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
 
     /**
      * The invoice sender (9). Field by field, which is what the separate
-     * columns were for (Michael, 2026-09-22).
+     * columns were for.
      *
      * Named in the sentence, not merely counted: "unvollständig" without
      * saying which part sends the operator through six fields comparing them
@@ -439,7 +436,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
 
             /*
              * `order` ALWAYS, the document ranges wherever a chosen payment
-             * method issues an invoice at all (F4, 2026-09-23; widened in E-2).
+             * method issues an invoice at all (F4; widened in E-2).
              *
              * F4 asked only for methods that issue ON ORDER, because in C
              * nothing else issued. Since D-1 every trigger does — on payment,
@@ -480,7 +477,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                     'types' => implode(', ', array_map(
                         // From default.php: the start page never loads
                         // tl_consho_number_range, so this printed the keys
-                        // (found in the review of D-3, S1).
+                        // (D-3).
                         static fn (string $type): string => (string) ($GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'][$type] ?? $type),
                         $need,
                     )),
@@ -518,7 +515,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
             /*
              * ⚠️ START POINTS are counted, not rows.
              *
-             * Found in the review of 2026-09-22: for the legal texts a row is
+             * For the legal texts a row is
              * a (start point × kind) pair, so one start point missing both
              * texts read "Startpunkte ohne Rechtstext: 2 (Shop DE)" — two
              * announced, one listed. Counted by id, not by title: two start
@@ -539,7 +536,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                 /*
                  * The label the checkout shows ("AGB", "Widerrufsbelehrung"),
                  * not the internal key: the operator read "betroffen: terms"
-                 * on the dashboard (C-12 acceptance, 2026-09-26). The key
+                 * on the dashboard (C-12). The key
                  * where no language file is loaded — tests, the console.
                  */
                 $context['kinds'] = implode(', ', array_unique(array_map(
@@ -558,7 +555,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
      * The mask's label for a field, so the sentence says "Firmenname" and not
      * "invoiceCompany".
      *
-     * 🔴 Found in the review of 2026-09-22. The docblock above promised the
+     * 🔴 The docblock above once promised the
      * opposite of what the code did — "named in the sentence, not merely
      * counted" — and then printed column names, which is a different kind of
      * uselessness than a bare count, not a smaller one.
@@ -577,7 +574,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
     /**
      * A root page that actually serves somebody: published, in its window, and
      * with a shop on it. Written once — four queries use it, and four copies
-     * would be four chances to forget `published` again (C-5's acceptance).
+     * would be four chances to forget `published` again (C-5).
      *
      * For the setup page every start point with a shop (N1, issuesForSetup()).
      */

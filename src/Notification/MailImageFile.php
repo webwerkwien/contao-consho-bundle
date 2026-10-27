@@ -15,7 +15,6 @@ use Symfony\Component\Uid\Uuid;
  * Embedded, not linked: a mail programme blocks remote images until the
  * reader allows them, and a linked image is not part of the mail — the
  * confirmation on a durable medium (§ 7 Abs. 3 FAGG) would not contain it.
- * Found at NNP on 2026-10-05.
  *
  * PNG and JPG only: Gmail and Outlook strip SVG, and anything else was not
  * chosen through a field that allows it.

@@ -23,7 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
 /**
  * Explains why a shop offers the delivery countries it offers.
  *
- * Written for the A-3 acceptance, kept because the question it answers is one
+ * Written for A-3, kept because the question it answers is one
  * an operator will ask in earnest: a country vanishes from checkout and nothing
  * says why. The rule — a country needs a rate for *every* tax class in use — is
  * correct but invisible from the outside.
@@ -104,15 +104,14 @@ class DiagnoseTaxCommand extends Command
         }
 
         /*
-         * 🔴 Über den Framework-Adapter, nicht statisch.
+         * 🔴 Through the framework adapter, not statically.
          *
-         * Zwölf Stellen in `src/` machen es so, diese Datei war die Ausnahme —
-         * und die Ausnahme war genau die, die keinen Test hatte. Ein statischer
-         * `Model::findByPk()` lässt sich nicht ersetzen, also braucht der Test
-         * eine Datenbank und ein initialisiertes Framework; über den Adapter
-         * ist er ein Mock. Aufgefallen im Review vom 2026-09-23 als „Regel 24:
-         * kein Test ruft die Stelle auf" — die Ursache war nicht der Befehl,
-         * sondern dass er der Hausregel nicht folgte.
+         * Twelve places in `src/` do it this way; this file was the exception — and
+         * the exception was exactly the one without a test. A static
+         * `Model::findByPk()` cannot be replaced, so the test would need a database
+         * and an initialised framework; through the adapter it is a mock. The gap
+         * showed as "no test calls this place" — the cause was not the command but
+         * that it did not follow the house rule.
          */
         $shops = $this->framework->getAdapter(ShopModel::class);
         $classes = $this->framework->getAdapter(TaxClassModel::class);
@@ -195,7 +194,7 @@ class DiagnoseTaxCommand extends Command
          * A rate with tstamp 0 is a draft — an unsaved copy — and counts for
          * nothing (findRate()). A row written by an import or raw SQL without
          * tstamp lands here too, and would otherwise be a gap without a name
-         * (CW-6 review, K6).
+         * (CW-6).
          */
         $drafts = [] === $taxClassIds ? [] : $this->connection->fetchAllAssociative(
             'SELECT pid, country, rate FROM tl_consho_tax_rate WHERE tstamp = 0 AND country <> \'\' AND pid IN (?) ORDER BY pid, country',
@@ -255,18 +254,17 @@ class DiagnoseTaxCommand extends Command
      * Whole installation, not the shop that was asked about — see
      * TaxClassReferences::orphans().
      *
-     * ⚠️ **`DiagnoseTaxCommandTest` ruft diese Methode auf** — und der Weg
-     * dorthin ist die eigentliche Geschichte. Im Review vom 2026-09-23 stand
-     * hier eine Regel-24-Lücke: kein Test erreichte den Abschnitt. Der Grund
-     * war nicht, dass ein Konsolenbefehl schwer zu prüfen wäre, sondern dass
-     * diese Datei als einzige Modelle **statisch** holte, während der Rest von
-     * `src/` den Framework-Adapter nimmt. Ein statischer Aufruf lässt sich
-     * nicht ersetzen; über den Adapter ist er ein Mock.
+     * ⚠️ **`DiagnoseTaxCommandTest` calls this method** — and the way there is
+     * the real story. For a while no test reached this section. The reason was
+     * not that a console command is hard to test, but that this file alone
+     * fetched models **statically**, while the rest of `src/` takes the
+     * framework adapter. A static call cannot be replaced; through the adapter
+     * it is a mock.
      *
-     * Der Test deckt beides ab: dass der Abschnitt **kommt**, wenn ein
-     * Verweis verwaist ist, und dass er **wegbleibt**, wenn keiner es ist —
-     * und dass der `--class/--country`-Weg vorher zurückkehrt, damit ein
-     * späteres Aufräumen die frühe Rückkehr nicht versehentlich entfernt.
+     * The test covers both: that the section **comes** when a reference is
+     * orphaned, and that it **stays away** when none is — and that the
+     * `--class/--country` path returns before, so that a later clean-up does not
+     * remove the early return by accident.
      */
     private function reportOrphans(SymfonyStyle $io): void
     {
@@ -290,7 +288,7 @@ class DiagnoseTaxCommand extends Command
             .'Open each record and pick a tax class. Whole installation, not just this shop.',
         );
 
-        // Review Abo-3, L3: a subscription is read-only in the mask and has
+        // Abo-3: a subscription is read-only in the mask and has
         // no price on show — its damage is the next bill.
         if ([] !== array_filter($orphans, static fn (array $row): bool => 'tl_consho_subscription' === $row['table'])) {
             $io->warning(

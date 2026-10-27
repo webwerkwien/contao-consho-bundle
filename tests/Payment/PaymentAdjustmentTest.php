@@ -10,7 +10,7 @@ class PaymentAdjustmentTest extends TestCase
 {
     public function testDieHerkunftTraegtDasVorzeichenNichtDerBetrag(): void
     {
-        // C5: Nachlass oder Gebühr — die Rechnung beschriftet danach.
+        // C5: discount or fee — the invoice labels it accordingly.
         $adjustment = new PaymentAdjustment('2', PaymentAdjustmentOrigin::Discount);
 
         self::assertSame('2.0000', $adjustment->net);
@@ -23,7 +23,7 @@ class PaymentAdjustmentTest extends TestCase
 
     public function testEineNullAnpassungWirdAbgelehnt(): void
     {
-        // Nichts hinzuzufügen oder abzuziehen heißt null zurückgeben, keine Null-Anpassung.
+        // Nothing to add or subtract means returning null, not a zero adjustment.
         $this->expectException(\InvalidArgumentException::class);
 
         new PaymentAdjustment('0', PaymentAdjustmentOrigin::Discount);

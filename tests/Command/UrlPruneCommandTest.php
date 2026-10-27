@@ -74,8 +74,7 @@ class UrlPruneCommandTest extends TestCase
     public static function agesStrtotimeMisreads(): iterable
     {
         // "y" is a military time zone to strtotime(): "-10y" gave a cut-off
-        // in the future, and --force removed every address (found on the
-        // test server, 2026-10-14).
+        // in the future, and --force removed every address.
         yield 'unit as a time zone' => ['10y'];
         yield 'no count' => ['days'];
         yield 'zero' => ['0 days'];

@@ -54,7 +54,7 @@ class SubscriptionMandates
         return array_map(static fn (array $row): SubscriptionLineView => new SubscriptionLineView(
             (string) $row['subscriptionNumber'],
             (string) ($row['productName'] ?? ''),
-            // Four places on every database (Fall 30): SQLite drops the zeros.
+            // Four places on every database: SQLite drops the zeros.
             (string) BigDecimal::of((string) ($row['lineTotal'] ?? '0'))->toScale(4, RoundingMode::HalfUp),
             (int) $row['billingInterval'],
             SubscriptionRuleValidator::termMonths((int) $row['termLength'], (string) $row['termUnit']),

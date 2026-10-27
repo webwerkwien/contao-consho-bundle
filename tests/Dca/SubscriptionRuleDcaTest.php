@@ -25,7 +25,7 @@ class SubscriptionRuleDcaTest extends TestCase
         $renewal = $GLOBALS['TL_DCA']['tl_consho_subscription_rule']['fields']['renewal'];
 
         self::assertSame(array_map(static fn (RenewalKind $kind): string => $kind->value, RenewalKind::cases()), $renewal['options']);
-        // P7: die Art ohne Rechtsrisiko.
+        // P7: the type without legal risk.
         self::assertSame('ends', $renewal['sql']['default']);
     }
 
@@ -33,7 +33,7 @@ class SubscriptionRuleDcaTest extends TestCase
     {
         $fields = $GLOBALS['TL_DCA']['tl_consho_subscription_rule']['fields'];
 
-        // P7, und die Nachfrist aus A6.
+        // P7, and the grace period from A6.
         self::assertSame(14, $fields['noticeDays']['sql']['default']);
         self::assertSame(30, $fields['reminderDays']['sql']['default']);
         self::assertSame(14, $fields['graceDays']['sql']['default']);
@@ -44,7 +44,7 @@ class SubscriptionRuleDcaTest extends TestCase
 
     public function testDieRegelTraegtKeinenBetrag(): void
     {
-        // A2: Der Betrag steht in der Preistabelle des Produkts.
+        // A2: the amount is in the product's price table.
         $fields = array_keys($GLOBALS['TL_DCA']['tl_consho_subscription_rule']['fields']);
 
         self::assertSame([], array_values(array_intersect($fields, ['net', 'amount', 'price', 'currency'])));
@@ -52,7 +52,7 @@ class SubscriptionRuleDcaTest extends TestCase
 
     public function testLoeschenLaeuftUeberDieBerechtigungspruefung(): void
     {
-        // Benannt, nicht als Array — sonst prüft niemand den Voter.
+        // Named, not as an array — otherwise nobody checks the voter.
         self::assertContains('!delete', $GLOBALS['TL_DCA']['tl_consho_subscription_rule']['list']['operations']);
     }
 
@@ -74,7 +74,7 @@ class SubscriptionRuleDcaTest extends TestCase
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('höchstens 28 Tage');
 
-        // Nur die geänderten Felder kommen an; der Rest aus dem gespeicherten Satz.
+        // Only the changed fields arrive; the rest comes from the saved record.
         (new SubscriptionRuleListener())->refuseInvalid(['renewal' => 'indefinite', 'noticeDays' => 40, 'reminderDays' => 60], $dc);
     }
 

@@ -6,8 +6,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartRuleCurrency;
 
 /**
- * CW-4b (H3): die Währungspflicht der Warenkorbregel ohne Anfrage — dieselbe
- * Regel für Maske und Befehl.
+ * CW-4b (H3): the cart rule's currency requirement without a request — the same
+ * rule for the form and the command.
  */
 class CartRuleCurrencyTest extends TestCase
 {

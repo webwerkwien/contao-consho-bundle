@@ -4,7 +4,7 @@
  * A product carries a tax CLASS, not a rate. Country and order date resolve
  * the rate, which is then frozen on the order item. That is what later carries
  * destination-based taxation and OSS without touching the schema.
- * See docs/block-a-fundament.md, section 3.5.
+ * See Block A, section 3.5.
  */
 $GLOBALS['TL_DCA']['tl_consho_tax_class'] = [
     'config' => [

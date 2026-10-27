@@ -11,11 +11,11 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationVersioning;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen eine SQLite-Datenbank mit tl_version in der Form des Cores.
+ * Against an SQLite database with tl_version in the core's shape.
  *
- * Der gefährliche Fehler dieser Klasse ist lautlos: Das Zurückholen meldet
- * Erfolg, die Haupttabelle stimmt, und die Übersetzungen stehen leer oder
- * falsch. Deshalb prüft jeder Test den Zustand der Zeilen, nicht Aufrufe.
+ * The dangerous error of this class is silent: the restore reports
+ * success, the main table is right, and the translations are empty or
+ * wrong. That is why every test checks the state of the rows, not calls.
  */
 class TranslationVersioningTest extends TestCase
 {
@@ -30,10 +30,10 @@ class TranslationVersioningTest extends TestCase
         );
         DcaSchema::create($this->connection, 'tl_consho_shop');
 
-        // So streng wie die echte Tabelle — beide Unique-Indizes.
+        // As strict as the real table — both unique indexes.
         DcaSchema::create($this->connection, 'tl_consho_translation');
 
-        // Wie vendor/contao/core-bundle/contao/dca/tl_version.php.
+        // Like vendor/contao/core-bundle/contao/dca/tl_version.php.
         $this->connection->executeStatement(
             "CREATE TABLE tl_version (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,10 +53,10 @@ class TranslationVersioningTest extends TestCase
 
     public function testTheSnapshotIsFlatAndUsesTheMasksFieldNames(): void
     {
-        // Die Form ist der ganze Punkt: compare() beschriftet über
-        // $GLOBALS['TL_DCA'][table]['fields'][k]['label'], und die Maske legt
-        // genau diese Feldnamen an. Als verschachtelter Klumpen abgelegt zeigt
-        // der Vergleich einen unlesbaren Blockdiff.
+        // The shape is the whole point: compare() labels via
+        // $GLOBALS['TL_DCA'][table]['fields'][k]['label'], and the form creates
+        // exactly these field names. Stored as a nested lump, the comparison
+        // shows an unreadable block diff.
         $this->translate('tl_consho_product', 1, 'en', title: 'Herbal Bitters', alias: 'herbal-bitters');
 
         $snapshot = $this->versioning()->snapshot('tl_consho_product', 1);
@@ -81,8 +81,8 @@ class TranslationVersioningTest extends TestCase
 
     public function testOnlyTheFieldsOfTheTableAreInTheSnapshot(): void
     {
-        // Eine Eigenschaftsoption hat nur den Titel. Ein teaser__en im
-        // Schnappschuss wäre im Vergleich eine Zeile ohne Feld dahinter.
+        // A property option only has the title. A teaser__en in the snapshot
+        // would be a line without a field behind it in the comparison.
         $this->translate('tl_consho_property_option', 1, 'en', title: 'Red', alias: null);
 
         self::assertSame(['title__en' => 'Red'], $this->versioning()->snapshot('tl_consho_property_option', 1));
@@ -97,8 +97,8 @@ class TranslationVersioningTest extends TestCase
 
     public function testAMonolingualInstallationHasAnEmptySnapshot(): void
     {
-        // Prüfstein der Spezifikation (Abschnitt 2): Ohne zweite Sprache
-        // bleibt die Versionszeile, wie sie vor M-5 war.
+        // Touchstone of the specification (section 2): without a second
+        // language the version row stays as it was before M-5.
         $this->shop(7, 'de', 'de');
 
         self::assertSame([], $this->versioning()->snapshot('tl_consho_product', 1));
@@ -106,10 +106,10 @@ class TranslationVersioningTest extends TestCase
 
     public function testAnOfferedLanguageWithoutARowIsInTheSnapshotAsEmpty(): void
     {
-        // Das leere Feld ist eine Aussage: „in diesem Stand gab es kein
-        // Englisch". Fehlte der Schlüssel, ließe sich die Version nicht von
-        // einer vor M-5 unterscheiden — und ein Zurückholen ließe eine später
-        // angelegte Übersetzung stehen.
+        // The empty field is a statement: "in this state there was no
+        // English". If the key were missing, the version could not be told
+        // apart from one before M-5 — and a restore would leave a translation
+        // created later in place.
         $this->shop(7, 'de', 'de', 'en');
 
         $snapshot = $this->versioning()->snapshot('tl_consho_product', 1);
@@ -120,8 +120,8 @@ class TranslationVersioningTest extends TestCase
 
     public function testALanguageNoLongerOfferedIsStillInTheSnapshot(): void
     {
-        // Die Zeile existiert; unsichtbar ist sie nur, solange kein Shop die
-        // Sprache führt. Ein Schnappschuss bildet ab, was gespeichert ist.
+        // The row exists; it is only invisible as long as no shop carries the
+        // language. A snapshot reflects what is stored.
         $this->shop(7, 'de', 'de');
         $this->translate('tl_consho_product', 1, 'fr', title: 'Amer aux herbes', alias: 'amer');
 
@@ -157,9 +157,9 @@ class TranslationVersioningTest extends TestCase
 
     public function testRestoringWritesTheTranslationsBack(): void
     {
-        // Contaos restore() hat die Übersetzungsschlüssel zu diesem Zeitpunkt
-        // schon per array_intersect_key() abgestreift — die Klasse bekommt
-        // deshalb gar keine Daten übergeben und muss tl_version selbst lesen.
+        // At this point Contao's restore() has already stripped the
+        // translation keys via array_intersect_key() — so the class is passed
+        // no data at all and has to read tl_version itself.
         $this->translate('tl_consho_product', 1, 'en', title: 'Something Else', alias: 'something-else');
         $this->version('tl_consho_product', pid: 1, version: 3, data: [
             'id' => 1,
@@ -194,8 +194,8 @@ class TranslationVersioningTest extends TestCase
 
     public function testRestoringRemovesALanguageThatTheVersionDidNotHave(): void
     {
-        // Sonst überlebte eine später angelegte Sprache das Zurückholen auf
-        // einen Stand, in dem sie noch nicht existierte.
+        // Otherwise a language created later would survive the restore to a
+        // state in which it did not exist yet.
         $this->translate('tl_consho_product', 1, 'fr', title: 'Amer aux herbes', alias: 'amer');
         $this->version('tl_consho_product', pid: 1, version: 3, data: [
             'id' => 1,
@@ -211,10 +211,10 @@ class TranslationVersioningTest extends TestCase
 
     public function testRestoringAVersionFromBeforeTranslationsWereVersionedLeavesThemAlone(): void
     {
-        // Eine Version ohne jeden Übersetzungsschlüssel stammt von vor M-5
-        // (oder aus einer Zeit ohne Übersetzungssprache). Sie weiß nichts über
-        // Übersetzungen — sie zu löschen hieße, Text zu vernichten, der in
-        // keiner Version steht und nirgends zurückzuholen ist.
+        // A version without any translation key dates from before M-5 (or from
+        // a time without a translation language). It knows nothing about
+        // translations — deleting them would mean destroying text that is in no
+        // version and cannot be restored from anywhere.
         $this->translate('tl_consho_product', 1, 'en', title: 'Herbal Bitters', alias: 'herbal-bitters');
         $this->version('tl_consho_product', pid: 1, version: 3, data: ['id' => 1, 'title' => 'Kräuterbitter']);
 
@@ -225,9 +225,9 @@ class TranslationVersioningTest extends TestCase
 
     public function testRestoringBringsBackALanguageNoLongerOffered(): void
     {
-        // Zurückgeholt statt übersprungen: Die Zeile ist unsichtbar, solange
-        // kein Shop die Sprache führt, aber nicht verloren. Übersprungen wäre
-        // sie genau dann weg, wenn die Sprache wiederkommt.
+        // Restored instead of skipped: the row is invisible as long as no shop
+        // carries the language, but not lost. Skipped, it would be gone exactly
+        // when the language comes back.
         $this->shop(7, 'de', 'de');
         $this->version('tl_consho_product', pid: 1, version: 3, data: [
             'id' => 1,
@@ -242,9 +242,10 @@ class TranslationVersioningTest extends TestCase
 
     public function testAnAliasTakenMeanwhileIsEmptiedInsteadOfFailing(): void
     {
-        // Wie Contao mit dem eigenen unique-Feld (Versions::restore, #698):
-        // leeren statt am Index scheitern. Ein SQL-Fehler im Callback wäre eine
-        // Fehlerseite — und die Haupttabelle stünde schon auf dem alten Stand.
+        // Like Contao with its own unique field (Versions::restore, #698):
+        // clear instead of failing on the index. An SQL error in the callback
+        // would be an error page — and the main table would already be at the
+        // old state.
         $this->translate('tl_consho_product', 2, 'en', title: 'Other Bitters', alias: 'herbal-bitters');
         $this->version('tl_consho_product', pid: 1, version: 3, data: [
             'id' => 1,
@@ -275,7 +276,7 @@ class TranslationVersioningTest extends TestCase
 
     public function testTheSameAliasInAnotherTableIsNoCollision(): void
     {
-        // Der Index ist (ptable, language, alias).
+        // The index is (ptable, language, alias).
         $this->translate('tl_consho_manufacturer', 2, 'en', title: 'Herbal', alias: 'herbal-bitters');
         $this->version('tl_consho_product', pid: 1, version: 3, data: [
             'id' => 1,
@@ -314,7 +315,7 @@ class TranslationVersioningTest extends TestCase
         $this->version('tl_consho_product', pid: 1, version: 1, data: ['id' => 1]);
         $this->versioning()->store('tl_consho_product', 1, 1);
 
-        // Danach: Englisch geändert, Französisch neu.
+        // Afterwards: English changed, French new.
         $this->storage()->write('tl_consho_product', 1, 'en', ['title' => 'Something Else', 'alias' => 'something-else']);
         $this->storage()->write('tl_consho_product', 1, 'fr', ['title' => 'Amer', 'alias' => 'amer']);
 

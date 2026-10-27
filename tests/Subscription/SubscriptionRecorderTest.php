@@ -14,12 +14,12 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionWithoutAccount;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-3: Beim Kauf entsteht je Abo-Zeile ein Abo, aus der EINGEFRORENEN
- * Bestellzeile (A9, A10, P16–P19).
+ * Abo-3: on purchase one subscription is created per subscription line, from the FROZEN
+ * order line (A9, A10, P16–P19).
  *
- * Bestellung 90 „WEB-00090", gekauft am 31.01.2026 10:15 Wien, Konto 7:
- * Zeile 1 Einmalkauf, Zeile 2 Monatsabo (Regel 1) Menge 2, Zeile 3 Jahresabo
- * mit einer Zahlung (Regel 2). Die Tabellen kommen aus den DCAs.
+ * Order 90 "WEB-00090", bought on 31.01.2026 10:15 Vienna, account 7:
+ * line 1 one-off purchase, line 2 monthly subscription (rule 1) quantity 2, line 3 yearly subscription
+ * with one payment (rule 2). The tables come from the DCAs.
  */
 class SubscriptionRecorderTest extends TestCase
 {
@@ -61,12 +61,12 @@ class SubscriptionRecorderTest extends TestCase
         $rows = $this->connection->fetchAllAssociative('SELECT id, subscriptionNumber, orderItem, firstOrder, product, quantity FROM tl_consho_subscription ORDER BY id');
 
         self::assertSame(array_map(static fn (array $row): int => (int) $row['id'], $rows), $ids);
-        // P19 = B: die Einmalkauf-Zeile zählt nicht mit.
+        // P19 = B: the one-off line does not count.
         self::assertSame(['WEB-00090-1', 'WEB-00090-2'], array_column($rows, 'subscriptionNumber'));
         self::assertSame([2, 3], array_map('intval', array_column($rows, 'orderItem')));
         self::assertSame([90, 90], array_map('intval', array_column($rows, 'firstOrder')));
         self::assertSame([12, 13], array_map('intval', array_column($rows, 'product')));
-        // A10: Menge = Lizenzen.
+        // A10: quantity = licences.
         self::assertSame([2.0, 1.0], array_map('floatval', array_column($rows, 'quantity')));
     }
 
@@ -86,7 +86,7 @@ class SubscriptionRecorderTest extends TestCase
     {
         $this->recorder()->record(90);
 
-        // Die Regel ändert sich nach dem Kauf — das Abo nicht (A9).
+        // The rule changes after the purchase — the subscription does not (A9).
         $this->connection->update('tl_consho_subscription_rule', ['title' => 'Neu', 'noticeDays' => 99, 'pauseMonths' => 6], ['id' => 1]);
 
         $monthly = $this->subscription(2);
@@ -112,7 +112,7 @@ class SubscriptionRecorderTest extends TestCase
 
         $yearly = $this->subscription(3);
 
-        // Gegenprobe: jede Zeile trägt ihre eigenen Werte.
+        // Counter-check: every line carries its own values.
         self::assertSame(0, (int) $yearly['reverseCharge']);
         self::assertSame('service', $yearly['kind']);
         self::assertSame('Jahresabo', $yearly['ruleTitle']);
@@ -124,14 +124,14 @@ class SubscriptionRecorderTest extends TestCase
 
         $monthly = $this->subscription(2);
 
-        // P16a: Start ist der Kaufklick. P17: Anker am 31., geklemmt.
+        // P16a: the start is the buy click. P17: anchor on the 31st, clamped.
         self::assertSame('2026-01-31 10:15', $this->local((int) $monthly['startedAt']));
         self::assertSame('2026-01-31 10:15', $this->local((int) $monthly['periodFrom']));
         self::assertSame('2026-02-28 10:15', $this->local((int) $monthly['periodUntil']));
         self::assertSame('2026-02-28 10:15', $this->local((int) $monthly['nextBillingAt']));
         self::assertSame('2027-01-31 10:15', $this->local((int) $monthly['minimumEndsAt']));
 
-        // Eine Zahlung: die Periode ist die ganze Laufzeit.
+        // One payment: the period is the whole term.
         $yearly = $this->subscription(3);
 
         self::assertSame('2027-01-31 10:15', $this->local((int) $yearly['periodUntil']));
@@ -167,9 +167,9 @@ class SubscriptionRecorderTest extends TestCase
     }
 
     /**
-     * Abo-7b (P68, P69): WEB-00080-1 ist zum 20.02. gekündigt; die
-     * Verlängerung beginnt dort, nicht beim Kauf am 31.01. — keine doppelte
-     * Zahlung, keine Lücke.
+     * Abo-7b (P68, P69): WEB-00080-1 is cancelled as of 20.02.; the
+     * renewal begins there, not at the purchase on 31.01. — no double
+     * payment, no gap.
      */
     public function testDieVerlaengerungBeginntAmEndeDesAltenAbos(): void
     {
@@ -190,9 +190,9 @@ class SubscriptionRecorderTest extends TestCase
     }
 
     /**
-     * P68 mit P55: außerordentlich zum 10.02. gekündigt, die Periode bis 20.02.
-     * ist schon bezahlt — die Verlängerung beginnt am 20.02., nicht am 10.02.,
-     * sonst zahlte der Kunde zehn Tage doppelt (und die Lizenz würde kürzer).
+     * P68 with P55: cancelled extraordinarily as of 10.02., the period until 20.02.
+     * is already paid — the renewal begins on 20.02., not on 10.02.,
+     * otherwise the customer would pay ten days twice (and the licence would get shorter).
      */
     public function testDieVerlaengerungBeginntNachDerBezahltenPeriode(): void
     {
@@ -257,7 +257,7 @@ class SubscriptionRecorderTest extends TestCase
     }
 
     /**
-     * WEB-00080-1: Konto 7, Artikel 12 (wie Zeile 2), Shop 3, Monatsabo.
+     * WEB-00080-1: account 7, article 12 (like line 2), shop 3, monthly subscription.
      *
      * @param array<string, mixed> $values
      */

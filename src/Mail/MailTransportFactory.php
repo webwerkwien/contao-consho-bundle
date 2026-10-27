@@ -16,7 +16,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * The confirmation goes out in the request of the purchase click, after the
  * commit. Symfony Mailer has no DSN option for a timeout (EsmtpTransportFactory
  * in 7.4 reads auto_tls, source_ip, verify_peer, peer_fingerprint,
- * local_domain and three thresholds — measured 2026-09-25). Without one,
+ * local_domain and three thresholds). Without one,
  * SocketStream falls back to default_socket_timeout, 60 seconds on most hosts,
  * and a mail server that does not answer keeps the buyer staring at a
  * spinning button for a minute after the order already exists.

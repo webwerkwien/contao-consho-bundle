@@ -59,8 +59,7 @@ class PathTemplateListener
             $previous = ProductPathTemplate::fromString($stored);
         } catch (InvalidPathTemplate) {
             /*
-             * The stored pattern is unusable — written past the DCA, as
-             * measured on 2026-09-11. The route fell back to {alias}, so the
+             * The stored pattern is unusable — written past the DCA. The route fell back to {alias}, so the
              * addresses that existed were the fallback's; recording the broken
              * pattern's would file paths nobody ever visited.
              */

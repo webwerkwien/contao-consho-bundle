@@ -20,7 +20,7 @@ use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
  * — so a module does not depend on which of them happened. Only handlers
  * implementing RevocableDeliveryHandlerInterface are asked.
  *
- * ── After the commit, not inside it (review Nachlese, S1) ─────────────────
+ * ── After the commit, not inside it (Nachlese) ─────────────────
  *
  * The revocations happen inside transactions that may still roll back — a
  * withdrawal whose refund fails, a cancellation whose voucher rollback
@@ -57,7 +57,7 @@ class EntitlementRevocations
      * Late in kernel.terminate — after Contao's web cron (priority 0) and its
      * web worker (-2048), so whatever they revoke is told in the same request.
      * And after every message a worker handled, so a long-running consumer
-     * does not hold them for hours (second review, S-3).
+     * does not hold them for hours.
      */
     #[AsEventListener(KernelEvents::TERMINATE, priority: -4096)]
     #[AsEventListener(ConsoleEvents::TERMINATE)]

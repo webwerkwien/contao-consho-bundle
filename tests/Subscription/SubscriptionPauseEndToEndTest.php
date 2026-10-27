@@ -67,13 +67,13 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 
 /**
- * Abo pausieren (P102–P108) mit echten Bausteinen: echte Pause, echter Biller
- * mit Folgebestellung und Rechnung, echter Lebenszyklus, echter
- * Kündigungstermin, echte Berechtigungsabfrage, echter Verzug. Gedoppelt sind
- * nur Katalog, Mail, Bestellseite und Archiv.
+ * Pausing a subscription (P102–P108) with real building blocks: real pause, real biller
+ * with follow-up order and invoice, real lifecycle, real
+ * cancellation date, real entitlement query, real delinquency. Doubled are
+ * only catalogue, mail, order page and archive.
  *
- * Das Abo: Monatsabo ab 31.01.2026 10:15, ein Jahr, danach gleiche Laufzeit
- * (Geschäftskunde), Kündigungsfrist 30 Tage, Pause bis 3 Monate je Jahr.
+ * The subscription: monthly subscription from 31.01.2026 10:15, one year, then the same term
+ * (business customer), notice period 30 days, pause up to 3 months per year.
  */
 final class SubscriptionPauseEndToEndTest extends TestCase
 {
@@ -143,9 +143,9 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * P103–P105: zwei Monate ab dem Ende der laufenden Periode. Alles danach
-     * rückt um zwei Monate; in der Pause keine Abrechnung und kein Zugang,
-     * danach geht es mit der nächsten Periode weiter.
+     * P103–P105: two months from the end of the current period. Everything after
+     * moves by two months; during the pause no billing and no access,
+     * afterwards it continues with the next period.
      */
     public function testDiePauseVerschiebtAllesUndDanachGehtEsWeiter(): void
     {
@@ -161,22 +161,22 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         self::assertSame([2, '2026-04-30 10:15', '2027-03-31 10:15', 'active'], [(int) $row['pausedMonths'], $this->local($row['nextBillingAt']), $this->local($row['minimumEndsAt']), $row['state']]);
         self::assertSame([], $this->pause()->options($this->row(), $announced), 'eine Pause zur Zeit');
 
-        // Am Ende der Periode: nichts abgerechnet, das Abo pausiert.
+        // At the end of the period: nothing billed, the subscription is paused.
         $periodEnd = $this->at('2026-02-28 11:00');
         self::assertSame(['paused' => ['WEB-00090-1'], 'resumed' => []], $this->pause()->run($periodEnd));
         self::assertSame([], $this->billingRun()->run($periodEnd));
         self::assertSame('paused', $this->row()['state']);
 
-        // P105: der Zugang endet mit der bezahlten Periode.
+        // P105: access ends with the paid period.
         $query = new EntitlementQuery($this->connection);
         self::assertTrue($query->isActive(30, $this->at('2026-02-28 10:00')));
         self::assertFalse($query->isActive(30, $this->at('2026-03-15 12:00')));
 
-        // P108: der Verzug prüft weiter — ohne Überfälliges bleibt es pausiert.
+        // P108: delinquency keeps checking — with nothing overdue it stays paused.
         $this->delinquencyRun()->run($this->at('2026-03-15 12:00'));
         self::assertSame('paused', $this->row()['state']);
 
-        // Am Ende der Pause: wieder aktiv und im selben Lauf abgerechnet.
+        // At the end of the pause: active again and billed in the same run.
         $resumedAt = $this->at('2026-04-30 11:00');
         self::assertSame(['paused' => [], 'resumed' => ['WEB-00090-1']], $this->pause()->run($resumedAt));
         $billed = $this->billingRun()->run($resumedAt);
@@ -186,17 +186,17 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         self::assertTrue($query->isActive(30, $this->at('2026-05-15 12:00')), 'der Zugang ist zurück');
         self::assertSame('2026-05-31 10:15', $this->local($this->row()['nextBillingAt']));
 
-        // P104: der Kündigungstermin aus dem verschobenen Kalender.
+        // P104: the cancellation date from the shifted calendar.
         $term = new CancellationTerm(new SubscriptionCalendar(self::ZONE));
         self::assertSame('2027-03-31 10:15', $this->local($term->ordinary($this->row(), $this->at('2027-02-10 12:00'), null)->effectiveAt));
-        // Zu spät für dieses Ende: das nächste der gleichen Laufzeit — ab dem verschobenen Anker.
+        // Too late for this end: the next one of the same term — from the shifted anchor.
         self::assertSame('2028-03-31 10:15', $this->local($term->ordinary($this->row(), $this->at('2027-03-10 12:00'), null)->effectiveAt));
     }
 
     /**
-     * Eine Pause später im Vertrag: Die nächste Periode beginnt am Ende der
-     * Pause, nicht an der ersten Grenze nach der zuletzt bezahlten — die
-     * Grenzen liegen bei einer Pause aus ganzen Perioden ja an denselben Tagen.
+     * A pause later in the contract: the next period begins at the end of the
+     * pause, not at the first boundary after the last paid one — with a pause of
+     * whole periods the boundaries fall on the same days, after all.
      */
     public function testNachEinerSpaetenPauseBeginntDiePeriodeAmEndeDerPause(): void
     {
@@ -218,9 +218,9 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * P106/P108: Eine Zahlung während der Pause lässt das Abo pausiert — der
-     * Verzug holt nur ein ruhendes zurück, sonst käme „wieder aktiv" mitten in
-     * der Pause.
+     * P106/P108: a payment during the pause leaves the subscription paused — the
+     * delinquency check brings back only a suspended one, otherwise "active again" would come in the middle of
+     * the pause.
      */
     public function testEineZahlungInDerPauseWecktNichts(): void
     {
@@ -232,10 +232,10 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * Review B1: eine Pause aus der letzten Periode der Mindestlaufzeit. Ohne
-     * die Korrektur wartete die Abrechnung auf den Übergang und der Übergang
-     * auf die Abrechnung — für immer. Je Verlängerungsart, und das Jahresabo,
-     * bei dem jede Pause dort liegt (Regel 43).
+     * A pause from the last period of the minimum term. Without
+     * the fix, billing waited for the transition and the transition
+     * for billing — forever. Per renewal type, and the yearly subscription,
+     * in which every pause lies there — a state in which only this path can fire.
      *
      * @return iterable<string, array{array<string, mixed>, int, string, string, string}>
      */
@@ -260,8 +260,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         $this->pause()->schedule(1, $months, 'account', $this->at('2027-01-10 09:00'));
         self::assertSame($pauseEnds, $this->local($this->row()['minimumEndsAt']), 'die Laufzeit endet mit der Pause');
 
-        // Der echte Cron am Pausenende (zweites Review, S-B): seine
-        // Reihenfolge und seine Kandidatensuche, nicht eine Abschrift davon.
+        // The real cron at the end of the pause: its
+        // order and its candidate search, not a transcript of them.
         $at = $this->at($pauseEnds) + 2_700;
         $lifecycle = new SubscriptionLifecycle($this->connection, new DbalSubscriptionLock($this->connection), new SubscriptionCalendar(self::ZONE));
         $links = $this->createStub(OrderPageLink::class);
@@ -280,9 +280,9 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         $billed = $this->connection->fetchAllAssociative('SELECT servicePeriodFrom, servicePeriodUntil FROM tl_consho_order WHERE subscription = 1');
         self::assertCount(1, $billed, 'genau eine Periode nach der Pause');
         self::assertSame([$pauseEnds, $firstPeriodEnds], [$this->local($billed[0]['servicePeriodFrom']), $this->local($billed[0]['servicePeriodUntil'])]);
-        // Aus der Pause heraus. Nicht „active": DocumentIssuer stellt mit der
-        // Uhr des Servers aus, das Zahlungsziel liegt damit vor $at, und der
-        // echte Verzug im selben Lauf lässt das Abo ruhen (wie im Abo-5-Test).
+        // Out of the pause. Not "active": DocumentIssuer issues with the
+        // server's clock, so the payment term lies before $at, and the
+        // real delinquency check in the same run suspends the subscription (as in the Abo-5 test).
         self::assertNotSame('paused', $this->row()['state']);
 
         if ('' === $nextTermEnds) {
@@ -293,8 +293,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * Review S2: Ein Abo, das ohnehin endet, wird in seiner letzten Periode
-     * nicht pausiert — die Pause verschöbe nur das Ende um unbezahlte Monate.
+     * A subscription that ends anyway is not paused in its last period
+     * — the pause would only push the end out by unpaid months.
      */
     public function testEinEndendesAboNichtInDerLetztenPeriode(): void
     {
@@ -304,21 +304,21 @@ final class SubscriptionPauseEndToEndTest extends TestCase
 
         self::assertSame([], $this->pause()->options($this->row(), $this->at('2027-01-10 09:00')));
 
-        // Mitten in der Laufzeit schon.
+        // In the middle of the term it is.
         $this->connection->update('tl_consho_subscription', ['periodFrom' => $this->at('2026-01-31 10:15'), 'periodUntil' => $this->at('2026-02-28 10:15'), 'nextBillingAt' => $this->at('2026-02-28 10:15')], ['id' => 1]);
         self::assertSame([1, 2, 3], $this->pause()->options($this->row(), $this->at('2026-02-10 09:00')));
     }
 
     /**
-     * Review S1: nach einer Kündigung ist die Pause nicht mehr zurücknehmbar —
-     * der Kündigungstermin wurde aus der verschobenen Laufzeit gerechnet.
+     * After a cancellation the pause can no longer be withdrawn —
+     * the cancellation date was calculated from the shifted term.
      */
     public function testNachDerKuendigungNichtMehrZuruecknehmbar(): void
     {
         $this->pause()->schedule(1, 2, 'account', $this->at('2026-02-10 09:00'));
         $this->connection->update('tl_consho_subscription', ['endsAt' => $this->at('2027-03-31 10:15')], ['id' => 1]);
 
-        // Zweites Review, S-A: sie findet statt und bleibt sichtbar — nur nicht zurücknehmbar.
+        // It takes place and stays visible — just not withdrawable.
         self::assertTrue(SubscriptionPause::announced($this->row(), $this->at('2026-02-15 09:00')));
         self::assertFalse(SubscriptionPause::withdrawable($this->row(), $this->at('2026-02-15 09:00')));
         self::assertFalse($this->pause()->withdraw(1, $this->at('2026-02-15 09:00')));
@@ -326,8 +326,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * Review, Hinweis: ruht das Abo in der Pause und wird bezahlt, kommt es
-     * pausiert zurück — ohne „wieder aktiv".
+     * If the subscription is suspended during the pause and gets paid, it comes back
+     * paused — without "active again".
      */
     public function testBezahltInDerPauseKommtPausiertZurueck(): void
     {
@@ -344,8 +344,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * P108: Eine Rechnung von vor der Pause bleibt fällig — ihr Verzug läuft
-     * in der Pause weiter.
+     * P108: an invoice from before the pause stays due — its delinquency continues
+     * during the pause.
      */
     public function testDerVerzugLaeuftInDerPauseWeiter(): void
     {
@@ -360,8 +360,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * P104: Die gleiche Laufzeit verlängert vom verschobenen Ende aus — der
-     * Lebenszyklus fragt denselben Kalender.
+     * P104: the same term renews from the shifted end — the
+     * lifecycle asks the same calendar.
      */
     public function testDieGleicheLaufzeitVerlaengertVomVerschobenenEnde(): void
     {
@@ -376,8 +376,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * P107: vor Beginn zurücknehmen stellt genau her, was vorher war; eine
-     * laufende Pause läuft bis zu ihrem Ende.
+     * P107: withdrawing before the start restores exactly what was before; a
+     * running pause runs until its end.
      */
     public function testZuruecknehmenNurVorBeginnUndGenauWieVorher(): void
     {
@@ -395,14 +395,14 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         self::assertFalse($this->pause()->withdraw(1, $this->at('2026-02-20 09:00')), 'einmal');
         self::assertSame([1, 2, 3], $this->pause()->options($this->row(), $this->at('2026-02-20 09:00')), 'zurückgenommen zählt nicht ins Kontingent');
 
-        // Begonnen: nicht mehr.
+        // Started: no longer.
         $this->pause()->schedule(1, 1, 'account', $this->at('2026-02-20 09:00'));
         self::assertFalse($this->pause()->withdraw(1, $this->at('2026-03-01 09:00')));
         self::assertSame(1, (int) $this->row()['pausedMonths']);
     }
 
     /**
-     * P102: das Kontingent gilt je Vertragsjahr, gezählt vom echten Beginn.
+     * P102: the allowance applies per contract year, counted from the real start.
      */
     public function testDasKontingentJeVertragsjahr(): void
     {
@@ -418,8 +418,8 @@ final class SubscriptionPauseEndToEndTest extends TestCase
     }
 
     /**
-     * P103 und P106: nur ein aktives Abo, je Periode abgerechnet, ohne
-     * bekanntes Ende.
+     * P103 and P106: only an active subscription, billed per period, without a
+     * known end.
      */
     public function testWannEsNichtGeht(): void
     {
@@ -438,7 +438,7 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         }
     }
 
-    // ── Bausteine ───────────────────────────────────────────────────────────
+    // ── Building blocks ─────────────────────────────────────────────────────
 
     private function pause(): SubscriptionPause
     {

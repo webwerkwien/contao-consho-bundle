@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * dev#2: Ein Lieferschein je Paket, nur mit Nummernkreis, nur Physisches,
- * mit dem, was separat folgt (Entscheidungen Michael, 2026-10-21).
+ * dev#2: One delivery note per parcel, only with a number range, only
+ * physical items, with what follows separately.
  */
 final class DeliveryNoteIssuerTest extends TestCase
 {

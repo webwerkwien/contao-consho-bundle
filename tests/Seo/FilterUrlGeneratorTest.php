@@ -20,18 +20,19 @@ use Webwerkwien\ContaoConshoBundle\Seo\FilterStateCodec;
 use Webwerkwien\ContaoConshoBundle\Seo\FilterUrlGenerator;
 
 /**
- * Mit dem echten ContentUrlGenerator von Contao, nicht mit einem Mock.
+ * With Contao's real ContentUrlGenerator, not with a mock.
  *
- * Geprüft wird die Zeichenkette, die im href landet. Ein Mock müsste nachbauen,
- * wie Symfony den Pfad kodiert und die Query anhängt — und genau das ist die
- * Frage: Bleibt `cq=colour:red;volume:250ml` lesbar, oder wird daraus
- * `cq=colour%3Ared%3Bvolume%3A250ml`? Ohne Datenbank: PageRegistry fragt die
- * Verbindung erst für Präfixe und Suffixe aller Startpunkte, nicht für eine Route.
+ * What is checked is the string that ends up in the href. A mock would have
+ * to rebuild how Symfony encodes the path and appends the query — and that is
+ * exactly the question: does `cq=colour:red;volume:250ml` stay readable, or
+ * does it become `cq=colour%3Ared%3Bvolume%3A250ml`? Without a database:
+ * PageRegistry only asks the connection for the prefixes and suffixes of all
+ * start points, not for a route.
  */
 class FilterUrlGeneratorTest extends TestCase
 {
     /**
-     * Seite 12 (Kräuter) hat "volume:250ml" freigegeben, Seite 13 (Tees)
+     * Page 12 (Kräuter) has released "volume:250ml", page 13 (Tees)
      * "volume:500ml".
      */
     private const RELEASED = [
@@ -65,8 +66,8 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testDeselectingTheLastFilterIsTheBareCategory(): void
     {
-        // Kein "?cq=" und kein "?cq=colour:" — die Kategorie hat genau eine
-        // Adresse, und die trägt keine Query.
+        // No "?cq=" and no "?cq=colour:" — the category has exactly one
+        // address, and it carries no query.
         self::assertSame(
             '/kraeuter.html',
             $this->generator()->toggle($this->kraeuter(), new FilterState(['colour' => ['red']]), 'colour', 'red'),
@@ -81,7 +82,7 @@ class FilterUrlGeneratorTest extends TestCase
         );
     }
 
-    // ── Nur verfügbare (block Verfügbarkeit, V5) ─────────────────────────
+    // ── Only available (block Verfügbarkeit, V5) ─────────────────────────
 
     public function testDasHaekchenStehtImParameterUndBleibtBeimFiltern(): void
     {
@@ -111,8 +112,8 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testAReleasedCombinationKeepsTheSortOrderAsItsOnlyParameter(): void
     {
-        // Sortieren erzeugt keine neue Menge — die Landingpage bleibt, die
-        // Sortierung steht als einziges in cq.
+        // Sorting creates no new set — the landing page stays, the
+        // sort order is the only thing in cq.
         self::assertSame(
             '/kraeuter/schwedenbitter-250-ml.html?cq=sort_by:price_asc',
             $this->generator()->toggle($this->kraeuter(), new FilterState([], 'price_asc'), 'volume', '250ml'),
@@ -121,8 +122,8 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testAnotherFilterOnALandingPageLeavesItForTheCategory(): void
     {
-        // Rot + 250 ml ist nicht freigegeben. Die Adresse der Vereinigung ist
-        // die Kategorie mit cq — nicht die Landingpage mit "colour:red" dahinter.
+        // Red + 250 ml is not released. The address of the union is
+        // the category with cq — not the landing page with "colour:red" after it.
         self::assertSame(
             '/kraeuter.html?cq=colour:red;volume:250ml',
             $this->generator()->toggle($this->kraeuter(), new FilterState(['volume' => ['250ml']]), 'colour', 'red'),
@@ -160,9 +161,9 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testTheClickOrderDoesNotChangeTheAddress(): void
     {
-        // Erst rot, dann 250 ml — erst 250 ml, dann rot. Zwei Wege, ein Inhalt,
-        // eine Adresse. Beim zweiten Weg steht der Besucher dazwischen sogar
-        // auf der Landingpage.
+        // First red, then 250 ml — first 250 ml, then red. Two paths, one content,
+        // one address. On the second path the visitor is even on the
+        // landing page in between.
         $generator = $this->generator();
         $page = $this->kraeuter();
 
@@ -175,7 +176,7 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testTheReleaseBelongsToItsPage(): void
     {
-        // volume:500ml ist unter den Tees freigegeben, nicht unter den Kräutern.
+        // volume:500ml is released under the teas, not under the herbs.
         self::assertSame(
             '/kraeuter.html?cq=volume:500ml',
             $this->generator()->toggle($this->kraeuter(), new FilterState(), 'volume', '500ml'),
@@ -204,7 +205,7 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testAnEmptySortIsTheDefaultOrderWithoutAParameter(): void
     {
-        // Die Vorgabesortierung der Liste braucht keinen eigenen cq-Wert.
+        // The default sort order of the list needs no cq value of its own.
         self::assertSame(
             '/kraeuter/schwedenbitter-250-ml.html',
             $this->generator()->withSort($this->kraeuter(), new FilterState(['volume' => ['250ml']], 'price_asc'), ''),
@@ -214,9 +215,9 @@ class FilterUrlGeneratorTest extends TestCase
     public function testThePageNumberIsNeverCarriedOver(): void
     {
         /*
-         * Der Generator bekommt keinen Request — ein page_c<ID> kann gar nicht
-         * mitkommen. Hier zusätzlich belegt, dass auch Symfony die Query der
-         * laufenden Anfrage nicht übernimmt, wenn sie im RequestContext steht.
+         * The generator gets no request — a page_c<ID> cannot come along at
+         * all. Here it is additionally shown that Symfony does not take over the
+         * query of the current request either when it is in the RequestContext.
          */
         $context = new RequestContext();
         $context->setQueryString('page_c7=3&cq=colour:red&utm_source=newsletter');
@@ -229,7 +230,7 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testAnAbsoluteAddressCarriesDomainAndScheme(): void
     {
-        // So braucht es der Canonical (Task 6).
+        // This is how the canonical needs it.
         $page = $this->page(12, 'kraeuter', domain: 'example.org', https: true);
 
         self::assertSame(
@@ -240,8 +241,8 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testExtraQueryValuesFollowThePathAddressOfALandingPage(): void
     {
-        // So bekommt der Canonical einer Landingpage ab Seite 2 seine
-        // Seitenzahl (Task 6) — über Symfony, nicht per Zeichenkette.
+        // This is how the canonical of a landing page gets its page number from
+        // page 2 on — through Symfony, not by string.
         self::assertSame(
             '/kraeuter/schwedenbitter-250-ml.html?page_c7=2',
             $this->generator()->addressOf($this->kraeuter(), new FilterState(['volume' => ['250ml']]), UrlGeneratorInterface::ABSOLUTE_PATH, ['page_c7' => 2]),
@@ -258,9 +259,9 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testAnExtraFilterParameterIsRefused(): void
     {
-        // Die Adresse ist eine Funktion von Seite und Zustand. Ein Zusatzwert
-        // namens cq käme auf der Landingpage ohne Sortierung sonst einfach
-        // dazu — eine Adresse, die ListingAddressResolver als ungültig abweist.
+        // The address is a function of page and state. An extra value
+        // named cq would otherwise simply be added on the landing page without
+        // sorting — an address that ListingAddressResolver rejects as invalid.
         $this->expectException(\InvalidArgumentException::class);
 
         $this->generator()->addressOf($this->kraeuter(), new FilterState(['volume' => ['250ml']]), UrlGeneratorInterface::ABSOLUTE_PATH, ['cq' => 'colour:red']);
@@ -268,8 +269,8 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testAnExtraPathSegmentIsRefused(): void
     {
-        // "parameters" ist die Routenvariable für das Segment — ein Zusatzwert
-        // dieses Namens würde auf der Kategorie eine Landingpage erfinden.
+        // "parameters" is the route variable for the segment — an extra value
+        // of this name would invent a landing page on the category.
         $this->expectException(\InvalidArgumentException::class);
 
         $this->generator()->addressOf($this->kraeuter(), new FilterState(), UrlGeneratorInterface::ABSOLUTE_PATH, ['parameters' => '/erfunden']);
@@ -277,8 +278,8 @@ class FilterUrlGeneratorTest extends TestCase
 
     public function testTheParameterStaysReadableForEveryStateTheCodecLetsThrough(): void
     {
-        // Doppelpunkt, Strichpunkt und Komma bleiben unkodiert: Symfony nimmt
-        // sie in der Query ausdrücklich zurück (RFC 3986, QUERY_FRAGMENT_DECODED).
+        // Colon, semicolon and comma stay unencoded: Symfony explicitly reverts
+        // them in the query (RFC 3986, QUERY_FRAGMENT_DECODED).
         $generator = $this->generator();
         $codec = new FilterStateCodec();
 
@@ -298,10 +299,10 @@ class FilterUrlGeneratorTest extends TestCase
     public function testAnAliasOutsideTheCodecCannotBreakOutOfTheParameter(): void
     {
         /*
-         * Aliase kommen aus der Datenbank, nicht vom Besucher — aber falls doch
-         * einmal etwas anderes darin steht, darf daraus kein zweiter
-         * Query-Parameter und kein Fragment werden. Symfony kodiert & # = und
-         * Leerzeichen; von Hand zusammengesetzt stünde hier "&page_c7=9".
+         * Aliases come from the database, not from the visitor — but should
+         * something else ever be in there, it must not turn into a second
+         * query parameter or a fragment. Symfony encodes & # = and
+         * spaces; assembled by hand this would read "&page_c7=9".
          */
         $url = $this->generator()->toggle($this->kraeuter(), new FilterState(), 'colour', 'red&page_c7=9#x y');
 
@@ -343,7 +344,7 @@ class FilterUrlGeneratorTest extends TestCase
     }
 
     /**
-     * Eine reguläre Seite, wie PageRoute sie nach loadDetails() liest.
+     * A regular page, as PageRoute reads it after loadDetails().
      */
     private function page(int $id, string $alias, string $domain = '', bool $https = false): PageModel
     {

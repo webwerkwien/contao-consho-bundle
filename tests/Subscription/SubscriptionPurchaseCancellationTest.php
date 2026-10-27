@@ -16,12 +16,12 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPurchaseCancellation
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-7b, Review S1: Eine stornierte Verlängerung gibt die Lizenz zurück.
+ * Abo-7b: a cancelled renewal returns the licence.
  *
- * Altes Abo 40 (Bestellung 3, Zeile 7, bezahlt bis NOW + 10 Tage), verlängert
- * durch Abo 44 aus Bestellung 5 (Zeile 10); die Berechtigung 70 ist schon
- * übernommen und läuft bis NOW + 40 Tage. Mit der echten Verzugsprüfung —
- * sie entscheidet, ob die zurückgegebene Lizenz ruht (zweites Review, S-1).
+ * Old subscription 40 (order 3, line 7, paid until NOW + 10 days), renewed
+ * by subscription 44 from order 5 (line 10); entitlement 70 has already been
+ * taken over and runs until NOW + 40 days. With the real delinquency check —
+ * it decides whether the returned licence is suspended.
  */
 final class SubscriptionPurchaseCancellationTest extends TestCase
 {
@@ -64,8 +64,8 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
     }
 
     /**
-     * Zweites Review, S-1: Die übernommene Lizenz ruhte für die unbezahlte
-     * Verlängerung 5. Storniert, zählt 5 nicht mehr — die Lizenz ist frei.
+     * The licence taken over was suspended for the unpaid
+     * renewal 5. Cancelled, 5 no longer counts — the licence is free.
      */
     public function testEineFuerDieStornierteRechnungRuhendeLizenzWirdFrei(): void
     {
@@ -91,9 +91,9 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
     }
 
     /**
-     * Abo-Nachlese, P72: ein gewöhnliches Abo (kein Vorgänger) endet mit der
-     * Stornierung seiner Kaufbestellung — sonst entstünden weiter
-     * Folgebestellungen „Auf Rechnung" für etwas nie Gekauftes.
+     * Abo-Nachlese, P72: an ordinary subscription (no predecessor) ends with the
+     * cancellation of its purchase order — otherwise follow-up orders
+     * "on invoice" would keep being created for something never bought.
      */
     public function testEinGewoehnlichesAboEndetMitDerStornierung(): void
     {
@@ -104,7 +104,7 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
         $this->rollback()->afterCancellation(8, self::NOW);
 
         self::assertSame(['ended', self::NOW], $this->stateAndEnd(50));
-        // Das Mandat geht mit dem Vertrag (Abo-4b, P98).
+        // The mandate goes with the contract (Abo-4b, P98).
         self::assertSame('', $this->connection->fetchOne('SELECT mandate FROM tl_consho_subscription WHERE id = 50'));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT mandateMethod FROM tl_consho_subscription WHERE id = 50'));
         self::assertSame(['ended', self::NOW], $this->stateAndEnd(51), 'auch ruhend');
@@ -112,8 +112,8 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
     }
 
     /**
-     * Review Abo-Nachlese, S3: Der Kauf 3 des schon verlängerten Abos 40 wird
-     * storniert — 40 endet (P72), die Lizenz bleibt bei 44, das sie hält.
+     * Abo-Nachlese: purchase 3 of the already renewed subscription 40 is
+     * cancelled — 40 ends (P72), the licence stays with 44, which holds it.
      */
     public function testDerKaufEinesVerlaengertenAbosBeendetEsDieLizenzBleibt(): void
     {
@@ -126,7 +126,7 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
     }
 
     /**
-     * Review Abo-Nachlese, L9a: eine Folgebestellung ist nicht der Kauf.
+     * Abo-Nachlese: a follow-up order is not the purchase.
      */
     public function testDieStornierungEinerFolgebestellungBeendetNichts(): void
     {
@@ -140,7 +140,7 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
 
     public function testVorDerFreigabeNurDieSperreZurueck(): void
     {
-        // Vorkasse, nie bezahlt: die Berechtigung hängt noch am alten Abo.
+        // Prepayment, never paid: the entitlement still hangs on the old subscription.
         $this->connection->update('tl_consho_entitlement', ['pid' => 3, 'orderItem' => 7, 'subscription' => 40, 'validUntil' => self::NOW + 10 * self::DAY], ['id' => 70]);
 
         $this->rollback()->afterCancellation(5, self::NOW);
@@ -150,8 +150,8 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
     }
 
     /**
-     * Zweites Review, L-2: 44 ist selbst schon durch 48 verlängert, das die
-     * Lizenz hält — nichts zurückbauen, sonst führten zwei Wege zu ihr.
+     * 44 has itself already been renewed by 48, which holds the
+     * licence — roll nothing back, otherwise two paths would lead to it.
      */
     public function testEineSelbstVerlaengerteVerlaengerungBleibtStehen(): void
     {
@@ -162,14 +162,14 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
 
         self::assertSame(44, (int) $this->connection->fetchOne('SELECT renewedBy FROM tl_consho_subscription WHERE id = 40'));
         self::assertSame(48, (int) $this->connection->fetchOne('SELECT subscription FROM tl_consho_entitlement WHERE id = 70'));
-        // Das Abo selbst endet trotzdem (Review Abo-Nachlese, S3).
+        // The subscription itself still ends (Abo-Nachlese).
         self::assertSame(['ended', self::NOW], $this->stateAndEnd(44));
     }
 
     /**
-     * Abo-8, P78: Ein angenommener Widerruf der Kaufbestellung beendet das
-     * Abo seiner Zeile sofort und sperrt dessen Berechtigung. Ein zweites Abo
-     * derselben Bestellung, dessen Zeile nicht widerrufen ist, läuft weiter.
+     * Abo-8, P78: an accepted withdrawal of the purchase order ends the
+     * subscription of its line immediately and blocks its entitlement. A second subscription
+     * of the same order, whose line is not withdrawn, continues.
      */
     public function testDerWiderrufBeendetDasAboDerZeileUndSperrtDieLizenz(): void
     {
@@ -188,9 +188,9 @@ final class SubscriptionPurchaseCancellationTest extends TestCase
     }
 
     /**
-     * Abo-8, P78: Der Widerruf einer Verlängerung gibt die Lizenz ans alte Abo
-     * zurück wie die Stornierung — gesperrt wird sie nicht, die alte Periode
-     * ist bezahlt.
+     * Abo-8, P78: the withdrawal of a renewal returns the licence to the old subscription
+     * like the cancellation — it is not blocked, the old period
+     * is paid.
      */
     public function testDerWiderrufEinerVerlaengerungGibtDieLizenzZurueck(): void
     {

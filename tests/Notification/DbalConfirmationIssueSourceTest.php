@@ -27,7 +27,7 @@ class DbalConfirmationIssueSourceTest extends TestCase
     public function testVersendeteUndAltbestandMeldenNichts(): void
     {
         $this->connection->insert('tl_consho_order', ['id' => 1, 'shop' => 1, 'orderNumber' => 'WEB-1', 'confirmationSentAt' => 1_758_800_000]);
-        // 0: vor C-9 angelegt, keine Bestätigung fällig.
+        // 0: created before C-9, no confirmation due.
         $this->connection->insert('tl_consho_order', ['id' => 2, 'shop' => 1, 'orderNumber' => 'WEB-2', 'confirmationSentAt' => 0]);
 
         self::assertSame([], $this->source()->issues());
@@ -49,8 +49,8 @@ class DbalConfirmationIssueSourceTest extends TestCase
     }
 
     /**
-     * Microsoft 365 legt eine Mail an sich selbst nur unter „Gesendet" ab —
-     * ein Hinweis, groß oder klein geschrieben.
+     * Microsoft 365 files a mail to oneself only under "Sent" — a notice,
+     * upper or lower case.
      */
     public function testBetreiberadresseGleichAbsenderIstEinHinweis(): void
     {

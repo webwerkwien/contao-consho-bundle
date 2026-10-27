@@ -9,9 +9,9 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\DbalWithdrawalRepository;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * F-4, F17: Freigegebene digitale Mengen sind nicht mehr widerrufbar — die
- * Freigabe geschieht nur mit Zustimmung, bei Geschäftskunden oder nach
- * Fristende (§ 18 Abs. 1 Z 11 FAGG, § 356 Abs. 6 BGB).
+ * F-4, F17: Released digital quantities can no longer be withdrawn — the
+ * release only happens with consent, for business customers or after the
+ * period has ended (§ 18 Abs. 1 Z 11 FAGG, § 356 Abs. 6 BGB).
  */
 class DbalWithdrawalRepositoryTest extends TestCase
 {
@@ -43,10 +43,10 @@ class DbalWithdrawalRepositoryTest extends TestCase
     }
 
     /**
-     * Abo-8, P76: Eine Dienstleistung bleibt nach der Freigabe widerrufbar —
-     * die Zustimmung lässt das Recht bestehen, sie schuldet nur Wertersatz
-     * (§ 357a Abs. 2 BGB). Gegenprobe: dieselbe Freigabe an einem digitalen
-     * Inhalt verbraucht die Menge.
+     * Abo-8, P76: A service remains withdrawable after the release — the
+     * consent leaves the right in place, it only owes compensation for value
+     * (§ 357a Abs. 2 BGB). Control case: the same release on a digital content
+     * uses up the quantity.
      */
     public function testFreigegebeneDienstleistungBleibtWiderrufbar(): void
     {
@@ -61,8 +61,8 @@ class DbalWithdrawalRepositoryTest extends TestCase
     }
 
     /**
-     * Review Abo-8, S1: Für einen Geschäftskunden verbraucht die Freigabe auch
-     * eine Dienstleistung — wie seit F-4 einen digitalen Inhalt.
+     * Abo-8: For a business customer the release also uses up a service — as
+     * it has used up a digital content since F-4.
      */
     public function testBeimGeschaeftskundenVerbrauchtDieFreigabeAuchDieDienstleistung(): void
     {
@@ -74,9 +74,9 @@ class DbalWithdrawalRepositoryTest extends TestCase
     }
 
     /**
-     * DL3: „Leistung erbracht" mit Zustimmung zum vorzeitigen Beginn beendet
-     * das Recht (§ 356 Abs. 4 BGB, § 18 Abs. 1 Z 1 FAGG); ohne Zustimmung
-     * nicht. Das Buch daneben behält sein Fenster.
+     * DL3: "Service performed" with consent to the early start ends the right
+     * (§ 356 Abs. 4 BGB, § 18 Abs. 1 Z 1 FAGG); without consent it does not.
+     * The book next to it keeps its window.
      */
     public function testErbrachteLeistungMitZustimmungIstNichtMehrWiderrufbar(): void
     {
@@ -97,7 +97,7 @@ class DbalWithdrawalRepositoryTest extends TestCase
     }
 
     /**
-     * Abo-8, P77: Eine Abo-Zeile ist nur ganz widerrufbar.
+     * Abo-8, P77: A subscription line can only be withdrawn as a whole.
      */
     public function testAboZeileIstNurGanz(): void
     {
@@ -109,10 +109,10 @@ class DbalWithdrawalRepositoryTest extends TestCase
     }
 
     /**
-     * Abnahme Abo-8: „Die ganze Bestellung" legt keine Positionen an. Ohne
-     * eigene Regel blieb danach jede Menge übrig, und die Bestellseite bot
-     * den Widerruf weiter an. Gegenprobe: ein Teil als Freitext nennt keine
-     * Menge und lässt alles stehen.
+     * Abo-8: "The whole order" creates no items. Without a rule of its own
+     * every quantity remained afterwards, and the order page kept offering
+     * the withdrawal. Control case: a part as free text names no quantity and
+     * leaves everything in place.
      */
     public function testNachWiderrufDerGanzenBestellungIstNichtsMehrUebrig(): void
     {

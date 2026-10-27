@@ -51,7 +51,7 @@ final class CartView
     /**
      * The same basket under reverse charge: no tax, so every gross is its net.
      *
-     * 🔴 Found at the C-12 acceptance (2026-09-26): the checkout priced the
+     * 🔴 Before C-12 the checkout priced the
      * lines with the delivery country's rate and took the tax off shipping
      * and payment amounts only. The review showed a German customer's
      * article at net + 19 %, and OrderFactory — which does apply reverse

@@ -37,7 +37,7 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
  *  - POST `consho_renew_subscription=<id>` (Abo-7b, P67): "Lizenz verlängern"
  *    — asked again, the line into the member's basket, on to the basket page.
  *    The link is only there when the renewal is: renewable and offered with
- *    a price (Michael: „nichts anbieten was es ohnehin nicht gibt").
+ *    a price: nothing is offered that does not exist anyway.
  *  - `consho_pause_subscription=<id>` (Abo pausieren, P101): the page to
  *    choose a length; POST confirm announces it (asked again under the
  *    lock), mails "Pause bestätigt" and comes back with a notice. The link
@@ -173,8 +173,7 @@ class MySubscriptionsFlow
                 return ['redirect' => $here.'?'.http_build_query([self::NOTICE_PARAM => 'notFound'])];
             }
 
-            // The account's name, changeable (Michael, 2026-09-30: „ja, Name
-            // vorausfüllen") — the account knows it; asking again is friction.
+            // The account's name, changeable (prefilled) — the account knows it; asking again is friction.
             return ['view' => [
                 ...$view,
                 'form' => true,
@@ -187,7 +186,7 @@ class MySubscriptionsFlow
 
         $notice = $request->query->getString(self::NOTICE_PARAM);
 
-        // A result page past its 90 days says so (L4; second review, S-1).
+        // A result page past its 90 days says so (L4).
         if ($this->form->expired($request)) {
             $notice = 'expired';
         }
@@ -261,10 +260,10 @@ class MySubscriptionsFlow
                 $ended => 'ended',
                 $endsAt > 0 => 'ending',
                 // Resting first: also a renewal not started yet can rest for
-                // its predecessor's invoice (second review, L-4).
+                // its predecessor's invoice.
                 'suspended' === (string) $row['state'] => 'suspended',
                 'paused' === (string) $row['state'] => 'paused',
-                // A renewal that starts where the old licence ends (Abo-7b, review L6).
+                // A renewal that starts where the old licence ends (Abo-7b).
                 (int) $row['startedAt'] > $now => 'upcoming',
                 default => 'active',
             },
@@ -373,7 +372,7 @@ class MySubscriptionsFlow
 
     /**
      * The earliest end of an ordinary cancellation now, for the confirmation
-     * page (review Abo-7, S1) — '' where it has an end already or has ended.
+     * page (Abo-7) — '' where it has an end already or has ended.
      *
      * @param array<string, mixed> $subscription
      */

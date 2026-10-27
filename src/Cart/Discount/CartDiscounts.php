@@ -16,7 +16,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\ProductConditions;
 
 /**
  * Which cart rule applies to a basket, and what it takes off (block H, H-4;
- * docs/block-h-preise.md, H6, C3, W1–W6).
+ * Block H, H6, C3, W1–W6).
  *
  * The amounts are worked out in the customer's own reading (W2): per tax
  * class, the class's goods as the customer sees them (gross, or net for a net
@@ -135,7 +135,7 @@ class CartDiscounts implements ResetInterface
      * order only. Throws when it is gone meanwhile.
      *
      * ⚠️ Correct only under READ COMMITTED, which OrderPlacer sets for the
-     * purchase (review H, P7): the second buyer waits for the lock, then has
+     * purchase (H): the second buyer waits for the lock, then has
      * to SEE the first one's redemption when counting. Under REPEATABLE READ
      * the count would read the snapshot taken before the lock, and both
      * would get the last use — the trap the last key of block G fell into.
@@ -255,7 +255,7 @@ class CartDiscounts implements ResetInterface
         $digits = Currencies::getFractionDigits($currency);
 
         /*
-         * Per class AND country (review H, S1): a service and a good may
+         * Per class AND country (H): a service and a good may
          * share a class and still be taxed in different countries (DL4);
          * the amount off each is at that supply's own rate.
          *

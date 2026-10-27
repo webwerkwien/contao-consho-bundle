@@ -40,29 +40,30 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Der Mini-Warenkorb (C10).
+ * The mini cart (C10).
  *
- * Der Kern dieser Datei ist **eine** Behauptung: Die Antwort des Fragments
- * trägt den Header `Contao-Merge-Cache-Control` **nicht**. Trüge sie ihn,
- * mischte `SubrequestCacheSubscriber` ihr `private, no-store` in das
- * Cache-Control der Seite — und jede Seite mit einem Mini-Warenkorb fiele aus
- * dem geteilten Cache, sobald ESI nicht greift.
+ * The core of this file is **one** claim: the fragment's response does
+ * **not** carry the header `Contao-Merge-Cache-Control`. If it did,
+ * `SubrequestCacheSubscriber` would merge its `private, no-store` into the
+ * page's Cache-Control — and every page with a mini cart would drop out of
+ * the shared cache as soon as ESI does not apply.
  *
- * Deshalb wird `getResponse()` hier wirklich aufgerufen und nicht nur
- * `freshResponse()` betrachtet: Ein Test, der allein das Antwortobjekt prüfte,
- * bliebe grün, wenn der Controller es nie weiterreichte. Die `FragmentTemplate`
- * bekommt dafür eine Schließung, die genau das tut, was
- * `AbstractFragmentController::render()` tut, wenn ihm **keine** Antwort
- * übergeben wird (Z. 232–241 zusammen mit `markResponseForInternalCaching()`):
- * Sie setzt den Misch-Header. Ein Controller, der `$template->getResponse()`
- * ohne Argument aufriefe, bekäme ihn also und diese Tests würden rot.
+ * That is why `getResponse()` is really called here and not just
+ * `freshResponse()` looked at: a test that checked only the response object
+ * would stay green if the controller never passed it on. For this the
+ * `FragmentTemplate` gets a closure that does exactly what
+ * `AbstractFragmentController::render()` does when it is passed **no**
+ * response (l. 232–241 together with `markResponseForInternalCaching()`):
+ * it sets the merge header. A controller that called
+ * `$template->getResponse()` without an argument would therefore get it, and
+ * these tests would turn red.
  *
- * Was diese Tests NICHT zeigen:
+ * What these tests do NOT show:
  *
- * - dass ein Reverse Proxy das Fragment tatsächlich per ESI nachlädt — das ist
- *   die Messung in C-12 (13.2);
- * - dass die Twig-Datei fehlerfrei rendert; sie wird wie in CartTemplateTest
- *   als Text geprüft, nicht gerendert.
+ * - that a reverse proxy actually loads the fragment via ESI — that is the
+ *   measurement in C-12 (13.2);
+ * - that the Twig file renders without errors; as in CartTemplateTest it is
+ *   checked as text, not rendered.
  */
 class MiniCartControllerTest extends TestCase
 {
@@ -77,7 +78,7 @@ class MiniCartControllerTest extends TestCase
     private Connection $connection;
 
     /**
-     * Die Kundengruppen, die der Controller zuletzt an den Rechner gab.
+     * The customer groups the controller last passed to the calculator.
      *
      * @var list<int>
      */
@@ -93,8 +94,8 @@ class MiniCartControllerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         $this->connection->insert('tl_consho_shop', ['id' => self::SHOP, 'fallbackLanguage' => 'de']);
 
-        // Für PriceAudienceResolver: Der Hinweis fragt tl_member_group und
-        // tl_consho_price ab, auch wenn der Mini-Warenkorb ihn nicht zeigt.
+        // For PriceAudienceResolver: the notice queries tl_member_group and
+        // tl_consho_price, even though the mini cart does not show it.
         $this->connection->executeStatement('CREATE TABLE tl_member_group (id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT "", disable CHAR(1) NOT NULL DEFAULT "")');
         DcaSchema::create($this->connection, 'tl_consho_price');
         DcaSchema::create($this->connection, 'tl_consho_product');
@@ -103,10 +104,10 @@ class MiniCartControllerTest extends TestCase
 
     public function testDasElementWirdAlsEsiGerendert(): void
     {
-        // C10: Das Fragment wird frisch geholt, während die Seite im geteilten
-        // Cache bleibt. Ohne `renderer` gälte `forward` — dann rendert Contao
-        // das Element inline, und im Seiten-Cache läge der Warenkorb eines
-        // einzelnen Besuchers.
+        // C10: the fragment is fetched fresh while the page stays in the shared
+        // cache. Without `renderer`, `forward` would apply — then Contao renders
+        // the element inline, and the page cache would hold the cart of a
+        // single visitor.
         $attributes = (new \ReflectionClass(MiniCartController::class))->getAttributes(AsContentElement::class);
 
         self::assertCount(1, $attributes);
@@ -123,9 +124,9 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Die eigentliche Aussage des Tasks — siehe den Klassenkommentar: Die
-     * Schließung der Vorlage setzt den Misch-Header genau dann, wenn ihr keine
-     * vorgebaute Antwort übergeben wird.
+     * The actual claim of this file — see the class comment: the template's
+     * closure sets the merge header exactly when it is passed no prebuilt
+     * response.
      */
     public function testDieGerenderteAntwortTraegtDenMischHeaderNicht(): void
     {
@@ -142,8 +143,8 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Auch der stumme Fall darf den Header nicht tragen — er ist der Zweig,
-     * der ohne Vorlage auskommt und deshalb leicht vergessen wird.
+     * The silent case must not carry the header either — it is the branch
+     * that gets by without a template and is therefore easily forgotten.
      */
     public function testAuchOhneShopBleibtDerMischHeaderWeg(): void
     {
@@ -155,11 +156,11 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Das Abzeichen zählt **Positionen**, nicht Stückzahlen.
+     * The badge counts **lines**, not pieces.
      *
-     * `CartView::quantity` ist die Summe der Mengen — hier 3 + 2 = 5 — und
-     * damit eine Dezimalzahl: Ein Shop, der in Kilogramm verkauft, schriebe
-     * „2,5" ins Abzeichen. `count()` ist von Bauart her eine ganze Zahl.
+     * `CartView::quantity` is the sum of the quantities — here 3 + 2 = 5 — and
+     * therefore a decimal: a shop selling by the kilogram would write "2,5"
+     * into the badge. `count()` is an integer by construction.
      */
     public function testDasAbzeichenZaehltPositionenUndNichtStueckzahlen(): void
     {
@@ -171,11 +172,11 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Und `count()` zählt auch die Zeilen mit, die nicht bepreisbar sind —
-     * `CartView::quantity` tut das nicht, `CartPricer` zählt die Menge erst
-     * hinter der Preisprüfung. Ein Abzeichen auf der Stückzahl zeigte für einen
-     * Warenkorb, der nur unbepreisbare Artikel hält, eine 0 — während der
-     * Besucher genau diese Artikel entfernen muss, um weiterzukommen.
+     * And `count()` also counts the lines that cannot be priced —
+     * `CartView::quantity` does not, `CartPricer` only counts the quantity
+     * after the price check. A badge on the piece count would show a 0 for a
+     * cart holding only unpriceable articles — while the visitor has to
+     * remove exactly these articles to get any further.
      */
     public function testEineUnbepreisbareZeileZaehltMit(): void
     {
@@ -188,9 +189,9 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Der Betrag kommt fertig formatiert aus MoneyFormatter, nicht als rohe
-     * Dezimalzahl: 3 × 10,00 netto plus 2 × 10,00 netto ergibt bei 20 % genau
-     * 60,00 brutto.
+     * The amount comes fully formatted from MoneyFormatter, not as a raw
+     * decimal: 3 × 10.00 net plus 2 × 10.00 net makes exactly 60.00 gross at
+     * 20 %.
      */
     public function testDerBetragKommtFertigFormatiert(): void
     {
@@ -205,10 +206,10 @@ class MiniCartControllerTest extends TestCase
 
     public function testDerBetragTraegtDieWaehrungDesStartpunktsNichtDieDesShops(): void
     {
-        // Spec 4.0: Der Shop dieses Tests steht auf EUR (siehe framework()),
-        // der Startpunkt auf GBP. Die Preise sind gedoppelt und währungsblind,
-        // der Betrag bleibt also 60,00 — was sich ändert, ist einzig die
-        // Währung, in der er formatiert wird. Genau darum geht es hier.
+        // Spec 4.0: the shop of this test is set to EUR (see framework()), the
+        // start point to GBP. The prices are doubled and currency-blind, so the
+        // amount stays 60.00 — the only thing that changes is the currency in
+        // which it is formatted. That is exactly the point here.
         $this->fillCart();
 
         $data = $this->context($this->requestWithCart(), $this->page(currency: 'GBP'));
@@ -221,14 +222,14 @@ class MiniCartControllerTest extends TestCase
     public function testOhneWaehrungAmStartpunktBleibtDasElementStumm(): void
     {
         /*
-         * Das Fenster zwischen Deploy und `contao:migrate`. Der Mini-Warenkorb
-         * steht auf jeder Seite und rendert auch leer — ohne diese Sperre
-         * stünde dort „0,00 XXX" (gemessen: ICU setzt für einen unbekannten
-         * Code seinen Platzhalter, und `Currencies::getFractionDigits('')`
-         * fällt auf DEFAULT zurück statt zu werfen).
+         * The window between deploy and `contao:migrate`. The mini cart stands
+         * on every page and renders even when empty — without this lock it
+         * would show "0,00 XXX" (measured: ICU puts its placeholder for an
+         * unknown code, and `Currencies::getFractionDigits('')` falls back to
+         * DEFAULT instead of throwing).
          *
-         * Geprüft wird die Antwort selbst, nicht nur ein fehlender Betrag: Sie
-         * muss die frische sein — privat, ohne Speicherung, ohne Misch-Header.
+         * What is checked is the response itself, not just a missing amount: it
+         * has to be the fresh one — private, no storage, no merge header.
          */
         $this->fillCart();
 
@@ -243,9 +244,9 @@ class MiniCartControllerTest extends TestCase
 
     public function testOhneWarenkorbStehtEineNullDa(): void
     {
-        // Es gibt keinen Warenkorb, und es wird auch keiner angelegt (12). Das
-        // Element steht trotzdem da — sonst springt das Layout, sobald der
-        // erste Artikel hineinkommt.
+        // There is no cart, and none is created either (12). The element still
+        // stands there — otherwise the layout jumps as soon as the first article
+        // goes in.
         $data = $this->context(Request::create('https://example.com/'), $this->page());
 
         self::assertSame(0, $data['line_count']);
@@ -261,9 +262,9 @@ class MiniCartControllerTest extends TestCase
 
     public function testOhneWarenkorbseiteGibtEsKeinenVerweis(): void
     {
-        // Keine Warenkorbseite gesetzt: Der Befund aus Task 13 mahnt das im
-        // Backend an; das Element zeigt derweil Zahl und Summe ohne Verweis —
-        // ein toter Link hülfe dem Besucher nicht.
+        // No cart page set: a setup issue reminds of that in the back end;
+        // meanwhile the element shows count and total without a link — a dead
+        // link would not help the visitor.
         $data = $this->context(Request::create('https://example.com/'), $this->page(cartPageId: 0));
 
         self::assertNull($data['cart_page']);
@@ -271,8 +272,8 @@ class MiniCartControllerTest extends TestCase
 
     public function testDieVorlageHaengtKeineWaehrungSelbstAn(): void
     {
-        // Wie beim Warenkorb-Element: Der Betrag ist schon formatiert, und im
-        // Englischen steht das Währungszeichen davor.
+        // As with the cart element: the amount is already formatted, and in
+        // English the currency symbol stands in front.
         self::assertStringNotContainsString('{{ currency }}', $this->templateSource());
     }
 
@@ -297,8 +298,8 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Ohne Palette ist der Typ im Backend nicht auswählbar — das Element
-     * existierte dann nur im Code.
+     * Without a palette the type cannot be selected in the back end — the
+     * element would then exist only in the code.
      */
     public function testDasElementHatEinePalette(): void
     {
@@ -321,10 +322,10 @@ class MiniCartControllerTest extends TestCase
         self::assertArrayHasKey('consho_mini_cart', $palettes);
     }
 
-    // ── Aufbau ──────────────────────────────────────────────────────────────
+    // ── Setup ───────────────────────────────────────────────────────────────
 
     /**
-     * Zwei Positionen: 3 Stück und 2 Stück, beide zu 10,00 netto.
+     * Two lines: 3 pieces and 2 pieces, both at 10.00 net.
      */
     private function fillCart(): void
     {
@@ -339,8 +340,8 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * 43 Zeichen aus dem erlaubten Vorrat — CartToken::fromRequest weist alles
-     * andere ab, bevor es die Datenbank sieht.
+     * 43 characters from the allowed set — CartToken::fromRequest rejects
+     * everything else before it sees the database.
      */
     private function token(): string
     {
@@ -352,7 +353,7 @@ class MiniCartControllerTest extends TestCase
         return Request::create('https://example.com/', cookies: [CartToken::NAME => $this->token()]);
     }
 
-    // ── Für wen der Mini-Warenkorb rechnet (C-4) ────────────────────────────
+    // ── Whom the mini cart calculates for (C-4) ─────────────────────────────
 
     public function testEinGastSiehtDieSummeBrutto(): void
     {
@@ -366,10 +367,10 @@ class MiniCartControllerTest extends TestCase
 
     public function testDieGruppenDesMitgliedsErreichenDenRechner(): void
     {
-        // ⚠️ Regel 24, im Abschlussreview C-4 als Lücke gemeldet: Ob der
-        // Controller die Gruppen überhaupt weitergibt, verrät kein Betrag —
-        // der Rechner-Doppel liefert hier immer dieselben 10,00. Also wird
-        // aufgezeichnet, was ankam.
+        // ⚠️ The test must go through the real place (C-4): whether the
+        // controller passes the groups on at all is revealed by no amount —
+        // the calculator double always returns the same 10.00 here. So what
+        // arrived is recorded.
         $this->connection->insert('tl_member_group', ['id' => 3, 'name' => 'Händler']);
         $this->fillCart();
 
@@ -390,22 +391,21 @@ class MiniCartControllerTest extends TestCase
         self::assertFalse($brutto['showsNet']);
         self::assertTrue($netto['showsNet']);
 
-        // Die Beträge ausdrücklich, nicht nur „verschieden": 3 + 2 Stück zu
-        // 10,00 netto sind 50,00 netto und 60,00 brutto bei 20 %. Ein
-        // assertNotSame wäre auch dann grün, wenn die Summe aus einer
-        // beliebigen anderen Quelle käme.
+        // The amounts explicitly, not just "different": 3 + 2 pieces at
+        // 10.00 net are 50.00 net and 60.00 gross at 20 %. An assertNotSame
+        // would also be green if the total came from any other source.
         self::assertSame((new MoneyFormatter())->format('60.0000', 'EUR', 'de'), $brutto['total']);
         self::assertSame((new MoneyFormatter())->format('50.0000', 'EUR', 'de'), $netto['total']);
     }
 
     /**
-     * Was das Element der Vorlage übergibt.
+     * What the element passes to the template.
      *
-     * Über getData(), nicht get(): FragmentTemplate::get() wirft für einen
-     * Schlüssel, dessen Wert null ist — und genau das ist `cart_page` ohne
-     * eingestellte Warenkorbseite.
+     * Via getData(), not get(): FragmentTemplate::get() throws for a key whose
+     * value is null — and that is exactly `cart_page` without a configured
+     * cart page.
      *
-     * @param list<int>|null $memberGroups null = niemand angemeldet (C-4)
+     * @param list<int>|null $memberGroups null = nobody logged in (C-4)
      *
      * @return array<string, mixed>
      */
@@ -427,9 +427,9 @@ class MiniCartControllerTest extends TestCase
         $shops = new ShopResolver($framework);
 
         /*
-         * getResponse() ist protected — wie in ProductPageControllerTest macht
-         * eine anonyme Unterklasse sie für den Test erreichbar. Sie überschreibt
-         * nichts, damit geprüft wird, was das Element wirklich tut.
+         * getResponse() is protected — as in ProductPageControllerTest an
+         * anonymous subclass makes it reachable for the test. It overrides
+         * nothing, so that what is checked is what the element really does.
          */
         $controller = new class(
             new CartResolver($repository, new TokenStorage()),
@@ -451,9 +451,9 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Eine FragmentTemplate, deren Schließung sich verhält wie
-     * AbstractFragmentController::render(): Ohne vorgebaute Antwort setzt sie
-     * den Misch-Header und räumt das Cache-Control weg.
+     * A FragmentTemplate whose closure behaves like
+     * AbstractFragmentController::render(): without a prebuilt response it
+     * sets the merge header and clears the Cache-Control.
      */
     private function template(): FragmentTemplate
     {
@@ -472,17 +472,18 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Der Startpunkt selbst — `rootId` zeigt auf ihn. Seit C-1c trägt seine
-     * Zeile auch die Währung, denn die hängt am Startpunkt und nicht am Shop.
+     * The start point itself — `rootId` points to it. Since C-1c its row also
+     * carries the currency, because that hangs off the start point and not
+     * off the shop.
      */
     private function page(int $cartPageId = self::CART_PAGE, string $currency = 'EUR'): PageModel
     {
         $page = $this->createMock(PageModel::class);
         $page->method('__get')->willReturnMap([
             ['id', self::PAGE],
-            // `type`, nicht nur `rootId`: Woran ShopResolver einen Startpunkt
-            // erkennt, ist die echte Spalte — `rootId` allein zu setzen hieße,
-            // das Doppel über seine Herkunft entscheiden zu lassen.
+            // `type`, not just `rootId`: what ShopResolver recognises a start point
+            // by is the real column — setting only `rootId` would mean letting the
+            // double decide about its own origin.
             ['type', 'root'],
             ['rootId', self::PAGE],
             ['language', 'de'],
@@ -537,11 +538,11 @@ class MiniCartControllerTest extends TestCase
     }
 
     /**
-     * Artikel 100 und 200 kosten 10,00 netto, alles andere ist unbepreisbar.
-     * 20 % in Österreich.
+     * Articles 100 and 200 cost 10.00 net, everything else cannot be priced.
+     * 20 % in Austria.
      */
     /**
-     * Ein angemeldetes Mitglied mit diesen Gruppen, oder niemand (C-4).
+     * A logged-in member with these groups, or nobody (C-4).
      *
      * @param list<int>|null $groups
      */
@@ -568,9 +569,9 @@ class MiniCartControllerTest extends TestCase
         $prices = $this->createMock(CartLinePriceSource::class);
         $prices->method('forCartLine')->willReturnCallback(
             function (int $articleId, int $mainProductId, string $currency, string $quantity, int $now, array $groups): CartLinePrice|null {
-                // Aufgezeichnet, weil die Frage ist, ob der Controller die
-                // Gruppen überhaupt weitergibt (Regel 24) — ein Rückgabewert
-                // allein verriete das nicht.
+                // Recorded, because the question is whether the controller passes
+                // the groups on at all — a return value alone would not reveal
+                // that.
                 $this->groupsSeen = $groups;
 
                 return \in_array($articleId, [100, 200], true) ? new CartLinePrice('10.0000', 1) : null;
@@ -598,11 +599,12 @@ class MiniCartControllerTest extends TestCase
         return new CartPricer($tree, $prices, new GrossCalculator(new TaxResolver($rates, new CountryProvider($countries))));
     }
 
-    // ── Vorlage und Sprachdateien ───────────────────────────────────────────
+    // ── Template and language files ─────────────────────────────────────────
 
     /**
-     * Die Vorlage **ohne** ihre Twig-Kommentare — wie in CartTemplateTest: Ein
-     * Erklärkommentar, der Markup ausschreibt, verfälscht sonst jede Suche.
+     * The template **without** its Twig comments — as in CartTemplateTest: an
+     * explanatory comment that spells out markup otherwise distorts every
+     * search.
      */
     private function markup(): string
     {
@@ -653,8 +655,8 @@ class MiniCartControllerTest extends TestCase
             $item = $item[$part];
         }
 
-        // Eine CTE-Beschriftung ist ein Paar [Name, Beschreibung]; der erste
-        // Eintrag ist der Name.
+        // A CTE label is a pair [name, description]; the first entry is the
+        // name.
         if (\is_array($item)) {
             return isset($item[0]) && \is_string($item[0]) ? $item[0] : null;
         }

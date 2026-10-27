@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingCountryCoverage;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * E-5, V3: Welche Länder die Versandarten eines Shops erreichen — und laut,
- * wenn ein angehaktes Lieferland dadurch aus dem Checkout fällt.
+ * E-5, V3: Which countries a shop's shipping methods reach — and loudly,
+ * when a ticked delivery country drops out of the checkout because of it.
  */
 class ShippingCountryCoverageTest extends TestCase
 {
@@ -44,8 +44,8 @@ class ShippingCountryCoverageTest extends TestCase
     }
 
     /**
-     * Unveröffentlicht oder nie gespeichert (ohne Steuerklasse) liefert
-     * nirgends hin — und zählt deshalb nicht als „überall".
+     * Unpublished or never saved (without a tax class) delivers nowhere —
+     * and therefore does not count as "everywhere".
      */
     public function testNurAngebotsfaehigeArtenZaehlen(): void
     {

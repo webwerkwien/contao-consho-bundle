@@ -43,7 +43,7 @@ final class ContaoOrderStatusWriter implements OrderStatusWriterInterface
 
         // Versions derives the "edit" link from the running request — in a
         // provider's notification that is /_consho/payment/notify/… and leads
-        // nowhere (Fable review of D-1, K2).
+        // nowhere (D-1).
         $versions->setEditUrl($this->router->generate('contao_backend', ['do' => 'consho_order', 'act' => 'edit', 'id' => $orderId]));
         $versions->initialize();
 

@@ -13,9 +13,9 @@ class DbalArticleTaxClassesTest extends TestCase
 
     public function testAVariantIsTaxedWithItsOwnClassNotTheMainProducts(): void
     {
-        // taxClass ist an jeder Zeile Pflicht, auch an Varianten — und OrderFactory
-        // versteuert die Position mit der Klasse des Artikels. Die Anzeige darf
-        // nichts anderes rechnen, auch wenn die Variante die Preiszeilen erbt.
+        // taxClass is required on every row, variants included — and OrderFactory
+        // taxes the line item with the article's class. The display must not
+        // calculate anything else, even if the variant inherits the price rows.
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($connection);
         $this->insertProduct(['id' => 1, 'pid' => 0, 'taxClass' => 2]);

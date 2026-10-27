@@ -69,13 +69,13 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Translation\TranslationStorage;
 
 /**
- * Abo-4b (P94–P97, P99) mit echten Bausteinen: echter Biller, echte
- * Folgebestellung, echter Zahlungsversuch, echte Zahlungszeile, echte
- * Rechnung, echter Rückfall „Auf Rechnung". Gedoppelt sind nur das
- * Zahlungsmodul (FakeRecurringHandler), Mail, Bestellseite und Archiv.
+ * Abo-4b (P94–P97, P99) with real building blocks: real biller, real
+ * follow-up order, real payment attempt, real payment row, real
+ * invoice, real fallback "on invoice". Doubled are only the
+ * payment module (FakeRecurringHandler), mail, order page and archive.
  *
- * FOR UPDATE wie in SubscriptionBillingEndToEndTest: eine DBAL-Middleware
- * streicht die zwei Wörter. Alle Tabellen aus den DCAs.
+ * FOR UPDATE as in SubscriptionBillingEndToEndTest: a DBAL middleware
+ * strips the two words. All tables from the DCAs.
  */
 final class SubscriptionChargeEndToEndTest extends TestCase
 {
@@ -157,9 +157,9 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * P94, P97: bezahlt → Zahlungszeile, Rechnung nach dem Auslöser des
-     * Moduls (bei Zahlung), „Rechnung zum Abo" mit Abbuchungstag statt
-     * „Zahlung erhalten".
+     * P94, P97: paid → payment row, invoice after the module's trigger
+     * (on payment), "invoice for the subscription" with the charge date instead of
+     * "payment received".
      */
     public function testBezahltBuchtDieZahlungUndSchicktDieAbgebuchteFassung(): void
     {
@@ -175,7 +175,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame([8, 'Karte'], [(int) $order['paymentMethod'], $order['paymentMethodTitle']]);
         self::assertSame($now, (int) $order['paymentSettledAt']);
 
-        // Das Modul bekam Mandat, Versuch und Sicht mit der Abo-Zeile.
+        // The module received mandate, attempt and view with the subscription line.
         self::assertCount(1, $this->card->charges);
         [$attempt, $view, $mandate] = $this->card->charges[0];
         self::assertSame('cus_1|pm_2', $mandate);
@@ -192,8 +192,8 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * P95: fehlgeschlagen → sofort „Auf Rechnung", ohne Gebühr, Rechnung und
-     * Mail wie bisher; das Mandat bleibt.
+     * P95: failed → immediately "on invoice", without a fee, invoice and
+     * mail as before; the mandate stays.
      */
     public function testFehlgeschlagenGehtSofortAufRechnung(): void
     {
@@ -214,7 +214,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame(['cus_1|pm_2', 8], [$this->subscription()['mandate'], (int) $this->subscription()['mandateMethod']], 'das Mandat bleibt');
         self::assertContains('Charging follow-up order WEB-00091 failed: Karte abgelaufen.', $this->log->getArrayCopy());
 
-        // Die nächste Periode wird wieder abgebucht.
+        // The next period is charged again.
         $this->card->charge = ChargeResult::paid('8.33', 'ch_2');
         $next = $this->billingRun()->run($this->at('2026-03-31 11:00'));
         self::assertSame(8, (int) $this->order($next[0]->orderId)['paymentMethod']);
@@ -232,8 +232,8 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * P94, P97: ausstehend → keine Rechnung, keine Mail; die Meldung des
-     * Anbieters bucht und schickt die abgebuchte Fassung.
+     * P94, P97: pending → no invoice, no mail; the provider's report
+     * books and sends the charged version.
      */
     public function testAusstehendWartetAufDieMeldung(): void
     {
@@ -244,16 +244,16 @@ final class SubscriptionChargeEndToEndTest extends TestCase
 
         self::assertSame('pending', $this->connection->fetchOne('SELECT state FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
         self::assertFalse($this->connection->fetchOne("SELECT 1 FROM tl_consho_document WHERE pid = ? AND type = 'invoice'", [$orderId]));
-        // E7: der Kunde erfährt, dass abgebucht wird — mit Zeitraum; die Rechnung folgt mit der Zahlung.
+        // E7: the customer learns that a charge is coming — with the period; the invoice follows with the payment.
         self::assertSame([['subscriptionChargePending', $orderId, 'WEB-00090-1', true]], $this->mails->getArrayCopy());
 
-        // Ein zweiter Lauf bucht nicht noch einmal ab: Der Versuch steht schon.
+        // A second run does not charge again: the attempt is already there.
         self::assertNull($this->charger()->charge($orderId, $now + 60));
         self::assertCount(1, $this->mails, 'und schreibt auch nicht noch einmal');
         self::assertSame([], $this->charger()->chargeOutstanding($now + 60));
         self::assertCount(1, $this->card->charges);
 
-        // Drei Tage später meldet der Anbieter: bezahlt.
+        // Three days later the provider reports: paid.
         $this->card->notification = NotificationResult::paid('8.33', 'sepa_1');
         $paidAt = $now + 3 * 86_400;
         self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $paidAt));
@@ -264,8 +264,8 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * P95 auch über die Meldung: Eine ausstehende Lastschrift, die der
-     * Anbieter später als fehlgeschlagen meldet.
+     * P95 via the report as well: a pending direct debit that the
+     * provider later reports as failed.
      */
     public function testEineSpaeterFehlgeschlageneLastschriftGehtAufRechnung(): void
     {
@@ -281,8 +281,8 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * P96: Ausstehend länger als 7 Tage → wie P95, im stündlichen Lauf. Nicht
-     * vorher, und der abgebrochene Versuch wird dem Modul gemeldet.
+     * P96: pending for longer than 7 days → like P95, in the hourly run. Not
+     * before, and the aborted attempt is reported to the module.
      */
     public function testNachSiebenTagenOhneAntwortAufRechnung(): void
     {
@@ -300,18 +300,18 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertCount(1, $this->card->cancelled);
         self::assertSame([['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0]], $this->mails->getArrayCopy());
 
-        // Ein zweiter Lauf findet nichts mehr.
+        // A second run finds nothing more.
         self::assertSame([], $this->fallback()->lapse($createdAt + 8 * 86_400));
     }
 
     /**
-     * P96 fragt die BESTELLUNG: Auch eine, deren Abbuchung nie begann, geht
-     * nach 7 Tagen auf Rechnung — vorher holt der Lauf die Abbuchung nach.
+     * P96 asks the ORDER: one whose charge never began also goes
+     * on invoice after 7 days — before that the run catches up on the charge.
      */
     public function testEineNieBegonneneAbbuchungWirdNachgeholt(): void
     {
         $now = $this->at('2026-02-28 11:00');
-        // Der Lauf stirbt zwischen Commit und Abbuchung: ohne Abbucher abgerechnet.
+        // The run dies between commit and charge: billed without a charger.
         $billed = $this->biller()->billDue(1, $now);
         self::assertNotNull($billed);
         self::assertTrue($billed->charged);
@@ -321,15 +321,15 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame([$billed->orderId], $this->charger()->chargeOutstanding($now + 3_600));
         self::assertNotNull($this->order($billed->orderId)['paymentSettledAt']);
 
-        // Nichts doppelt.
+        // Nothing twice.
         self::assertSame([], $this->charger()->chargeOutstanding($now + 7_200));
         self::assertNull($this->charger()->charge($billed->orderId, $now + 7_200));
         self::assertCount(1, $this->card->charges);
     }
 
     /**
-     * Wer im Browser gerade selbst zahlt, wird nicht umgestellt; eine
-     * bezahlte oder stornierte Bestellung auch nicht.
+     * Whoever is paying in the browser right now is not switched; a
+     * paid or cancelled order is not either.
      */
     public function testDerRueckfallLaesstBezahltesUndKundenzahlungenInRuhe(): void
     {
@@ -348,8 +348,8 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * Review S1: Hat der Betreiber schon eine Zahlung erfasst, holt der Lauf
-     * die Abbuchung nicht nach — der volle Betrag würde überzahlen.
+     * If the operator has already recorded a payment, the run does not
+     * catch up on the charge — the full amount would overpay.
      */
     public function testNachholenNichtWennSchonGezahltWurde(): void
     {
@@ -371,9 +371,9 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * Review S2: Kommt das Geld einer Lastschrift erst nach dem Rückfall,
-     * wird es gebucht (Z3) — aber mit „Zahlung erhalten", nicht mit
-     * „abgebucht über Auf Rechnung".
+     * If the money of a direct debit arrives only after the fallback,
+     * it is booked (Z3) — but with "payment received", not with
+     * "charged via on invoice".
      */
     public function testSpaetesGeldNachDemRueckfallIstZahlungErhalten(): void
     {
@@ -393,9 +393,9 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * Review S5: Ohne „Auf Rechnung" im Shop wiederholt der stündliche Lauf
-     * keine Warnung — der Befund aus P24 sagt es. Stornierte Bestellungen
-     * sucht er gar nicht erst.
+     * Without "on invoice" in the shop the hourly run repeats
+     * no warning — the finding from P24 says it. Cancelled orders
+     * it does not even look for.
      */
     public function testDerRueckfallLaufWiederholtSichNichtImLog(): void
     {
@@ -417,8 +417,8 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
-     * P99: Die Zahlungsart des Mandats ist nicht mehr veröffentlicht → „Auf
-     * Rechnung", eine Logzeile, nichts abgebucht.
+     * P99: the mandate's payment method is no longer published → "on
+     * invoice", one log line, nothing charged.
      */
     public function testEineNichtMehrVerfuegbareZahlungsartRechnetAufRechnungAb(): void
     {
@@ -444,7 +444,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame([], $this->log->getArrayCopy(), 'kein Mandat ist kein Befund');
     }
 
-    // ── Bausteine ───────────────────────────────────────────────────────────
+    // ── Building blocks ─────────────────────────────────────────────────────
 
     private function billingRun(): SubscriptionBillingRun
     {

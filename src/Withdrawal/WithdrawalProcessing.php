@@ -183,7 +183,7 @@ class WithdrawalProcessing
             ], ['id' => $withdrawal['id']]);
 
             /*
-             * WG7, review WG-7 S1: the bought vouchers withdrawn are taken
+             * WG7, WG-7: the bought vouchers withdrawn are taken
              * back, one per piece — only ones not redeemed. A redeemed one
              * bought something that has to go back first; the acceptance is
              * refused (and rolled back) with the orders to see to.
@@ -194,7 +194,7 @@ class WithdrawalProcessing
                 ARRAY_FILTER_USE_KEY,
             ), $now) ?? [];
 
-            // One message per reason, the weightiest first (second review, L-B, L-C).
+            // One message per reason, the weightiest first.
             foreach (['redeemed' => 'voucherRedeemed', 'blocked' => 'voucherBlocked', 'changed' => 'voucherChangedByHand'] as $reason => $key) {
                 $these = array_filter($redeemed, static fn (array $v): bool => $reason === $v['reason']);
 
@@ -221,7 +221,7 @@ class WithdrawalProcessing
                 ARRAY_FILTER_USE_BOTH,
             )), $now);
 
-            // Block G (review L2): a key line withdrawn before its delivery
+            // Block G: a key line withdrawn before its delivery
             // no longer waits for a code; the product page has to know.
             $this->stock?->keysFreed((int) $order['id']);
 
@@ -302,7 +302,7 @@ class WithdrawalProcessing
                 }
             }
 
-            // An empty date keeps the one recorded (review D-3, S2): whoever
+            // An empty date keeps the one recorded (D-3): whoever
             // only corrects a quantity must not erase when the goods came.
             $this->connection->update('tl_consho_withdrawal', ['returnReceivedAt' => $receivedAt > 0 ? $receivedAt : $withdrawal['returnReceivedAt'], 'tstamp' => $now], ['id' => $withdrawal['id']]);
 
@@ -356,7 +356,7 @@ class WithdrawalProcessing
              */
             try {
                 // An emptied field keeps nothing back, like the delivery share;
-                // only a field never shown (null) keeps the proposal (review S3).
+                // only a field never shown (null) keeps the proposal.
                 $kept = BigDecimal::of(null === $compensation
                     ? (string) ($withdrawal['valueCompensation'] ?? '0')
                     : ('' !== trim($compensation) ? str_replace(',', '.', trim($compensation)) : '0'));
@@ -395,8 +395,15 @@ class WithdrawalProcessing
              * what they paid — the same means of payment (§ 14 Abs. 1 FAGG,
              * § 357 Abs. 3 BGB) —, the rest to the payment method. The
              * operator may change the split (null: the proposal).
+             *
+             * EZ-4: a single-purpose voucher takes back only what the credited
+             * lines of its pot give back, so that is the most the field
+             * takes. A cancellation (everything) gives back all.
              */
-            $voucherPaid = ($this->vouchers?->paidTotal($orderId) ?? BigDecimal::zero())->toScale($digits, RoundingMode::Down);
+            $creditLines = $everything ? null : $lines;
+            $voucherPaid = null === $this->vouchers
+                ? BigDecimal::zero()->toScale($digits)
+                : $this->vouchers->onVouchers($orderId, (string) $this->vouchers->paidTotal($orderId), $creditLines)->toScale($digits, RoundingMode::Down);
 
             try {
                 $toVouchers = null === $toVouchers
@@ -414,13 +421,18 @@ class WithdrawalProcessing
             // decided, so it never asks for more than this refund pays out.
             $toVouchers = BigDecimal::min($toVouchers, $payout);
 
+            // Within the most above the plan books it all; read back so the
+            // documents, the payments and the mail state what is booked.
+            if ($toVouchers->isPositive() && null !== $this->vouchers) {
+                $toVouchers = $this->vouchers->onVouchers($orderId, (string) $toVouchers, $creditLines)->toScale($digits, RoundingMode::Down);
+            }
+
             $documentId = 0;
             $issuedInvoice = null;
 
             try {
                 /*
-                 * No invoice yet and not everything withdrawn (F3a, Fable
-                 * review B2): the invoice is issued NOW, then corrected. Left
+                 * No invoice yet and not everything withdrawn (F3a): the invoice is issued NOW, then corrected. Left
                  * to the shipment ("Rechnung bei Versand"), it would state the
                  * whole order and never be corrected — this refund is booked
                  * already. The shipment finds it and issues no second one
@@ -438,7 +450,7 @@ class WithdrawalProcessing
                 if (null !== $invoiceId && ($everything || [] !== $lines)) {
                     $documentId = $everything
                         ? $this->documents->cancel($invoiceId)
-                        : $this->documents->correct($invoiceId, $lines, (string) $withdrawal['number']);
+                        : $this->documents->correct($invoiceId, $lines, (string) $withdrawal['number'], $toVouchers->isPositive() ? ($this->vouchers?->prepaidFor($orderId, (string) $toVouchers, (string) ($order['language'] ?? ''), $creditLines) ?? []) : []);
                 }
             } catch (NumberRangeNotConfigured $e) {
                 return ProcessingResult::refused('numberRangeMissing', [$e->type]);
@@ -446,7 +458,7 @@ class WithdrawalProcessing
 
             $paymentId = 0;
             $voucherPayments = $toVouchers->isPositive() && null !== $this->vouchers
-                ? $this->vouchers->refund($orderId, (string) $toVouchers, $now, (string) $withdrawal['number'], (string) ($order['language'] ?? ''))
+                ? $this->vouchers->refund($orderId, (string) $toVouchers, $now, (string) $withdrawal['number'], (string) ($order['language'] ?? ''), $creditLines)
                 : [];
             $toMethod = $payout->minus($toVouchers);
 
@@ -546,8 +558,9 @@ class WithdrawalProcessing
         return [
             'goods' => (string) $goods,
             'shippingLeft' => (string) $this->shippingLeft($orderId),
-            // WG11: what the order's vouchers paid and can take back.
-            'vouchers' => (string) ($this->vouchers?->paidTotal($orderId) ?? BigDecimal::zero()),
+            // WG11: what the order's vouchers paid and can take back — a
+            // single-purpose one only from its pot's lines (EZ-4).
+            'vouchers' => null === $this->vouchers ? '0' : (string) $this->vouchers->onVouchers($orderId, (string) $this->vouchers->paidTotal($orderId), $this->lines($orderId, $withdrawalId, BigDecimal::zero())),
         ];
     }
 
@@ -931,6 +944,9 @@ class WithdrawalProcessing
             // Block R (R-2): a service stays out of the OSS threshold, on a
             // correction too.
             'kind' => $item['kind'] ?? '',
+            // EZ-4: which pot a single-purpose voucher may take back from
+            // (VoucherReturn); not part of the document.
+            'taxClass' => (string) ($item['taxClass'] ?? ''),
         ];
     }
 

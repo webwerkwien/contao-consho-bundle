@@ -13,8 +13,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  *
  * ── Why this is allowed, and still worth saying ───────────────────────────
  *
- * "Darf der Betreiber einen teureren Gruppenpreis angeben? Ich denke ja,
- * aber vielleicht sollte es einen Hinweis geben" — Michael, 2026-09-21.
+ * An operator may set a dearer group price — but it is worth a note.
  *
  * It follows from the resolution order, which is deliberate: a group price
  * beats a list price whatever the amounts, so a bulk discount cannot silently

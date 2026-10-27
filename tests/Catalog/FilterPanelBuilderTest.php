@@ -43,20 +43,20 @@ use Webwerkwien\ContaoConshoBundle\Seo\ListingAddress;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Zahlen, Sichtbarkeit und Links der Filterbedienung (B-4 Entscheidung 10).
+ * Counts, visibility and links of the filter controls (B-4).
  *
- * Alles echt: FilterResolver, FilterOptionRepository, ProductQuery und
- * FilterUrlGenerator sind final, und gefragt ist, was aus ihrem Zusammenspiel
- * herauskommt — gegen SQLite und mit Contaos echtem ContentUrlGenerator.
+ * Everything real: FilterResolver, FilterOptionRepository, ProductQuery and
+ * FilterUrlGenerator are final, and the question is what comes out of their
+ * interplay — against SQLite and with Contao's real ContentUrlGenerator.
  *
- * Katalog (Shop 1, Seite 12 „Kräuter", dort ist „volume:250ml" freigegeben):
+ * Catalogue (shop 1, page 12 "Kräuter", where "volume:250ml" is released):
  *
- *   | rot   | 12 Artikel | 5 mit 250 ml, 7 mit 500 ml |
- *   | blau  |  8 Artikel | 3 mit 250 ml, 5 mit 500 ml |
- *   | grün  |  4 Artikel | ohne Füllmenge             |
- *   | navy  |  keine     | (nur für einzelne Tests)   |
+ *   | rot   | 12 items   | 5 with 250 ml, 7 with 500 ml |
+ *   | blau  |  8 items   | 3 with 250 ml, 5 with 500 ml |
+ *   | grün  |  4 items   | without quantity             |
+ *   | navy  |  none      | (only for individual tests)  |
  *
- * „Außerhalb der Kategorie" heißt: nicht in der Vorgabe des Listenelements.
+ * "Outside the category" means: not in the default of the list element.
  */
 class FilterPanelBuilderTest extends TestCase
 {
@@ -90,8 +90,8 @@ class FilterPanelBuilderTest extends TestCase
     {
         self::$statements = [];
 
-        // Jede Anweisung wird mitgeschrieben — so lässt sich zählen, wie oft
-        // countsFor() tatsächlich gefragt hat.
+        // Every statement is logged — that way it can be counted how often
+        // countsFor() actually asked.
         $configuration = (new Configuration())->setMiddlewares([new class implements Middleware {
             public function wrap(Driver $driver): Driver
             {
@@ -121,14 +121,14 @@ class FilterPanelBuilderTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true], $configuration);
 
         /*
-         * Spalten, NULL-barkeit, Vorgabewerte und UNIQUE-Indizes wie in der
-         * echten DB — über CatalogSchema, samt der Projektion der Sichtbarkeit,
-         * die ProductQuery seit B-10 liest. Shop 1 in EUR, Startpunkte de und en.
+         * Columns, nullability, defaults and UNIQUE indexes as in the
+         * real DB — through CatalogSchema, including the visibility projection
+         * that ProductQuery reads since B-10. Shop 1 in EUR, start points de and en.
          *
-         * 🔴 safetyWarnings/safetyInformation sind `text notnull false` —
-         * longtext NULL ohne Vorgabe. Ein nie gespeichertes Feld ist NULL, nicht
-         * ''. Genau diese Strenge zu viel im Testschema hat am 2026-09-13 einen
-         * echten Fehler verborgen (e90728d auf main).
+         * 🔴 safetyWarnings/safetyInformation are `text notnull false` —
+         * longtext NULL without a default. A field never saved is NULL, not
+         * ''. Exactly this extra strictness in the test schema once hid a
+         * real bug.
          */
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
@@ -163,7 +163,7 @@ class FilterPanelBuilderTest extends TestCase
         }
     }
 
-    // ── Zahlen ───────────────────────────────────────────────────────────
+    // ── Counts ───────────────────────────────────────────────────────────
 
     public function testWithoutPresetOrChoiceEveryOptionOfTheShopIsCountedAndLinked(): void
     {
@@ -181,8 +181,8 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testAChosenOptionLeavesTheNumbersOfItsOwnGroupAlone(): void
     {
-        // 🔴 Der Selbstausschluss, offen seit der Abnahme von B-3. Ohne ihn stünde
-        // neben „blau" eine Null, obwohl es acht blaue Artikel gibt.
+        // 🔴 The self-exclusion, left open since B-3. Without it there would be
+        // a zero next to "blau", although there are eight blue items.
         $colour = $this->options($this->build(new FilterState(['colour' => ['red']])), 'colour');
 
         self::assertSame(['red' => 12, 'blue' => 8, 'green' => 4], $this->counts($colour));
@@ -205,7 +205,7 @@ class FilterPanelBuilderTest extends TestCase
         self::assertSame(['250ml' => 5, '500ml' => 7], $this->counts($this->options($panel, 'volume')));
     }
 
-    // ── Was erscheint ────────────────────────────────────────────────────
+    // ── What appears ─────────────────────────────────────────────────────
 
     public function testWhatThePresetDoesNotContainDoesNotAppear(): void
     {
@@ -216,8 +216,8 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testAnOptionWithoutProductsInTheCategoryDoesNotAppear(): void
     {
-        // „navy" gibt es als Option, aber kein Artikel trägt sie. Sonst stünden in
-        // „Kräuterbitter" alle Farben des Shops.
+        // "navy" exists as an option, but no item carries it. Otherwise
+        // "Kräuterbitter" would list all colours of the shop.
         $colour = $this->options($this->build(new FilterState()), 'colour');
 
         self::assertArrayNotHasKey('navy', $colour);
@@ -225,7 +225,7 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testAGroupThePresetNarrowsToOneOptionIsDropped(): void
     {
-        // Ein Knopf, der nichts eingrenzt, erzeugt nur eine weitere cq-Adresse.
+        // A button that narrows nothing only creates another cq address.
         $panel = $this->build(new FilterState(), preset: [self::RED]);
 
         self::assertSame(['volume'], $this->groupAliases($panel));
@@ -235,10 +235,10 @@ class FilterPanelBuilderTest extends TestCase
     public function testAGroupWithOneOptionStaysWhileThatOptionIsChosen(): void
     {
         /*
-         * Übergabe aus Task 9: Landingpage „250 ml" in einer Kategorie, in der
-         * alles 250 ml hat. Ohne Wahl entfällt die Gruppe (ein Knopf, der nichts
-         * eingrenzt). Ist die einzige Option aber gewählt, bliebe sie ohne die
-         * Gruppe nicht abwählbar.
+         * Landing page "250 ml" in a category in which
+         * everything has 250 ml. Without a choice the group is dropped (a button
+         * that narrows nothing). But if the only option is chosen, it could not
+         * be deselected without the group.
          */
         $this->product(50, [self::NAVY, self::ML250]);
         $this->product(51, [self::NAVY, self::ML250]);
@@ -257,8 +257,8 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testAnOptionAChoiceBringsDownToZeroStaysWithoutALink(): void
     {
-        // Zwei Marineblaue ohne 250 ml, in der Vorgabe. Mit „250 ml" bleibt navy
-        // stehen — keine Layoutbewegung —, aber ein Link führte auf eine 404.
+        // Two navy ones without 250 ml, in the default. With "250 ml" navy
+        // stays — no layout shift — but a link would lead to a 404.
         $this->product(50, [self::NAVY, self::ML500]);
         $this->product(51, [self::NAVY, self::ML500]);
         $preset = [self::RED, self::BLUE, self::NAVY];
@@ -276,9 +276,9 @@ class FilterPanelBuilderTest extends TestCase
     public function testAChosenOptionTheCategoryLacksStaysSoItCanBeDeselected(): void
     {
         /*
-         * ?cq=colour:navy,red — ein altes Lesezeichen. Die Liste zeigt die roten
-         * (ODER in der Gruppe), keine 404. Verschwände navy aus der Bedienung,
-         * führte „rot abwählen" auf colour:navy, und das ist eine 404.
+         * ?cq=colour:navy,red — an old bookmark. The list shows the red ones
+         * (OR within the group), no 404. If navy disappeared from the controls,
+         * "deselect red" would lead to colour:navy, and that is a 404.
          */
         $colour = $this->options($this->build(new FilterState(['colour' => ['navy', 'red']])), 'colour');
 
@@ -290,10 +290,9 @@ class FilterPanelBuilderTest extends TestCase
     public function testAChosenOptionOutsideAnExplicitPresetStaysToo(): void
     {
         /*
-         * Derselbe Fall, aber die Kategorie legt die Farbe ausdrücklich fest
-         * (rot, blau). Die Vorgabe filterte navy heraus, bevor überhaupt
-         * gefragt wurde, ob es gewählt ist — gefunden in der Prüfung von
-         * Task 7–9 am 2026-09-13.
+         * The same case, but the category explicitly fixes the colour
+         * (red, blue). The default filtered navy out before it was even
+         * asked whether it is chosen.
          */
         $colour = $this->options(
             $this->build(new FilterState(['colour' => ['navy', 'red']]), preset: [self::RED, self::BLUE]),
@@ -307,15 +306,15 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testAStateThatCannotMatchGivesAnEmptyPanel(): void
     {
-        // narrow() ergibt null — die Liste antwortet ohnehin 404.
+        // narrow() yields null — the list answers 404 anyway.
         self::assertSame([], $this->build(new FilterState(['colour' => ['blue']]), preset: [self::RED]));
         self::assertSame(0, $this->countQueries());
     }
 
     public function testAnInvalidAddressGivesAnEmptyPanel(): void
     {
-        // Sein Zustand ist leer. Ohne Prüfung zeigte die 404-Seite die Bedienung
-        // der ganzen Kategorie.
+        // Its state is empty. Without the check the 404 page would show the controls
+        // of the whole category.
         self::assertSame([], $this->build(ListingAddress::invalid()));
     }
 
@@ -325,13 +324,13 @@ class FilterPanelBuilderTest extends TestCase
         self::assertSame(['volume'], $this->groupAliases($this->build(new FilterState(), offered: [self::VOLUME])));
     }
 
-    // ── Ohne Zahlen: gerechnet wird trotzdem, nur nicht angezeigt ────────
+    // ── Without counts: still computed, just not shown ───────────────────
 
     public function testWithoutNumbersTheyAreStillCountedButNotShown(): void
     {
-        // Entscheidung 2026-09-14: Ohne Rechnung wusste das Panel nicht, welche
-        // Option leer ist, verlinkte alle — ein Klick führte auf 404 (Befund
-        // 2026-09-13). Gerechnet wird jetzt immer, der Schalter blendet nur aus.
+        // Without computing, the panel did not know which option is empty and
+        // linked all of them — a click led to a 404. Counting now always
+        // happens; the switch only hides the numbers.
         $panel = $this->build(new FilterState(), preset: [self::RED, self::BLUE], showCounts: false);
         $colour = $this->options($panel, 'colour');
 
@@ -344,8 +343,8 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testWithoutNumbersAnOptionWithoutProductsIsNotOffered(): void
     {
-        // navy hat keinen einzigen Artikel. Früher erschien es verlinkt, und der
-        // Klick darauf ergab 404.
+        // navy has not a single item. It used to appear linked, and
+        // clicking it gave a 404.
         $colour = $this->options($this->build(new FilterState(), showCounts: false), 'colour');
 
         self::assertSame(['red', 'blue', 'green'], array_keys($colour));
@@ -353,8 +352,8 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testWithoutNumbersAChoiceThatLeavesNothingIsNotLinked(): void
     {
-        // Grün hat keine Füllmenge: 250 ml bliebe leer. Sichtbar, damit nichts
-        // springt — aber ohne Link, sonst wieder 404.
+        // Green has no quantity: 250 ml would stay empty. Visible, so that nothing
+        // jumps — but without a link, otherwise 404 again.
         $volume = $this->options($this->build(new FilterState(['colour' => ['green']]), showCounts: false), 'volume');
 
         self::assertSame(['250ml' => null, '500ml' => null], $this->counts($volume));
@@ -362,7 +361,7 @@ class FilterPanelBuilderTest extends TestCase
         self::assertNull($volume['500ml']->url);
     }
 
-    // ── Kosten ───────────────────────────────────────────────────────────
+    // ── Cost ─────────────────────────────────────────────────────────────
 
     public function testWithoutAChoiceTheNumbersCostOneQuery(): void
     {
@@ -373,15 +372,15 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testAChoiceCostsAtMostTwoQueriesPlusOnePerChosenGroup(): void
     {
-        // Grundmenge + unberührte Gruppen + „Farbe" ohne sich selbst.
+        // Base set + untouched groups + "Farbe" without itself.
         $this->build(new FilterState(['colour' => ['red']]));
         self::assertSame(3, $this->countQueries());
 
-        // Keine Gruppe unberührt: Die Abfrage dafür entfällt.
+        // No group untouched: the query for it is dropped.
         $this->build(new FilterState(['colour' => ['red'], 'volume' => ['250ml']]));
         self::assertSame(3, $this->countQueries());
 
-        // Eine gewählte Gruppe, die das Element nicht anbietet, braucht keine Zahl.
+        // A chosen group that the element does not offer needs no count.
         $this->build(new FilterState(['colour' => ['red']]), offered: [self::VOLUME]);
         self::assertSame(2, $this->countQueries());
     }
@@ -390,7 +389,7 @@ class FilterPanelBuilderTest extends TestCase
 
     public function testTheLinksComeFromTheFilterUrlGenerator(): void
     {
-        // Nur Durchreichen — wie die Adressen gebaut werden, prüft FilterUrlGeneratorTest.
+        // Only passed through — FilterUrlGeneratorTest checks how the addresses are built.
         $panel = $this->build(new FilterState(['colour' => ['red']], 'price_asc'));
         $colour = $this->options($panel, 'colour');
 
@@ -420,10 +419,10 @@ class FilterPanelBuilderTest extends TestCase
     public function testAPageWithoutARouteGivesAnEmptyPanel(): void
     {
         /*
-         * Übergabe aus Task 5: ContentUrlGenerator wirft bei nicht routbaren
-         * Seiten. Das passiert wirklich — ein Filter im Layout-Bereich mit fest
-         * gewählter Liste rendert auch auf der 404-Seite, und die hat keine Route.
-         * Die Fehlerseite darf daran nicht ein zweites Mal scheitern.
+         * ContentUrlGenerator throws for non-routable
+         * pages. That really happens — a filter in a layout section with a fixed
+         * list also renders on the 404 page, and that one has no route.
+         * The error page must not fail on it a second time.
          */
         $registry = new PageRegistry($this->createMock(Connection::class));
         $registry->add('error_404', new RouteConfig(false));
@@ -431,18 +430,18 @@ class FilterPanelBuilderTest extends TestCase
         self::assertSame([], $this->build(new FilterState(), page: $this->page('error_404'), urls: $this->contentUrls($registry)));
     }
 
-    // ── Sprache ──────────────────────────────────────────────────────────
+    // ── Language ─────────────────────────────────────────────────────────
 
     public function testLabelsAndNumbersFollowThePageLanguage(): void
     {
         /*
-         * Auf Englisch gibt es nur, was übersetzt ist: alle roten, drei blaue,
-         * kein grüner Artikel. Grün fällt damit aus der Grundmenge.
+         * In English there is only what is translated: all red, three blue,
+         * no green item. Green thus drops out of the base set.
          *
-         * ⚠️ Die übersetzten Artikel gelten hier als im Backend gespeichert — ihre
-         * Sicherheitsfelder sind '', nicht NULL. Nie gespeicherte (NULL) ließen sie
-         * auf b-4 in jeder Fremdsprache verschwinden; das behebt e90728d auf main,
-         * noch nicht in diesem Zweig.
+         * ⚠️ The translated items count as saved in the backend here — their
+         * safety fields are '', not NULL. Never-saved ones (NULL) once made them
+         * disappear in every foreign language; VisibilityCriteriaTest covers that
+         * case.
          */
         foreach ([...range(1, 12), 20, 21, 22] as $id) {
             $this->connection->update('tl_consho_product', ['safetyWarnings' => '', 'safetyInformation' => ''], ['id' => $id]);
@@ -463,14 +462,14 @@ class FilterPanelBuilderTest extends TestCase
         self::assertSame('Füllmenge', $this->group($panel, 'volume')->label, 'ohne Übersetzung die Standardsprache');
     }
 
-    // ── Andockstelle für große Kataloge ──────────────────────────────────
+    // ── Docking point for large catalogues ───────────────────────────────
 
     public function testTheCountsComeFromTheInjectedImplementation(): void
     {
-        // Entscheidung 2026-09-14: Ein Modul für große Kataloge setzt eine eigene
-        // Zählung ein. Die Regeln des Panels gelten für jede — hier 99 für „rot"
-        // statt der zwölf, die der Katalog hat. Die privaten Konstanten sind in
-        // der anonymen Klasse nicht erreichbar: 11 = rot, 13 = grün.
+        // A module for large catalogues plugs in its own
+        // counting. The panel's rules apply to every one — here 99 for "rot"
+        // instead of the twelve the catalogue has. The private constants are not
+        // reachable in the anonymous class: 11 = red, 13 = green.
         $counts = new class implements FilterCountsInterface {
             public function countsFor(int $shopId, array $groups, int|null $without, string $language, string $currency, bool $availableOnly = false): array
             {
@@ -494,7 +493,7 @@ class FilterPanelBuilderTest extends TestCase
         self::assertSame(0, $this->countQueries(), 'Die Zählung des Kerns wurde nicht gefragt.');
     }
 
-    // ── Nur verfügbare (block Verfügbarkeit, V5) ─────────────────────────
+    // ── Only available (block Verfügbarkeit, V5) ─────────────────────────
 
     public function testNurVerfuegbareSenktDieZahlenUndBehaeltDieOptionen(): void
     {
@@ -537,7 +536,7 @@ class FilterPanelBuilderTest extends TestCase
         self::assertNull($choice->count, 'ohne Zahlen an der Liste keine Zahl');
     }
 
-    // ── Hilfen ───────────────────────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────────────────
 
     private function availability(FilterState $state, bool $showCounts = true): ?AvailabilityChoice
     {
@@ -577,8 +576,8 @@ class FilterPanelBuilderTest extends TestCase
         ?ContentUrlGenerator $urls = null,
         ?FilterCountsInterface $counts = null,
     ): array {
-        // Die Projektion aus den Fixtures, wie sie jetzt stehen — zum Zeitpunkt,
-        // den der Test früher der Abfrage selbst mitgab.
+        // The projection from the fixtures as they are now — at the point in time
+        // that the test used to pass to the query itself.
         (new VisibilityProjector(
             $this->connection,
             new VisibilityRows(new VisibilityCriteria()),
@@ -597,7 +596,7 @@ class FilterPanelBuilderTest extends TestCase
         $builder = new FilterPanelBuilder(
             new FilterResolver($this->connection),
             new FilterOptionRepository($this->connection),
-            // Standard ist die Zählung des Kerns; ein Test kann eine andere einsetzen.
+            // The default is the core's counting; a test can plug in another one.
             $counts ?? new ProductQuery($this->connection),
             new FilterUrlGenerator($urls ?? $this->contentUrls(), new FacetPageResolver($repository, $codec), $codec),
         );
@@ -617,7 +616,7 @@ class FilterPanelBuilderTest extends TestCase
     }
 
     /**
-     * Wie oft ProductQuery::countsFor() seit dem letzten build() gefragt wurde.
+     * How often ProductQuery::countsFor() was asked since the last build().
      */
     private function countQueries(): int
     {
@@ -641,7 +640,7 @@ class FilterPanelBuilderTest extends TestCase
     /**
      * @param list<FilterGroupView> $panel
      *
-     * @return array<string, FilterOptionView> alias => option, in der Reihenfolge des Panels
+     * @return array<string, FilterOptionView> alias => option, in the order of the panel
      */
     private function options(array $panel, string $alias): array
     {
@@ -679,8 +678,8 @@ class FilterPanelBuilderTest extends TestCase
      */
     private function product(int $id, array $options): void
     {
-        // Sicherheitsfelder bleiben NULL — ein Artikel, an dem nie jemand sie
-        // gespeichert hat, wie auf dem Testserver jeder einzelne.
+        // Safety fields stay NULL — an item on which nobody ever saved them,
+        // as every single one was on a real installation.
         $this->connection->insert('tl_consho_product', ['id' => $id, 'title' => 'Produkt '.$id, 'published' => 1]);
         $this->connection->insert('tl_consho_product_shop', ['pid' => $id, 'shop' => self::SHOP]);
         $this->connection->insert('tl_consho_product_list_price', ['pid' => $id, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000']);
@@ -710,7 +709,7 @@ class FilterPanelBuilderTest extends TestCase
     }
 
     /**
-     * Eine Seite, wie PageRoute sie nach loadDetails() liest.
+     * A page as PageRoute reads it after loadDetails().
      */
     private function page(string $type = 'regular'): PageModel
     {

@@ -54,7 +54,8 @@ final class DbalArticleShippingData implements ArticleShippingDataInterface
             'SELECT a.id, a.weight, a.shippingWeight, a.length, a.width, a.height,
                     p.weight AS mainWeight, p.shippingWeight AS mainShippingWeight,
                     p.length AS mainLength, p.width AS mainWidth, p.height AS mainHeight,
-                    COALESCE(tm.kind, ta.kind, \'physical\') AS kind
+                    COALESCE(tm.kind, ta.kind, \'physical\') AS kind,
+                    CASE WHEN a.pid > 0 THEN p.voucherSinglePurpose ELSE a.voucherSinglePurpose END AS singlePurpose
                FROM tl_consho_product a
                LEFT JOIN tl_consho_product p ON p.id = a.pid AND a.pid > 0
                LEFT JOIN tl_consho_product_type tm ON tm.id = p.productType
@@ -77,6 +78,8 @@ final class DbalArticleShippingData implements ArticleShippingDataInterface
             }
 
             $entry['kind'] = ProductKind::stored((string) $row['kind'])->value;
+            // EZ-1: the main product's switch, and only where it is a voucher.
+            $entry['singlePurpose'] = ProductKind::Voucher->value === $entry['kind'] && (bool) $row['singlePurpose'];
 
             $data[(int) $row['id']] = $entry;
         }

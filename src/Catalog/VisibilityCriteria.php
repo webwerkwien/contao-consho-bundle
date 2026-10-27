@@ -5,7 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Catalog;
 /**
  * Whether a product may be shown — in one place, for all four of them.
  *
- * The rules come from docs/block-a-fundament.md, section 3.7. They apply to
+ * The rules come from Block A, section 3.7. They apply to
  * the LISTING, the PRODUCT PAGE, the SITEMAP and the JSON-LD, and that is the
  * whole reason this class exists: four copies of the same condition are three
  * too many, and the forgotten one is always the sitemap. Isotope has exactly
@@ -142,9 +142,8 @@ final class VisibilityCriteria
      *
      * "" means "not set" and must be checked for explicitly — comparing it
      * with `<=`/`>` against a timestamp answers a different, wrong question.
-     * The previous `= 0` version only ever worked on the test server because
-     * MySQL casts '' to 0 for an implicit numeric comparison; on 2026-09-13
-     * the real DB confirmed both columns hold '' for every product, so every
+     * The previous `= 0` version only ever worked because MySQL casts ''
+     * to 0 for an implicit numeric comparison; the real DB confirmed both columns hold '' for every product, so every
      * row was passing this check purely by that implicit cast, not by design.
      *
      * ⚠️ SQLite has no such implicit cast. A VARCHAR/TEXT column carries TEXT
@@ -224,8 +223,8 @@ final class VisibilityCriteria
      * true.
      *
      * ⚠️ COALESCE, not a plain comparison with ''. The columns are nullable
-     * longtext without a default, so a field nobody ever saved is NULL — on
-     * the test server on 2026-09-13 that was every single product. `NULL = ''` is
+     * longtext without a default, so a field nobody ever saved is NULL — in
+     * a real installation that was every single product. `NULL = ''` is
      * never true in SQL, and without COALESCE every such product vanished in
      * every translation language, complete translation or not.
      */
@@ -252,7 +251,7 @@ final class VisibilityCriteria
      * Rule 4 for a variant: its OWN safety texts, if it has any, exist in the
      * page's language — otherwise the variant does not exist there.
      *
-     * Michael, 2026-09-13 (plan B-5, question 3). A variant usually inherits
+     * B-5. A variant usually inherits
      * its main product's safety texts and is untouched by this. But one that
      * carries its own German warning leaves a French page only three options:
      * show the German one (a breach), show the main product's (wrong) or show

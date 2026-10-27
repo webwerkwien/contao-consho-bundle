@@ -3,10 +3,9 @@
 $GLOBALS['TL_LANG']['tl_consho_shop']['title'] = ['Bezeichnung', 'Name dieser Shop-Konfiguration im Backend.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['currencies'] = ['Erlaubte Währungen', 'In welchen Währungen dieser Shop abrechnen kann. Das hängt am Bankkonto, an der Zahlungsart und daran, ob eine Versandpauschale einen Betrag in dieser Währung hat. Welche Währung ein Besucher sieht, steht nicht hier, sondern am Startpunkt — dort wird aus dieser Liste ausgewählt.'];
 
-// Aus der Palette gefallen (C-1c), der Eintrag bleibt: Contao zeigt die
-// Beschriftung auch in der Listenansicht und unter „Details".
-// Nur noch Liste und Detailansicht zeigen dieses Label — das Feld ist seit
-// C-1c aus der Maske genommen und fällt nach der Abnahme ganz weg.
+// Out of the palette since C-1c, the entry stays: Contao shows the label in
+// the listing and under "Details" as well, until the column goes in a later
+// release.
 $GLOBALS['TL_LANG']['tl_consho_shop']['currency'] = ['Frühere Währung', 'Die Währung, die dieser Shop vor C-1c hatte. Sie wurde an seine Startpunkte übertragen und wird nirgends mehr gelesen; welche Währungen der Shop annimmt, steht unter „Währungen".'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['country'] = ['Heimatland', 'Das Land, in dem der Shop seinen Sitz hat. Mit dessen Steuersatz wird aus dem Nettopreis der Bruttopreis, den Besucher sehen, solange noch kein Lieferland feststeht. Ohne Heimatland zeigt der Shop keine Preise.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['fallbackLanguage'] = ['Standardsprache', 'Die Sprache, in der die Texte am Datensatz selbst stehen. Fehlt eine Übersetzung, greift diese Sprache.'];

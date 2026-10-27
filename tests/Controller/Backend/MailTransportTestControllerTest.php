@@ -30,8 +30,8 @@ use Webwerkwien\ContaoConshoBundle\Mail\MailTransportFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * „Testmail senden" (C-9, Michael 2026-09-25). Hätte es sie gegeben, wäre
- * der Passwortfehler ohne Testkauf aufgefallen.
+ * "Testmail senden" (send test mail, C-9). Had it existed, the password
+ * error would have shown up without a test purchase.
  */
 class MailTransportTestControllerTest extends TestCase
 {
@@ -74,13 +74,13 @@ class MailTransportTestControllerTest extends TestCase
     }
 
     /**
-     * Michael, 2026-09-25: „Testmail funktioniert, aber man bekommt keine
-     * optische Bestätigung im BE." Die Seite leitet auf sich selbst zurück und
-     * ist keine Contao-Liste — sie muss die Meldung selbst ausgeben.
+     * The test mail worked, but there was no visual confirmation in the back
+     * end. The page redirects to itself and is not a Contao list — it has to
+     * output the message itself.
      */
     /**
-     * D-7, M5: Die Prüfung aus Block A stand seit 09.09. gebaut und wurde nie
-     * aufgerufen. Jetzt steht sie neben dem technischen Test.
+     * D-7, M5: the check from Block A had been built and was never called.
+     * Now it sits next to the technical test.
      */
     public function testDieZustellbarkeitStehtNebenDemTest(): void
     {
@@ -94,19 +94,19 @@ class MailTransportTestControllerTest extends TestCase
     public function testFehlendeEintraegeUndFremdeAnmeldung(): void
     {
         $this->dns = [];
-        $this->connection->update('tl_consho_mail_transport', ['username' => 'konto@gmail.com'], ['id' => 1]);
+        $this->connection->update('tl_consho_mail_transport', ['username' => 'konto@mailprovider.example'], ['id' => 1]);
 
         $html = $this->controller(Request::create('/contao?do=consho_mail&key=testMail&id=1'))($this->dc(1));
 
         self::assertStringContainsString('Für example.org gibt es keinen SPF-Eintrag', $html);
         self::assertStringContainsString('Für example.org gibt es keinen DMARC-Eintrag', $html);
-        self::assertStringContainsString('(gmail.com)', $html);
+        self::assertStringContainsString('(mailprovider.example)', $html);
         self::assertStringNotContainsString('SPF und DMARC sind eingetragen', $html);
     }
 
     public function testSendmailMeldetKeineFremdeAnmeldung(): void
     {
-        $this->connection->update('tl_consho_mail_transport', ['type' => 'sendmail', 'username' => 'konto@gmail.com'], ['id' => 1]);
+        $this->connection->update('tl_consho_mail_transport', ['type' => 'sendmail', 'username' => 'konto@mailprovider.example'], ['id' => 1]);
 
         $html = $this->controller(Request::create('/contao?do=consho_mail&key=testMail&id=1'))($this->dc(1));
 
@@ -134,9 +134,9 @@ class MailTransportTestControllerTest extends TestCase
     }
 
     /**
-     * Nachlese Stufe 2: Auf dem Verkaufsshop kam die Bezeichnung als
-     * „&#40;…&#41;" in Betreff und Text, sobald die Maske einmal gespeichert
-     * hatte — Contaos Eingabekodierung. Betreibertexte gehen dekodiert hinaus.
+     * Nachlese stage 2: on a shop the label arrived as "&#40;…&#41;" in subject
+     * and text as soon as the mask had been saved once — Contao's input
+     * encoding. Operator texts go out decoded.
      */
     public function testBezeichnungUndAbsenderKommenDekodiert(): void
     {
@@ -154,7 +154,7 @@ class MailTransportTestControllerTest extends TestCase
     }
 
     /**
-     * Genau dafür ist sie da: die Antwort des Servers in der Meldung.
+     * That is exactly what it is for: the server's answer in the message.
      */
     public function testDieAntwortDesServersStehtInDerMeldung(): void
     {
@@ -167,8 +167,8 @@ class MailTransportTestControllerTest extends TestCase
     }
 
     /**
-     * Review 2026-09-25: Contao gibt Meldungen ungefiltert als HTML aus, und
-     * die Antwort des Servers ist fremder Text (bei Graph ein HTTP-Body).
+     * Contao outputs messages unfiltered as HTML, and the server's answer is
+     * foreign text (with Graph an HTTP body).
      */
     public function testDieAntwortDesServersWirdEscaped(): void
     {

@@ -55,6 +55,7 @@ final class DbalOrderProductRepository implements OrderProductRepositoryInterfac
         }
 
         $title = $this->titles->of([$productId], $language, $fallback)[$productId] ?? null;
+        $article = $this->articles->of([$productId])[$productId] ?? null;
         $guarantee = $this->guarantees?->of([$productId])[$productId] ?? null;
 
         return [
@@ -62,7 +63,7 @@ final class DbalOrderProductRepository implements OrderProductRepositoryInterfac
             'durabilityYears' => $guarantee['years'] ?? '0',
             'durabilityLabel' => null === $guarantee ? null : StringUtil::uuidToBin($guarantee['label']),
 
-            // Cut to the column (review E2, S1): title and values may each be
+            // Cut to the column (E2): title and values may each be
             // 255 long, and a name too long for productName would fail the
             // purchase click on a strict database.
             'name' => null !== $title ? mb_substr($title->title, 0, self::NAME_LENGTH) : '',
@@ -76,7 +77,10 @@ final class DbalOrderProductRepository implements OrderProductRepositoryInterfac
 
             // Through the checkout's source, so the basket and the order it
             // becomes cannot disagree about what has to be shipped (F-1).
-            'kind' => ProductKind::stored($this->articles->of([$productId])[$productId]['kind'] ?? null)->value,
+            'kind' => ProductKind::stored($article['kind'] ?? null)->value,
+
+            // EZ-1: sold as a single-purpose voucher — the same source as the basket.
+            'singlePurpose' => $article['singlePurpose'] ?? false,
 
             // What a voucher of this article is worth (WG-4) — frozen at the line.
             'voucherValue' => is_numeric($row['voucherValue'] ?? null) ? (string) $row['voucherValue'] : '0',

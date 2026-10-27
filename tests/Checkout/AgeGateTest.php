@@ -16,9 +16,9 @@ class AgeGateTest extends TestCase
     #[DataProvider('hinweisStufen')]
     public function testSechsZwoelfUndVierzehnSindNurEinHinweis(int $age): void
     {
-        // C19 sagt es ausdrücklich: Für ein Brettspiel ab 12 verlangt niemand
-        // einen Ausweis. Sperren würde einen Shop unverkäuflich machen, der
-        // nur Spielzeug führt.
+        // C19 says it explicitly: nobody asks for an ID for a board game
+        // from 12. Blocking would make a shop that only carries toys
+        // unable to sell.
         self::assertNull($this->check($age));
     }
 
@@ -34,11 +34,10 @@ class AgeGateTest extends TestCase
     }
 
     /**
-     * 🔴 Der Standardfall eines frisch eingerichteten Shops: Der Betreiber
-     * stellt Spirituosen ein und richtet weder Gruppe noch prüfende
-     * Versandart ein. Dann ist der Artikel NICHT bestellbar — das ist kein
-     * Versehen, sondern die Antwort. Ein Alter, das niemand feststellen kann,
-     * ist nicht festgestellt.
+     * 🔴 The default case of a freshly set-up shop: the operator adds spirits
+     * and sets up neither a group nor a checking shipping method. Then the
+     * item is NOT orderable — that is not an oversight, it is the answer. An
+     * age that nobody can establish is not established.
      */
     #[DataProvider('gepruefteStufen')]
     public function testOhneBeideWegeIstNichtsBestellbar(int $age): void
@@ -71,8 +70,8 @@ class AgeGateTest extends TestCase
     }
 
     /**
-     * Eine Versandart, die ab 16 prüft, trägt keine Lieferung ab 18. Sie prüft
-     * dann zwar einen Ausweis, aber gegen die falsche Grenze.
+     * A shipping method that checks from 16 does not carry a delivery from 18.
+     * It does check an ID then, but against the wrong limit.
      */
     public function testEineZuNiedrigPruefendeVersandartReichtNicht(): void
     {
@@ -85,12 +84,12 @@ class AgeGateTest extends TestCase
     }
 
     /**
-     * Michaels Entscheidung vom 2026-09-22 im Wortlaut: **„Einer genügt."**
+     * **One of the two is enough.**
      *
-     * Die Spezifikation schrieb „und/oder … Beides eingerichtet → beides
-     * gilt", was sich auch als „beide müssen erfüllt sein" lesen ließ. Der
-     * Satz steht hier neben der Erwartung, weil ein `assertNull` allein nur
-     * sagt, was der Code tut, und nicht, was jemand entschieden hat.
+     * The specification wrote "and/or … both set up → both apply", which could
+     * also be read as "both must be fulfilled". The sentence stands here next
+     * to the expectation, because an `assertNull` alone only says what the
+     * code does, not what was decided.
      */
     public function testEinGepruefetesMitgliedDarfAuchOhnePruefendeVersandartBestellen(): void
     {
@@ -104,8 +103,8 @@ class AgeGateTest extends TestCase
 
     public function testEinGastDarfMitPruefenderVersandartBestellen(): void
     {
-        // Die Gegenrichtung derselben Entscheidung: kein Konto, keine Gruppe,
-        // aber eine Zustellung, die den Ausweis sehen will.
+        // The other direction of the same decision: no account, no group,
+        // but a delivery that wants to see the ID.
         self::assertNull($this->check(18, groups: [], verified: [3], shipping: new ShippingCapabilities(18, false)));
     }
 
@@ -120,9 +119,9 @@ class AgeGateTest extends TestCase
     }
 
     /**
-     * 🔴 Fragt die Versandart nach einem Geburtsdatum, dann prüft sie es auch.
-     * „Du bist alt genug, weil du in einer Gruppe bist" würde die Frage zur
-     * Verzierung machen — und ein zu junger Besteller käme durch.
+     * 🔴 If the shipping method asks for a date of birth, it also checks it.
+     * "You are old enough because you are in a group" would turn the question
+     * into decoration — and a buyer who is too young would get through.
      */
     public function testEineGepruefteGruppeUeberspringtDasGeburtsdatumNicht(): void
     {
@@ -144,9 +143,9 @@ class AgeGateTest extends TestCase
     }
 
     /**
-     * Am Geburtstag selbst ist man alt genug, einen Tag davor nicht. Gezählt
-     * werden Kalenderjahre — wer am 29. Februar geboren ist, wird in einem
-     * Jahr ohne einen solchen am 1. März volljährig.
+     * On the birthday itself one is old enough, a day before not. Calendar
+     * years are counted — whoever was born on 29 February comes of age on
+     * 1 March in a year without one.
      */
     public function testDerGeburtstagSelbstZaehltBereits(): void
     {
@@ -167,14 +166,13 @@ class AgeGateTest extends TestCase
     }
 
     /**
-     * 🔴 Im Review vom 2026-09-22 gefunden. Eine Versandart, die ab 16 prüft
-     * und dafür ein Geburtsdatum verlangt, trägt KEINE Lieferung ab 18 — auch
-     * dann nicht, wenn das eingetippte Datum alt genug ist. Eine
-     * Selbstauskunft ist keiner der beiden Wege aus C19; sie ergänzt einen
-     * Weg, sie ersetzt ihn nicht.
+     * 🔴 A shipping method that checks from 16 and asks for a date of birth
+     * for it carries NO delivery from 18 — not even when the typed date is old
+     * enough. A self-declaration is neither of the two ways from C19; it adds
+     * to a way, it does not replace it.
      *
-     * Vorher stand nach der Datumsprüfung ein `return null`, und genau dieser
-     * Fall ging durch.
+     * Before, a `return null` stood after the date check, and exactly this
+     * case went through.
      */
     public function testEinPassendesGeburtsdatumOeffnetKeineHoehereStufe(): void
     {
@@ -186,10 +184,10 @@ class AgeGateTest extends TestCase
 
     public function testEinPassendesGeburtsdatumZusammenMitEinemWegGehtDurch(): void
     {
-        // Die Prüfung ab 18 trägt die Lieferung ab 18 — und das Datum stimmt.
+        // The check from 18 carries the delivery from 18 — and the date is right.
         self::assertNull($this->check(18, shipping: new ShippingCapabilities(18, true), dateOfBirth: '1980-05-17'));
 
-        // Und über die Gruppe, während die Art nur ab 16 prüft.
+        // And through the group, while the method only checks from 16.
         self::assertNull($this->check(
             18,
             groups: [3],

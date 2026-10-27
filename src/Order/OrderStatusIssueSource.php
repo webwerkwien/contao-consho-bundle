@@ -18,10 +18,9 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * StatusRequirement is checked when a status is SET — by the operator and by
  * the automatic change. A later booking can tip the balance under it: a
  * refund under "Bezahlt", an accepted withdrawal under "Abgeschlossen". And
- * orders from before D-1 were never checked at all (c5: WEB-00044,
- * "Abgeschlossen", 25.00 paid on 20.00). A note, not a change: Michael,
- * 2026-09-28, M3 „wie empfohlen" — Consho does not take a status back by
- * itself; which one fits is the operator's call.
+ * orders from before D-1 were never checked at all (e.g.
+ * "Abgeschlossen", 25.00 paid on 20.00). A note, not a change (M3):
+ * Consho does not take a status back by itself; which one fits is the operator's call.
  *
  * Every backend page asks for findings, so the balance is not read for every
  * flagged order. SQL first narrows them to CANDIDATES — orders whose plain
@@ -41,7 +40,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * only with a claim above zero, so money has come in, and a cancelled order
  * with money in is overpaid. The change is skipped silently — so a warning.
  *
- * NOT "when settled" (Fable review D-7, S1, reproduced with the real
+ * NOT "when settled" (D-7, reproduced with the real
  * advancer): a withdrawal of everything before shipping, fully refunded,
  * leaves claim 0, paid 0, nothing shipped — the cancelling status is set, and
  * rightly so. OrderStatusAdvancerTest holds that path.
@@ -50,7 +49,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  *
  * Contao asks for system messages on EVERY back end page (the counter in the
  * header, BackendHeaderListener), and M3 reads every order in a flagged
- * status (Fable review D-7, S2). Its result is cached for a few minutes; a
+ * status (D-7). Its result is cached for a few minutes; a
  * note may lag that long behind a booking.
  */
 final class OrderStatusIssueSource implements ConfigurationIssueSource
@@ -161,7 +160,7 @@ final class OrderStatusIssueSource implements ConfigurationIssueSource
             if ([] !== StatusRequirement::unmet($flags, $balance)) {
                 // The order's shop, not the status's: a status of another
                 // shop is itself an error, and the note belongs where the
-                // order is (Fable review D-7, K2).
+                // order is (D-7).
                 $byShop[(int) $row['orderShop']][] = (string) $row['orderNumber'];
             }
         }

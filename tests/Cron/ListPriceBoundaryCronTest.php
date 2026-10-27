@@ -52,10 +52,10 @@ class ListPriceBoundaryCronTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($this->connection);
 
-        // Der Markt, in dem die EUR-Preise der Tests projiziert werden (C25) —
-        // ohne ihn entsteht keine Zeile und kein Preis ist fällig. Seit C-1c
-        // gehören zwei Zeilen dazu: das Heimatland am Shop, die Währung am
-        // Startpunkt (Spezifikation 4.0).
+        // The market in which the tests' EUR prices are projected (C25) —
+        // without it no row is created and no price is due. Since C-1c it
+        // takes two rows: the home country on the shop, the currency on the
+        // start point (specification 4.0).
         $this->createRootPageTable($this->connection);
         $this->insertShop(['id' => 99, 'title' => 'Markt', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', 99, 'EUR');
@@ -71,7 +71,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testARowWrittenAfterTheBeginningIsNotDue(): void
     {
-        // Schon umgeschaltet — beim nächsten Lauf nicht noch einmal.
+        // Already switched — not again on the next run.
         $this->price(validFrom: self::NOW - 60);
         $this->row(tstamp: self::NOW - 30);
 
@@ -95,7 +95,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testAPriceThatBeganAndEndedWithoutARowIsNeverDue(): void
     {
-        // Sonst würde es jede Minute neu gerechnet, ohne dass je eine Zeile entsteht.
+        // Otherwise it would be recalculated every minute without a row ever being created.
         $this->price(validFrom: self::NOW - 120, validTo: self::NOW - 60);
 
         self::assertSame([], $this->due());
@@ -118,7 +118,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testOnlyRowsThatCanBeAListPriceCount(): void
     {
-        // Gruppen- und Staffelpreise stehen nicht in der Projektion.
+        // Group and tier prices are not in the projection.
         $this->price(validFrom: self::NOW - 60, customerGroup: 3);
         $this->price(validFrom: self::NOW - 60, minQuantity: '10.0000');
 
@@ -127,8 +127,8 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEinAbopreisKannDieKachelZahlSein(): void
     {
-        // Abo-2b (P88): Ein Produkt ohne Einmalkauf steht mit seinem ersten
-        // Modell in der Projektion — dessen Preisgrenze ist fällig wie jede.
+        // Abo-2b (P88): A product without a one-time purchase is in the projection
+        // with its first plan — that plan's price boundary is due like any other.
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'validFrom' => self::NOW - 60, 'subscriptionRule' => 5]);
         $this->row(tstamp: self::LONG_AGO);
 
@@ -145,9 +145,9 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testAPriceInACurrencyNoShopSellsInIsNeverDue(): void
     {
-        // Seit C25 entsteht eine Zeile nur je Markt. Ein CHF-Preis ohne CHF-Shop
-        // bekommt nie eine — er wäre sonst jede Minute fällig, ohne dass sich
-        // etwas ändert.
+        // Since C25 a row is only created per market. A CHF price without a CHF
+        // shop never gets one — otherwise it would be due every minute without
+        // anything changing.
         $this->insertPrice(['pid' => 1, 'currency' => 'CHF', 'net' => '10.0000', 'validFrom' => self::NOW - 60]);
 
         self::assertSame([], $this->due());
@@ -155,9 +155,9 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEinZweiterStartpunktDesselbenShopsMachtSeineWaehrungFaellig(): void
     {
-        // C-1c: Die österreichische Firma verkauft über /en/ in Pfund. Vorher
-        // wäre dafür ein zweiter Shop nötig gewesen; jetzt ist es ein zweiter
-        // Startpunkt, und der GBP-Preis bekommt dadurch seine Zeile.
+        // C-1c: The Austrian company sells in pounds via /en/. Before, that
+        // would have needed a second shop; now it is a second start point,
+        // and the GBP price gets its row through it.
         $this->insertRootPage(2, 'en', 99, 'GBP');
         $this->insertPrice(['pid' => 1, 'currency' => 'GBP', 'net' => '10.0000', 'validFrom' => self::NOW - 60]);
 
@@ -166,8 +166,8 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEinZweiterStartpunktDerselbenWaehrungAendertDieZeilenzahlNicht(): void
     {
-        // Der Prüfstein: Solange nur eine Währung im Spiel ist, darf der Verbund
-        // über die Startpunkte nichts doppelt zählen — DISTINCT im Markt-Verbund.
+        // The touchstone: as long as only one currency is involved, the join
+        // over the start points must not count anything twice — DISTINCT in the market join.
         $this->insertRootPage(2, 'en', 99, 'EUR');
         $this->price(validFrom: self::NOW - 60);
         $this->row(tstamp: self::LONG_AGO);
@@ -177,8 +177,8 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEinDepublizierterStartpunktHaeltSeineWaehrungFaellig(): void
     {
-        // Ohne published-Filter (siehe DbalMarketRepository): Wer den GBP-
-        // Startpunkt depubliziert, nimmt seinen Preiszeilen nicht das Umschalten.
+        // Without a published filter (see DbalMarketRepository): unpublishing the
+        // GBP start point does not take the switch away from its price rows.
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'language' => 'en', 'consho_shop' => 99, 'consho_currency' => 'GBP', 'published' => 0]);
         $this->insertPrice(['pid' => 1, 'currency' => 'GBP', 'net' => '10.0000', 'validFrom' => self::NOW - 60]);
 
@@ -187,7 +187,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEinStartpunktOhneWaehrungMachtKeinenPreisFaellig(): void
     {
-        // Er zeigt nichts an; ein Preis „in gar keiner Währung" gibt es nicht.
+        // It displays nothing; a price "in no currency at all" does not exist.
         $this->connection->update('tl_page', ['consho_currency' => ''], ['id' => 1]);
         $this->price(validFrom: self::NOW - 60);
 
@@ -196,12 +196,12 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testDieLeereWaehrungTrifftSichNichtSelbst(): void
     {
-        // ⚠️ Der Fall, der ohne die Bedingung `consho_currency <> ''` still
-        // durchginge: tl_consho_price.currency hat seit 2026-09-21 eine leere
-        // Vorgabe, damit eine an der Maske vorbei geschriebene Zeile nicht zum
-        // Euro-Preis wird. Stünde ein leerer Startpunkt als Markt ('', 'AT') da,
-        // fände er über `m.currency = p.currency` genau diese Zeile — und die
-        // Projektion bekäme eine Zeile für eine Währung, die es nicht gibt.
+        // ⚠️ The case that would slip through silently without the condition
+        // `consho_currency <> ''`: tl_consho_price.currency has an empty default,
+        // so that a row written past the form does not become a euro price.
+        // If an empty start point stood as a market ('', 'AT'), it would find
+        // exactly this row via `m.currency = p.currency` — and the projection
+        // would get a row for a currency that does not exist.
         $this->connection->update('tl_page', ['consho_currency' => ''], ['id' => 1]);
         $this->insertPrice(['pid' => 1, 'currency' => '', 'net' => '10.0000', 'validFrom' => self::NOW - 60]);
 
@@ -210,8 +210,8 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEineSeiteDieKeinStartpunktIstMachtKeinenPreisFaellig(): void
     {
-        // consho_currency steht auf jeder Seite. Ein Restwert auf einer Seite,
-        // die einmal Startpunkt war, ist kein Markt.
+        // consho_currency is on every page. A leftover value on a page that was
+        // once a start point is not a market.
         $this->connection->update('tl_page', ['type' => 'regular'], ['id' => 1]);
         $this->price(validFrom: self::NOW - 60);
 
@@ -220,7 +220,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEinStartpunktEinerFremdenWebsiteMachtKeinenPreisFaellig(): void
     {
-        // Ohne Shop kein Heimatland, ohne Heimatland kein Brutto.
+        // No shop, no home country; no home country, no gross price.
         $this->connection->update('tl_page', ['consho_shop' => 0], ['id' => 1]);
         $this->price(validFrom: self::NOW - 60);
 
@@ -229,7 +229,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testAPriceInAShopWithoutAHomeCountryIsNeverDue(): void
     {
-        // Nach dem Deploy von C-1a der Normalfall, bis jemand das Heimatland pflegt.
+        // The normal case right after upgrading to C-1a, until someone fills in the home country.
         $this->connection->update('tl_consho_shop', ['country' => ''], ['id' => 99]);
         $this->price(validFrom: self::NOW - 60);
 
@@ -238,8 +238,8 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEineNieGespeichertePreiszeileIstNieFaellig(): void
     {
-        // tstamp 0: die Preismaske wurde geöffnet, aber nie gespeichert — anders
-        // als testTheFirstPriceOfAProductIsDueOnceItBegins, wo die Zeile steht.
+        // tstamp 0: the price form was opened but never saved — unlike
+        // testTheFirstPriceOfAProductIsDueOnceItBegins, where the row exists.
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'validFrom' => self::NOW - 60, 'tstamp' => 0]);
 
         self::assertSame([], $this->due());
@@ -247,11 +247,11 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testAHangingMarketWithoutARateNeverInvalidatesOnceTheOtherMarketIsCorrect(): void
     {
-        // I-1: zwei Euro-Shops, AT und DE — nur AT hat einen Satz. Die DE-Zeile
-        // entsteht nie (TaxRateNotFound), der Preis bleibt deshalb jede Minute
-        // fällig (productIdsDue joint über die Märkte). Die AT-Zeile ist aber
-        // schon korrekt geschrieben — refresh() zählt keine echte Änderung mehr,
-        // also darf nichts invalidiert werden.
+        // I-1: two euro shops, AT and DE — only AT has a rate. The DE row is
+        // never created (TaxRateNotFound), so the price stays due every minute
+        // (productIdsDue joins over the markets). The AT row, however, is
+        // already written correctly — refresh() counts no real change any more,
+        // so nothing may be invalidated.
         $this->insertShop(['id' => 100, 'title' => 'DE-Markt', 'country' => 'DE']);
         $this->insertRootPage(2, 'de', 100, 'EUR');
         $this->insertProduct(['id' => 1, 'pid' => 0]);
@@ -275,11 +275,11 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testASwitchedPriceInvalidatesTheSitemap(): void
     {
-        // Contao hält die Sitemap einen Monat im Cache; beim Umschalten speichert
-        // niemand etwas im Backend, also muss der Cron selbst entwerten.
+        // Contao keeps the sitemap in the cache for a month; at the switch
+        // nobody saves anything in the back end, so the cron must invalidate it itself.
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'validFrom' => time() - 60]);
 
-        // Nur die Sitemaps der Startpunkte mit Shop, wie Contao je Startpunkt entwertet.
+        // Only the sitemaps of start points with a shop, the way Contao invalidates per start point.
         $this->startPoints();
 
         $tags = $this->createMock(CacheTagManager::class);
@@ -289,8 +289,8 @@ class ListPriceBoundaryCronTest extends TestCase
     }
 
     /**
-     * Block H (H-3): eine Katalogregel, die beginnt, schaltet die Kacheln und
-     * die Produktseiten um — niemand speichert in dem Moment etwas.
+     * Block H (H-3): a catalogue rule that begins switches the tiles and
+     * the product pages — nobody saves anything at that moment.
      */
     public function testEineBeginnendePreisregelMachtIhreProdukteFaelligUndEntwertetDieSeiten(): void
     {
@@ -311,7 +311,7 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testASwitchedPriceInvalidatesTheListings(): void
     {
-        // Die Listen zeigen, filtern und sortieren nach der Projektion (B-7b).
+        // The lists display, filter and sort by the projection (B-7b).
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'validFrom' => time() - 60]);
         $this->startPoints();
 
@@ -323,15 +323,15 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testASwitchedPriceRefreshesTheVisibilityProjectionToo(): void
     {
-        // B-10: „bepreist" und Ab-Preis hängen an der Listenpreis-Projektion.
-        // Der Preis-Projektor hier schreibt über einen Mock; die Zeile, die er
-        // geschrieben hätte, steht deshalb schon da — älter als der Beginn,
-        // sonst gälte der Preis als schon umgeschaltet und wäre nicht fällig.
+        // B-10: "priced" and the from-price depend on the list price projection.
+        // The price projector here writes through a mock; the row it would have
+        // written is therefore already there — older than the start, otherwise
+        // the price would count as already switched and would not be due.
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'validFrom' => time() - 60]);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000', 'tstamp' => time() - 3600]);
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1]);
-        // Shop und Startpunkt stehen schon aus setUp() — Shop 99 in AT, ein
-        // deutscher Euro-Startpunkt darunter.
+        // Shop and start point already exist from setUp() — shop 99 in AT, a
+        // German euro start point below it.
         $this->insertProductShop(['pid' => 1, 'shop' => 99]);
 
         $visibility = new VisibilityProjector(
@@ -364,7 +364,7 @@ class ListPriceBoundaryCronTest extends TestCase
         (new ListPriceBoundaryCron($this->connection, $this->writingProjector(), new SitemapCacheTags($this->connection, $tags)))();
     }
 
-    // ── Steuersätze (C25) ───────────────────────────────────────────────
+    // ── Tax rates (C25) ─────────────────────────────────────────────────
 
     public function testTheArticlesOfAClassWhoseRateChangedSinceTheLastRunAreDue(): void
     {
@@ -382,8 +382,8 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testTheFirstRunOnlySetsTheMarker(): void
     {
-        // Ohne Marker ist nichts bekannt, was seither fällig wurde — den Stand
-        // davor baut die Migration (ListPriceMarketMigration).
+        // Without a marker nothing is known that has become due since — the state
+        // before that is built by the migration (ListPriceMarketMigration).
         $rates = $this->createMock(TaxRateRepositoryInterface::class);
         $rates->expects(self::never())->method('findClassesWithBoundaryIn');
         $state = new ProjectionState($this->connection);
@@ -409,15 +409,15 @@ class ListPriceBoundaryCronTest extends TestCase
     }
 
     /**
-     * Ablauftest mit echtem Projektor gegen SQLite (wie
-     * CatalogRefreshListenerTest::listener()): ersetzt man in __invoke() den
-     * Steuerteil durch [] statt productIdsWithTaxBoundary(), bleibt dieser
-     * Test rot — anders als ein Test, der nur die Methode isoliert aufruft.
+     * Flow test with a real projector against SQLite (like
+     * CatalogRefreshListenerTest::listener()): if the tax part in __invoke() is
+     * replaced by [] instead of productIdsWithTaxBoundary(), this test stays
+     * red — unlike a test that only calls the method in isolation.
      */
     public function testEinBeginnenderSteuersatzGibtDemArtikelSeineZeile(): void
     {
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1, 'taxClass' => 1]);
-        // Ohne validFrom/validTo: nur der Steuerpfad macht das Produkt fällig.
+        // Without validFrom/validTo: only the tax path makes the product due.
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000']);
 
         $state = new ProjectionState($this->connection);
@@ -443,16 +443,16 @@ class ListPriceBoundaryCronTest extends TestCase
         self::assertSame(1, (int) $rows[0]['pid']);
         self::assertSame('EUR', $rows[0]['currency']);
         self::assertSame('AT', $rows[0]['country']);
-        // SQLite liefert NUMERIC uneinheitlich zurück — deshalb Vergleich per sprintf.
+        // SQLite returns NUMERIC inconsistently — hence the comparison via sprintf.
         self::assertSame('12.0000', \sprintf('%.4F', $rows[0]['gross']));
         self::assertSame(self::NOW, $state->get(ProjectionState::LIST_PRICE_TAX_BOUNDARIES));
 
-        // Merkwert statt des tstamp aus dem ersten Lauf: Der Schreiber setzt
-        // time(), und beide Läufe liegen in derselben Sekunde — ein fälschlich
-        // neu geschriebener tstamp sähe genauso aus wie der alte.
+        // A marker value instead of the tstamp from the first run: the writer sets
+        // time(), and both runs fall in the same second — a tstamp rewritten by
+        // mistake would look exactly like the old one.
         $this->connection->executeStatement('UPDATE tl_consho_product_list_price SET tstamp = 1 WHERE pid = 1');
 
-        // Zweiter Lauf: keine neue Grenze mehr — die Zeile bleibt unangetastet.
+        // Second run: no new boundary any more — the row stays untouched.
         $ratesSecondRun = $this->createMock(TaxRateRepositoryInterface::class);
         $ratesSecondRun->expects(self::once())->method('findClassesWithBoundaryIn')->with(self::NOW, self::NOW + 60)->willReturn([]);
 
@@ -475,10 +475,10 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEineSteuersatzgrenzeMitAenderungInvalidiertListingsUndCatalog(): void
     {
-        // I-2: die Detailseite trägt CATALOG und den eigenen Produkt-Tag, nicht
-        // LISTINGS — eine Satzgrenze muss deshalb beides invalidieren. Die Zeile
-        // fehlt hier noch (anders als im I-1-Test), refresh() schreibt sie also
-        // neu und zählt das als Änderung.
+        // I-2: the detail page carries CATALOG and its own product tag, not
+        // LISTINGS — a rate boundary must therefore invalidate both. The row is
+        // still missing here (unlike in the I-1 test), so refresh() writes it
+        // anew and counts that as a change.
         $this->insertProduct(['id' => 1, 'pid' => 0, 'taxClass' => 1]);
 
         $state = new ProjectionState($this->connection);
@@ -504,10 +504,10 @@ class ListPriceBoundaryCronTest extends TestCase
 
     public function testEineWiederholteSteuersatzgrenzeOhneAenderungInvalidiertTrotzdem(): void
     {
-        // I-A: Ein Lauf schrieb die Listenpreise schon und scheiterte danach
-        // (Zeitlimit in der Sichtbarkeit) — der Marker blieb stehen. Die
-        // Wiederholung findet die neuen Beträge bereits vor, refresh() zählt 0.
-        // Ohne die Satzgrenze in der Bedingung blieben Kachel und Caches alt.
+        // I-A: A run had already written the list prices and failed afterwards
+        // (time limit in the visibility) — the marker stayed where it was. The
+        // retry finds the new amounts already in place, refresh() counts 0.
+        // Without the rate boundary in the condition, tile and caches would stay old.
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1, 'taxClass' => 1]);
         $this->insertPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000']);
         $this->row(self::LONG_AGO);
@@ -532,15 +532,15 @@ class ListPriceBoundaryCronTest extends TestCase
             static fn (): int => self::NOW,
         ))();
 
-        // Der Betrag stand schon richtig da — es war wirklich keine Änderung.
+        // The amount was already correct — there really was no change.
         self::assertSame('12.0000', \sprintf('%.4F', $this->connection->fetchOne('SELECT gross FROM tl_consho_product_list_price WHERE pid = 1')));
     }
 
     public function testDerMarkerLaeuftNichtZurueck(): void
     {
-        // Uhrensprung oder überlappende Läufe: $last liegt schon nach $now, der
-        // Steuerpfad läuft also gar nicht erst an — und der Marker darf trotzdem
-        // nicht auf den älteren $now zurückfallen.
+        // Clock jump or overlapping runs: $last is already after $now, so the
+        // tax path does not even start — and the marker must still not fall
+        // back to the older $now.
         $state = new ProjectionState($this->connection);
         $state->set(ProjectionState::LIST_PRICE_TAX_BOUNDARIES, self::NOW + 100);
 
@@ -562,8 +562,8 @@ class ListPriceBoundaryCronTest extends TestCase
     }
 
     /**
-     * Startpunkt 1 mit Shop steht schon aus setUp() — hier kommt Startpunkt 2
-     * ohne Shop dazu, eine fremde Website in derselben Installation.
+     * Start point 1 with a shop already exists from setUp() — here start point 2
+     * without a shop is added, a foreign website in the same installation.
      */
     private function startPoints(): void
     {
@@ -571,7 +571,7 @@ class ListPriceBoundaryCronTest extends TestCase
     }
 
     /**
-     * Ein Projektor, der für Produkt 1 tatsächlich eine Zeile schreibt.
+     * A projector that actually writes a row for product 1.
      */
     private function writingProjector(): ListPriceProjector
     {
@@ -583,9 +583,9 @@ class ListPriceBoundaryCronTest extends TestCase
     }
 
     /**
-     * Ein echter Projektor gegen SQLite (wie CatalogRefreshListenerTest::listener()),
-     * für den Ablauftest, der den Steuerpfad end-to-end durchrechnet statt ihn
-     * über einen Mock zu stellen.
+     * A real projector against SQLite (like CatalogRefreshListenerTest::listener()),
+     * for the flow test that computes the tax path end to end instead of
+     * stubbing it with a mock.
      */
     private function realProjector(): ListPriceProjector
     {

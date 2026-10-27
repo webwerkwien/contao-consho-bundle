@@ -92,7 +92,7 @@ final class VoucherDocument
 
         try {
             $pdfs = [];
-            // In the order's language (acceptance WG-7: "Gutschein-…" in an
+            // In the order's language (WG-7: "Gutschein-…" in an
             // English mail), letters and digits only.
             $name = trim((string) preg_replace('/[^A-Za-z0-9]+/', '-', $this->translator->trans('CONSHO.voucher.title', [], 'contao_default')), '-');
 

@@ -9,10 +9,10 @@ use Webwerkwien\ContaoConshoBundle\Pricing\ArticlePriceResolver;
 use Webwerkwien\ContaoConshoBundle\Pricing\CartLinePriceSource;
 
 /**
- * Die Andockstelle für den Zeilenpreis. C-4 tauscht hier genau eine
- * Implementierung — die, die die Kundengruppe des Mitglieds kennt. Das hält
- * nur, solange CartPricer allein die Schnittstelle kennt und der Alias dort
- * steht, wo C-4 ihn umbiegt. Gleiches Muster wie FilterCountsSeamTest.
+ * The docking point for the line price. C-4 swaps exactly one
+ * implementation here — the one that knows the member's customer group. That holds
+ * only as long as CartPricer alone knows the interface and the alias sits
+ * where C-4 redirects it. Same pattern as FilterCountsSeamTest.
  */
 class CartLinePriceSeamTest extends TestCase
 {

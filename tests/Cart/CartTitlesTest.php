@@ -9,10 +9,10 @@ use Webwerkwien\ContaoConshoBundle\Cart\CartTitles;
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Gegen SQLite mit dem gemeinsamen Katalog-Testschema.
+ * Against SQLite with the shared catalogue test schema.
  *
- * Die Einfüger des Traits liefern keine Id zurück (`insertProduct(): void`),
- * deshalb stehen die Ids hier als Konstanten.
+ * The trait's inserters return no id (`insertProduct(): void`),
+ * which is why the ids are constants here.
  */
 class CartTitlesTest extends TestCase
 {
@@ -39,9 +39,9 @@ class CartTitlesTest extends TestCase
 
     public function testEineVarianteTraegtDenTitelIhresHauptprodukts(): void
     {
-        // Der eigene Titel einer Variante ist eine Backend-Beschriftung
-        // (ProductDetailAssembler: „title … always the main product's").
-        // Stünde er im Warenkorb, hieße der Artikel dort anders als im Katalog.
+        // A variant's own title is a back-end label
+        // (ProductDetailAssembler: "title … always the main product's").
+        // If it appeared in the cart, the article would be called differently there than in the catalogue.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock']);
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN, 'title' => 'rot / 120 cm']);
 
@@ -50,21 +50,21 @@ class CartTitlesTest extends TestCase
 
     public function testZweiVariantenDesselbenProduktsSindAuseinanderzuhalten(): void
     {
-        // Der Befund aus der Durchsicht: Beide Zeilen tragen den Titel des
-        // Hauptprodukts, also hießen Beschriftung und Knöpfe in beiden Zeilen
-        // gleich — zweimal „Menge: Wanderstock", zweimal „Entfernen
-        // Wanderstock". Für einen Screenreader sind das dieselben Namen.
-        // Die Artikelnummer steht am Artikel selbst und wird nie vom
-        // Hauptprodukt geerbt (tl_consho_product: „Per ARTICLE, and never
-        // inherited"), ist also genau das zeilenspezifische Merkmal.
+        // The problem: both lines carry the title of the
+        // main product, so label and buttons in both lines were
+        // the same — twice "Quantity: Wanderstock", twice "Remove
+        // Wanderstock". For a screen reader those are the same names.
+        // The article number sits on the article itself and is never inherited
+        // from the main product (tl_consho_product: "Per ARTICLE, and never
+        // inherited"), so it is exactly the line-specific feature.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock', 'sku' => 'WS']);
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN, 'title' => 'rot / 120 cm', 'sku' => 'WS-120-ROT']);
         $this->insertProduct(['id' => self::OTHER, 'pid' => self::MAIN, 'title' => 'rot / 140 cm', 'sku' => 'WS-140-ROT']);
 
         $titles = $this->titles->of([self::VARIANT, self::OTHER], '', '');
 
-        // Der Titel bleibt der des Hauptprodukts — das ist die Regel, nicht
-        // der Fehler.
+        // The title stays that of the main product — that is the rule, not
+        // the bug.
         self::assertSame('Wanderstock', $titles[self::VARIANT]->title);
         self::assertSame('Wanderstock', $titles[self::OTHER]->title);
 
@@ -75,9 +75,9 @@ class CartTitlesTest extends TestCase
 
     public function testEineVarianteNenntIhreWerteInDerReihenfolgeDerAchsen(): void
     {
-        // E2 (Michael, 2026-10-08: „nur die Werte"): „Wanderstock, rot, L",
-        // Achsen wie auf der Detailseite nach ihrer Beschriftung geordnet —
-        // hier also Farbe vor Größe, obwohl Größe zuerst angelegt ist.
+        // E2: "Wanderstock, rot, L",
+        // axes ordered by their label as on the detail page —
+        // here colour before size, although size was created first.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock']);
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN, 'title' => 'rot / L']);
         $this->insertPropertyGroup(['id' => 10, 'title' => 'Größe']);
@@ -95,8 +95,8 @@ class CartTitlesTest extends TestCase
 
     public function testJeAchseZaehltNurEinWert(): void
     {
-        // Wie auf der Detailseite gewinnt bei zwei Werten einer Achse der
-        // erste nach `sorting`.
+        // As on the detail page, with two values on one axis the
+        // first by `sorting` wins.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock']);
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN]);
         $this->insertPropertyGroup(['id' => 11, 'title' => 'Farbe']);
@@ -148,9 +148,9 @@ class CartTitlesTest extends TestCase
 
     public function testEinGeloeschtesProduktFehltInDerZuordnung(): void
     {
-        // Genau der Fall, für den die unbepreisbaren Zeilen da sind: Das
-        // Produkt ist weg, die Position steht noch im Warenkorb. Es gibt
-        // keinen Titel — die Vorlage setzt dann ihren Ersatztext ein.
+        // Exactly the case the unpriceable lines exist for: the
+        // product is gone, the line item is still in the cart. There is
+        // no title — the template then uses its fallback text.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock']);
 
         self::assertSame([self::MAIN => 'Wanderstock'], $this->titlesOf([self::MAIN, self::OTHER], '', ''));
@@ -158,13 +158,13 @@ class CartTitlesTest extends TestCase
 
     public function testEineVarianteOhneHauptproduktFaelltAufDenErsatztextZurueck(): void
     {
-        // Der INNER JOIN aufs Hauptprodukt lässt die Zeile ganz weg, wenn das
-        // Hauptprodukt gelöscht ist — obwohl der Artikel selbst noch existiert.
-        // Gewollt: Der Titel, den die Vorlage zeigen soll, IST der des
-        // Hauptprodukts (ProductDetailAssembler), und den gibt es dann nicht
-        // mehr. Der eigene Titel der Variante („rot / 120 cm") wäre eine
-        // Backend-Beschriftung, der Ersatztext ist ehrlicher. Die Zeile bleibt
-        // sichtbar und entfernbar, weil die Vorlage den Ersatztext einsetzt.
+        // The INNER JOIN on the main product leaves the row out entirely when the
+        // main product is deleted — even though the article itself still exists.
+        // Intended: the title the template is meant to show IS the one of the
+        // main product (ProductDetailAssembler), and that no longer exists
+        // then. The variant's own title ("rot / 120 cm") would be a
+        // back-end label; the fallback text is more honest. The line stays
+        // visible and removable because the template uses the fallback text.
         $this->insertProduct(['id' => self::VARIANT, 'pid' => self::MAIN, 'title' => 'rot / 120 cm', 'sku' => 'WS-120-ROT']);
 
         self::assertSame([], $this->titles->of([self::VARIANT], '', ''));
@@ -177,16 +177,16 @@ class CartTitlesTest extends TestCase
 
     public function testEineUnveroeffentlichteZeileBehaeltIhrenNamen(): void
     {
-        // Ohne Sichtbarkeitsprüfung, ausdrücklich: Wer nicht sieht, welcher
-        // Artikel den Checkout blockiert, kann ihn auch nicht entfernen.
+        // Without a visibility check, explicitly: whoever cannot see which
+        // article blocks the checkout cannot remove it either.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock', 'published' => 0]);
 
         self::assertSame([self::MAIN => 'Wanderstock'], $this->titlesOf([self::MAIN], '', ''));
     }
 
     /**
-     * Nur die Titel, damit die Erwartungen oben so knapp bleiben wie vor der
-     * Artikelnummer.
+     * Only the titles, so that the expectations above stay as short as before
+     * the article number.
      *
      * @param list<int> $articleIds
      *

@@ -100,6 +100,8 @@ final class InvoiceView
                 // Abo-2 (P13): a subscription's conditions as frozen at the
                 // purchase; '' on every other line and before version 6.
                 'terms' => (string) ($item['subscriptionTerms'] ?? ''),
+                // EZ-3: noted beside the line; absent before version 12.
+                'singlePurpose' => (bool) ($item['voucherSinglePurpose'] ?? false),
             ];
         }
 
@@ -114,6 +116,24 @@ final class InvoiceView
                 'net' => $this->money->format($entry['net'], $currency, $language),
                 'tax' => $this->money->format($entry['tax'], $currency, $language),
                 'gross' => $this->money->format($entry['gross'], $currency, $language),
+            ];
+        }
+
+        // EZ-4: tax a single-purpose voucher already carried, deducted from
+        // the tax of this invoice; absent before version 13.
+        $prepaid = [];
+        $prepaidTax = BigDecimal::zero();
+
+        foreach (\is_array($payload['prepaid'] ?? null) ? $payload['prepaid'] : [] as $entry) {
+            if (!\is_array($entry) || !is_numeric($entry['tax'] ?? null) || !is_numeric($entry['rate'] ?? null)) {
+                continue;
+            }
+
+            $prepaidTax = $prepaidTax->plus((string) $entry['tax']);
+            $prepaid[] = [
+                'label' => (string) ($entry['label'] ?? ''),
+                'rate' => ($countries ? strtoupper((string) ($entry['country'] ?? '')).' ' : '').$this->percent((string) $entry['rate'], $locale),
+                'tax' => $this->money->format((string) $entry['tax'], $currency, $language),
             ];
         }
 
@@ -156,6 +176,9 @@ final class InvoiceView
             // Which label goes with it (formatVersion 5, E-6b); older
             // snapshots only ever held the expected period.
             'deliveryKind' => \in_array($payload['delivery']['kind'] ?? null, ['delivered', 'partial'], true) ? $payload['delivery']['kind'] : 'expected',
+            // An invoice paid in advance before shipping says so (L-1). Only
+            // from formatVersion 11: an older invoice prints as it was issued.
+            'advance' => $version >= 11 && 'expected' === ($payload['delivery']['kind'] ?? null) && true === ($payload['delivery']['advance'] ?? null),
             'deliveryFirst' => $this->period(\is_array($payload['delivery'] ?? null) ? ['from' => $payload['delivery']['from'] ?? '', 'to' => $payload['delivery']['from'] ?? ''] : null, $locale),
             'deliveryRest' => $this->period(\is_array($payload['delivery'] ?? null) ? ['from' => $payload['delivery']['to'] ?? '', 'to' => $payload['delivery']['to'] ?? ''] : null, $locale),
             // "Zahlbar bis" of a purchase on account (formatVersion 4, E-2);
@@ -183,6 +206,8 @@ final class InvoiceView
             'taxes' => $taxes,
             'netTotal' => $this->money->format((string) ($order['netTotal'] ?? '0'), $currency, $language),
             'taxTotal' => $this->money->format((string) ($order['taxTotal'] ?? '0'), $currency, $language),
+            'prepaid' => $prepaid,
+            'taxDue' => [] === $prepaid ? '' : $this->money->format((string) BigDecimal::of((string) ($order['taxTotal'] ?? '0'))->minus($prepaidTax), $currency, $language),
             'grandTotal' => $this->money->format((string) ($order['grandTotal'] ?? '0'), $currency, $language),
             'shippingMethod' => (string) ($order['shippingMethodTitle'] ?? ''),
             'paymentMethod' => (string) ($order['paymentMethodTitle'] ?? ''),
@@ -311,8 +336,7 @@ final class InvoiceView
     }
 
     /**
-     * The buyer's VAT ID, unless VIES said it is invalid (Michael, 2026-09-24:
-     * "UID so umsetzen"). An ID the register rejected would stand on the
+     * The buyer's VAT ID, unless VIES said it is invalid. An ID the register rejected would stand on the
      * invoice as if it were the buyer's — which is exactly what VIES said it
      * is not. Valid: printed. Unavailable: printed, because the buyer gave it
      * and the order was taxed anyway (C15). A version 1 snapshot carries no

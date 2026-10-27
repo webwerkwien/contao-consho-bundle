@@ -24,7 +24,7 @@ class ShippingPriceDcaTest extends TestCase
 
     public function testDerBetragHatBewusstKeineSpalte(): void
     {
-        // Wie bei den Produktpreisen: ohne 'sql' => null legte Contao jsonData an.
+        // As with the product prices: without 'sql' => null Contao would create jsonData.
         $amount = $GLOBALS['TL_DCA']['tl_consho_shipping_price']['fields']['amount'];
 
         self::assertArrayHasKey('sql', $amount);
@@ -54,10 +54,10 @@ class ShippingPriceDcaTest extends TestCase
 
     public function testEinVersandbetragErbtKeinenEuroVorgabewert(): void
     {
-        // Dieselbe Begründung wie an tl_consho_price.currency (2026-09-21):
-        // Eine Versandpauschale, die still auf Euro lautet, ist in einem Shop,
-        // der nur in Pfund verkauft, nicht verfügbar — und FlatRateShipping
-        // wirft dann erst im Checkout.
+        // The same reasoning as on tl_consho_price.currency:
+        // a flat shipping rate that is silently in euros is not available in a
+        // shop that only sells in pounds — and FlatRateShipping only throws in
+        // the checkout.
         self::assertSame('', $GLOBALS['TL_DCA']['tl_consho_shipping_price']['fields']['currency']['sql']['default']);
     }
 }

@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherCode;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherLedger;
 
 /**
- * WG9: Der Saldo eines Gutscheins ändert sich nur über eine Bewegung — und ist
- * immer die Summe seiner Bewegungen.
+ * WG9: A voucher's balance only changes through a movement — and is
+ * always the sum of its movements.
  */
 class VoucherLedgerTest extends TestCase
 {
@@ -59,8 +59,8 @@ class VoucherLedgerTest extends TestCase
     }
 
     /**
-     * Wer zuletzt kommt, findet weniger vor — und bekommt nicht mehr, als da
-     * ist. Nichts wird gebucht.
+     * Whoever comes last finds less — and gets no more than there is.
+     * Nothing is booked.
      */
     public function testUnterNullWirdNichtGebucht(): void
     {
@@ -76,13 +76,13 @@ class VoucherLedgerTest extends TestCase
         self::assertSame('20.0000', $this->decimal($this->voucher($id)['balance']));
         self::assertCount(1, $this->bookings($id));
 
-        // Genau bis null geht.
+        // Exactly down to zero works.
         self::assertSame('0.0000', $ledger->book($id, '-20', VoucherBookingType::Redeem, self::NOW + 2, 81));
     }
 
     /**
-     * Gelesen wird der Saldo unter Sperre — sonst sähe der zweite Käufer den
-     * Stand vor dem ersten.
+     * The balance is read under a lock — otherwise the second buyer would see
+     * the state before the first.
      */
     public function testDerSaldoWirdUnterSperreGelesen(): void
     {
@@ -107,8 +107,8 @@ class VoucherLedgerTest extends TestCase
     }
 
     /**
-     * WG5 mit Michaels Nachschärfung: getippt wird, wie es kommt — klein, mit
-     * Bindestrichen, mit Leerzeichen.
+     * WG5, refined: codes are typed however they come — lower case, with
+     * hyphens, with spaces.
      */
     public function testDerCodeWirdSoGefundenWieErGetipptWird(): void
     {

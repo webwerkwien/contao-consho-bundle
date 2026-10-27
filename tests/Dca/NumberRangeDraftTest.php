@@ -8,17 +8,17 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Issue #3 (Bernhard Renner, 2026-10-17, Version 0.1.3): Mit einer
- * Bestellnummer im Shop scheiterte jedes weitere „Neu" in den Nummernkreisen
- * an `Duplicate entry '1-order' for key 'pid_type'`.
+ * Issue #3 (version 0.1.3): with an order number in the shop, every further
+ * "New" in the number ranges failed with
+ * `Duplicate entry '1-order' for key 'pid_type'`.
  *
- * Contao legt bei „Neu" sofort einen Entwurf an, nur mit `pid` und den
- * Vorgaben der Spalten — und die Art hatte die Vorgabe `order`. Der Entwurf
- * war also eine zweite Bestellnummer, bevor jemand eine Art gewählt hatte.
- * Workaround des Melders: die Bestellnummer zuletzt anlegen.
+ * On "New", Contao immediately creates a draft, with only `pid` and the
+ * column defaults — and the type had the default `order`. So the draft was
+ * a second order number before anybody had chosen a type. The reporter's
+ * workaround: create the order number last.
  *
- * Das Schema kommt aus der DCA-Datei (DcaSchema), der Entwurf wird so
- * eingefügt, wie DC_Table::create() es tut: ohne `type`.
+ * The schema comes from the DCA file (DcaSchema); the draft is inserted the
+ * way DC_Table::create() does it: without `type`.
  */
 class NumberRangeDraftTest extends TestCase
 {
@@ -34,7 +34,7 @@ class NumberRangeDraftTest extends TestCase
     public function testNeuNebenEinerBestellnummerScheitertNicht(): void
     {
         $this->connection->insert('tl_consho_number_range', ['pid' => 1, 'tstamp' => 0]);
-        // Ein zweiter offener Entwurf, etwa aus einem zweiten Tab.
+        // A second open draft, say from a second tab.
         $this->connection->insert('tl_consho_number_range', ['pid' => 1, 'tstamp' => 0]);
 
         self::assertSame(3, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_number_range WHERE pid = 1'));

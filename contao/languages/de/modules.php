@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
-// Drei Gruppen, drei Fragen: Was tue ich heute? Was pflege ich laufend?
-// Was habe ich einmal eingerichtet? Siehe config.php.
+// Three groups, three questions: what do I do today? What do I maintain
+// continuously? What did I set up once? See config.php.
 $GLOBALS['TL_LANG']['MOD']['consho'] = 'Consho';
 $GLOBALS['TL_LANG']['MOD']['consho_data'] = 'Consho-Stammdaten';
 $GLOBALS['TL_LANG']['MOD']['consho_setup'] = 'Consho-Einrichtung';

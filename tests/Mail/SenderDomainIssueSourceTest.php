@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Mail\SenderDomainIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * D-7, M5: Absender-Domain gegen die Domains der Startpunkte, ohne DNS.
+ * D-7, M5: Sender domain against the domains of the start points, without DNS.
  */
 final class SenderDomainIssueSourceTest extends TestCase
 {
@@ -27,7 +27,7 @@ final class SenderDomainIssueSourceTest extends TestCase
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop', 'mailTransport' => 1]);
     }
 
-    public function testDerFallAusDerAbnahmeD1(): void
+    public function testDerFallAusD1(): void
     {
         $this->root(1, 'shop.example.org');
 

@@ -80,7 +80,7 @@ final class WithdrawalAssignment
         // with the check above: that one reads before this write, and between
         // the two another request can assign. No test reaches that gap
         // (SQLite in memory, one connection) — keep the condition anyway
-        // (review WA, K1).
+        // (WA).
         $changed = $this->connection->executeStatement(
             "UPDATE tl_consho_withdrawal SET pid = ?, afterWindow = ?, tstamp = ? WHERE id = ? AND pid = 0 AND state = 'received'",
             [$orderId, $late ? 1 : 0, time(), $withdrawalId],
@@ -94,7 +94,7 @@ final class WithdrawalAssignment
     }
 
     /**
-     * "Ohne Bestellung abweisen" (review WA, S2; Michael, 2026-10-22): a
+     * "Ohne Bestellung abweisen" (WA): a
      * declaration that belongs to no order — nonsense, a duplicate, an order of
      * another shop — would otherwise stay "received" for good, in the finding
      * and on the dashboard. Rejected with the operator's reason, kept as it

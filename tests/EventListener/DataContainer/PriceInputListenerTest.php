@@ -64,8 +64,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testJederCallbackDerPreismaskeIstGenauEinmalRegistriert(): void
     {
-        // Hält den Umbau in eine Basisklasse fest: kein Callback verloren,
-        // keiner doppelt, keiner an einer fremden Tabelle, keiner mit vertauschtem Ziel.
+        // Pins the move into a base class: no callback lost, none doubled, none
+        // on a foreign table, none with a swapped target.
         $targets = [];
 
         foreach ((new \ReflectionClass(PriceInputListener::class))->getMethods() as $method) {
@@ -93,8 +93,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testDieBasisklasseRegistriertSelbstKeinenCallback(): void
     {
-        // Sonst hinge jede Unterklasse ihre Callbacks zusätzlich an die Tabelle
-        // der Basis — getMethods() liefert geerbte Methoden samt Attributen.
+        // Otherwise every subclass would additionally attach its callbacks to the
+        // base's table — getMethods() returns inherited methods along with their attributes.
         $class = new \ReflectionClass(CoupledPriceInputListener::class);
 
         self::assertTrue($class->isAbstract());
@@ -115,14 +115,14 @@ class PriceInputListenerTest extends TestCase
     {
         $this->listener([['EUR', 'AT'], ['CHF', 'CH']])->onLoad();
 
-        // Leer, nicht fehlend: sonst griffe der Spalten-Standard EUR.
+        // Empty, not missing: otherwise the column default EUR would take effect.
         self::assertSame('', $GLOBALS['TL_DCA']['tl_consho_price']['fields']['currency']['default']);
     }
 
     public function testDasLandIstAusgeblendetWennJedeWaehrungNurEinHeimatlandHat(): void
     {
-        // Der Normalfall: Shops aus einem Land. Der Betreiber sieht nur
-        // „brutto | netto" und den Betrag.
+        // The normal case: shops from one country. The operator only sees
+        // "gross | net" and the amount.
         $this->listener([['EUR', 'AT'], ['CHF', 'CH']])->onLoad();
 
         $palette = $GLOBALS['TL_DCA']['tl_consho_price']['palettes']['default'];
@@ -140,8 +140,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testDasLandBietetImmerAlleHeimatlaender(): void
     {
-        // Ohne automatisches Absenden kann die Liste einer eben gewählten
-        // Währung nicht folgen — PriceInputListener prüft das beim Speichern.
+        // Without automatic submit the list cannot follow a currency that has
+        // just been chosen — PriceInputListener checks that on save.
         $listener = $this->listener([['EUR', 'DE'], ['CHF', 'CH'], ['EUR', 'AT']]);
 
         self::assertSame(['AT' => 'Österreich', 'CH' => 'Schweiz', 'DE' => 'Deutschland'], $listener->countryOptions($this->dc(['currency' => 'EUR'])));
@@ -156,7 +156,7 @@ class PriceInputListenerTest extends TestCase
 
     public function testImMehrfachBearbeitenOhneDatensatzBietetDasLandAlleHeimatlaender(): void
     {
-        // "Mehrere bearbeiten → überschreiben": getCurrentRecord() liefert null.
+        // "Edit multiple → override": getCurrentRecord() returns null.
         $listener = $this->listener([['EUR', 'DE'], ['CHF', 'CH'], ['EUR', 'AT']]);
 
         self::assertSame(['AT' => 'Österreich', 'CH' => 'Schweiz', 'DE' => 'Deutschland'], $listener->countryOptions($this->dc(null)));
@@ -206,17 +206,17 @@ class PriceInputListenerTest extends TestCase
 
     public function testEineWaehrungEinesUnveroeffentlichtenStartpunktsWirdAngenommen(): void
     {
-        // 🎯 So wird eine Währung vorbereitet, bevor sie jemand sieht: Startpunkt
-        // anlegen, GBP wählen, Preise pflegen, dann veröffentlichen.
+        // 🎯 This is how a currency is prepared before anybody sees it: create
+        // the root page, choose GBP, maintain prices, then publish.
         //
-        // Gegen die echte Datenbank statt gegen den Markt-Mock der übrigen
-        // Tests, und das ist der ganze Zweck: Die Frage ist nicht, was die Maske
-        // mit einer Liste von Märkten tut, sondern ob DbalMarketRepository den
-        // unveröffentlichten Startpunkt überhaupt zum Markt macht. Ein Mock
-        // beantwortet das nie — er gibt zurück, was wir hineinschreiben.
-        // Nähme die Abfrage einen `published`-Filter auf, würfe saveCurrency()
-        // hier, und die Währung ließe sich erst pflegen, wenn sie schon online
-        // ist.
+        // Against the real database instead of the market mock of the other
+        // tests, and that is the whole point: the question is not what the form
+        // does with a list of markets, but whether DbalMarketRepository makes the
+        // unpublished root page a market at all. A mock never answers that — it
+        // returns what we write into it.
+        // If the query picked up a `published` filter, saveCurrency() would throw
+        // here, and the currency could only be maintained once it is already
+        // online.
         $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $this->createCatalogSchema($connection);
         $this->createRootPageTable($connection);
@@ -236,7 +236,7 @@ class PriceInputListenerTest extends TestCase
         self::assertSame('GBP', $listener->saveCurrency('GBP'));
     }
 
-    // ── Beim Speichern ──────────────────────────────────────────────────
+    // ── On saving ───────────────────────────────────────────────────────
 
     public function testEineBruttoEingabeWirdBeimSpeichernZuNetto(): void
     {
@@ -244,19 +244,19 @@ class PriceInputListenerTest extends TestCase
 
         self::assertSame('10.0000', $values['net']);
         self::assertSame('gross', $values['inputMode']);
-        // Nur ein Heimatland für EUR: gesetzt, obwohl das Feld ausgeblendet war.
+        // Only one home country for EUR: set, although the field was hidden.
         self::assertSame('AT', $values['inputCountry']);
     }
 
     public function testEinNieGespeicherterDatensatzBleibtBeimAutomatischenAbsendenNeu(): void
     {
-        // Kein Feld dieser Maske sendet automatisch ab; der Schutz bleibt für
-        // den Fall, dass eines submitOnChange bekommt: submit() hat tstamp
-        // schon gesetzt. Bliebe er, löschte „Zurück" die Zeile nicht mehr, und
-        // sie stünde mit Netto 0 in der Datenbank.
-        // Ohne `amount`: Beim automatischen Absenden überspringt Contao das
-        // leere Pflichtfeld, es fehlt in den Werten. Die Zurücksetzung muss
-        // deshalb VOR dem frühen Return für fehlendes `amount` stehen.
+        // No field of this form submits automatically; the protection stays for
+        // the case that one gets submitOnChange: submit() has already set
+        // tstamp. If it stayed, "Back" would no longer delete the row, and it
+        // would be in the database with net 0.
+        // Without `amount`: on automatic submit Contao skips the empty mandatory
+        // field, so it is missing from the values. The reset must therefore come
+        // BEFORE the early return for a missing `amount`.
         $values = $this->listener([['EUR', 'AT']], 1, 'auto')->onBeforeSubmit(
             ['tstamp' => self::NOW, 'currency' => 'EUR', 'inputMode' => 'gross'],
             $this->dc(['tstamp' => 0, 'net' => '0.0000']),
@@ -267,8 +267,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinGespeicherterDatensatzBehaeltBeimAutomatischenAbsendenSeinenZeitstempel(): void
     {
-        // Schutz für ein mögliches künftiges submitOnChange: ein Absenden mit
-        // echtem tstamp darf ihn nicht auf 0 zurücksetzen.
+        // Protection for a possible future submitOnChange: a submit with a real
+        // tstamp must not reset it to 0.
         $values = $this->listener([['EUR', 'AT']], 1, 'auto')->onBeforeSubmit(
             ['tstamp' => self::NOW, 'currency' => 'EUR', 'inputMode' => 'gross', 'amount' => '12.00'],
             $this->dc(),
@@ -279,7 +279,7 @@ class PriceInputListenerTest extends TestCase
 
     public function testDerBetragLandetNieInDerDatenbank(): void
     {
-        // DC_Table::submit() schreibt jeden Schlüssel — amount hat keine Spalte.
+        // DC_Table::submit() writes every key — amount has no column.
         $values = $this->listener()->onBeforeSubmit(['amount' => '12.00', 'inputMode' => 'gross'], $this->dc());
 
         self::assertArrayNotHasKey('amount', $values);
@@ -287,7 +287,7 @@ class PriceInputListenerTest extends TestCase
 
     public function testEineNettoEingabeWirdOhneSatzGespeichert(): void
     {
-        // Steuerklasse 0 und kein Heimatland für CHF — für netto egal.
+        // Tax class 0 and no home country for CHF — irrelevant for net.
         $values = $this->listener([['EUR', 'AT']], 0)->onBeforeSubmit(['amount' => '10.5', 'inputMode' => 'net', 'currency' => 'CHF'], $this->dc());
 
         self::assertSame('10.5000', $values['net']);
@@ -297,9 +297,9 @@ class PriceInputListenerTest extends TestCase
 
     public function testBeimAutomatischenAbsendenWirdNichtUmgerechnet(): void
     {
-        // Schutz für ein mögliches künftiges submitOnChange: ein automatisches
-        // Absenden darf nicht umrechnen — der Betrag kann leer sein, das Land
-        // noch zur alten Währung gehören.
+        // Protection for a possible future submitOnChange: an automatic submit
+        // must not convert — the amount may be empty, the country may still
+        // belong to the old currency.
         $values = $this->listener([['EUR', 'AT']], 1, 'auto')->onBeforeSubmit(['amount' => '12.00', 'inputMode' => 'gross', 'currency' => 'EUR'], $this->dc());
 
         self::assertArrayNotHasKey('net', $values);
@@ -308,7 +308,7 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinNegativerBetragWirdAbgelehnt(): void
     {
-        // rgxp digit lässt -1 durch, und 'minval' => 0 prüft Contao nicht.
+        // rgxp digit lets -1 through, and Contao does not check 'minval' => 0.
         $this->expectExceptionMessage('negativ');
 
         $this->listener()->onBeforeSubmit(['amount' => '-1.00', 'inputMode' => 'net'], $this->dc());
@@ -316,8 +316,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinZuGrosserNettobetragWirdAbgelehnt(): void
     {
-        // net ist decimal(12,4), acht Vorkommastellen. Contaos maxval liefe hier
-        // ins Leere: es prüft vor der Komma-Umwandlung.
+        // net is decimal(12,4), eight digits before the point. Contao's maxval
+        // would miss here: it checks before the comma conversion.
         $this->expectExceptionMessage('zu groß');
 
         $this->listener()->onBeforeSubmit(['amount' => '123456789.5', 'inputMode' => 'net'], $this->dc());
@@ -325,8 +325,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinBruttobetragZaehltMitSeinemNetto(): void
     {
-        // Brutto über der Netto-Grenze, das daraus errechnete Netto passt aber
-        // noch — 20 % Steuersatz in AT, der einzigen Heimat für EUR.
+        // Gross above the net limit, but the net calculated from it still fits
+        // — 20 % tax rate in AT, the only home for EUR.
         $values = $this->listener()->onBeforeSubmit(['amount' => '99999999.99', 'inputMode' => 'gross'], $this->dc());
 
         self::assertSame('83333333.3250', $values['net']);
@@ -362,8 +362,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinLandEinerAnderenWaehrungWirdBeimSpeichernAbgelehnt(): void
     {
-        // Die Länderliste zeigt jetzt immer alle Heimatländer — ob das gewählte
-        // zur Währung passt, prüft erst onBeforeSubmit().
+        // The country list now always shows all home countries — whether the
+        // chosen one matches the currency is only checked by onBeforeSubmit().
         $this->expectExceptionMessage('Land für EUR aus Österreich, Deutschland wählen');
 
         $this->listener([['EUR', 'AT'], ['EUR', 'DE'], ['CHF', 'CH']])->onBeforeSubmit(
@@ -381,7 +381,7 @@ class PriceInputListenerTest extends TestCase
 
     public function testOhneSatzImBezugslandLehntDieMaskeAb(): void
     {
-        // Der Rechner kennt AT und DE, der Shop verkauft in CHF aus der Schweiz.
+        // The calculator knows AT and DE, the shop sells in CHF from Switzerland.
         $this->expectExceptionMessage('kein Satz in Schweiz am');
 
         $this->listener([['CHF', 'CH']])->onBeforeSubmit(['amount' => '12.00', 'inputMode' => 'gross', 'currency' => 'CHF'], $this->dc(['currency' => 'CHF']));
@@ -389,8 +389,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinPreisDerSpaeterBeginntRechnetMitDemSatzAbSeinemBeginn(): void
     {
-        // Angekündigte Satzänderung: ab FUTURE 21 %. Wer den neuen Preis
-        // schon heute anlegt, meint das Brutto ab seinem Beginn.
+        // Announced rate change: 21 % from FUTURE. Whoever creates the new price
+        // today already means the gross from its start.
         $listener = $this->listener([['EUR', 'AT']], 1, null, $this->calculatorChangingAt(self::FUTURE));
 
         $future = $listener->onBeforeSubmit(['amount' => '12.10', 'inputMode' => 'gross', 'validFrom' => self::FUTURE], $this->dc());
@@ -402,8 +402,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinGeleertesGueltigAbRechnetMitDemHeutigenSatz(): void
     {
-        // validFrom kommt geleert als null in den Werten an. Mit `??` fiele es
-        // auf den gespeicherten Beginn zurück und rechnete mit 21 %.
+        // validFrom arrives emptied as null in the values. With `??` it would
+        // fall back to the stored start and calculate with 21 %.
         $listener = $this->listener([['EUR', 'AT']], 1, null, $this->calculatorChangingAt(self::FUTURE));
 
         $values = $listener->onBeforeSubmit(['amount' => '12.00', 'inputMode' => 'gross', 'validFrom' => null], $this->dc(['validFrom' => self::FUTURE]));
@@ -413,22 +413,22 @@ class PriceInputListenerTest extends TestCase
 
     public function testBeimWaehrungswechselFolgtDasLandDerNeuenWaehrung(): void
     {
-        // Währung gewechselt, das Land der alten Währung war noch gesetzt:
-        // gespeichert wird mit dem Land und Satz der neuen.
+        // Currency switched, the country of the old currency was still set:
+        // saved with the country and rate of the new one.
         $values = $this->listener([['EUR', 'AT'], ['CHF', 'CH']], 1, null, $this->grossCalculator(['AT' => '20.0000', 'CH' => '8.1000']))->onBeforeSubmit(
             ['currency' => 'CHF', 'inputCountry' => 'AT', 'inputMode' => 'gross', 'amount' => '10.81'],
             $this->dc(),
         );
 
         self::assertSame('CH', $values['inputCountry']);
-        // 10.81 / 1.081 = 10 genau.
+        // 10.81 / 1.081 = exactly 10.
         self::assertSame('10.0000', $values['net']);
     }
 
     public function testDerSchutzFuerAutomatischesAbsendenRechnetNichtUm(): void
     {
-        // Kein Feld dieser Maske sendet automatisch ab; der Schutz bleibt für
-        // den Fall, dass eines submitOnChange bekommt.
+        // No field of this form submits automatically; the protection stays for
+        // the case that one gets submitOnChange.
         $values = $this->listener([['EUR', 'AT'], ['CHF', 'CH']], 1, 'auto')->onBeforeSubmit(
             ['currency' => 'CHF', 'inputCountry' => 'AT', 'inputMode' => 'gross', 'amount' => '12.00'],
             $this->dc(),
@@ -440,9 +440,9 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinLandOhnePassendeWahlWirdBeimAutomatischenAbsendenGeleert(): void
     {
-        // Schutz für ein mögliches künftiges submitOnChange: EUR hat zwei
-        // Heimatländer, keines davon gewählt — das Land der alten Währung
-        // (CHF: CH) darf nicht stehen bleiben.
+        // Protection for a possible future submitOnChange: EUR has two home
+        // countries, neither of them chosen — the country of the old currency
+        // (CHF: CH) must not remain.
         $values = $this->listener([['EUR', 'AT'], ['EUR', 'DE'], ['CHF', 'CH']], 1, 'auto')->onBeforeSubmit(
             ['currency' => 'EUR', 'inputCountry' => 'CH', 'inputMode' => 'gross'],
             $this->dc(['currency' => 'CHF', 'inputCountry' => 'CH']),
@@ -453,8 +453,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testImUeberschreibenBrauchtDerBetragDieEingabeart(): void
     {
-        // „Mehrere bearbeiten → überschreiben": der Betrag ohne "Eingabe als"
-        // wäre in einer Nettozeile netto, in einer Bruttozeile brutto.
+        // "Edit multiple → override": the amount without "Input as" would be
+        // net in a net row and gross in a gross row.
         $this->expectExceptionMessage('mit Eingabeart');
 
         $this->listener([['EUR', 'AT']], 1, null, null, ['act' => 'overrideAll'])->onBeforeSubmit(['amount' => '12.00'], $this->dc());
@@ -462,8 +462,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEineNeueZeileOhneBetragWirdNichtAlsPreisGespeichert(): void
     {
-        // Eine Benutzergruppe ohne Recht auf "Betrag" sieht nur "Währung" —
-        // ohne die Prüfung stünde die neue Zeile mit Netto 0 live.
+        // A user group without permission for "Amount" only sees "Currency" —
+        // without the check the new row would be live with net 0.
         $this->expectExceptionMessage('Betrag fehlt');
 
         $this->listener()->onBeforeSubmit(
@@ -474,8 +474,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testEineDuplizierteZeileOhneBetragWirdGespeichert(): void
     {
-        // DC_Table::copy(): tstamp 0, aber das Netto des Originals — ein echter
-        // Preis, keine leere neue Zeile. Die Sperre gilt nur bei Netto 0.
+        // DC_Table::copy(): tstamp 0, but the net of the original — a real
+        // price, not an empty new row. The block only applies at net 0.
         $values = $this->listener()->onBeforeSubmit(['currency' => 'EUR'], $this->dc(['tstamp' => 0, 'net' => '10.4167']));
 
         self::assertArrayNotHasKey('net', $values);
@@ -483,20 +483,20 @@ class PriceInputListenerTest extends TestCase
 
     public function testEineGespeicherteZeileOhneBetragBleibtUnveraendert(): void
     {
-        // Bereits gespeichert (tstamp > 0): kein neuer Preis von 0, also keine
-        // Ablehnung — nur „Betrag" fehlt in den Werten, nicht die ganze Zeile.
+        // Already saved (tstamp > 0): no new price of 0, so no rejection — only
+        // "Amount" is missing from the values, not the whole row.
         $values = $this->listener()->onBeforeSubmit(['currency' => 'EUR'], $this->dc());
 
         self::assertArrayNotHasKey('net', $values);
     }
 
-    // ── Beim Öffnen ─────────────────────────────────────────────────────
+    // ── On opening ──────────────────────────────────────────────────────
 
     public function testEineZeileOhneEingabeartOeffnetAlsNetto(): void
     {
-        // Aus einer Version vor C-1b wiederhergestellt: Versions::restore()
-        // setzt spätere Spalten leer — die Pflicht-Radio-Auswahl "inputMode"
-        // zeigte sonst nichts Gewähltes.
+        // Restored from a version before C-1b: Versions::restore() empties later
+        // columns — the mandatory radio choice "inputMode" would otherwise show
+        // nothing selected.
         $listener = $this->listener();
 
         self::assertSame('net', $listener->loadInputMode(''));
@@ -508,14 +508,15 @@ class PriceInputListenerTest extends TestCase
     {
         $amount = $this->listener()->loadAmount(null, $this->dc(['net' => '16.6583', 'inputMode' => 'gross', 'inputCountry' => 'AT']));
 
-        // Auf den Cent, wie eingetippt — PriceEntry::toAmount() (Nachtrag Task 1).
+        // To the cent, as typed — PriceEntry::toAmount().
         self::assertSame('19.99', $amount);
     }
 
     /**
-     * Wie die übrigen Dezimalfelder der Maske (DecimalFieldListener): mit dem
-     * Trennzeichen der Backend-Sprache, gesehen auf c5 am 2026-10-24 — die
-     * Mindestmenge zeigte schon „1“, der Betrag daneben noch „10.4167“.
+     * Like the other decimal fields of the form (DecimalFieldListener): with
+     * the separator of the backend language. Seen on a real installation — the
+     * minimum quantity already showed "1", the amount next to it still
+     * "10.4167".
      */
     public function testDerBetragSprichtDieSpracheDesBackends(): void
     {
@@ -531,27 +532,27 @@ class PriceInputListenerTest extends TestCase
 
     public function testEineAlteZeileZeigtIhrNetto(): void
     {
-        // Vor C-1b gespeichert: inputMode hat den Standardwert net.
+        // Saved before C-1b: inputMode has the default value net.
         self::assertSame('10.4167', $this->listener()->loadAmount(null, $this->dc(['net' => '10.4167'])));
     }
 
     public function testEinNeuerDatensatzZeigtEinLeeresBetragsfeld(): void
     {
-        // Frisch angelegt, noch nie gespeichert: tstamp 0, net 0 — "0.0000"
-        // im Feld sähe aus wie ein Preis.
+        // Freshly created, never saved: tstamp 0, net 0 — "0.0000" in the
+        // field would look like a price.
         self::assertSame('', $this->listener()->loadAmount(null, $this->dc(['tstamp' => 0, 'net' => '0.0000', 'inputMode' => 'gross'])));
     }
 
     public function testEineDuplizierteEinzelnePreiszeileZeigtIhrenBetrag(): void
     {
-        // DC_Table::copy() gibt der Kopie tstamp 0, aber das Netto des Originals —
-        // wer einen Preis für eine andere Kundengruppe dupliziert, tippt ihn nicht neu.
+        // DC_Table::copy() gives the copy tstamp 0, but the net of the original —
+        // whoever duplicates a price for another customer group does not retype it.
         self::assertSame('10.4167', $this->listener()->loadAmount(null, $this->dc(['tstamp' => 0, 'net' => '10.4167'])));
     }
 
     public function testOhneSatzZeigtDieMaskeEinLeeresBetragsfeld(): void
     {
-        // Nicht das Netto zeigen: beim Speichern würde es als Brutto gelesen.
+        // Do not show the net: on save it would be read as gross.
         $amount = $this->listener([['CHF', 'CH']])->loadAmount(null, $this->dc(['currency' => 'CHF', 'inputMode' => 'gross', 'inputCountry' => 'CH']));
 
         self::assertSame('', $amount);
@@ -559,9 +560,9 @@ class PriceInputListenerTest extends TestCase
 
     public function testEinPreisDerSpaeterBeginntZeigtBeimOeffnenDasBruttoAbSeinemBeginn(): void
     {
-        // Angekündigte Satzänderung: ab FUTURE 21 %. Solange der Preis noch
-        // nicht gilt, zeigt die Maske das Brutto zu seinem eigenen Satz —
-        // sonst wiche ein ungeändertes Speichern vom gezeigten Netto ab.
+        // Announced rate change: 21 % from FUTURE. As long as the price does not
+        // apply yet, the form shows the gross at its own rate — otherwise an
+        // unchanged save would deviate from the net shown.
         $listener = $this->listener([['EUR', 'AT']], 1, null, $this->calculatorChangingAt(self::FUTURE));
 
         $amount = $listener->loadAmount(null, $this->dc(['net' => '10.0000', 'inputMode' => 'gross', 'inputCountry' => 'AT', 'validFrom' => self::FUTURE]));
@@ -571,7 +572,7 @@ class PriceInputListenerTest extends TestCase
 
     public function testOhneSteuerklasseZeigtEineBruttoZeileEinLeeresBetragsfeld(): void
     {
-        // Steuerklasse 0: ohne sie lässt sich das Netto nicht in brutto zeigen.
+        // Tax class 0: without it the net cannot be shown as gross.
         $amount = $this->listener([['EUR', 'AT']], 0)->loadAmount(null, $this->dc(['inputMode' => 'gross', 'inputCountry' => 'AT']));
 
         self::assertSame('', $amount);
@@ -579,8 +580,8 @@ class PriceInputListenerTest extends TestCase
 
     public function testBeiZweiHeimatlaendernOhneGespeichertesLandZeigtEineBruttoZeileEinLeeresBetragsfeld(): void
     {
-        // Zwei Heimatländer für EUR, kein Land gespeichert — resolve() liefert
-        // keins, und ohne Land lässt sich kein Satz bestimmen.
+        // Two home countries for EUR, no country stored — resolve() returns
+        // none, and without a country no rate can be determined.
         $amount = $this->listener([['EUR', 'AT'], ['EUR', 'DE']])->loadAmount(null, $this->dc(['inputMode' => 'gross', 'inputCountry' => '']));
 
         self::assertSame('', $amount);
@@ -598,7 +599,7 @@ class PriceInputListenerTest extends TestCase
 
     /**
      * @param list<array{string, string}> $markets currency, country
-     * @param array<string, string>       $query   GET-Parameter, z. B. `act`
+     * @param array<string, string> $query GET parameters, e.g. `act`
      */
     private function listener(array $markets = [['EUR', 'AT']], int $taxClass = 1, string|null $submitType = null, GrossCalculator|null $calculator = null, array $query = []): PriceInputListener
     {
@@ -608,8 +609,8 @@ class PriceInputListenerTest extends TestCase
         $countries = $this->createMock(Countries::class);
         $countries->method('getCountries')->willReturn(['AT' => 'Österreich', 'CH' => 'Schweiz', 'DE' => 'Deutschland']);
 
-        // Die Steuerklasse des Produkts, an dem die Preiszeile hängt — alle
-        // Testdatensätze hängen an pid 1.
+        // The tax class of the product the price row hangs on — all test
+        // records hang on pid 1.
         $connection = $this->createMock(Connection::class);
         $connection->method('fetchOne')->with(self::anything(), [1])->willReturn($taxClass);
 
@@ -627,9 +628,9 @@ class PriceInputListenerTest extends TestCase
     }
 
     /**
-     * Ein Datensatz wie aus getCurrentRecord(): eine alte Nettozeile in Euro.
+     * A record as from getCurrentRecord(): an old net row in euros.
      *
-     * @param array<string, mixed>|null $overrides null = kein Datensatz
+     * @param array<string, mixed>|null $overrides null = no record
      */
     private function dc(array|null $overrides = []): DataContainer
     {

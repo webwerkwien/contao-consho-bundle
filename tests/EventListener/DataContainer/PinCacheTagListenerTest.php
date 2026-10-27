@@ -9,13 +9,12 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\PinCacheTagListener;
 
 /**
- * Nur der Papierkorb. Speichern, Umschalten und Löschen entwertet Contao selbst:
- * DC_Table setzt `config.ptable` aus der Zeile (findPtable()), und
- * addPtableTags() hängt damit `contao.db.tl_content.<Liste>` an.
+ * Only the recycle bin. Saving, toggling and deleting are invalidated by
+ * Contao itself: DC_Table sets `config.ptable` from the row (findPtable()),
+ * and addPtableTags() thereby adds `contao.db.tl_content.<list>`.
  *
- * ⚠️ Eine frühere Fassung ergänzte diesen Tag noch einmal, und ihr Test gab
- * die Kern-Tags OHNE ihn vor — eine Eingabe, die der Kern nie liefert. Die
- * contao-ai-Session hat es am 2026-09-13 aufgedeckt.
+ * ⚠️ An earlier version added this tag once more, and its test preset the
+ * core tags WITHOUT it — an input that the core never delivers.
  */
 class PinCacheTagListenerTest extends TestCase
 {
@@ -35,7 +34,7 @@ class PinCacheTagListenerTest extends TestCase
         $listener = new PinCacheTagListener($tags);
         $listener->onUndo('tl_content', ['id' => 21, 'pid' => 11, 'ptable' => 'tl_content', 'type' => 'text'], $this->dc());
 
-        // pid 10 meint hier den Artikel 10, nicht das Element 10.
+        // pid 10 here means article 10, not element 10.
         $listener->onUndo('tl_content', ['id' => 22, 'pid' => 10, 'ptable' => 'tl_article', 'type' => 'consho_product_pin'], $this->dc());
     }
 

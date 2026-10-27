@@ -15,7 +15,7 @@
  * ── Why this is a table of its own and not a child of the shop ────────────
  *
  * A shop configuration POINTS AT one of these. Three things follow, and the
- * third is why it was rebuilt on 2026-09-09 rather than left as a child:
+ * third is why it is not a child table:
  *
  *  1. Reuse. Several shop configurations — an agency running several tenants
  *     from one mailbox — share a single configuration.
@@ -63,9 +63,9 @@ $GLOBALS['TL_DCA']['tl_consho_mail_transport'] = [
             '!delete',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
 
-            // C-9 (Michael, 2026-09-25: „Testmail-Funktion, wo man einen
-            // Empfänger eintragen kann"). A link to a form page; the sending
-            // itself is a POST from that page (MailTransportTestController).
+            // C-9: a test mail to a recipient the operator enters. A link to a
+            // form page; the sending itself is a POST from that page
+            // (MailTransportTestController).
             'testMail' => ['href' => 'key=testMail', 'icon' => 'resend.svg', 'primary' => true],
             '!versions',
         ],
@@ -118,7 +118,7 @@ $GLOBALS['TL_DCA']['tl_consho_mail_transport'] = [
         'username' => [
             'inputType' => 'text',
             'exclude' => true,
-            // Raw like the password (review 2026-09-25): o'brien@… is a legal
+            // Raw like the password: o'brien@… is a legal
             // address and would otherwise be stored as o&#39;brien@….
             'eval' => ['maxlength' => 255, 'useRawRequestData' => true, 'tl_class' => 'clr w50'],
             'sql' => ['type' => 'string', 'length' => 255, 'default' => ''],
@@ -132,7 +132,7 @@ $GLOBALS['TL_DCA']['tl_consho_mail_transport'] = [
          * Encryption happens in TransportSecretListener, not here — see the
          * note there on why the field also has a load_callback.
          *
-         * 🔴 `useRawRequestData`, found at the acceptance of C-9 (2026-09-25):
+         * 🔴 `useRawRequestData` (C-9):
          * without it the text widget reads through Input::post() in mode
          * encodeAll and turns `# < > ( ) \ = " '` into HTML entities BEFORE
          * the listener encrypts. A password containing a `#` or a `=` was

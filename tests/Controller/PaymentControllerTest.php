@@ -7,9 +7,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Webwerkwien\ContaoConshoBundle\Controller\PaymentController;
 
 /**
- * Die zwei Adressen, die ein Anbieter kennt (6.3). Nur die Benachrichtigung
- * verzichtet auf die CSRF-Prüfung — sie kommt vom Server des Anbieters, der
- * kein Anfrage-Token haben kann; an ihre Stelle tritt die Unterschrift.
+ * The two addresses a provider knows (6.3). Only the notification does
+ * without the CSRF check — it comes from the provider's server, which
+ * cannot have a request token; the signature takes its place.
  */
 class PaymentControllerTest extends TestCase
 {

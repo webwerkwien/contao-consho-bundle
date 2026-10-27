@@ -50,7 +50,7 @@ final class RegistrationActivation
             return;
         }
 
-        $this->activate((int) $id, $data, $this->rootIdOfCurrentPage());
+        $this->activate((int) $id, $data, $this->currentRootId());
     }
 
     /**
@@ -94,7 +94,7 @@ final class RegistrationActivation
      * The front end has walked the tree already (`rootId` is filled by the
      * time a module renders), so no loadDetails() here — see ShopResolver.
      */
-    private function rootIdOfCurrentPage(): int
+    public function currentRootId(): int
     {
         $page = $this->requests->getCurrentRequest()?->attributes->get('pageModel');
 

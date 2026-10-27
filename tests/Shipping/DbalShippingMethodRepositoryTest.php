@@ -24,7 +24,7 @@ class DbalShippingMethodRepositoryTest extends TestCase
 
     public function testDieArtenKommenInDerReihenfolgeDerAuswahl(): void
     {
-        // C2: die Reihenfolge ist die im Checkout, die oberste ist Standard.
+        // C2: the order is the one in the checkout, the topmost is the default.
         $this->method(3, 'Post');
         $this->method(5, 'Abholung');
         $this->shop(['5', '3']);
@@ -64,13 +64,13 @@ class DbalShippingMethodRepositoryTest extends TestCase
 
     public function testBeiZweiZeilenDerselbenWaehrungGewinntDieNeueste(): void
     {
-        // Ein Duplikat kann aus einer wiederhergestellten Version entstehen
-        // (Task 7, Review): fetchAllKeyValue() behält die letzte Zeile je pid,
-        // ORDER BY id macht "letzte" zu "die mit der höchsten id" statt
-        // Zufall der Speicher-Engine.
-        // Ohne diese PRAGMA liefert SQLite Zeilen ohnehin in rowid-Reihenfolge
-        // zurück; der Test könnte dann auch ohne das ORDER BY im Repository
-        // niemals fehlschlagen.
+        // A duplicate can come from a restored version (task 7):
+        // fetchAllKeyValue() keeps the last row per pid, ORDER BY id makes
+        // "last" mean "the one with the highest id" instead of the storage
+        // engine's chance.
+        // Without this PRAGMA SQLite returns rows in rowid order anyway; the
+        // test could then never fail even without the ORDER BY in the
+        // repository.
         $this->connection->executeStatement('PRAGMA reverse_unordered_selects = ON');
 
         $this->method(3, 'Post');
@@ -82,9 +82,9 @@ class DbalShippingMethodRepositoryTest extends TestCase
     }
 
     /**
-     * E-4: Alle Zeilen der Währung mit ihrer Gewichtsgrenze, nach Gewicht
-     * sortiert — die Stufen der Gewichtsstaffel. Andere Währungen und nie
-     * gespeicherte Zeilen nicht.
+     * E-4: All rows of the currency with their weight limit, sorted by
+     * weight — the steps of the weight scale. Not other currencies and not
+     * rows that were never saved.
      */
     public function testDieStufenKommenUnterRatesNachGewicht(): void
     {
@@ -109,13 +109,13 @@ class DbalShippingMethodRepositoryTest extends TestCase
 
         $method = $this->repository()->forShop(1, 'EUR')[0];
 
-        self::assertSame(['AT', 'DE'], $method->countries, 'in der kanonischen Schreibweise (Spec A 707)');
+        self::assertSame(['AT', 'DE'], $method->countries, 'in der kanonischen Schreibweise');
         self::assertSame(['120.0000', '300.0000', '31.5000'], [$method->limits->maxLength, $method->limits->maxGirth, $method->limits->maxPieceWeight]);
     }
 
     public function testEinNieGespeicherterBetragZaehltNicht(): void
     {
-        // Contao legt die Zeile beim Öffnen der Maske mit tstamp 0 an (C-1b, Task 2b).
+        // Contao creates the row with tstamp 0 when the form is opened (C-1b, task 2b).
         $this->method(3, 'Post');
         $this->shop(['3']);
         $this->price(3, 'EUR', '4.0833', tstamp: 0);
@@ -125,8 +125,8 @@ class DbalShippingMethodRepositoryTest extends TestCase
 
     public function testModuleinstellungenKommenAusJsonDataDerKernschluesselGewinnt(): void
     {
-        // `net` ist reserviert (ShippingMethodTypeInterface): ein Modulfeld gleichen
-        // Namens darf den Betrag nicht überdecken.
+        // `net` is reserved (ShippingMethodTypeInterface): a module field of the
+        // same name must not cover the amount.
         $this->method(3, 'DHL', type: 'dhl', jsonData: '{"zone":"EU","net":"999"}');
         $this->shop(['3']);
 
@@ -150,9 +150,9 @@ class DbalShippingMethodRepositoryTest extends TestCase
 
     public function testEineNieGespeicherteArtWirdUebersprungenAuchWennVeroeffentlicht(): void
     {
-        // Nachtrag zum Review von Task 4: act=toggle überspringt die
-        // Pflichtprüfungen der Maske. Eine nie gespeicherte Zeile hat also
-        // type '' bzw. taxClass 0, kann aber trotzdem 'published' sein.
+        // act=toggle skips the form's mandatory checks. A row that was never
+        // saved therefore has type '' or taxClass 0, but can still be
+        // 'published'.
         $this->method(3, 'Ohne Typ', type: '', taxClass: 1);
         $this->method(4, 'Ohne Steuerklasse', type: 'flat_rate', taxClass: 0);
         $this->method(5, 'Post', type: 'flat_rate', taxClass: 1);
@@ -163,9 +163,9 @@ class DbalShippingMethodRepositoryTest extends TestCase
 
     public function testDerTitelKommtInDerSpracheDerSeite(): void
     {
-        // Titel liegen in der Hauptsprache, je Seite übersetzt
-        // (TranslatableFields). Ohne diesen Test bliebe die Übersetzung im
-        // Checkout unbemerkt aus — es stünde einfach der deutsche Titel da.
+        // Titles are in the main language, translated per page
+        // (TranslatableFields). Without this test a missing translation in the
+        // checkout would go unnoticed — the German title would simply be there.
         $this->method(3, 'Paketversand');
         $this->price(3, 'EUR', '5.0000');
         $this->shop(['3']);

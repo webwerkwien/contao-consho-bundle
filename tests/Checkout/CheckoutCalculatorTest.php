@@ -60,8 +60,8 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxRateRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
 
 /**
- * Der Rechenschritt aus 7.2. Alles hier läuft ohne Datenbank — die beiden
- * Repositories sind seit C-5 Schnittstellen, eben dafür.
+ * The calculation step from 7.2. Everything here runs without a database —
+ * the two repositories have been interfaces since C-5, precisely for this.
  */
 class CheckoutCalculatorTest extends TestCase
 {
@@ -75,7 +75,7 @@ class CheckoutCalculatorTest extends TestCase
         self::assertNull($state->blockedAt());
         self::assertSame('50.00', $state->cart->net);
 
-        // 50,00 Ware + 5,00 Versand = 55,00 netto, 20 % → 66,00.
+        // 50.00 goods + 5.00 shipping = 55.00 net, 20 % → 66.00.
         self::assertSame('55.00', $state->netTotal);
         self::assertSame('66.00', $state->grossTotal);
         self::assertSame('EUR', $state->currency);
@@ -91,8 +91,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Block G (G5): Reicht der Bestand nicht, hält die Kasse an — gefragt mit
-     * den Zeilen des Korbs, Artikel und Menge.
+     * Block G (G5): if the stock is not enough, the checkout stops — asked
+     * with the basket's lines, article and quantity.
      */
     public function testZuWenigBestandHaeltDenCheckoutAn(): void
     {
@@ -107,8 +107,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * G-5: „Lizenz verlängern" braucht keinen Code (Abo-7b) — die Zeile fragt
-     * den Bestand nicht.
+     * G-5: "Renew licence" needs no code (Abo-7b) — the line does not ask the
+     * stock.
      */
     public function testEineVerlaengerungFragtDenBestandNicht(): void
     {
@@ -134,8 +134,8 @@ class CheckoutCalculatorTest extends TestCase
 
     public function testEineUnbepreisteZeileHaeltDenCheckoutAn(): void
     {
-        // CartView sagt es selbst: die Warenkorbseite bietet das Entfernen an,
-        // der Checkout geht nicht weiter, solange eine dasteht.
+        // CartView says so itself: the cart page offers removal,
+        // the checkout does not go on as long as one is there.
         $state = $this->calculate($this->vollstaendig(), items: [
             new CartItemRow(1, 7, '1.0000', 1),
             new CartItemRow(2, 999, '1.0000', 1),
@@ -174,10 +174,10 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Ohne Adresse hat der Besucher noch kein Land genannt. Dann rechnet der
-     * Warenkorb im Heimatland des Shops — sonst gäbe es keinen Steuersatz und
-     * die Warenkorbseite stünde leer da, bevor überhaupt jemand etwas
-     * eingetippt hat.
+     * Without an address the visitor has not named a country yet. Then the
+     * basket computes in the shop's home country — otherwise there would be no
+     * tax rate and the cart page would stand empty before anybody has typed
+     * anything at all.
      */
     public function testOhneAdresseGiltDasHeimatlandDesShops(): void
     {
@@ -201,9 +201,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * 🔴 C15: Ein nicht erreichbares VIES sperrt nicht. Der Besucher kann eine
-     * Störung in Brüssel nicht beheben, indem er wartet — er bestellt mit
-     * Steuer und bekommt „Erneut prüfen".
+     * 🔴 C15: an unreachable VIES does not block. The visitor cannot fix an
+     * outage in Brussels by waiting — he orders with tax and gets "Check
+     * again".
      */
     public function testEinNichtErreichbaresViesSperrtNicht(): void
     {
@@ -230,28 +230,28 @@ class CheckoutCalculatorTest extends TestCase
 
         self::assertTrue($state->reverseCharge);
 
-        // Die Ware ist wirklich drin — sonst prüft die Gleichung unten nur
-        // den Versand (so geschehen bis C-12, siehe grossCalculator()).
+        // The goods really are in — otherwise the equation below only checks
+        // the shipping (as happened until C-12, see grossCalculator()).
         self::assertCount(1, $state->cart->lines);
         self::assertSame([], $state->cart->unpriced);
         self::assertTrue($state->isReady());
 
-        // Kein Satz, also ist brutto gleich netto — auch an der Zeile, die die
-        // Übersicht zeigt. Die Rechnung trägt statt eines Satzes den
-        // Reverse-Charge-Hinweis.
+        // No rate, so gross equals net — on the line the overview shows as
+        // well. Instead of a rate the invoice carries the reverse-charge
+        // note.
         self::assertSame($state->cart->lines[0]->lineNet, $state->cart->lines[0]->lineGross);
         self::assertSame('55.00', $state->netTotal);
         self::assertSame('55.00', $state->grossTotal);
     }
 
     /**
-     * Die Gegenprobe: dieselbe Lieferung nach Deutschland OHNE UID trägt
-     * die deutschen 19 % — der Satz existiert, nur Reverse Charge nimmt ihn weg.
+     * The control case: the same delivery to Germany WITHOUT a VAT ID carries
+     * the German 19 % — the rate exists, only reverse charge takes it away.
      */
     /**
-     * C-12 (Michael, 2026-09-26: „1a nur mit eigener UID"): Ohne UID des
-     * Shops rechnet der Checkout mit Steuer, auch bei geprüfter UID des
-     * Kunden — Art. 11 Abs. 2 UStG 1994 Anhang (Binnenmarkt).
+     * C-12: without the shop's VAT ID the checkout computes with tax, even
+     * with the customer's VAT ID checked — Art. 11 Abs. 2 UStG 1994 annex
+     * (internal market).
      */
     public function testOhneEigeneUidDesShopsKeinReverseCharge(): void
     {
@@ -279,16 +279,16 @@ class CheckoutCalculatorTest extends TestCase
         self::assertFalse($state->reverseCharge);
         self::assertCount(1, $state->cart->lines);
         self::assertSame('59.50', $state->cart->gross);
-        // Der Versand folgt der Ware ins Lieferland: 5,00 netto zu 19 %.
+        // Shipping follows the goods into the delivery country: 5.00 net at 19 %.
         self::assertSame('65.45', $state->grossTotal);
         self::assertTrue($state->taxAtDestination);
     }
 
     /**
-     * Block R (O1, R2): Ohne „Steuer im Bestimmungsland" ist der Fernverkauf
-     * an einen Verbraucher in einem anderen EU-Land im Shopland zu
-     * versteuern — Ware UND Versand zu 20 %, wie im Inland. Geliefert wird
-     * trotzdem nach Deutschland: Nur der Satz folgt dem Schalter.
+     * Block R (O1, R2): without "tax in the country of destination" a distance
+     * sale to a consumer in another EU country is taxed in the shop's country —
+     * goods AND shipping at 20 %, as at home. Delivery still goes to Germany:
+     * only the rate follows the switch.
      */
     public function testOhneSchalterGiltImEuAuslandDerSatzDesShops(): void
     {
@@ -305,8 +305,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Auch die Versandarten, die nicht gewählt sind, nennen ihren Preis zum
-     * Satz des Shops — die Liste ist, was der Kunde vergleicht.
+     * The shipping methods that are not chosen also state their price at the
+     * shop's rate — the list is what the customer compares.
      */
     public function testOhneSchalterNennenAuchDieAnderenVersandartenDenSatzDesShops(): void
     {
@@ -320,8 +320,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Außerhalb der EU gibt es keine Lieferschwelle: Der Satz, den der
-     * Betreiber für das Land eingetragen hat, gilt mit und ohne Schalter.
+     * Outside the EU there is no delivery threshold: the rate the operator
+     * entered for the country applies with and without the switch.
      */
     public function testAusserhalbDerEuGiltDerSatzDesLandesMitUndOhneSchalter(): void
     {
@@ -337,9 +337,9 @@ class CheckoutCalculatorTest extends TestCase
     }
     public function testDieEigeneUidImInlandGibtKeinReverseCharge(): void
     {
-        // § 3 UStG: Reverse Charge gilt grenzüberschreitend, nicht im eigenen
-        // Land. Eine gültige österreichische UID ändert an einer Lieferung
-        // nach Österreich nichts.
+        // § 3 UStG: reverse charge applies across borders, not in one's own
+        // country. A valid Austrian VAT ID changes nothing about a delivery
+        // to Austria.
         $state = $this->calculate(
             $this->vollstaendig()
                 ->withVatId('ATU12345678')
@@ -352,8 +352,8 @@ class CheckoutCalculatorTest extends TestCase
 
     public function testDieObersteVerfuegbareArtIstDieVorauswahl(): void
     {
-        // C2: oberste = Standard; ist sie nicht verfügbar, rückt die nächste
-        // nach. Eine getroffene Wahl wird nie still umgestellt.
+        // C2: topmost = default; if it is not available, the next one moves
+        // up. A choice that was made is never switched silently.
         $state = $this->calculate($this->vollstaendig(), shipping: [
             $this->versandart(1, 'Nicht hierhin', verfuegbar: false),
             $this->versandart(2, 'Paket', net: '7.0000'),
@@ -365,9 +365,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * 🔴 Eine unverfügbare Art verschwindet NICHT aus der Liste. Wer sie
-     * gewählt hatte und dann das Land wechselt, muss sehen, dass sie weg ist —
-     * eine Auswahl, die sich einfach auflöst, sieht aus wie ein Fehler.
+     * 🔴 An unavailable method does NOT disappear from the list. Whoever had
+     * chosen it and then changes the country must see that it is gone — a
+     * selection that simply dissolves looks like a bug.
      */
     public function testEineWeggefalleneWahlWirdGemeldetUndNichtErsetzt(): void
     {
@@ -402,8 +402,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Eine Art, deren Modul deinstalliert wurde, ist keine Fehlermeldung,
-     * sondern schlicht ein Weg weniger.
+     * A method whose module was uninstalled is not an error message, but
+     * simply one way fewer.
      */
     public function testEineArtOhneRegistriertenTypVerschwindetStill(): void
     {
@@ -418,22 +418,22 @@ class CheckoutCalculatorTest extends TestCase
 
     public function testEinNachlassDerZahlungsartSenktDieSumme(): void
     {
-        // C5: Der Betrag trägt eine Herkunft. Ein Nachlass ist negativ.
+        // C5: the amount carries an origin. A discount is negative.
         $state = $this->calculate($this->vollstaendig(), payment: [
             $this->zahlungsart(1, 'Vorkasse', adjustment: new PaymentAdjustment('2.0000', PaymentAdjustmentOrigin::Discount)),
         ]);
 
         self::assertSame(PaymentAdjustmentOrigin::Discount, $state->paymentAdjustment);
 
-        // 50,00 Ware + 5,00 Versand − 2,00 Nachlass = 53,00 netto.
+        // 50.00 goods + 5.00 shipping − 2.00 discount = 53.00 net.
         self::assertSame('-2.0000', $state->payment?->net);
         self::assertSame('53.00', $state->netTotal);
         self::assertSame('63.60', $state->grossTotal);
     }
 
     /**
-     * WG8: Ein Warenkorb nur aus Gutscheinen hat keine Ware, die ein
-     * Nachlass mindern könnte — die Zahlungsart bleibt, ohne Nachlass.
+     * WG8: a basket of gift cards only has no goods a discount could reduce —
+     * the payment method stays, without a discount.
      */
     public function testNurGutscheineBekommenKeinenNachlassDerZahlungsart(): void
     {
@@ -456,8 +456,8 @@ class CheckoutCalculatorTest extends TestCase
 
     public function testDerVersandWirdNachSteuersaetzenAufgeteilt(): void
     {
-        // 50,00 in Klasse 1 (20 %) und 50,00 in Klasse 2 (10 %): Die 10,00
-        // Versand gehen 5,00/5,00, und die Rechnung bekommt zwei Zeilen.
+        // 50.00 in class 1 (20 %) and 50.00 in class 2 (10 %): the 10.00
+        // shipping go 5.00/5.00, and the invoice gets two lines.
         $state = $this->calculate(
             $this->vollstaendig(),
             items: [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(2, 8, '1.0000', 1)],
@@ -469,16 +469,16 @@ class CheckoutCalculatorTest extends TestCase
         self::assertSame('6.0000', $state->shippingShares[0]->gross);
         self::assertSame('5.5000', $state->shippingShares[1]->gross);
 
-        // 50 + 50 Ware + 10 Versand netto; brutto 60 + 55 + 6 + 5,50.
+        // 50 + 50 goods + 10 shipping net; gross 60 + 55 + 6 + 5.50.
         self::assertSame('110.00', $state->netTotal);
         self::assertSame('126.50', $state->grossTotal);
     }
 
     /**
-     * C4 in einem Satz: „gilt ebenso für einen Betrag der Zahlungsart". Ein
-     * Nachlass auf einen Warenkorb mit zwei Sätzen wird genauso aufgeteilt wie
-     * der Versand — sonst stünde er mit einem Satz auf der Rechnung, den
-     * niemand begründen kann.
+     * C4 in one sentence: "applies likewise to an amount of the payment
+     * method". A discount on a basket with two rates is split exactly like the
+     * shipping — otherwise it would stand on the invoice with a rate nobody
+     * can justify.
      */
     public function testDerBetragDerZahlungsartWirdEbensoAufgeteilt(): void
     {
@@ -493,14 +493,15 @@ class CheckoutCalculatorTest extends TestCase
         self::assertSame('-2.4000', $state->paymentShares[0]->gross, '20 % auf die eine Hälfte.');
         self::assertSame('-2.2000', $state->paymentShares[1]->gross, '10 % auf die andere.');
 
-        // 100 Ware + 5 Versand − 4 Nachlass = 101,00 netto.
+        // 100 goods + 5 shipping − 4 discount = 101.00 net.
         self::assertSame('101.00', $state->netTotal);
     }
 
     /**
-     * E-1, Z3: Ob eine Zahlungsgebühr Nebenleistung oder eigene Leistung ist,
-     * entscheidet Consho nicht. Ohne Wahl des Betreibers wird die Zahlungsart
-     * gar nicht angeboten — bis E-1 scheiterte die Bestellung erst beim Klick.
+     * E-1, Z3: whether a payment fee is an ancillary supply or a supply of its
+     * own is not for Consho to decide. Without the operator's choice the
+     * payment method is not offered at all — until E-1 the order only failed
+     * at the click.
      */
     public function testEineGebuehrOhneSteuerwahlWirdNichtAngeboten(): void
     {
@@ -538,7 +539,7 @@ class CheckoutCalculatorTest extends TestCase
         self::assertSame('2.4000', $state->paymentShares[0]->gross, '20 % auf die eine Hälfte.');
         self::assertSame('2.2000', $state->paymentShares[1]->gross, '10 % auf die andere.');
 
-        // 100 Ware + 5 Versand + 4 Gebühr = 109,00 netto.
+        // 100 goods + 5 shipping + 4 fee = 109.00 net.
         self::assertSame('109.00', $state->netTotal);
     }
 
@@ -558,8 +559,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Block R (R2): Die Gebühr folgt der Ware, mit der sie kommt — nach
-     * Deutschland ohne „Steuer im Bestimmungsland" zu 20 % AT, mit zu 19 % DE.
+     * Block R (R2): the fee follows the goods it comes with — to Germany
+     * without "tax in the country of destination" at 20 % AT, with it at
+     * 19 % DE.
      */
     public function testDieGebuehrFolgtDemSchalter(): void
     {
@@ -572,8 +574,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E-3, Z2: Nachnahme gibt es nur mit einer Versandart, die kassiert. Der
-     * Checkout reicht die Fähigkeiten der GEWÄHLTEN Versandart weiter.
+     * E-3, Z2: cash on delivery exists only with a shipping method that
+     * collects. The checkout passes on the capabilities of the CHOSEN shipping
+     * method.
      */
     public function testNachnahmeNurMitEinerVersandartDieKassiert(): void
     {
@@ -593,8 +596,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E-4, V1: Der Checkout gibt der Versandart Gewicht und Maße je Stück mit,
-     * aus dem Katalog — bis E-4 las sie niemand.
+     * E-4, V1: the checkout gives the shipping method weight and dimensions per
+     * piece, from the catalogue — until E-4 nobody read them.
      */
     public function testDieVersandartBekommtGewichtUndMasse(): void
     {
@@ -648,10 +651,10 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * F-1, F13: Versand braucht es, sobald EINE Position körperlich ist —
-     * Buch mit E-Book geht als Paket. Nur digitale Positionen: kein Paket,
-     * sondern die elektronische Zustellung (F-2).
-     * Ohne Datenquelle oder für einen unbekannten Artikel: körperlich.
+     * F-1, F13: shipping is needed as soon as ONE item is physical — a book
+     * with an e-book goes as a parcel. Digital items only: no parcel, but
+     * electronic delivery (F-2).
+     * Without a data source or for an unknown article: physical.
      */
     public function testVersandNurBeiKoerperlichenPositionen(): void
     {
@@ -677,15 +680,15 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Nachlese E5b: Die Kasse sagt der Zahlungsart, ob digitale Inhalte oder
-     * Gutscheine im Korb sind — „Auf Rechnung" mit Schalter fällt dann weg.
-     * Eine Dienstleistung zählt nicht.
+     * Nachlese E5b: the checkout tells the payment method whether digital
+     * content or gift cards are in the basket — "on invoice" with the switch
+     * on then drops out. A service does not count.
      */
     public function testAufRechnungNichtFuerSofortNutzbareGueter(): void
     {
         $rechnung = new PaymentMethod(1, 'invoice', 'Auf Rechnung', ['notHandedOutAtOnce' => '1']);
 
-        // Artikel 7 — der Testkatalog hat einen Preis nur für ihn — in jeder Art.
+        // Article 7 — the test catalogue has a price only for it — in every kind.
         $angeboten = function (string $kind) use ($rechnung): bool {
             $articles = new class($kind) implements ArticleShippingDataInterface {
                 public function __construct(private readonly string $kind)
@@ -717,10 +720,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Variante A (Michael, 2026-10-08: „nicht automatisch, der Betreiber muss
-     * diese Jahresabos auf Geschäftskunden limitieren"): Die Kasse sperrt
-     * „volle Mindestlaufzeit" nicht mehr für Verbraucher — wem sie angeboten
-     * wird, entscheiden die Kundengruppen der Regel, schon beim Hinzufügen.
+     * Variant A: the checkout no longer blocks "full minimum term" for
+     * consumers — who is offered it is decided by the rule's member groups,
+     * already when adding.
      */
     public function testGleicheLaufzeitSperrtDenVerbraucherNichtMehr(): void
     {
@@ -731,9 +733,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Abo-2, P14 (A12): Der Zustimmungskasten richtet sich nach den
-     * Widerrufsarten der digitalen Zeilen — Artikel 7 digitaler Inhalt,
-     * 8 Dienstleistung, 9 körperlich.
+     * Abo-2, P14 (A12): the consent box follows the withdrawal kinds of the
+     * digital lines — article 7 digital content, 8 service, 9 physical.
      */
     public function testDieWiderrufsartenDerDigitalenZeilen(): void
     {
@@ -755,9 +756,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * WG3: Ein Wertgutschein wird elektronisch zugestellt, verlangt aber
-     * keine Zustimmung zum vorzeitigen Beginn — es beginnt nichts vorzeitig,
-     * der Code ist Geld.
+     * WG3: a gift card is delivered electronically, but requires no consent
+     * to early performance — nothing begins early, the code is money.
      */
     public function testEinGutscheinOhneVersandUndOhneZustimmung(): void
     {
@@ -781,11 +781,11 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * F-2, F14: Nur digitale Positionen — der Versandschritt bleibt und bietet
-     * die elektronische Zustellung an: eine Option, ohne Kosten, auch ohne
-     * eingerichtete Versandart. Eine vorher gewählte Paket-Versandart ist
-     * nicht „weg", sie gilt nur nicht. Die Altersprüfung läuft wie bei einer
-     * Versandart ohne Prüfung an der Tür: nur altersgeprüfte Gruppen.
+     * F-2, F14: digital items only — the shipping step stays and offers
+     * electronic delivery: one option, without costs, even without a shipping
+     * method set up. A parcel shipping method chosen before is not "gone", it
+     * just does not apply. The age check runs as for a shipping method without
+     * a check at the door: only age-verified groups.
      */
     public function testElektronischeZustellung(): void
     {
@@ -819,9 +819,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E-5: Länder (V3) und Sperrgut (V4) fragt der Kern, bevor der Typ
-     * gefragt wird — eine Versandart nur für Deutschland ist in Österreich
-     * nicht verfügbar, eine mit 100 cm Seitenlänge nicht für 120 cm.
+     * E-5: the core asks countries (V3) and bulky goods (V4) before the type
+     * is asked — a shipping method only for Germany is not available in
+     * Austria, one with 100 cm side length not for 120 cm.
      */
     public function testLaenderUndGrenzenDerVersandart(): void
     {
@@ -849,8 +849,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E-6, V6: Braucht der Paketdienst der gewählten Versandart eine
-     * Telefonnummer, fragt der Checkout danach — sonst nicht.
+     * E-6, V6: if the parcel service of the chosen shipping method needs a
+     * phone number, the checkout asks for it — otherwise not.
      */
     public function testDasTelefonNurWennDieVersandartEsBraucht(): void
     {
@@ -891,9 +891,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * 🔴 Versand UND Nachlass zusammen. Beim Bauen hatte ich für beide
-     * dieselbe Variable benutzt, und die Zahlungsstufe überschrieb die
-     * Versandanteile — die Summe stimmte dann zufällig fast.
+     * 🔴 Shipping AND discount together. An earlier version used the same
+     * variable for both, and the payment stage overwrote the shipping shares —
+     * the total then happened to be almost right.
      */
     public function testVersandUndNachlassKommenBeideInDerSummeAn(): void
     {
@@ -911,12 +911,12 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * 🔴 Im Review vom 2026-09-22 gemessen. Ein Versand von 4,95 auf zwei
-     * Steuerklassen zu gleichen Teilen ergab 2,4750 je Zeile — auf der
-     * Rechnung zweimal 2,48, zusammen 4,96. Der Besucher hatte 4,95 gelesen.
+     * 🔴 A shipping of 4.95 on two tax classes in equal parts gave 2.4750 per
+     * line — on the invoice twice 2.48, together 4.96. The visitor had read
+     * 4.95.
      *
-     * Seitdem teilt der Aufteiler auf den Stellen der Währung, und die Summe
-     * der Zeilen ist genau der genannte Betrag.
+     * Since then the splitter divides on the currency's decimal places, and
+     * the sum of the lines is exactly the amount stated.
      */
     public function testDieVersandzeilenErgebenGenauDenGenanntenBetrag(): void
     {
@@ -938,10 +938,10 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * 🔴 Ebenfalls aus dem Review: Das Brutto der Versandoption kam aus der
-     * Steuerklasse der Versandart. Bei „anteilig" dient die Klasse laut 5.1
-     * nur der Umrechnung einer Brutto-Eingabe — als Satz genommen ergab sie
-     * 5,94 an der Option, während die Zeilen zusammen 5,6925 ergaben.
+     * 🔴 The gross of the shipping option came from the shipping method's tax
+     * class. With "proportional", according to 5.1 the class only serves to
+     * convert a gross entry — taken as a rate it gave 5.94 on the option,
+     * while the lines together gave 5.6925.
      */
     public function testDasBruttoDerVersandoptionIstDieSummeSeinerZeilen(): void
     {
@@ -960,15 +960,15 @@ class CheckoutCalculatorTest extends TestCase
         self::assertNotNull($state->shipping);
         self::assertSame(0, $summe->compareTo(BigDecimal::of($state->shipping->gross)));
 
-        // 5,00 zu 20 % und 5,00 zu 10 % sind 11,50 — nicht 12,00, wie es die
-        // Klasse der Versandart allein ergäbe.
+        // 5.00 at 20 % and 5.00 at 10 % are 11.50 — not 12.00, as the
+        // shipping method's class alone would give.
         self::assertSame('11.5000', $state->shipping->gross);
     }
 
     /**
-     * Die Gruppen reisen als Liste bis in den Versandkontext — die Korrektur
-     * vom 2026-09-22. Ein Modul, das „Händler zahlen keinen Versand" anbietet,
-     * sieht dieselben Gruppen, mit denen der Preis gerechnet wurde.
+     * The groups travel as a list all the way into the shipping context. A
+     * module that offers "retailers pay no shipping" sees the same groups the
+     * price was computed with.
      */
     public function testDieKundengruppenErreichenDenVersandkontextVollstaendig(): void
     {
@@ -1012,10 +1012,10 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Die Altersprüfung hängt in der Versandstufe, weil eine ihrer beiden
-     * Antworten die Versandart ist. Sie meldet sich, bevor überhaupt eine
-     * gewählt wurde — ein Warenkorb, den niemand kaufen darf, soll das nicht
-     * erst nach drei Schritten sagen.
+     * The age check hangs in the shipping stage, because one of its two
+     * answers is the shipping method. It speaks up before one has been chosen
+     * at all — a basket nobody may buy should not say so only after three
+     * steps.
      */
     public function testEinArtikelAbAchtzehnOhneJedenPruefwegWirdGemeldet(): void
     {
@@ -1040,8 +1040,8 @@ class CheckoutCalculatorTest extends TestCase
 
     public function testEinHinweisalterHaeltNichtAn(): void
     {
-        // 6, 12, 14 sind laut C19 ein Hinweis. Der Warenkorb sagt es, der
-        // Checkout lässt durch.
+        // 6, 12, 14 are a notice according to C19. The basket says so, the
+        // checkout lets it through.
         $state = $this->calculate($this->vollstaendig(), minimumAge: 12);
 
         self::assertTrue($state->isReady());
@@ -1049,9 +1049,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Derselbe Zustand zweimal gerechnet ergibt dasselbe — sonst könnte der
-     * Kaufklick (7.3) die Prüfsumme des Formulars nicht gegen eine frische
-     * Rechnung halten.
+     * The same state computed twice gives the same result — otherwise the
+     * purchase click (7.3) could not hold the form's checksum against a fresh
+     * calculation.
      */
     public function testZweimalGerechnetKommtDasselbeHeraus(): void
     {
@@ -1083,11 +1083,11 @@ class CheckoutCalculatorTest extends TestCase
      * @param list<int>                           $customerGroups
      * @param list<int>                           $ageVerifiedGroups
      */
-    // ── Block H (H-4): Warenkorbregel in der Kasse ────────────────────────
+    // ── Block H (H-4): cart rule in the checkout ──────────────────────────
 
     /**
-     * Die Zahlungsart prüft ihre Grenze an dem, was zu zahlen ist — nach
-     * dem Rabatt: 50 Ware − 10 % + 5 Versand = 50 netto.
+     * The payment method checks its limit against what is to be paid — after
+     * the discount: 50 goods − 10 % + 5 shipping = 50 net.
      */
     public function testDieZahlungsartSiehtDenBetragNachDemRabatt(): void
     {
@@ -1120,9 +1120,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Review H, L1: Kostet die gewählte Versandart nichts, spart der Code
-     * nichts — er gilt nicht und wird nicht verbraucht (der Kaufklick löst
-     * nur ein, was der Zustand trägt).
+     * H: if the chosen shipping method costs nothing, the code saves nothing —
+     * it does not apply and is not used up (the purchase click only redeems
+     * what the state carries).
      */
     public function testVersandkostenfreiOhneVersandkostenGiltNicht(): void
     {
@@ -1138,9 +1138,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Zweites Review H, L-B: Kostet die gewählte Art nichts, stehen die
-     * anderen trotzdem bei 0 — gewählt, wären sie es auch. Verbraucht wird
-     * der Code nicht.
+     * H: if the chosen method costs nothing, the others still stand at 0 —
+     * chosen, they would be too. The code is not used up.
      */
     public function testVersandkostenfreiZeigtJedeArtMitNullAuchWennDieGewaehlteNichtsKostet(): void
     {
@@ -1157,9 +1156,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Zwei Regeln, die gleich viel abziehen: gleiche Summen, anderer Rabatt.
-     * Der Fingerabdruck muss ihn kennen, sonst friert der Kauf eine Zeile
-     * ein, die nicht über dem Knopf stand.
+     * Two rules that deduct the same: the same totals, a different discount.
+     * The fingerprint has to know it, otherwise the purchase freezes a line
+     * that did not stand above the button.
      */
     public function testDerFingerabdruckKenntDenRabatt(): void
     {
@@ -1176,12 +1175,12 @@ class CheckoutCalculatorTest extends TestCase
         self::assertNotSame($fingerprint->of($eins), $fingerprint->of($ohne));
     }
 
-    // ── Wertgutscheine (WG-5) ─────────────────────────────────────────────
-    // Artikel 7: 50 netto zu 20 % = 60,00; Paket 5 netto zu 20 % = 6,00.
+    // ── Gift cards (WG-5) ─────────────────────────────────────────────────
+    // Article 7: 50 net at 20 % = 60.00; parcel 5 net at 20 % = 6.00.
 
     /**
-     * E1: Deckt der Gutschein alles, gibt es nichts einzuziehen — Zahlungsart
-     * „Gutschein", allein, auch wenn vorher eine andere gewählt war.
+     * E1: if the gift card covers everything, there is nothing to collect —
+     * payment method "gift card", alone, even if another one was chosen before.
      */
     public function testVollGedecktBrauchtKeineZahlungsart(): void
     {
@@ -1201,8 +1200,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E1 ohne Zahlungsart heißt: auch ohne deren Gebühr — die Gebühr gibt es
-     * nur, wo eine Zahlungsart einzieht.
+     * E1 without a payment method means: also without its fee — the fee only
+     * exists where a payment method collects.
      */
     public function testVollGedecktOhneGebuehr(): void
     {
@@ -1221,9 +1220,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E2: Bei Teildeckung bleiben Gebühr und Grenzen auf der ganzen
-     * Bestellung; die Gutscheine decken danach den Gesamtbetrag samt Gebühr,
-     * in der Reihenfolge der Eingabe.
+     * E2: with partial coverage, fee and limits stay on the whole order; the
+     * gift cards then cover the total including the fee, in the order they
+     * were entered.
      */
     public function testTeilgedecktZahltDieZahlungsartDenRestSamtGebuehr(): void
     {
@@ -1236,7 +1235,7 @@ class CheckoutCalculatorTest extends TestCase
 
         self::assertFalse($state->coveredByVouchers);
         self::assertSame(1, $state->payment?->id);
-        // 60 + 6 + 4,80 Gebühr
+        // 60 + 6 + 4.80 fee
         self::assertSame('70.80', $state->grossTotal);
         self::assertSame(['20.00', '30.00'], array_map(static fn ($v): string => $v->applied, $state->vouchers));
         self::assertSame('20.80', $state->toPay());
@@ -1244,10 +1243,10 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Review WG-7, S3 (Michael, 2026-10-06: „kein Skonto bei Gutscheinen"):
-     * 66 Bestellung, 64 Gutschein, Vorkasse mit 2 Nachlass — ohne die Regel
-     * senkte der Nachlass auf 63,60 und der Gutschein zahlte alles. Jetzt:
-     * kein Nachlass, Vorkasse zieht 2 ein.
+     * WG-7:
+     * 66 order, 64 gift card, prepayment with a discount of 2 — without the
+     * rule the discount lowered it to 63.60 and the gift card paid everything.
+     * Now: no discount, prepayment collects 2.
      */
     public function testKeinSkontoWennEinGutscheinMitzahlt(): void
     {
@@ -1264,11 +1263,11 @@ class CheckoutCalculatorTest extends TestCase
         self::assertSame('2.00', $state->toPay());
         $this->assertBilanz($state);
 
-        // Ohne Gutschein bleibt der Nachlass.
+        // Without a gift card the discount stays.
         $ohne = $this->calculate($this->vollstaendig(), payment: [$this->zahlungsart(1, 'Vorkasse', adjustment: new PaymentAdjustment('2.0000', PaymentAdjustmentOrigin::Discount))]);
         self::assertSame(PaymentAdjustmentOrigin::Discount, $ohne->paymentAdjustment);
 
-        // Ein Gutschein, der nichts zahlt (gesperrt), nimmt den Nachlass nicht.
+        // A gift card that pays nothing (blocked) does not take the discount.
         $gesperrt = $this->calculate(
             $this->vollstaendig(),
             payment: [$this->zahlungsart(1, 'Vorkasse', adjustment: new PaymentAdjustment('2.0000', PaymentAdjustmentOrigin::Discount))],
@@ -1279,8 +1278,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Mit einer Abo-Zeile bleibt die Zahlungsart: sie trägt die
-     * Folgezahlungen. Die erste deckt der Gutschein trotzdem.
+     * With a subscription line the payment method stays: it carries the
+     * follow-up payments. The gift card still covers the first one.
      */
     public function testMitAboBleibtDieZahlungsart(): void
     {
@@ -1298,8 +1297,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * WG8: Geld kauft man nicht mit einem Gutschein — die Gutscheinzeile
-     * bleibt offen, gedeckt wird nur der Rest.
+     * WG8: money is not bought with a gift card — the gift card line stays
+     * open, only the rest is covered.
      */
     public function testGutscheinzeileZahltKeinGutschein(): void
     {
@@ -1320,7 +1319,7 @@ class CheckoutCalculatorTest extends TestCase
             voucherCodes: ['AAAAAAAAAAAAAAAA'],
         );
 
-        // 60 Gutscheinzeile + 55 Ware + Paket: nur Ware und Paket gedeckt.
+        // 60 gift card line + 55 goods + parcel: only goods and parcel covered.
         self::assertFalse($state->coveredByVouchers);
         self::assertSame(1, $state->payment?->id);
         self::assertSame('60.00', $state->toPay());
@@ -1328,8 +1327,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E4: Zahlt ein Gutschein zwischen Seite und Klick weniger (anderswo
-     * eingelöst), ist es eine andere Vereinbarung — die Prüfsumme sagt es.
+     * E4: if a gift card pays less between page and click (redeemed
+     * elsewhere), it is a different agreement — the checksum says so.
      */
     public function testDiePruefsummeKenntDieGutscheine(): void
     {
@@ -1345,9 +1344,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * E4: zwischen Seite und Klick gesperrt — der Gutschein zahlt nichts mehr,
-     * die Deckung kippt, die Zahlungsart ist wieder eine echte. Eine andere
-     * Vereinbarung, also eine andere Prüfsumme (Review WG-7, P3).
+     * E4: blocked between page and click — the gift card pays nothing any
+     * more, the coverage tips over, the payment method is a real one again. A
+     * different agreement, so a different checksum (WG-7).
      */
     public function testEinGesperrterGutscheinAendertDiePruefsumme(): void
     {
@@ -1364,9 +1363,9 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Was PurchaseSettlement sehen muss (Review WG-7, P1): die Gutscheine
-     * zahlen, was sie zeigen, die Zahlungsart den Rest — zusammen genau der
-     * Gesamtbetrag, der auf die Bestellung kommt.
+     * What PurchaseSettlement has to see (WG-7): the gift cards pay what they
+     * show, the payment method the rest — together exactly the total that
+     * goes onto the order.
      */
     private function assertBilanz(CheckoutState $state): void
     {
@@ -1451,8 +1450,8 @@ class CheckoutCalculatorTest extends TestCase
             $this->paymentRepository($payment),
             new PaymentHandlers(new ServiceLocator([
                 'vorkasse' => static fn (): PaymentHandlerInterface => new PaymentHandlerStub(),
-                // Die echte Nachnahme (E-3): Sie fragt die Versandart, und
-                // genau diese Frage soll der Checkout beantworten.
+                // The real cash on delivery (E-3): it asks the shipping method, and
+                // exactly this question is what the checkout is meant to answer.
                 'cod' => static fn (): PaymentHandlerInterface => new CashOnDeliveryHandler(),
                 ...array_map(static fn (PaymentHandlerInterface $handler): \Closure => static fn (): PaymentHandlerInterface => $handler, $paymentHandlers),
             ])),
@@ -1563,8 +1562,8 @@ class CheckoutCalculatorTest extends TestCase
     }
 
     /**
-     * Artikel 7 steht in Steuerklasse 1 (20 %), Artikel 8 in Klasse 2 (10 %),
-     * beide 50,00 netto.
+     * Article 7 is in tax class 1 (20 %), article 8 in class 2 (10 %), both
+     * 50.00 net.
      */
     private function pricer(ArticleShippingDataInterface|null $kinds = null): CartPricer
     {
@@ -1592,20 +1591,19 @@ class CheckoutCalculatorTest extends TestCase
     {
         $rates = new class implements TaxRateRepositoryInterface {
             /*
-             * Deutschland mit eigenen Sätzen, seit der Abnahme von C-12
-             * (2026-09-26). Vorher kannte das Doppel nur AT: Ein Artikel mit
-             * Lieferung nach DE fand keinen Satz, galt als „ohne Preis" und
-             * fiel aus dem Warenkorb — und der Reverse-Charge-Test prüfte
-             * netto = brutto an einem Warenkorb, in dem nur noch der Versand
-             * stand. Am Server rechnete der Checkout die Ware mit 19 % und
-             * jede solche Bestellung scheiterte.
+             * Germany with rates of its own since C-12. Before, the double only
+             * knew AT: an article delivered to DE found no rate, counted as
+             * "without a price" and dropped out of the basket — and the
+             * reverse-charge test checked net = gross on a basket in which only
+             * the shipping was left. On a real installation the checkout computed
+             * the goods at 19 % and every such order failed.
              */
             public function findRate(int $taxClassId, string $countryCode, int $timestamp): string|null
             {
                 return match ($countryCode) {
                     'AT' => 1 === $taxClassId ? '20.0000' : '10.0000',
                     'DE' => 1 === $taxClassId ? '19.0000' : '7.0000',
-                    // Block R: ein Drittland, das der Betreiber mit 0 % (Ausfuhr) führt.
+                    // Block R: a third country the operator keeps at 0 % (export).
                     'CH' => '0.0000',
                     default => null,
                 };
@@ -1635,9 +1633,9 @@ class CheckoutCalculatorTest extends TestCase
 }
 
 /**
- * Außerhalb der Testklasse, weil eine anonyme Klasse keine statische Methode
- * einer Schnittstelle mit `getType()` tragen kann, ohne dass PHPUnit sie beim
- * Sammeln instanziiert — und weil PaymentHandlers den Typ statisch abfragt.
+ * Outside the test class, because an anonymous class cannot carry a static
+ * method of an interface with `getType()` without PHPUnit instantiating it
+ * while collecting — and because PaymentHandlers asks the type statically.
  */
 final class PaymentHandlerStub implements PaymentHandlerInterface
 {

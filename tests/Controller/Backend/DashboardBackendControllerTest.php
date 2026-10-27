@@ -32,7 +32,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * Dashboard DB1, DB3, DB7, DB8: die Seite mit den echten deutschen Texten.
+ * Dashboard DB1, DB3, DB7, DB8: the page with the real German texts.
  */
 final class DashboardBackendControllerTest extends TestCase
 {
@@ -48,7 +48,7 @@ final class DashboardBackendControllerTest extends TestCase
         }
 
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop', 'country' => 'AT', 'vatId' => 'ATU12345678']);
-        // Block I: ohne veröffentlichten Startpunkt gilt der Shop als unvollständig.
+        // Block I: without a published start point the shop counts as incomplete.
         DcaSchema::createCore($this->connection, 'tl_page');
         $this->connection->insert('tl_page', ['id' => 1, 'title' => 'Testshop', 'type' => 'root', 'consho_shop' => 1, 'published' => 1]);
         $this->connection->insert('tl_consho_order', ['id' => 1, 'shop' => 1, 'orderNumber' => 'WEB-1', 'grandTotal' => '10.0000', 'currency' => 'EUR', 'language' => 'de', 'paymentDueAt' => time() - 86_400, 'createdAt' => time()]);
@@ -70,7 +70,7 @@ final class DashboardBackendControllerTest extends TestCase
         $html = $this->controller()();
 
         self::assertStringContainsString('<h2>Consho Dashboard</h2>', $html);
-        self::assertStringNotContainsString('Zu tun', $html, 'der Kopf ersetzt „Zu tun" (Michael, 2026-10-07)');
+        self::assertStringNotContainsString('Zu tun', $html, 'der Kopf ersetzt „Zu tun"');
         self::assertStringContainsString('Offene Punkte', $html);
         self::assertStringContainsString('consho_shop=1"><strong class="consho-dashboard__count">1</strong><span class="consho-dashboard__label">Zahlungen</span>', $html);
         self::assertStringContainsString('davon 1 überfällig', $html);
@@ -83,7 +83,7 @@ final class DashboardBackendControllerTest extends TestCase
     }
 
     /**
-     * D1: Die vier Karten stehen immer; eine 0 ist grau, ohne Link und ohne Frist.
+     * D1: the four cards are always there; a 0 is grey, without link and without deadline.
      */
     public function testEineNullBleibtStehenGrauUndOhneLink(): void
     {
@@ -149,12 +149,12 @@ final class DashboardBackendControllerTest extends TestCase
     {
         $html = $this->controller($this->without('consho_order'))();
 
-        // Gegenstück im selben Zustand mit Recht: testOffenePunkte…, testKennzahlenUndLieferschwelleJeShop.
+        // Counterpart in the same state with the right: testOffenePunkte…, testKennzahlenUndLieferschwelleJeShop.
         self::assertStringNotContainsString('Bestellwert', $html, 'DB8');
         self::assertStringNotContainsString('Zahlungen', $html);
         self::assertStringNotContainsString('Lieferungen', $html);
         self::assertStringNotContainsString('do=consho_order', $html);
-        // Steuermeldung und Export sind Bestelldaten (Review A1).
+        // Tax report and export are order data.
         self::assertStringNotContainsString('Lieferschwelle', $html);
         self::assertStringNotContainsString('Steuermeldung', $html);
         self::assertStringNotContainsString('view=taxReport', $html);
@@ -184,7 +184,7 @@ final class DashboardBackendControllerTest extends TestCase
     }
 
     /**
-     * Schlüsselvorräte ohne Codes: verfügbar 0, unter dem Meldebestand.
+     * Key pools without codes: available 0, below the reorder level.
      */
     private function keyStock(int $articles): void
     {
@@ -245,7 +245,7 @@ final class DashboardBackendControllerTest extends TestCase
 
         self::assertSame(1, substr_count($html, 'Einrichtung unvollständig'), 'nur der Shop, den der Befund sperrt');
         self::assertGreaterThan(strpos($html, 'Zweiter Shop'), strpos($html, 'Einrichtung unvollständig'));
-        // Oben zwei zählende Kästen, die Listen in je einem Dialog (DB1–DB3, 2026-10-09).
+        // At the top two counting boxes, the lists in one dialog each (DB1–DB3).
         self::assertMatchesRegularExpression('/<button type="button" class="consho-dashboard__finding consho-dashboard__finding--warnings" data-consho-dialog="consho-findings-warnings"[^>]*>\s*<strong class="consho-dashboard__count">1<\/strong><span class="consho-dashboard__label">Warnungen<\/span>/', $html);
         self::assertMatchesRegularExpression('/<button type="button" class="consho-dashboard__finding consho-dashboard__finding--notes" data-consho-dialog="consho-findings-notes"[^>]*>\s*<strong class="consho-dashboard__count">1<\/strong><span class="consho-dashboard__label">Hinweise<\/span>/', $html);
         self::assertLessThan(strpos($html, 'consho-dashboard__shops'), strpos($html, 'consho-dashboard__findings'), 'oben, vor den Shops');
@@ -258,8 +258,8 @@ final class DashboardBackendControllerTest extends TestCase
     }
 
     /**
-     * DB1: Bei 0 stehen beide Kästen grau da, ohne etwas zu öffnen — die
-     * Seite springt nicht.
+     * DB1: at 0 both boxes stand there grey without opening anything — the
+     * page does not jump.
      */
     public function testOhneBefundeZweiGraueKaestenOhneDialog(): void
     {
@@ -271,8 +271,8 @@ final class DashboardBackendControllerTest extends TestCase
     }
 
     /**
-     * H2: Der Status bleibt für alle; wer die Gründe nicht sehen darf, liest,
-     * wer sie sieht.
+     * H2: the status stays for everyone; whoever may not see the reasons
+     * reads who does see them.
      */
     public function testOhneRechtAufDieGruendeSagtDieZeileWerSieSieht(): void
     {
@@ -289,7 +289,7 @@ final class DashboardBackendControllerTest extends TestCase
         self::assertStringNotContainsString('Keine Zahlungsart.', $html);
         self::assertStringNotContainsString('Einrichtung fortsetzen', $html);
 
-        // Gegenprobe mit Recht auf die Zahlungsarten.
+        // Counter-check with the right to the payment methods.
         $html = $this->controller($this->without('consho_withdrawal'), $issues)();
 
         self::assertStringContainsString('Einrichtung unvollständig — dieser Shop verkauft nicht. <a href="/contao?do=consho_dashboard&amp;view=setup">Einrichtung fortsetzen</a>', $html, 'Block I: die Zeile führt zur Einrichtung');
@@ -298,8 +298,8 @@ final class DashboardBackendControllerTest extends TestCase
 
     public function testOhneStartpunktIstDerShopUnvollstaendigWieAufDerEinrichtungsseite(): void
     {
-        // Review I, S2: vorher sagte das Dashboard nichts, die Einrichtung
-        // „Noch nicht bereit" und consho:check Exit 1.
+        // I: before, the dashboard said nothing, the setup page said
+        // "Noch nicht bereit" (not ready yet) and consho:check exited with 1.
         self::assertStringNotContainsString('Einrichtung unvollständig', $this->controller()());
 
         $this->connection->update('tl_page', ['published' => 0], ['id' => 1]);
@@ -309,8 +309,8 @@ final class DashboardBackendControllerTest extends TestCase
 
     public function testEineVerborgeneWaehrungsluckeSagtWerDieGruendeSieht(): void
     {
-        // Zweites Review I, Punkt 4: der Satz folgte nur den sperrenden
-        // Befunden, „unvollständig" schon „Bereit".
+        // I: the sentence followed only the blocking issues, while "incomplete"
+        // already said "Ready".
         $GLOBALS['TL_LANG']['CONSHO']['findings'] = ['rootWithoutCurrency' => 'Startpunkt ohne Währung.'];
         $issues = [new ConfigurationIssue(ConfigurationFinding::RootWithoutCurrency, ['page' => 'Testshop', 'shop' => 'Testshop'], 1)];
 
@@ -319,8 +319,8 @@ final class DashboardBackendControllerTest extends TestCase
         self::assertStringContainsString('Die Gründe sieht, wer die Einrichtung bearbeiten darf.', $html);
         self::assertStringNotContainsString('Startpunkt ohne Währung.', $html);
 
-        // Gegenprobe: fehlt nur der Startpunkt, gibt es keinen Befund — die
-        // schlichte Zeile mit dem Weg zur Einrichtung, die es dort sagt.
+        // Counter-check: if only the start point is missing, there is no issue —
+        // just the plain line with the way to the setup page, which says it there.
         $this->connection->update('tl_page', ['published' => 0], ['id' => 1]);
         $html = $this->controller($this->without('page', 'consho_shop'))();
 
@@ -330,7 +330,7 @@ final class DashboardBackendControllerTest extends TestCase
 
     public function testOhneShopKonfigurationFuehrtDasDashboardZurEinrichtung(): void
     {
-        // Block I (I5): sonst zeigt eine frische Installation ein leeres Dashboard.
+        // Block I (I5): otherwise a fresh installation shows an empty dashboard.
         $this->connection->delete('tl_consho_shop', ['id' => 1]);
 
         self::assertStringContainsString('Noch keine Shop-Konfiguration — Einrichtung beginnen', $this->controller()());

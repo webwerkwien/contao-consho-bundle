@@ -23,7 +23,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * maintenance mode, a host without hairpin routing): the reason is said,
  * not guessed.
  *
- * Measured on c5 at the spec (2026-10-08): the start page answered
+ * Measured: a start page answered
  * `public, s-maxage=86400` with `Age: 6368`, the cancellation page — set to
  * the same 24 hours by inheritance — `private, no-store`. The setting alone
  * would have claimed both were cached.
@@ -90,7 +90,7 @@ final class CacheProbe
         $response = $this->fetch($url);
         $status = $response->getStatusCode();
 
-        // A 3xx here means the redirects ran out (review I, L8): its headers
+        // A 3xx here means the redirects ran out (I): its headers
         // describe the redirect, not the page.
         if ($status >= 300) {
             return 'HTTP '.$status;
@@ -134,7 +134,7 @@ final class CacheProbe
         $control = strtolower($header('cache-control'));
 
         // `no-cache` lets a cache keep the page but never hand it out unasked —
-        // for a guest that is the same as not cached (review I, L8).
+        // for a guest that is the same as not cached (I).
         if (str_contains($control, 'private') || str_contains($control, 'no-store') || str_contains($control, 'no-cache')) {
             return ['result' => self::PRIVATE, 'detail' => $header('cache-control')];
         }

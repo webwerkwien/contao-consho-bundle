@@ -56,7 +56,7 @@ class SubscriptionRuleRefreshTriggerListener
     }
 
     /**
-     * Deleted, too (Fable review Abo-2b, K4): without its type SaleModes
+     * Deleted, too (Abo-2b): without its type SaleModes
      * falls back to "physical", sold once only — ondelete runs while the
      * products still point at it.
      */

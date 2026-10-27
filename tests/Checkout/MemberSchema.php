@@ -5,28 +5,27 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Checkout;
 use Doctrine\DBAL\Connection;
 
 /**
- * Das SQLite-Testschema für `tl_member`, soweit der Checkout es liest.
+ * The SQLite test schema for `tl_member`, as far as the checkout reads it.
  *
- * Gebaut nach Contaos eigener `tl_member.php` und nach `contao/dca/tl_member.php`
- * dieses Bundles — mit denselben Spalten und denselben Typnamen:
+ * Built after Contao's own `tl_member.php` and this bundle's
+ * `contao/dca/tl_member.php` — with the same columns and the same type names:
  *
- * - `country varchar(6)`, nicht `(2)`. Contao lässt Untergliederungen wie
- *   `GB-ENG` zu, Consho rechnet mit ISO 3166-1 alpha-2.
+ * - `country varchar(6)`, not `(2)`. Contao allows subdivisions such as
+ *   `GB-ENG`, Consho works with ISO 3166-1 alpha-2.
  *
- *   ⚠️ **Die Länge trägt hier allerdings nichts.** SQLite kennt keine
- *   Spaltenbreite — `varchar(2)` nähme `GB-ENG` genauso an. Der Wert dieser
- *   Zeile ist, dass sie neben dem echten Schema steht und nicht von ihm
- *   abweicht; **abgesichert ist der Fall durch den Test**, der `GB-ENG`
- *   einträgt und ein leeres Land erwartet, nicht durch die Zahl in Klammern.
- *   (Im Review vom 2026-09-23 als Dekoration erkannt — ein Kommentar, der
- *   eine Zusicherung behauptet, die der Aufbau nicht leisten kann, ist
- *   genauso irreführend wie ein Test, der nichts prüft.)
- * - `gender varchar(32)` ist da, obwohl es **nicht** übernommen wird — damit
- *   ein Test festhalten kann, dass es liegen bleibt.
+ *   ⚠️ **The length carries nothing here, though.** SQLite has no column
+ *   width — `varchar(2)` would accept `GB-ENG` just the same. The value of
+ *   this line is that it sits next to the real schema and does not deviate
+ *   from it; **the case is guarded by the test** that enters `GB-ENG` and
+ *   expects an empty country, not by the number in brackets. (A comment
+ *   that claims an assurance the setup cannot deliver is as misleading as a
+ *   test that checks nothing.)
+ * - `gender varchar(32)` is there although it is **not** taken over — so
+ *   that a test can record that it is left alone.
  *
- * Nur die Spalten, die `MemberCheckoutDefaults` abfragt: Eine Nachbildung von
- * `tl_member` mit allen sechzig Feldern wäre eine zweite Wahrheit, die
- * auseinanderläuft.
+ * Only the columns `MemberCheckoutDefaults` queries: a replica of
+ * `tl_member` with all sixty fields would be a second truth that drifts
+ * apart.
  */
 trait MemberSchema
 {

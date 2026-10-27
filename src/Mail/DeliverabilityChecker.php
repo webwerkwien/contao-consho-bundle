@@ -12,7 +12,7 @@ namespace Webwerkwien\ContaoConshoBundle\Mail;
  *
  * That is why this checks the ADDRESS and not the transport type. Banning
  * sendmail:// would look decisive and catch nothing: sending as
- * bestellung@kundenshop.at through a Gmail account fails for exactly the same
+ * bestellung@example-shop.at through a mail provider's account fails for exactly the same
  * reason, and passes any check that only looks at how mail leaves the server.
  *
  * DKIM cannot be verified generically: the record lives at
@@ -85,7 +85,7 @@ final class DeliverabilityChecker
      * to the organisational domain: a subdomain without a record of its own is
      * covered by the parent. This walks up the labels to approximate that.
      *
-     * Found on 2026-09-09 against real DNS, not in a unit test:
+     * Found against real DNS, not in a unit test:
      * an address at a subdomain was reported as having no DMARC, although the
      * parent domain carries p=quarantine and the subdomain inherits it. A
      * check that calls a healthy setup broken teaches operators to ignore it —
@@ -120,9 +120,9 @@ final class DeliverabilityChecker
     /**
      * Relaxed alignment, the way DMARC defines it: a subdomain counts.
      *
-     * Sending as shop@kunde.at through smtp.kunde.at is the everyday setup, and
+     * Sending as shop@example.at through smtp.example.at is the everyday setup, and
      * a strict string comparison would report it as a fault. The leading dot is
-     * what keeps `boesekunde.at` from passing as a subdomain of `kunde.at` —
+     * what keeps `badexample.at` from passing as a subdomain of `example.at` —
      * without it, any domain merely ending in the same letters would align.
      *
      * ⚠️ This is deliberately not the full organisational-domain rule, which

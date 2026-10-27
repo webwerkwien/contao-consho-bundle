@@ -15,8 +15,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\DigitalAddressNot
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Nachlese E4: Digitale Güter an eine unbestätigte Adresse — ein Hinweis an
- * der Bestellung, keine Sperre.
+ * Nachlese E4: digital goods to an unconfirmed address — a notice on the
+ * order, not a block.
  */
 final class DigitalAddressNoticeListenerTest extends TestCase
 {

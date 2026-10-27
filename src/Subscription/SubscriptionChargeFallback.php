@@ -68,7 +68,7 @@ class SubscriptionChargeFallback
     /**
      * @param bool $quiet no warning when the shop lacks "on account" — the
      *                    hourly lapse() would repeat it for ever, and the
-     *                    finding of P24 says it already (review Abo-4b, S5)
+     *                    finding of P24 says it already (Abo-4b)
      *
      * @return bool whether the order went "on account" now
      */
@@ -199,7 +199,7 @@ class SubscriptionChargeFallback
             return false;
         }
 
-        // The customer's one change of method is theirs (review H4): what
+        // The customer's one change of method is theirs: what
         // they chose stays, whoever calls this.
         if ((int) ($order['paymentChangedAt'] ?? 0) > 0 || (int) ($order['cancelledAt'] ?? 0) > 0) {
             return false;
@@ -239,7 +239,7 @@ class SubscriptionChargeFallback
     }
 
     /**
-     * "Abbuchung gestartet" (E7; Michael, 2026-10-08: "E-Punkte passen"):
+     * "Abbuchung gestartet" (E7):
      * a charge the provider reports as pending. Until the money or the
      * fallback arrives — up to PENDING_DAYS later — the customer would see a
      * booking without explanation. Amount, period and method; the invoice

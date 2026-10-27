@@ -39,11 +39,11 @@ require_once __DIR__.'/../Confirmation/EmailConfirmationTest.php';
 require_once __DIR__.'/../Notification/OrderConfirmationTest.php';
 
 /**
- * Block G, G-6 (G12, G15): „Benachrichtigen, wenn wieder da" — nur Mitglieder,
- * genau eine Mail an die aktuelle Kontoadresse, und ihr Link bestätigt die
- * Adresse nach den Regeln von GuestOrderConfirmation.
+ * Block G, G-6 (G12, G15): "Notify me when back in stock" — members only,
+ * exactly one mail to the current account address, and its link confirms
+ * the address by the rules of GuestOrderConfirmation.
  *
- * Artikel 1: körperlich, Bestand geführt, ausverkauft.
+ * Article 1: physical, stock managed, sold out.
  */
 class StockNoticeTest extends TestCase
 {
@@ -67,7 +67,7 @@ class StockNoticeTest extends TestCase
         $this->connection->insert('tl_member', ['id' => 5, 'email' => 'kundin@example.org']);
         $this->connection->insert('tl_member', ['id' => 6, 'email' => 'weg@example.org', 'disable' => 1]);
 
-        // Im Shop 1 auf Deutsch zu sehen (K5: nur dann ein Wunsch).
+        // Visible in shop 1 in German (K5: only then a wish).
         $this->connection->insert('tl_consho_product_visibility', ['pid' => 1, 'main' => 1, 'shop' => 1, 'language' => 'de', 'currency' => 'EUR']);
         $this->connection->insert('tl_consho_product', ['id' => 1, 'title' => 'Wanderstock &amp; Hülle', 'stockTracked' => 1]);
         (new StockRows($this->connection))->sync(1, 100);
@@ -92,8 +92,8 @@ class StockNoticeTest extends TestCase
     }
 
     /**
-     * Nachlese K5 (Review G-7, L6): Ein Wunsch nur für einen Artikel, den der
-     * Startpunkt zeigt — anderer Shop oder andere Sprache: nichts gespeichert.
+     * Nachlese K5 (G-7): A wish only for an article the start point
+     * shows — another shop or another language: nothing stored.
      */
     public function testNurFuerEinenArtikelDesStartpunkts(): void
     {
@@ -141,8 +141,8 @@ class StockNoticeTest extends TestCase
     }
 
     /**
-     * Review G, L3: Eine ungültige Kontoadresse steht in der Meldung der
-     * Ausnahme — ins Log kommt sie trotzdem nicht.
+     * G: An invalid account address is in the exception's message —
+     * it still does not get into the log.
      */
     public function testEineUngueltigeAdresseKommtNichtInsLog(): void
     {
@@ -157,8 +157,8 @@ class StockNoticeTest extends TestCase
     }
 
     /**
-     * Review G, L4: ein Wunsch ohne Artikel oder ohne Produktseite geht —
-     * nicht jede Stunde ein Fehler.
+     * G: a wish without an article or without a product page goes —
+     * not an error every hour.
      */
     public function testUnerreichbareWuenscheGehen(): void
     {
@@ -174,8 +174,8 @@ class StockNoticeTest extends TestCase
     }
 
     /**
-     * Zweites Review G: Ein anderer Fehler beim Bauen der Adresse hält den
-     * Cron nicht für alle an — der Wunsch bleibt, die übrigen gehen raus.
+     * G: Another error while building the address does not stop the cron
+     * for everyone — the wish stays, the others go out.
      */
     public function testEinFehlerInDerAdresseHaeltDieAnderenNichtAuf(): void
     {
@@ -206,8 +206,8 @@ class StockNoticeTest extends TestCase
     }
 
     /**
-     * G15: Der Link bestätigt die Adresse — nach denselben vier Regeln wie
-     * bei den Gastbestellungen, mit eigenem Token-Präfix.
+     * G15: The link confirms the address — by the same four rules as for
+     * guest orders, with a token prefix of its own.
      */
     public function testDerLinkBestaetigtDieAdresseAngemeldetAlsDiesesKonto(): void
     {

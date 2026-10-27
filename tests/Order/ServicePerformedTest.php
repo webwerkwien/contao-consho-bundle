@@ -10,12 +10,12 @@ use Webwerkwien\ContaoConshoBundle\Order\ServicePerformed;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * DL3: „Leistung erbracht" nur an einer freigeschalteten Dienstleistung
- * ohne Abo, und nur einmal.
+ * DL3: "Service performed" only on an unlocked service without a
+ * subscription, and only once.
  *
- * Zeilen der Bestellung 7: 1 Beratungspaket (freigeschaltet), 2 Beratung
- * (nicht freigeschaltet), 3 Mitgliedschaft (Abo), 4 E-Book, 5 Versand,
- * 6 Beratung mit widerrufener Berechtigung.
+ * Lines of order 7: 1 consulting package (unlocked), 2 consulting
+ * (not unlocked), 3 membership (subscription), 4 e-book, 5 shipping,
+ * 6 consulting with a revoked entitlement.
  */
 class ServicePerformedTest extends TestCase
 {
@@ -89,8 +89,8 @@ class ServicePerformedTest extends TestCase
 
     private function service(): ServicePerformed
     {
-        // SQLite kennt kein FOR UPDATE; die Sperre liefert die Zeile wie die
-        // echte: jeder Wert als Zeichenkette.
+        // SQLite has no FOR UPDATE; the lock returns the row like the
+        // real one does: every value as a string.
         $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
         $orders->method('lockOrder')->willReturnCallback(fn (int $id): array|null => 7 === $id ? ['id' => '7', 'orderNumber' => 'WEB-7'] : null);
 

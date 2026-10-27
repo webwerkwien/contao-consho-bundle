@@ -54,9 +54,9 @@ class DbalLegalTextSourceTest extends TestCase
     }
 
     /**
-     * Die Überschrift steht serialisiert als `['unit' => 'h2', 'value' => …]`.
-     * Nur der Wert ist Rechtstext — die Ebene ist Darstellung, und mit ihr in
-     * der Prüfsumme würde ein Wechsel von h2 auf h3 den Text „ändern".
+     * The headline is stored serialised as `['unit' => 'h2', 'value' => …]`.
+     * Only the value is legal text — the level is presentation, and with it in
+     * the checksum a change from h2 to h3 would "change" the text.
      */
     public function testDieUeberschriftKommtOhneEbene(): void
     {
@@ -64,8 +64,8 @@ class DbalLegalTextSourceTest extends TestCase
     }
 
     /**
-     * ⚠️ C17: Ein Bild im Element bleibt weg. Gelesen werden `headline` und
-     * `text`, sonst nichts — die Spalte daneben rührt die Quelle nicht an.
+     * ⚠️ C17: an image in the element stays out. `headline` and `text` are
+     * read, nothing else — the column next to them does not touch the source.
      */
     public function testEinBildImElementWirdNichtGelesen(): void
     {
@@ -86,8 +86,8 @@ class DbalLegalTextSourceTest extends TestCase
 
     public function testEinElementVomFalschenTypZaehltNicht(): void
     {
-        // C17 sagt „nur vom Typ Text". Ein Akkordeon hat kein `text`, das
-        // eingefroren werden könnte.
+        // C17 says "only of type text". An accordion has no `text` that
+        // could be frozen.
         $this->connection->update('tl_content', ['type' => 'accordion'], ['id' => 10]);
 
         self::assertNull($this->source()->one(1, LegalTextKind::Terms));
@@ -99,9 +99,9 @@ class DbalLegalTextSourceTest extends TestCase
     }
 
     /**
-     * 🔴 Von beiden Reviews am 2026-09-22 gefunden: Ein Rechtstext in einem
-     * unveröffentlichten Artikel wurde ausgeliefert. Die Seite zeigt ihn
-     * nicht — der Kunde klickt auf „AGB" und liest nichts.
+     * 🔴 A legal text in an unpublished article was delivered. The page does
+     * not show it — the customer clicks "Terms and conditions" and reads
+     * nothing.
      */
     public function testEinUnveroeffentlichterArtikelZaehltNicht(): void
     {
@@ -118,8 +118,8 @@ class DbalLegalTextSourceTest extends TestCase
     }
 
     /**
-     * Das Inhaltselement hat ein eigenes Zeitfenster — in Contao zwei Felder
-     * neben `invisible`, und die erste Fassung sah nur `invisible` an.
+     * The content element has a time window of its own — in Contao two fields
+     * next to `invisible`, and the first version looked only at `invisible`.
      */
     public function testEinElementAusserhalbSeinesFenstersZaehltNicht(): void
     {
@@ -130,8 +130,8 @@ class DbalLegalTextSourceTest extends TestCase
 
     public function testEinVeroeffentlichterArtikelImFensterZaehltSehrWohl(): void
     {
-        // Die Gegenprobe: Sonst prüften die drei Tests oben nur, dass nie
-        // etwas herauskommt.
+        // The control case: otherwise the three tests above would only check that
+        // nothing ever comes out.
         $this->connection->update('tl_article', [
             'published' => 1, 'start' => (string) (time() - 86_400), 'stop' => (string) (time() + 86_400),
         ], ['id' => 2]);
@@ -140,8 +140,8 @@ class DbalLegalTextSourceTest extends TestCase
     }
 
     /**
-     * Die Prüfsumme geht über den AUFGELÖSTEN Text: Was der Kunde gelesen hat,
-     * nicht die Quelle, in der es geschrieben steht.
+     * The checksum covers the RESOLVED text: what the customer read, not the
+     * source it is written in.
      */
     public function testDiePruefsummeFolgtDemAufgeloestenText(): void
     {
@@ -161,9 +161,9 @@ class DbalLegalTextSourceTest extends TestCase
     }
 
     /**
-     * Insert-Tags werden aufgelöst, bevor die Prüfsumme gebildet wird. Ein
-     * `{{link_url::42}}`, das auf einmal woanders hinzeigt, IST eine Änderung
-     * an dem, was vereinbart wurde — und muss deshalb auffallen.
+     * Insert tags are resolved before the checksum is built. A
+     * `{{link_url::42}}` that suddenly points elsewhere IS a change to what was
+     * agreed — and must therefore stand out.
      */
     public function testInsertTagsWerdenAufgeloest(): void
     {

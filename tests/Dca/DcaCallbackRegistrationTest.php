@@ -7,14 +7,13 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\PriceRuleOptionsListener;
 
 /**
- * Abnahme H auf c5, 2026-10-05: Die Maske der Preisregeln starb mit einem
- * 500er beim ersten neuen Datensatz. Die DCA nannte den Listener als
- * `[Klasse::class, 'methode']`; Contao löst das über den Container auf, und
- * der Dienst des Bundles ist privat. Jeder Test baute die Klasse selbst
- * (Regel 25) — keiner den Container.
+ * H: the price rule form died with a 500 on its first new record. The DCA
+ * named the listener as `[Listener::class, 'method']`; Contao resolves that
+ * through the container, and the bundle's service is private. Every test
+ * built the class itself — none let the container build it.
  *
- * Callbacks des Bundles hängen deshalb am Attribut `#[AsCallback]`, das den
- * Dienst registriert. Dieser Test lehnt die Array-Form in den DCAs ab.
+ * The bundle's callbacks therefore hang on the `#[AsCallback]` attribute,
+ * which registers the service. This test rejects the array form in the DCAs.
  */
 final class DcaCallbackRegistrationTest extends TestCase
 {

@@ -61,19 +61,18 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Das Warenkorb-Element gegen echte Mitspieler auf einer SQLite-Datenbank —
- * nach dem Vorbild von AddToCartControllerTest. CartResolver,
- * DbalCartRepository, CartPricer, CartTitles und PurchaseCheck sind `final`
- * und arbeiten hier auf einer Verbindung, die beide Testschemata trägt
- * (Katalog und Warenkorb). Gedoubelt ist nur, was ein laufendes Contao
- * bräuchte: das Framework mit seinen Adaptern, Seiten- und Shop-Datensatz und
- * der Adressgenerator.
+ * The cart element against real collaborators on an SQLite database —
+ * modelled on AddToCartControllerTest. CartResolver, DbalCartRepository,
+ * CartPricer, CartTitles and PurchaseCheck are `final` and work here on a
+ * connection that carries both test schemas (catalogue and cart). Only what
+ * a running Contao would need is doubled: the framework with its adapters,
+ * page and shop record, and the URL generator.
  *
- * Grundbestand: Shop 1 (EUR, AT, Vorgabesprache de) unter Startpunkt 5, die
- * Warenkorbseite 7. Hauptprodukt 1 „Wanderstock" mit den Varianten 2
- * (WS-120) und 3 (WS-140) — beide heißen im Warenkorb „Wanderstock", das ist
- * der Befund, um den es geht. Dazu Artikel 21 „Rucksack" ohne Varianten und
- * **ohne Artikelnummer**, für den Fall, dass keine gepflegt ist.
+ * Base data: shop 1 (EUR, AT, default language de) below start point 5,
+ * the cart page 7. Main product 1 "Wanderstock" with the variants 2
+ * (WS-120) and 3 (WS-140) — both are called "Wanderstock" in the cart,
+ * which is the point here. Plus article 21 "Rucksack" without variants and
+ * **without an article number**, for the case that none is maintained.
  */
 class CartControllerTest extends TestCase
 {
@@ -89,14 +88,14 @@ class CartControllerTest extends TestCase
     private const MAIN = 1;
     private const SHORT = 2;
 
-    // Abnahme DL, Fund 2: die Art jedes Artikels; null = kein Art-Leser.
+    // DL: the kind of every article; null = no kind reader.
     private string|null $kind = null;
     private const LONG = 3;
     private const PLAIN = 21;
 
     private const CART_URL = 'https://shop.example/warenkorb.html';
 
-    /** E4: was die Bereitschaft der Kasse meldet. */
+    /** E4: what the checkout's readiness reports. */
     private array $issues = [];
 
     private string $token;
@@ -113,7 +112,7 @@ class CartControllerTest extends TestCase
         $this->cartConnection = $connection;
         $this->createCartTables();
 
-        // Block H (H-4): die Warenkorbregeln aus der DCA.
+        // Block H (H-4): the cart rules from the DCA.
         foreach (['tl_consho_cart_rule', 'tl_consho_cart_rule_redemption', 'tl_consho_voucher', 'tl_consho_tax_class'] as $table) {
             DcaSchema::create($connection, $table);
         }
@@ -121,9 +120,9 @@ class CartControllerTest extends TestCase
         $this->insertShop(['id' => self::SHOP, 'currency' => 'EUR', 'country' => 'AT', 'fallbackLanguage' => 'de']);
         $this->insertRootPage(self::ROOT_PAGE, 'de', self::SHOP);
 
-        // Hauptprodukt mit zwei Varianten. Der Titel steht nur am Hauptprodukt,
-        // die Artikelnummer an jeder Variante — genau die Aufteilung, die
-        // CartTitles abbildet.
+        // Main product with two variants. The title is only on the main product,
+        // the article number on every variant — exactly the split CartTitles
+        // reflects.
         $this->insertProduct(['id' => self::MAIN, 'title' => 'Wanderstock', 'sku' => 'WS', 'published' => 1]);
         $this->insertProductShop(['pid' => self::MAIN, 'shop' => self::SHOP]);
 
@@ -133,8 +132,8 @@ class CartControllerTest extends TestCase
         $this->insertProduct(['id' => self::LONG, 'pid' => self::MAIN, 'title' => 'rot / 140 cm', 'sku' => 'WS-140', 'published' => 1]);
         $this->insertPrice(['pid' => self::LONG, 'net' => '10.0000']);
 
-        // Ohne Artikelnummer: das Feld ist in tl_consho_product nicht
-        // verpflichtend, und ein kleiner Shop pflegt es oft nicht.
+        // Without an article number: the field is not mandatory in
+        // tl_consho_product, and a small shop often does not maintain it.
         $this->insertProduct(['id' => self::PLAIN, 'title' => 'Rucksack', 'published' => 1]);
         $this->insertProductShop(['pid' => self::PLAIN, 'shop' => self::SHOP]);
         $this->insertPrice(['pid' => self::PLAIN, 'net' => '20.0000']);
@@ -160,8 +159,8 @@ class CartControllerTest extends TestCase
         $action = CartController::actionOf($request);
 
         self::assertSame($expected, $action?->name);
-        // `->` statt `?->`: Das `??` fängt den Nullfall schon ab, und PHPStan
-        // (Level 6) weist die doppelte Absicherung als überflüssig zurück.
+        // `->` instead of `?->`: the `??` already catches the null case, and
+        // PHPStan (level 6) rejects the double safeguard as superfluous.
         self::assertSame($itemId, $action->itemId ?? 0);
     }
 
@@ -179,22 +178,22 @@ class CartControllerTest extends TestCase
 
     public function testMengeNullEntferntDiePosition(): void
     {
-        // Wer 0 eintippt, will die Position weghaben. Eine Fehlermeldung
-        // „ungültige Menge" wäre Rechthaberei.
+        // Whoever types 0 wants the line gone. An error message "invalid
+        // quantity" would be pedantry.
         self::assertTrue(CartController::removesLine('0'));
         self::assertTrue(CartController::removesLine('0.0000'));
         self::assertFalse(CartController::removesLine('1'));
         self::assertFalse(CartController::removesLine('keine Zahl'));
     }
 
-    // ── Was das Element beim Anzeigen aufbaut ───────────────────────────────
+    // ── What the element builds when displaying ─────────────────────────────
 
     public function testZweiVariantenEinesProduktsSindImWarenkorbAuseinanderzuhalten(): void
     {
-        // Der Befund: Beide Zeilen heißen „Wanderstock", weil CartTitles
-        // absichtlich den Titel des Hauptprodukts liefert. Die Artikelnummer
-        // steht je Variante daneben und macht Beschriftung und Knöpfe
-        // unterscheidbar.
+        // The point: both lines are called "Wanderstock" because CartTitles
+        // deliberately returns the main product's title. The article number
+        // stands next to it per variant and makes labels and buttons
+        // distinguishable.
         $this->fill([self::SHORT => '1.0000', self::LONG => '2.0000']);
 
         $lines = $this->rowsOf($this->render()['data'], 'lines');
@@ -210,8 +209,8 @@ class CartControllerTest extends TestCase
 
     public function testEineAbozeileTraegtIhreBedingungenMitDemBetragDerZeile(): void
     {
-        // Abo-2 (A10, P15): die Bedingungen an der Zeile, gebaut aus dem
-        // Betrag, den die Zeile zeigt — 1,00 netto × 2 = 2,40 brutto.
+        // Abo-2 (A10, P15): the terms on the line, built from the amount the
+        // line shows — 1.00 net × 2 = 2.40 gross.
         $cartId = $this->fill([]);
         $this->cartConnection->insert('tl_consho_price', ['pid' => self::SHORT, 'tstamp' => 1, 'currency' => 'EUR', 'net' => '1.0000', 'subscriptionRule' => 5]);
         (new DbalCartRepository($this->cartConnection))->addItem($cartId, self::SHORT, '2.0000', 1_000, 5);
@@ -224,7 +223,7 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Abnahme DL, Fund 2: „zzgl. Versandkosten" nur, wenn etwas versandt wird.
+     * DL: "zzgl. Versandkosten" (plus shipping) only when something is shipped.
      */
     public function testOhneWareKeinVersandhinweis(): void
     {
@@ -240,8 +239,8 @@ class CartControllerTest extends TestCase
 
     public function testEineVerlaengerungNenntDasAboUndBehaeltIhreMenge(): void
     {
-        // Abo-7b (P67): „verlängert WEB-00084-1", und eine Mengenänderung —
-        // auch ein selbst gebautes Formular — ändert nichts.
+        // Abo-7b (P67): "verlängert" (renews) with the subscription number, and
+        // a quantity change — even from a self-built form — changes nothing.
         $cartId = $this->fill([]);
         $this->cartConnection->insert('tl_consho_price', ['pid' => self::SHORT, 'tstamp' => 1, 'currency' => 'EUR', 'net' => '1.0000', 'subscriptionRule' => 5]);
         $repository = new DbalCartRepository($this->cartConnection);
@@ -255,14 +254,14 @@ class CartControllerTest extends TestCase
         $this->submit(['consho_cart_action' => 'update', 'item' => (string) $renewal, 'quantity' => '5']);
         self::assertSame(2.0, (float) $this->cartConnection->fetchOne('SELECT quantity FROM tl_consho_cart_item WHERE id = ?', [$renewal]));
 
-        // Entfernen geht.
+        // Removing works.
         $this->submit(['consho_cart_action' => 'remove', 'item' => (string) $renewal]);
         self::assertSame(1, $this->countItems());
     }
 
     public function testEinGastMitAboErfaehrtVorDerKasseDassEsEinKontoBraucht(): void
     {
-        // P12: Die Kasse verlangt die Anmeldung — der Warenkorb sagt es vorher.
+        // P12: the checkout requires logging in — the cart says so beforehand.
         $cartId = $this->fill([self::SHORT => '1.0000']);
 
         self::assertFalse($this->render()['data']['account_required']);
@@ -289,8 +288,8 @@ class CartControllerTest extends TestCase
 
     public function testDerWarenkorbVerlinktDenCheckout(): void
     {
-        // 4.2: „weiter zum Checkout". Ohne diesen Link wäre die Seite nur
-        // erreichbar, indem jemand ihre Adresse eintippt.
+        // 4.2: "weiter zum Checkout" (on to checkout). Without this link the page
+        // would only be reachable by someone typing its address.
         $this->fill([self::SHORT => '1.0000']);
 
         self::assertSame(self::CART_URL, $this->render()['data']['checkout_url']);
@@ -298,7 +297,7 @@ class CartControllerTest extends TestCase
 
     public function testEineGesperrteKasseWirdNichtVerlinkt(): void
     {
-        // E4 (C-12): statt eines Links auf eine leere Seite der Satz der Kasse.
+        // E4 (C-12): instead of a link to an empty page, the checkout's sentence.
         $this->fill([self::SHORT => '1.0000']);
         $this->issues = [new ConfigurationIssue(ConfigurationFinding::PaymentMethodMissing)];
 
@@ -321,16 +320,16 @@ class CartControllerTest extends TestCase
 
     public function testEinLeererWarenkorbVerlinktNichts(): void
     {
-        // Ein „Zur Kasse" über einem leeren Korb führt zu einer Seite, die
-        // sofort sagt, dass nichts da ist.
+        // A "Zur Kasse" (to checkout) above an empty cart leads to a page that
+        // immediately says that nothing is there.
         self::assertNull($this->render()['data']['checkout_url']);
     }
 
     public function testEineZeileOhneArtikelnummerTraegtIhrePosition(): void
     {
-        // Ist keine gepflegt, bleibt `sku` leer und die Vorlage greift auf die
-        // Position zurück. Die zählt ab 1 und läuft in der Reihenfolge, in der
-        // die Tabelle gerendert wird.
+        // If none is maintained, `sku` stays empty and the template falls back
+        // to the position. It counts from 1 and runs in the order in which the
+        // table is rendered.
         $this->fill([self::SHORT => '1.0000', self::PLAIN => '1.0000']);
 
         $lines = $this->rowsOf($this->render()['data'], 'lines');
@@ -344,9 +343,9 @@ class CartControllerTest extends TestCase
 
     public function testEineZeileOhnePreisStehtSeparatUndZaehltDiePositionWeiter(): void
     {
-        // Die unbepreisbare Zeile ist eine zweite Liste, steht in der Tabelle
-        // aber unter den bepreisten. Finge ihre Position wieder bei 1 an,
-        // trügen zwei Zeilen dasselbe Merkmal.
+        // The unpriceable line is a second list, but stands below the priced
+        // ones in the table. If its position started at 1 again, two lines
+        // would carry the same feature.
         $this->fill([self::SHORT => '1.0000', self::PLAIN => '1.0000']);
         $this->cartConnection->delete('tl_consho_price', ['pid' => self::PLAIN]);
 
@@ -363,7 +362,7 @@ class CartControllerTest extends TestCase
         self::assertSame('', $unpriced[0]['sku']);
         self::assertSame(2, $unpriced[0]['position']);
 
-        // isEmpty() ist falsch, solange eine unbepreisbare Zeile dasteht.
+        // isEmpty() is false as long as an unpriceable line is there.
         self::assertFalse($data['is_empty']);
     }
 
@@ -373,23 +372,23 @@ class CartControllerTest extends TestCase
 
         $lines = $this->rowsOf($this->render()['data'], 'lines');
 
-        // 10,00 netto × 3 = 30,00 netto → 36,00 brutto bei 20 %.
+        // 10.00 net × 3 = 30.00 net → 36.00 gross at 20 %.
         self::assertSame((new MoneyFormatter())->format('36.0000', 'EUR', 'de'), $lines[0]['lineGross']);
 
-        // Die Menge ohne ihre Nullen, weil sie in ein Eingabefeld geht.
+        // The quantity without its zeros, because it goes into an input field.
         self::assertSame('3', $lines[0]['quantity']);
     }
 
     public function testOhneWaehrungAmStartpunktBleibtDasElementStumm(): void
     {
         /*
-         * Das Fenster zwischen Deploy und `contao:migrate`: Der Startpunkt
-         * trägt noch keine Währung. Gemessen, was ohne diese Sperre
-         * herauskäme — `MoneyFormatter::format('0.00', '', 'de')` ergibt
-         * „0,00 XXX", weil `Currencies::getFractionDigits('')` auf DEFAULT
-         * zurückfällt statt zu werfen und ICU einen unbekannten Code als
-         * Platzhalter setzt. Und zwar auch bei leerem Warenkorb, also auf
-         * jeder Ansicht der Warenkorbseite.
+         * The window between deploy and `contao:migrate`: the start point
+         * does not carry a currency yet. Measured what would come out without
+         * this lock — `MoneyFormatter::format('0.00', '', 'de')` yields
+         * "0,00 XXX", because `Currencies::getFractionDigits('')` falls back
+         * to DEFAULT instead of throwing and ICU puts an unknown code as a
+         * placeholder. And that also with an empty cart, so on every view of
+         * the cart page.
          */
         $this->root = $this->pageModel(self::ROOT_PAGE, ['consho_shop' => self::SHOP, 'consho_currency' => '']);
         $this->fill([self::SHORT => '1.0000']);
@@ -397,11 +396,11 @@ class CartControllerTest extends TestCase
         $result = $this->render();
 
         /*
-         * Geprüft wird, was das Element der Vorlage übergibt, NICHT der Inhalt
-         * der Antwort: Die FragmentTemplate dieses Tests schließt über eine
-         * leere Response, `getContent()` ist also in beiden Fällen ''. Gemessen
-         * — mit einer Zusicherung auf den Inhalt überlebt das Entfernen der
-         * Sperre die ganze Suite.
+         * What is checked is what the element passes to the template, NOT the
+         * content of the response: this test's FragmentTemplate closes over an
+         * empty Response, so `getContent()` is '' in both cases. Measured —
+         * with an assertion on the content, removing the lock survives the
+         * whole suite.
          */
         self::assertSame([], $result['data']);
         self::assertSame('', $result['response']->getContent());
@@ -410,15 +409,15 @@ class CartControllerTest extends TestCase
     public function testGepreistWirdInDerWaehrungDesStartpunktsNichtInDerDesShops(): void
     {
         /*
-         * Spec 4.0: Die Währung gehört dem Publikum und hängt am Startpunkt,
-         * das Heimatland dem Rechnungssteller und hängt am Shop. Der Shop
-         * dieses Tests steht auf EUR und auf Österreich — gepreist wird
-         * trotzdem in Pfund, weil der Startpunkt es so sagt, und die 20 %
-         * kommen weiterhin aus AT.
+         * Spec 4.0: the currency belongs to the audience and hangs off the
+         * start point, the home country to the invoice issuer and hangs off the
+         * shop. The shop of this test is set to EUR and to Austria — it is
+         * priced in pounds anyway, because the start point says so, and the
+         * 20 % still come from AT.
          *
-         * Der Euro-Preis zu 10,00 bleibt daneben stehen: Nähme das Element
-         * wieder die Währung des Shops, fände es ihn und rechnete 24,00 statt
-         * 12,00 — der Unterschied ist damit nicht nur das Währungszeichen.
+         * The euro price of 10.00 stays next to it: if the element took the
+         * shop's currency again, it would find it and calculate 24.00 instead
+         * of 12.00 — so the difference is not only the currency symbol.
          */
         $this->root = $this->pageModel(self::ROOT_PAGE, ['consho_shop' => self::SHOP, 'consho_currency' => 'GBP']);
         $this->insertPrice(['pid' => self::SHORT, 'net' => '5.0000', 'currency' => 'GBP']);
@@ -428,7 +427,7 @@ class CartControllerTest extends TestCase
         $data = $this->render()['data'];
         $lines = $this->rowsOf($data, 'lines');
 
-        // 5,00 netto × 2 = 10,00 netto → 12,00 brutto bei 20 %.
+        // 5.00 net × 2 = 10.00 net → 12.00 gross at 20 %.
         $inPfund = (new MoneyFormatter())->format('12.0000', 'GBP', 'de');
 
         self::assertCount(1, $lines);
@@ -437,7 +436,7 @@ class CartControllerTest extends TestCase
         self::assertNotSame((new MoneyFormatter())->format('12.0000', 'EUR', 'de'), $data['total']);
     }
 
-    // ── Für wen der Korb rechnet (C-4) ──────────────────────────────────────
+    // ── Whom the cart calculates for (C-4) ──────────────────────────────────
 
     public function testEinGastSiehtDenKorbBrutto(): void
     {
@@ -447,16 +446,16 @@ class CartControllerTest extends TestCase
         $data = $this->render()['data'];
 
         self::assertFalse($data['showsNet']);
-        // 10,00 netto × 2 = 20,00 netto → 24,00 brutto bei 20 %.
+        // 10.00 net × 2 = 20.00 net → 24.00 gross at 20 %.
         self::assertSame((new MoneyFormatter())->format('24.0000', 'EUR', 'de'), $data['total']);
         self::assertSame((new MoneyFormatter())->format('24.0000', 'EUR', 'de'), $this->rowsOf($data, 'lines')[0]['lineGross']);
     }
 
     public function testEinMitgliedEinerNettogruppeSiehtDenKorbNetto(): void
     {
-        // ⚠️ Zeile UND Summe, beide: Eine Summe netto über Zeilen brutto wäre
-        // eine Rechnung, die sichtbar nicht aufgeht — und genau die Art
-        // Fehler, die ein Test nur auf die Summe durchließe.
+        // ⚠️ Line AND total, both: a net total over gross lines would be a
+        // calculation that visibly does not add up — and exactly the kind of
+        // error a test on the total alone would let through.
         $this->netPriceGroups([3]);
         $this->fill([self::SHORT => '2.0000']);
 
@@ -469,17 +468,17 @@ class CartControllerTest extends TestCase
 
     public function testEinGruppenpreisGiltAuchImKorb(): void
     {
-        // Der Korb muss die Produktseite bestätigen, von der aus gelegt wurde.
+        // The cart has to confirm the product page it was added from.
         $this->netPriceGroups([]);
         $this->insertPrice(['pid' => self::SHORT, 'net' => '8.0000', 'customerGroup' => 3]);
         $this->fill([self::SHORT => '1.0000']);
 
-        // 8,00 netto → 9,60 brutto; ohne die Gruppe wären es 12,00.
+        // 8.00 net → 9.60 gross; without the group it would be 12.00.
         self::assertSame((new MoneyFormatter())->format('9.6000', 'EUR', 'de'), $this->render(memberGroups: [3])['data']['total']);
         self::assertSame((new MoneyFormatter())->format('12.0000', 'EUR', 'de'), $this->render()['data']['total']);
     }
 
-    // ── Altersfreigabe (C19) ────────────────────────────────────────────────
+    // ── Age rating (C19) ────────────────────────────────────────────────────
 
     public function testOhneAltersfreigabeStehtKeinHinweisImKorb(): void
     {
@@ -512,8 +511,8 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Block G (G5): Der Korb hält nichts zurück und sagt, was übrig ist —
-     * je Artikel summiert, die Zahl nur, wo die Zeile mehr will.
+     * Block G (G5): the cart holds nothing back and says what is left —
+     * summed per article, the figure only where the line wants more.
      */
     public function testDerKorbSagtWasVomBestandUebrigIst(): void
     {
@@ -531,9 +530,9 @@ class CartControllerTest extends TestCase
 
     public function testDieNotizWirdBeimRendernGenauEinmalGelesen(): void
     {
-        // takeNotice() liest und leert in einem Zug (7.1). Bliebe sie stehen,
-        // läse der Besucher „Der Artikel wurde in den Warenkorb gelegt" auf
-        // jeder weiteren Ansicht des Warenkorbs wieder.
+        // takeNotice() reads and clears in one go (7.1). If it stayed, the
+        // visitor would read "Der Artikel wurde in den Warenkorb gelegt" (the
+        // article was added to the cart) again on every further view of the cart.
         $cartId = $this->fill([self::SHORT => '1.0000']);
         (new DbalCartRepository($this->cartConnection))->setNotice($cartId, CartNotice::Added);
 
@@ -544,8 +543,8 @@ class CartControllerTest extends TestCase
 
     public function testDieAntwortIstPrivatUndWirdNichtGespeichert(): void
     {
-        // Diese Seite zeigt den Warenkorb EINES Besuchers. `private` allein
-        // genügt nicht: Ein geteilter Cache darf sie gar nicht erst ablegen.
+        // This page shows the cart of ONE visitor. `private` alone is not
+        // enough: a shared cache must not store it in the first place.
         $this->fill([self::SHORT => '1.0000']);
 
         $response = $this->render()['response'];
@@ -557,8 +556,8 @@ class CartControllerTest extends TestCase
 
     public function testOhneShopBleibtDasElementStumm(): void
     {
-        // Keine Seite, kein Shop — dann hat das Element nichts zu zeigen, und
-        // vor allem darf es keinen Warenkorb anlegen.
+        // No page, no shop — then the element has nothing to show, and above
+        // all it must not create a cart.
         $this->root = $this->pageModel(self::ROOT_PAGE, ['consho_shop' => 0]);
 
         $response = $this->render()['response'];
@@ -566,14 +565,13 @@ class CartControllerTest extends TestCase
         self::assertSame('', $response->getContent());
     }
 
-    // ── Was ein Absenden bewirkt ────────────────────────────────────────────
+    // ── What a submission does ──────────────────────────────────────────────
 
     public function testEinAbsendenAntwortetMitEinerUmleitungAufDieWarenkorbseite(): void
     {
-        // Geworfen, nicht zurückgegeben: Ein Inhaltselement rendert als
-        // Unteranfrage, deren Response als Zeichenkette in die Seite wandert.
-        // Die Adresse kommt aus dem ContentUrlGenerator, nicht aus der
-        // Anfrage.
+        // Thrown, not returned: a content element renders as a sub-request
+        // whose Response travels into the page as a string. The address comes
+        // from the ContentUrlGenerator, not from the request.
         $this->fill([self::SHORT => '1.0000']);
         $itemId = $this->itemId(self::SHORT);
 
@@ -606,10 +604,10 @@ class CartControllerTest extends TestCase
 
     public function testEineInzwischenGeaenderteMindestmengeGreiftBeiJederMengenaenderung(): void
     {
-        // Ein Warenkorb steht tagelang offen. Ändert der Händler in der
-        // Zwischenzeit die Mindestmenge, muss die Prüfung beim Ändern erneut
-        // greifen — sonst käme über den Warenkorb eine Menge zustande, die die
-        // Kaufschaltfläche längst ablehnt.
+        // A cart stays open for days. If the merchant changes the minimum
+        // quantity in the meantime, the check has to apply again on change —
+        // otherwise the cart would produce a quantity the purchase button has
+        // long been rejecting.
         $cartId = $this->fill([self::PLAIN => '1.0000']);
 
         $this->cartConnection->update('tl_consho_product', ['minPurchase' => '5.0000'], ['id' => self::PLAIN]);
@@ -625,10 +623,10 @@ class CartControllerTest extends TestCase
 
     public function testEineGerateneFremdePositionBleibtUnberuehrt(): void
     {
-        // Die Positions-Id steht als kleine Zahl im Formular. Jede Methode des
-        // Repositorys hat das Paar (Warenkorb, Position) im WHERE, und
-        // articleOf() ist genau dafür da: Eine geratene Zahl liest sich als
-        // „nicht deine", nicht als die Zeile eines anderen.
+        // The line id stands in the form as a small number. Every method of the
+        // repository has the pair (cart, line) in its WHERE, and articleOf() is
+        // there exactly for that: a guessed number reads as "not yours", not as
+        // someone else's line.
         $cartId = $this->fill([self::PLAIN => '1.0000']);
 
         $repository = new DbalCartRepository($this->cartConnection);
@@ -646,18 +644,19 @@ class CartControllerTest extends TestCase
         );
         self::assertSame(2, $this->countItems());
 
-        // Und keine Notiz im eigenen Warenkorb: articleOf() steigt vor der
-        // Kaufprüfung aus. Ohne diese Absicherung liefe die Prüfung mit der
-        // Artikel-Id 0 weiter und schriebe dem Besucher ein „Dieser Artikel ist
-        // derzeit nicht erhältlich" über einen Artikel, den er nie angefasst hat.
+        // And no notice in one's own cart: articleOf() bails out before the
+        // purchase check. Without this safeguard the check would continue with
+        // article id 0 and write the visitor a "Dieser Artikel ist derzeit nicht
+        // erhältlich" (this article is currently unavailable) about an article
+        // they never touched.
         self::assertSame('', $this->cartConnection->fetchOne('SELECT notice FROM tl_consho_cart WHERE id = ?', [$cartId]));
     }
 
     public function testEinFremdesFormularAufDerselbenSeiteWirdNichtBeantwortet(): void
     {
-        // Ein Kontaktformular in einem zweiten Element postet auf dieselbe
-        // Adresse. Ohne eigene Handlung darf von hier keine Umleitung kommen —
-        // sonst verschluckt der Warenkorb die fremde Absendung.
+        // A contact form in a second element posts to the same address. Without
+        // an action of its own no redirect may come from here — otherwise the
+        // cart swallows the foreign submission.
         $this->fill([self::SHORT => '1.0000']);
 
         $data = $this->render($this->request('POST', ['betreff' => 'Hallo']))['data'];
@@ -666,7 +665,7 @@ class CartControllerTest extends TestCase
         self::assertSame(1, $this->countItems());
     }
 
-    // ── Block H (H-4): Rabattcode im Warenkorb (W1, W6) ───────────────────
+    // ── Block H (H-4): discount code in the cart (W1, W6) ─────────────────
 
     public function testDerCodeWirdGemerktWieGetipptOhneRandleerzeichen(): void
     {
@@ -689,7 +688,7 @@ class CartControllerTest extends TestCase
 
         $data = $this->render()['data'];
 
-        // Rucksack 20 netto = 24 brutto; 10 % = 2,40 €.
+        // Rucksack 20 net = 24 gross; 10 % = € 2.40.
         self::assertSame('applied', $data['code_status']);
         self::assertIsArray($data['discount']);
         self::assertSame('Sommerrabatt', $data['discount']['title']);
@@ -711,7 +710,7 @@ class CartControllerTest extends TestCase
         self::assertSame('24,00 €', str_replace("\u{a0}", ' ', (string) $data['total']));
     }
 
-    // ── Wertgutscheine (WG-5, E3) ─────────────────────────────────────────
+    // ── Value vouchers (WG-5, E3) ─────────────────────────────────────────
 
     public function testGutscheinWirdEingeloestUndMitGuthabenGezeigt(): void
     {
@@ -729,7 +728,7 @@ class CartControllerTest extends TestCase
         self::assertSame('…DDDD', $data['vouchers'][0]['code']);
         self::assertSame('usable', $data['vouchers'][0]['status']);
         self::assertSame('20,00 €', str_replace("\u{a0}", ' ', $data['vouchers'][0]['balance']));
-        // Angerechnet wird erst in der Kasse: die Summe bleibt.
+        // Credited only in the checkout: the total stays.
         self::assertSame('24,00 €', str_replace("\u{a0}", ' ', (string) $data['total']));
 
         $this->submit(['consho_cart_action' => 'removeVoucher', 'voucher' => 'AAAA-BBBB-CCCC-DDDD']);
@@ -738,8 +737,8 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Abnahme WG-7: liegt nur Nicht-Steuerbares im Korb, sagt die Summe nichts
-     * von der Steuer; ein steuerbarer Artikel daneben bringt den Satz zurück.
+     * WG-7: if only non-taxable items are in the cart, the total says nothing
+     * about tax; a taxable article next to it brings the sentence back.
      */
     public function testNurNichtSteuerbaresImKorbOhneSteuersatz(): void
     {
@@ -754,11 +753,11 @@ class CartControllerTest extends TestCase
         self::assertFalse($this->render()['data']['untaxed']);
     }
 
-    // ── Hilfen ──────────────────────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────────
 
     /**
-     * @param array<int, string> $lines Artikel-Id => Menge, in der Reihenfolge,
-     *                                  in der sie in den Warenkorb kommen
+     * @param array<int, string> $lines article id => quantity, in the order
+     *                                  in which they go into the cart
      */
     private function fill(array $lines): int
     {
@@ -813,7 +812,7 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Ein Absenden, und die Adresse, auf die es umleitet.
+     * A submission, and the address it redirects to.
      *
      * @param array<string, string> $post
      */
@@ -833,8 +832,8 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Die Zeilen einer der beiden Listen, mit einem Typ, mit dem sich prüfen
-     * lässt.
+     * The rows of one of the two lists, with a type that can be checked
+     * against.
      *
      * @param array<string, mixed> $data
      *
@@ -871,10 +870,10 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Ein angemeldetes Mitglied mit diesen Gruppen, oder niemand (C-4).
+     * A logged-in member with these groups, or nobody (C-4).
      *
-     * Echter FrontendUser statt Mock, wie in CartResolverTest: Der Resolver
-     * entscheidet an `instanceof FrontendUser`.
+     * A real FrontendUser instead of a mock, as in CartResolverTest: the
+     * resolver decides on `instanceof FrontendUser`.
      *
      * @param list<int>|null $groups
      */
@@ -897,15 +896,15 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * @param bool $asMember der Warenkorb wird als Mitglied 1 gesucht statt über
-     *                       das Cookie — nur für die Frage, ob jemand angemeldet ist
+     * @param bool $asMember the cart is looked up as member 1 instead of via
+     *                       the cookie — only for the question whether someone is logged in
      */
     private function controller(array|null $memberGroups = null, bool $asMember = false): CartController&TestableCartElement
     {
         $prices = new DbalPriceRepository($this->cartConnection);
 
-        // Der Satz selbst ist in SubscriptionTermsTest geprüft; hier zählt,
-        // welche Regel und welcher Zeilenbetrag hineingehen.
+        // The sentence itself is checked in SubscriptionTermsTest; what counts
+        // here is which rule and which line amount go into it.
         $lineTerms = $this->createMock(SubscriptionLineTerms::class);
         $lineTerms->method('of')->willReturnCallback(
             static fn (int $rule, string $amount): string|null => $rule > 0 ? 'Bedingungen '.$rule.' zu '.$amount : null,
@@ -1012,10 +1011,10 @@ class CartControllerTest extends TestCase
     }
 
     /**
-     * Die Zeile trägt `consho_currency` nur, wo der Aufrufer sie mitgibt — also
-     * am Startpunkt. Die Warenkorbseite selbst bekommt sie nicht: Die Spalte
-     * wird nur am Startpunkt gepflegt, und ein Doppel, das sie überall
-     * herausgäbe, wäre fähiger als das Original.
+     * The row carries `consho_currency` only where the caller passes it — that
+     * is, at the start point. The cart page itself does not get it: the column
+     * is only maintained at the start point, and a double that handed it out
+     * everywhere would be more capable than the original.
      *
      * @param array<string, int|string> $row
      */
@@ -1024,10 +1023,9 @@ class CartControllerTest extends TestCase
         $page = $this->createMock(PageModel::class);
         $page->method('__get')->willReturnMap([
             ['id', $id],
-            // Aus der Kennung abgeleitet und nicht übergeben: Woran
-            // ShopResolver den Startpunkt erkennt, ist `type` — und zwei
-            // Angaben, die dasselbe sagen sollen, laufen irgendwann
-            // auseinander.
+            // Derived from the identifier and not passed in: what ShopResolver
+            // recognises the start point by is `type` — and two statements that
+            // are supposed to say the same thing drift apart at some point.
             ['type', self::ROOT_PAGE === $id ? 'root' : 'regular'],
             ['rootId', self::ROOT_PAGE],
             ['language', 'de'],
@@ -1039,9 +1037,9 @@ class CartControllerTest extends TestCase
 }
 
 /**
- * `getResponse()` ist protected. Die anonyme Unterklasse oben macht sie über
- * `respond()` erreichbar; diese Schnittstelle gibt dem Rückgabewert von
- * `controller()` einen Namen, den die statische Analyse kennt.
+ * `getResponse()` is protected. The anonymous subclass above makes it
+ * reachable via `respond()`; this interface gives the return value of
+ * `controller()` a name that static analysis knows.
  */
 interface TestableCartElement
 {

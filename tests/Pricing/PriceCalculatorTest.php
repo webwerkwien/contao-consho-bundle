@@ -80,10 +80,10 @@ class PriceCalculatorTest extends TestCase
 
     public function testBeiZweiGruppenGewinntDerGuenstigerePreis(): void
     {
-        // C-4, entschieden von Michael am 2026-09-21: tl_member.groups ist eine
-        // Mehrfachauswahl, und die Reihenfolge der Haken darin ist kein
-        // Preisargument. Also der günstigste — hier steht die teurere Zeile
-        // absichtlich zuerst, damit „die erste gewinnt" auffliegen würde.
+        // C-4: tl_member.groups is a
+        // multiple selection, and the order of the ticks in it is not a
+        // price argument. So the cheapest — here the more expensive row deliberately
+        // comes first, so that "the first one wins" would be exposed.
         $calculator = $this->calculatorWith([
             new PriceRow('9.0000', 'EUR', 5, '1.0000'),
             new PriceRow('8.0000', 'EUR', 7, '1.0000'),
@@ -98,8 +98,8 @@ class PriceCalculatorTest extends TestCase
 
     public function testDieReihenfolgeDerGruppenAendertDenPreisNicht(): void
     {
-        // Dieselben Zeilen, die Gruppen andersherum gefragt. Eine Auflösung,
-        // die von der Eingabereihenfolge abhinge, gäbe hier 9.0000.
+        // The same rows, the groups asked the other way round. A resolution
+        // that depended on the input order would give 9.0000 here.
         $rows = [
             new PriceRow('9.0000', 'EUR', 5, '1.0000'),
             new PriceRow('8.0000', 'EUR', 7, '1.0000'),
@@ -114,14 +114,14 @@ class PriceCalculatorTest extends TestCase
     public function testEineZweiteMitgliedschaftMachtNichtsTeurer(): void
     {
         /*
-         * ⚠️ Hier stand bis zum Abschlussreview C-4 die Erwartung 9.0000, mit
-         * der Begründung „erst die Schwelle, dann der Preis". Die Begründung
-         * trägt innerhalb EINER Gruppe, wo der Betreiber beide Zeilen pflegt —
-         * über Gruppen hinweg pflegt niemand die Schnittmenge.
+         * ⚠️ Originally the expectation here was 9.0000, with
+         * the reasoning "first the threshold, then the price". The reasoning
+         * holds within ONE group, where the operator maintains both rows —
+         * across groups nobody maintains the intersection.
          *
-         * Gruppe 5 flach 8,00 ab 1, Gruppe 7 dann 9,00 ab 10. Ein Mitglied
-         * beider zahlte bei 9 Stück 8,00 und bei 10 Stück 9,00: Die zweite
-         * Mitgliedschaft war eine Preiserhöhung, und der Test schrieb sie fest.
+         * Group 5 flat 8.00 from 1, group 7 then 9.00 from 10. A member
+         * of both would pay 8.00 for 9 pieces and 9.00 for 10 pieces: the second
+         * membership was a price increase, and the test cemented it.
          */
         $calculator = $this->calculatorWith([
             new PriceRow('8.0000', 'EUR', 5, '1.0000'),
@@ -129,15 +129,15 @@ class PriceCalculatorTest extends TestCase
         ]);
 
         self::assertSame('8.0000', $calculator->calculate(1, 'EUR', [5, 7], '10', 1_757_000_000)->net);
-        // Und ohne die zweite Gruppe derselbe Preis — das ist der Punkt.
+        // And without the second group the same price — that is the point.
         self::assertSame('8.0000', $calculator->calculate(1, 'EUR', [5], '10', 1_757_000_000)->net);
     }
 
     public function testInnerhalbEinerGruppeSchlaegtDieHoehereSchwelleWeiterhin(): void
     {
-        // Die Regel von oben, unangetastet: Wo der Betreiber beide Zeilen
-        // pflegt, ist die Staffel eine Aussage und kein Zufall. Sonst wäre
-        // eine Staffel, die den Preis anhebt, wirkungslos.
+        // The rule from above, untouched: where the operator maintains both rows,
+        // the scale is a statement and not a coincidence. Otherwise
+        // a scale that raises the price would have no effect.
         $calculator = $this->calculatorWith([
             new PriceRow('8.0000', 'EUR', 5, '1.0000'),
             new PriceRow('9.0000', 'EUR', 5, '10.0000'),
@@ -149,11 +149,11 @@ class PriceCalculatorTest extends TestCase
     public function testDieAufloesungHaengtNichtAnDerZeilenreihenfolge(): void
     {
         /*
-         * Der zweite Grund für die Auflösung je Gruppe: Eine gemischte Regel
-         * („bei verschiedenen Gruppen der Betrag, sonst die Schwelle") ist
-         * nicht transitiv. Dieselben drei Zeilen ergäben dann je nach
-         * Reihenfolge der Datenbankausgabe 8,00 oder 9,00 — und welche das ist,
-         * entscheidet die Engine.
+         * The second reason for resolving per group: a mixed rule
+         * ("for different groups the amount, otherwise the threshold") is
+         * not transitive. The same three rows would then give 8.00 or 9.00 depending
+         * on the order of the database output — and which one that is
+         * is decided by the engine.
          */
         $rows = [
             new PriceRow('8.0000', 'EUR', 5, '1.0000'),
@@ -173,55 +173,55 @@ class PriceCalculatorTest extends TestCase
             );
         }
 
-        // 8,50 aus Gruppe 7 — Gruppe 5 löst für sich auf 9,00 auf (Staffel),
-        // und über die Gruppen gewinnt der günstigere.
+        // 8.50 from group 7 — group 5 resolves to 9.00 on its own (scale),
+        // and across the groups the cheaper one wins.
         self::assertSame('8.5000', $expected);
     }
 
     public function testEineAnwendbareGruppenzeileSchlaegtJedeAllgemeine(): void
     {
-        // ⚠️ Dieser Test hieß bis zur zweiten Reviewrunde „die Zeilen für alle
-        // gehen in jede Gruppenauflösung ein" — und prüfte damit eine Absicht
-        // ohne beobachtbare Wirkung: Eine Gruppenzeile schlägt jede allgemeine,
-        // also hätte das Weglassen nichts geändert. Er prüft in Wahrheit das
-        // hier, und das ist die Regel aus block-a 5.1.
+        // ⚠️ This test used to be called "the rows for everyone
+        // go into every group resolution" — and so checked an intention
+        // without observable effect: a group row beats every general one,
+        // so leaving them out would have changed nothing. What it really checks is this,
+        // and that is the rule from block-a 5.1.
         $calculator = $this->calculatorWith([
             new PriceRow('10.0000', 'EUR', null, '1.0000'),
             new PriceRow('7.0000', 'EUR', null, '100.0000'),
             new PriceRow('9.0000', 'EUR', 5, '1.0000'),
         ]);
 
-        // Bei 1: die Gruppenzeile, obwohl es keine günstigere allgemeine gibt.
+        // At 1: the group row, although there is no cheaper general one.
         self::assertSame('9.0000', $calculator->calculate(1, 'EUR', [5], '1', 1_757_000_000)->net);
 
         /*
-         * ⚠️ Bei 100 ebenfalls die Gruppenzeile — 9,00, während ein GAST dort
-         * 7,00 zahlt. Das ist die Ordnung aus block-a 5.1 („Spezifität
-         * entscheidet, nicht der kleinere Betrag"), und sie ist hier
-         * unangetastet geblieben: Ein Mengenrabatt darf einen Gruppenpreis
-         * nicht still überschreiben, sonst nennt der Hinweis an den Kunden den
-         * falschen Grund.
+         * ⚠️ At 100 the group row as well — 9.00, while a GUEST pays
+         * 7.00 there. That is the order from block-a 5.1 ("specificity
+         * decides, not the smaller amount"), and it has remained
+         * untouched here: a bulk discount must not silently override a group price,
+         * otherwise the notice to the customer names the
+         * wrong reason.
          *
-         * Es ist derselbe Geschmack wie der Befund B2 des C-4-Reviews, nur
-         * zwischen Gruppe und Listenpreis statt zwischen zwei Gruppen — und
-         * anders als dort eine ausdrücklich getroffene Entscheidung. Ob sie so
-         * bleiben soll, ist Michaels Frage, nicht die dieses Tests; er hält
-         * nur fest, was heute gilt.
+         * It is the same flavour as the case of two groups further up, only
+         * between group and list price instead of between two groups — and
+         * unlike there an explicitly made decision. Whether it should
+         * stay that way is not this test's question; it only pins down
+         * what applies today.
          */
         self::assertSame('9.0000', $calculator->calculate(1, 'EUR', [5], '100', 1_757_000_000)->net);
     }
 
     public function testZweiZeilenDerselbenGruppeBleibenUnentschieden(): void
     {
-        // ⚠️ Die Grenze der Regel oben, und sie ist der Punkt: Zwei Zeilen
-        // EINER Gruppe auf einer Schwelle sind ein Gleichstand, den
-        // DbalPriceTieIssueSource dem Betreiber meldet. Würde hier still die
-        // günstigere gewählt, verschwände der Befund aus der Welt — der Shop
-        // verkaufte zu einem Preis aus einer Doppelzeile, von der niemand mehr
-        // erfährt.
+        // ⚠️ The limit of the rule above, and it is the point: two rows
+        // of ONE group on one threshold are a tie that
+        // DbalPriceTieIssueSource reports to the operator. If the cheaper one were silently
+        // chosen here, the finding would vanish from the world — the shop
+        // would sell at a price from a duplicate row nobody would ever
+        // hear about again.
         //
-        // Geprüft wird deshalb, dass die ERSTE gewinnt, so wie vor C-4: die
-        // Zeile, die die Datenbank zuerst liefert.
+        // What is checked is therefore that the FIRST one wins, as before C-4: the
+        // row the database delivers first.
         $calculator = $this->calculatorWith([
             new PriceRow('9.0000', 'EUR', 5, '1.0000'),
             new PriceRow('8.0000', 'EUR', 5, '1.0000'),

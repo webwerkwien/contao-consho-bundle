@@ -48,7 +48,7 @@ class EntitlementQuery
      */
     public function activeFor(int $memberId, int $productId, int $now): array
     {
-        // Not signed in is nobody — not every guest's entitlement (review L4).
+        // Not signed in is nobody — not every guest's entitlement.
         if ($memberId < 1) {
             return [];
         }
@@ -70,7 +70,7 @@ class EntitlementQuery
     }
 
     /**
-     * Order lines whose contract has ended (review F, S3): the whole order when
+     * Order lines whose contract has ended (F): the whole order when
      * it is cancelled, otherwise every line an ACCEPTED withdrawal covers in
      * full. Nothing else revokes an entitlement on its own — the operator's
      * "gesperrt" stays the explicit switch — but a use after the money went

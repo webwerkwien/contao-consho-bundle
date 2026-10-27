@@ -14,9 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * E8 (Michael, 2026-10-08): Stundung über das Zahlungsziel statt einer
- * erfassten Scheinzahlung — nur später, nur offen, und das Abo wird sofort
- * neu bewertet.
+ * E8: deferral through the payment term instead of a recorded
+ * sham payment — only later, only while open, and the subscription is
+ * re-evaluated at once.
  */
 final class PaymentDeferralTest extends TestCase
 {

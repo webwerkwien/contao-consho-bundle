@@ -19,9 +19,9 @@ class PriceDcaTest extends TestCase
 
     public function testDerBetragHatBewusstKeineSpalte(): void
     {
-        // Fehlt der Schlüssel `sql` ganz, legt Contaos VirtualFieldsMappingListener
-        // das Feld in eine JSON-Spalte `jsonData` — die Tabelle bekäme eine
-        // Spalte, und der Betrag würde doch gespeichert.
+        // If the `sql` key is missing entirely, Contao's VirtualFieldsMappingListener
+        // puts the field into a JSON column `jsonData` — the table would get a
+        // column, and the amount would be saved after all.
         $amount = $GLOBALS['TL_DCA']['tl_consho_price']['fields']['amount'];
 
         self::assertArrayHasKey('sql', $amount);
@@ -30,7 +30,7 @@ class PriceDcaTest extends TestCase
 
     public function testBetragEingabeartUndLandKommenBeimSpeichernImmerAn(): void
     {
-        // DC_Table reicht nur geänderte Felder an onbeforesubmit weiter.
+        // DC_Table passes only changed fields on to onbeforesubmit.
         foreach (['amount', 'inputMode', 'inputCountry'] as $field) {
             self::assertTrue($GLOBALS['TL_DCA']['tl_consho_price']['fields'][$field]['eval']['alwaysSave'] ?? false, $field);
         }
@@ -50,8 +50,8 @@ class PriceDcaTest extends TestCase
 
     public function testDieWaehrungLaedtDieMaskeNichtNeu(): void
     {
-        // Ein automatisches Absenden speichert die Zeile — eine gespeicherte
-        // Preiszeile ginge mit neuer Währung und altem Netto live.
+        // An automatic submit saves the row — a saved price row would go live
+        // with the new currency and the old net amount.
         $currency = $GLOBALS['TL_DCA']['tl_consho_price']['fields']['currency'];
 
         self::assertSame('select', $currency['inputType']);
@@ -68,9 +68,9 @@ class PriceDcaTest extends TestCase
 
     public function testDerBetragIstEinPflichtfeldMitZiffernpruefung(): void
     {
-        // Kein maxval: Widget::validator() prüft es, bevor Contao ein Komma in
-        // einen Punkt verwandelt — CoupledPriceInputListener::assertFits() prüft
-        // stattdessen das errechnete Netto.
+        // No maxval: Widget::validator() checks it before Contao turns a comma
+        // into a point — CoupledPriceInputListener::assertFits() checks the
+        // calculated net amount instead.
         $eval = $GLOBALS['TL_DCA']['tl_consho_price']['fields']['amount']['eval'];
 
         self::assertTrue($eval['mandatory']);
@@ -80,20 +80,20 @@ class PriceDcaTest extends TestCase
 
     public function testEinePreiszeileErbtKeinenEuroVorgabewert(): void
     {
-        // „Lieber laut als still, ich denke das wäre auch internationaler"
-        // (Michael, 2026-09-21). Die Maske belegt die Währung seit C-1b richtig
-        // vor — CoupledPriceInputListener überschreibt den Vorgabewert je
-        // Request —, aber das erreicht nur die Maske. Eine Zeile, die daran
-        // vorbei entsteht (Modell, CLI, Migration), wurde sonst still zu einem
-        // Europreis, auch in einem Shop, der gar nicht in Euro verkauft.
+        // Loud rather than silent — which also suits an international product.
+        // The form has preset the currency correctly since C-1b —
+        // CoupledPriceInputListener overwrites the default per request — but that
+        // only reaches the form. A row created past it (model, CLI, migration)
+        // otherwise silently became a euro price, even in a shop that does not
+        // sell in euros at all.
         self::assertSame('', $GLOBALS['TL_DCA']['tl_consho_price']['fields']['currency']['sql']['default']);
     }
 
     public function testContaoLegtFuerDenBetragKeineJsonSpalteAn(): void
     {
-        // VirtualFieldsMappingListener läuft als loadDataContainer-Hook vor
-        // jeder eigenen Anpassung und würde ein Feld ohne 'sql' in eine
-        // jsonData-Spalte umbiegen — genau das soll 'sql' => null verhindern.
+        // VirtualFieldsMappingListener runs as a loadDataContainer hook before
+        // any adjustment of our own and would divert a field without 'sql' into
+        // a jsonData column — exactly what 'sql' => null is meant to prevent.
         (new VirtualFieldsMappingListener())('tl_consho_price');
 
         self::assertArrayNotHasKey('targetColumn', $GLOBALS['TL_DCA']['tl_consho_price']['fields']['amount']);

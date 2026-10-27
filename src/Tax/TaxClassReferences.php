@@ -30,7 +30,7 @@ use Doctrine\DBAL\Connection;
  * `TaxClassReferencesAreCompleteTest` derives it from the DCAs: every field
  * whose `foreignKey` names this table, minus the parent relation of the rates
  * (they are child rows and are meant to go along). A constant nobody checks
- * reads exactly like knowledge — see the review finding F7 of 2026-09-23.
+ * reads exactly like knowledge.
  */
 final class TaxClassReferences
 {
@@ -50,18 +50,29 @@ final class TaxClassReferences
          * the next bill without a rate.
          */
         'tl_consho_subscription' => 'taxClass',
+
+        /*
+         * EZ-5: a single-purpose voucher pays only for articles of the class
+         * it was sold with, matched by id. Deleted, the class would leave the
+         * voucher nothing to pay for. 0 is a multi-purpose voucher (OPTIONAL).
+         */
+        'tl_consho_voucher' => 'taxClass',
     ];
 
     /**
      * The column that names a row in `orphans()`, where it is not `title`.
      */
-    private const LABELS = ['tl_consho_subscription' => 'subscriptionNumber'];
+    private const LABELS = ['tl_consho_subscription' => 'subscriptionNumber', 'tl_consho_voucher' => 'code'];
 
     /**
      * Rows that still need their class (Abo-6, P51): an ended subscription is
      * never billed again, so it neither holds the class nor is an orphan.
      */
-    private const STILL_USED = ['tl_consho_subscription' => "state <> 'ended'"];
+    private const STILL_USED = [
+        'tl_consho_subscription' => "state <> 'ended'",
+        // EZ-5: a spent or blocked voucher pays for nothing any more.
+        'tl_consho_voucher' => 'balance > 0 AND blocked = 0',
+    ];
 
     /**
      * Tables where 0 is a legitimate "none" rather than a gap (E-1): a payment
@@ -69,7 +80,7 @@ final class TaxClassReferences
      * class, which most never do. There a 0 is not an orphan — a method that
      * needed one is not offered at checkout (PaymentMethod::feeTaxDecided()).
      */
-    public const OPTIONAL = ['tl_consho_payment_method'];
+    public const OPTIONAL = ['tl_consho_payment_method', 'tl_consho_voucher'];
 
     public function __construct(private readonly Connection $connection)
     {
@@ -127,7 +138,7 @@ final class TaxClassReferences
      * from an import, from raw SQL or from an installation older than the
      * field, which is exactly this section's subject. And a variant carries
      * its OWN class rather than inheriting one (`DbalArticleTaxClasses` reads
-     * the row's own column; c5 shows variants with pid 1 and taxClass 2), so
+     * the row's own column; variants with pid 1 and taxClass 2 exist), so
      * there is no legitimate 0 to make noise with.
      *
      * The damage is the same either way — `findRate()` answers null for 0 as

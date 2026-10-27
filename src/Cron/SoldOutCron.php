@@ -33,8 +33,7 @@ final class SoldOutCron
     {
         /*
          * Between unpacking an update and contao:migrate the table does not
-         * exist yet, and Contao's cron runs in that window too — measured on
-         * c5 at the deploy of this block (2026-10-09 11:21): the exception
+         * exist yet, and Contao's cron runs in that window too — the exception
          * ended the whole cron run of that minute, every other job with it.
          */
         if (!$this->connection->createSchemaManager()->tablesExist(['tl_consho_sold_out'])) {

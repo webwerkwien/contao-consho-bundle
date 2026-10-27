@@ -12,7 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationJoin;
  *
  * Only the LABEL is translated. The alias stays the one on the record, because
  * it is what `cq` carries, and `cq` is language neutral by design
- * (docs/mehrsprachigkeit.md, 6.1). FilterResolver therefore stays untouched.
+ * (Block M, 6.1). FilterResolver therefore stays untouched.
  *
  * ── What is left out ──────────────────────────────────────────────────────
  *

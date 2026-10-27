@@ -19,8 +19,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Befund auf der Startseite und die beiden Befehle der Projektion der
- * Sichtbarkeit (B-10). Shop 1 in EUR, Startpunkt de, ein bepreistes Produkt.
+ * Issue on the start page and the two commands of the visibility
+ * projection (B-10). Shop 1 in EUR, start point de, one priced product.
  */
 class VisibilityIssueSourceTest extends TestCase
 {
@@ -49,7 +49,7 @@ class VisibilityIssueSourceTest extends TestCase
 
     public function testADeviationIsAWarningWithItsCount(): void
     {
-        // Nie gebaut: die Zeile von Produkt 1 fehlt.
+        // Never built: the row of product 1 is missing.
         $issues = (new VisibilityIssueSource($this->projector(), new ArrayAdapter()))->issues();
 
         self::assertCount(1, $issues);
@@ -65,11 +65,11 @@ class VisibilityIssueSourceTest extends TestCase
 
         self::assertCount(1, $source->issues());
 
-        // Behoben am Befehl vorbei: Die Startseite zeigt die gemerkte Zahl weiter …
+        // Fixed past the command: the start page keeps showing the remembered count …
         $this->projector()->rebuild();
         self::assertCount(1, $source->issues());
 
-        // … bis der Befehl den Eintrag löscht.
+        // … until the command deletes the entry.
         (new CommandTester(new VisibilityRebuildCommand($this->projector(), $this->connection, $cache)))->execute([]);
         self::assertSame([], $source->issues());
     }

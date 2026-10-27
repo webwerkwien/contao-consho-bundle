@@ -82,7 +82,7 @@ final class PaymentDeferralBackendController
             'current' => $dueAt > 0 ? date('Y-m-d', $dueAt) : '',
             'currentLabel' => $dueAt > 0 ? date((string) ($GLOBALS['TL_CONFIG']['dateFormat'] ?? 'd.m.Y'), $dueAt) : '',
             // The calendar's next day, not +86400 s: on the day of a clock
-            // change that would be one day off (review E8, L5).
+            // change that would be one day off (E8).
             'min' => $dueAt > 0 ? (new \DateTimeImmutable('@'.$dueAt))->setTimezone(new \DateTimeZone(date_default_timezone_get()))->modify('+1 day')->format('Y-m-d') : '',
             'action' => null === $request ? '' : $request->getUri(),
             'back' => $this->framework->getAdapter(System::class)->getReferer(),

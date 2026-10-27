@@ -58,12 +58,11 @@ final class DbalAgeGateIssueSource implements ConfigurationIssueSource
             }
 
             /*
-             * ⚠️ Die STUFE zählt, nicht die bloße Existenz einer Prüfung. Eine
-             * Versandart, die ab 16 prüft, trägt keine Lieferung ab 18 — der
-             * Checkout weist sie mit AgeNotVerifiable ab, und genau diesen
-             * stillen Zustand soll der Befund melden. Vor dem Review vom
-             * 2026-09-22 genügte hier irgendein `ageCheck !== 0`, womit die
-             * 16er-Art den Befund für 18er-Artikel abgeschaltet hätte.
+             * ⚠️ The LEVEL counts, not the mere existence of a check. A shipping
+             * method that checks from 16 carries no delivery from 18 — the checkout
+             * refuses it with AgeNotVerifiable, and that silent state is what the
+             * finding is for. Any `ageCheck !== 0` used to be enough here, so the
+             * method from 16 would have switched the finding off for articles from 18.
              */
             $highestCheck = $this->highestShippingAgeCheck((int) $shop['id']);
             $threshold = max(self::CHECKED_FROM, $highestCheck + 1);

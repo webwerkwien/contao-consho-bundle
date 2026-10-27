@@ -20,15 +20,16 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Produktseite sucht ihre Adresse in der Sprache ihres Startpunkts.
+ * The product page looks up its address in the language of its start point.
  *
- * Gegen eine echte SQLite-Datenbank: ProductAddressLookup und ShopLanguages
- * sind final, und die Frage ist ohnehin, welche Zeilen die Abfrage findet.
- * renderPage() ersetzt eine anonyme Unterklasse — gerendert wird hier nichts,
- * geprüft wird, ob die Seite gerendert WÜRDE und mit welchem Produkt.
+ * Against a real SQLite database: ProductAddressLookup and ShopLanguages
+ * are final, and the question is which rows the query finds anyway.
+ * renderPage() is replaced by an anonymous subclass — nothing is rendered
+ * here; what is checked is whether the page WOULD be rendered, and with
+ * which product.
  *
- * Gefunden in B-5: M-3 hatte die Adresssuche sprachfähig gemacht, aber diesen
- * Aufrufer nicht umgestellt.
+ * M-3 had made the address lookup language-aware but had not switched this
+ * caller over (B-5).
  */
 class ProductPageControllerTest extends TestCase
 {
@@ -41,8 +42,8 @@ class ProductPageControllerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Spalten wie in der echten DB, aus der DCA gebaut: start/stop
-        // varchar mit '', die Sicherheitsfelder longtext NULL.
+        // Columns as in the real DB, built from the DCA: start/stop
+        // varchar with '', the safety fields longtext NULL.
         DcaSchema::create($this->connection, 'tl_consho_product');
         DcaSchema::create($this->connection, 'tl_consho_product_shop');
         DcaSchema::create($this->connection, 'tl_consho_manufacturer');
@@ -78,7 +79,7 @@ class ProductPageControllerTest extends TestCase
 
     public function testInAnotherLanguageTheDefaultAliasIsNotAnAddress(): void
     {
-        // Sonst wäre jedes Produkt unter zwei Adressen erreichbar.
+        // Otherwise every product would be reachable under two addresses.
         $this->translate('fr', 'amer-suedois');
 
         $this->expectException(PageNotFoundException::class);
@@ -95,8 +96,8 @@ class ProductPageControllerTest extends TestCase
 
     public function testUntranslatedSafetyNoticesHideTheProductInThatLanguage(): void
     {
-        // Die GPSR-Regel: Warnhinweise müssen in der Sprache des Marktes
-        // vorliegen und fallen nicht auf die Standardsprache zurück.
+        // The GPSR rule: warnings must be available in the language of the market
+        // and do not fall back to the default language.
         $this->connection->update('tl_consho_product', ['safetyWarnings' => 'Enthält Alkohol'], ['id' => 1]);
         $this->translate('fr', 'amer-suedois');
 
@@ -107,8 +108,8 @@ class ProductPageControllerTest extends TestCase
 
     public function testTranslatedSafetyNoticesMakeItReachableAgain(): void
     {
-        // Die Gegenprobe zum Test davor: Erst mit ihr ist belegt, dass dort die
-        // fehlenden Hinweise die 404 auslösen und nicht etwa der Alias.
+        // The counter-check to the test before: only with it is it proven that
+        // there the missing warnings trigger the 404 and not, say, the alias.
         $this->connection->update('tl_consho_product', ['safetyWarnings' => 'Enthält Alkohol'], ['id' => 1]);
         $this->translate('fr', 'amer-suedois', 'Contient de l\'alcool');
 

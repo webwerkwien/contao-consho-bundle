@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
  * Catalogue pages set to "always load from cache" in a shop that prices per
- * customer (C-4, found in the review of 2026-09-21).
+ * customer (C-4).
  *
  * ── Why this is not covered by Contao making the page private ─────────────
  *

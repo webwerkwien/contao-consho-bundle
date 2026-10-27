@@ -24,7 +24,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  *     address, and reads no Consho table but the method's secret.
  *   - It notifies over HTTP, like a provider's server — the real notify route,
  *     the real signature check, the real lock. A request from this server to
- *     itself; measured on c5 on 2026-09-26 (200 in 0.85 s).
+ *     itself.
  *   - "Twice" sends both notifications AT ONCE. One after the other would
  *     only prove the early return; at once, the second waits on the lock.
  *   - When a notification does not come back 200, the page SAYS so and stays

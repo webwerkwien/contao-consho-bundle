@@ -10,7 +10,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
  * Extraordinary cancellations waiting for the operator's decision (Abo-7,
- * P57; Michael, 2026-09-30: „Befund für wartende Kündigungen auch"), per shop,
+ * P57), per shop,
  * like the open withdrawals (F11). An extraordinary cancellation takes effect
  * only once decided; the copy of the confirmation is the only other sign of
  * it, and a shop without an operator address sends none.
@@ -29,8 +29,8 @@ final class WaitingCancellationIssueSource implements ConfigurationIssueSource
                JOIN tl_consho_subscription s ON s.id = c.pid
                JOIN tl_consho_shop sh ON sh.id = s.shop
               WHERE c.kind = 'extraordinary' AND c.decidedAt IS NULL
-                -- An ended subscription has nothing left to end (review
-                -- Abo-Nachlese, L2: a cancelled purchase ends it, P72).
+                -- An ended subscription has nothing left to end
+                -- (Abo-Nachlese: a cancelled purchase ends it, P72).
                 AND s.state <> 'ended'
               ORDER BY s.shop, c.receivedAt, c.id",
         );

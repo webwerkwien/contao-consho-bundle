@@ -46,7 +46,7 @@ class CancellationForm
     public const EXPIRES_PARAM = 'consho_expires';
 
     /**
-     * The result page stays open 90 days (Michael, 2026-09-30: „L4 90 Tage"):
+     * The result page stays open 90 days (L4):
      * long enough to save it; the confirmation mail is the lasting record.
      */
     public const RESULT_LIFETIME = 90 * 86_400;

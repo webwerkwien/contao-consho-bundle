@@ -42,7 +42,7 @@ class CartCleanupCronTest extends TestCase
 
     public function testEinUmgewandelterWarenkorbHatDieKuerzereFrist(): void
     {
-        // Alles Aufbewahrungswürdige steht dann in der Bestellung.
+        // Everything worth keeping is in the order by then.
         $this->insertCart(['state' => 'converted', 'updatedAt' => self::NOW - CartLifetime::CONVERTED - 1]);
         $this->insertCart(['state' => 'converted', 'updatedAt' => self::NOW - CartLifetime::CONVERTED + 1]);
 
@@ -62,8 +62,8 @@ class CartCleanupCronTest extends TestCase
 
     public function testVerwaisteZeilenVerschwindenAuchOhneZugehoerigenWarenkorb(): void
     {
-        // Ein Datenbankeingriff von Hand hinterlässt sie; nichts anderes räumt
-        // sie je weg.
+        // A manual database intervention leaves them behind; nothing else ever
+        // clears them away.
         $this->insertCartItem(['pid' => 999, 'product' => 7, 'quantity' => '1.0000']);
 
         $this->cron()();
@@ -73,9 +73,9 @@ class CartCleanupCronTest extends TestCase
 
     public function testDieKassendatenVerfallenNachSiebenTagenAuchWennDerWarenkorbBleibt(): void
     {
-        // E1: die Adresse hat eine eigene Uhr, unabhängig von den Zeilen.
-        $old = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - 60, 'checkoutData' => '{"email":"a@b.at"}', 'checkoutDataAt' => self::NOW - CartLifetime::CHECKOUT_DATA - 1]);
-        $edge = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - 60, 'checkoutData' => '{"email":"c@d.at"}', 'checkoutDataAt' => self::NOW - CartLifetime::CHECKOUT_DATA]);
+        // E1: the address has its own clock, independent of the rows.
+        $old = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - 60, 'checkoutData' => '{"email":"a@example.at"}', 'checkoutDataAt' => self::NOW - CartLifetime::CHECKOUT_DATA - 1]);
+        $edge = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - 60, 'checkoutData' => '{"email":"c@example.at"}', 'checkoutDataAt' => self::NOW - CartLifetime::CHECKOUT_DATA]);
 
         $this->cron()();
 
@@ -86,8 +86,8 @@ class CartCleanupCronTest extends TestCase
 
     public function testAlteWarenkoerbeOhneZeitstempelGehenNachUpdatedAt(): void
     {
-        $old = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - CartLifetime::CHECKOUT_DATA - 1, 'checkoutData' => '{"email":"a@b.at"}']);
-        $fresh = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - 60, 'checkoutData' => '{"email":"c@d.at"}']);
+        $old = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - CartLifetime::CHECKOUT_DATA - 1, 'checkoutData' => '{"email":"a@example.at"}']);
+        $fresh = $this->insertCart(['state' => 'open', 'updatedAt' => self::NOW - 60, 'checkoutData' => '{"email":"c@example.at"}']);
 
         $this->cron()();
 

@@ -15,7 +15,7 @@ $GLOBALS['TL_LANG']['tl_consho_purchase_list']['show'] = ['Details', 'Show the d
 $GLOBALS['TL_LANG']['tl_consho_purchase_list']['purchaseOutput'] = ['Output', 'Hand out the purchase list again'];
 $GLOBALS['TL_LANG']['tl_consho_purchase_list']['purchaseReceive'] = ['Receipt', 'Confirm the receipt of the purchase list'];
 // array_replace, not +=: Contao loads English first as the fallback, and +=
-// keeps every key that is already there (Abnahme G-8).
+// keeps every key that is already there (G-8).
 $GLOBALS['TL_LANG']['tl_consho_purchase_list'] = array_replace($GLOBALS['TL_LANG']['tl_consho_purchase_list'] ?? [], [
     'back' => 'Back',
     'colTake' => 'Take',

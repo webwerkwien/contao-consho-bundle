@@ -24,8 +24,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Tax\TaxFixture;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Nach dem Deploy von C-1a tragen alle Listenpreiszeilen das Land '' — kein
- * Markt. Ohne Neubau wäre jede Liste leer.
+ * After the update to C-1a all list price rows carry the country '' — no
+ * market. Without a rebuild every list would be empty.
  */
 class ListPriceMarketMigrationTest extends TestCase
 {
@@ -47,7 +47,7 @@ class ListPriceMarketMigrationTest extends TestCase
 
     public function testBeforeTheSchemaUpdateItDoesNotRun(): void
     {
-        // Erster Durchlauf von contao:migrate: die Spalte gibt es noch nicht.
+        // First pass of contao:migrate: the column does not exist yet.
         $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->connection->executeStatement('DROP TABLE tl_consho_product_list_price');
         $this->connection->executeStatement('CREATE TABLE tl_consho_product_list_price (id INTEGER PRIMARY KEY AUTOINCREMENT, tstamp INTEGER NOT NULL DEFAULT 0, pid INTEGER NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT \'\', net NUMERIC NOT NULL DEFAULT 0, gross NUMERIC NOT NULL DEFAULT 0)');
@@ -57,12 +57,12 @@ class ListPriceMarketMigrationTest extends TestCase
 
     public function testOhneDieWaehrungsspalteAmStartpunktLaeuftSieNichtAn(): void
     {
-        // Dieselbe Lücke wie bei VisibilityProjectionMigration, nur eine
-        // Schemaänderung früher: `country` kam mit C-1a, `consho_currency`
-        // erst mit C-1c. Wurde C-1a angelegt, die Migration aber abgebrochen,
-        // stehen im ersten Durchlauf nach dem Aufrüsten Zeilen mit country ''
-        // da, ohne dass es consho_currency schon gäbe — und beide Neubauten in
-        // run() fragen diese Spalte.
+        // The same gap as in VisibilityProjectionMigration, only one schema
+        // change earlier: `country` came with C-1a, `consho_currency` only
+        // with C-1c. If C-1a was created but the migration aborted, the first
+        // pass after upgrading finds rows with country '' without
+        // consho_currency existing yet — and both rebuilds in run() query
+        // that column.
         $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => '', 'net' => '10.0000', 'gross' => '12.0000']);
 
@@ -107,8 +107,8 @@ class ListPriceMarketMigrationTest extends TestCase
 
     public function testAShopWithoutAHomeCountryDoesNotKeepTheMigrationPending(): void
     {
-        // contao:migrate läuft, solange eine Migration fällig ist. Ohne Heimatland
-        // gibt es keinen Markt — die alten Zeilen gehen, neue entstehen nicht.
+        // contao:migrate runs as long as a migration is due. Without a home country
+        // there is no market — the old rows go, new ones are not created.
         $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de']);
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'net' => '10.0000', 'gross' => '12.0000']);
 
@@ -121,11 +121,11 @@ class ListPriceMarketMigrationTest extends TestCase
 
     public function testRunAbortsLoudlyWhenTheOldUniqueKeyStillExists(): void
     {
-        // M-1: contao:migrate löscht den alten Schlüssel regulär, neben der
-        // Spalte country bleibt er nur nach einer teilweise durchgelaufenen
-        // Schemaänderung stehen. Träfe INSERT ... ON DUPLICATE KEY ihn statt (pid, currency,
-        // country), würde die Projektion still geleert und die Länder
-        // vermischt — deshalb bricht run() hier laut ab, statt neu zu bauen.
+        // M-1: contao:migrate drops the old key regularly; it only remains next
+        // to the country column after a partially completed schema change.
+        // If INSERT ... ON DUPLICATE KEY hit it instead of (pid, currency,
+        // country), the projection would be silently emptied and the countries
+        // mixed — that is why run() aborts loudly here instead of rebuilding.
         $this->insertShop(['id' => 1, 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
 
         $this->connection->executeStatement('DROP TABLE tl_consho_product_list_price');
@@ -140,12 +140,12 @@ class ListPriceMarketMigrationTest extends TestCase
                 gross NUMERIC NOT NULL DEFAULT 0.0000
             )',
         );
-        // Ein benannter Index, nicht der inline-`UNIQUE (...)`-Tabellenzusatz:
-        // Doctrines SQLite-Introspektion meldet einen solchen Autoindex nicht
-        // über listTableIndexes() zurück (anders als MySQLs SHOW INDEX, das
-        // ihn wie jeden benannten Index sieht) — mit dem Tabellenzusatz bliebe
-        // die Erkennung im Test unbeobachtbar, das Verhalten in MySQL selbst
-        // ist davon nicht betroffen.
+        // A named index, not the inline `UNIQUE (...)` table clause:
+        // Doctrine's SQLite introspection does not report such an autoindex
+        // via listTableIndexes() (unlike MySQL's SHOW INDEX, which sees it
+        // like any named index) — with the table clause the detection would
+        // stay unobservable in the test; the behaviour in MySQL itself is not
+        // affected by this.
         $this->connection->executeStatement('CREATE UNIQUE INDEX old_pid_currency ON tl_consho_product_list_price (pid, currency)');
         $this->insertListPrice(['pid' => 1, 'currency' => 'EUR', 'country' => '', 'net' => '10.0000', 'gross' => '12.0000']);
 
@@ -156,7 +156,7 @@ class ListPriceMarketMigrationTest extends TestCase
             self::assertStringContainsString('(pid, currency)', $e->getMessage());
         }
 
-        // Abgebrochen, bevor etwas angefasst wurde: die alte Zeile steht noch da.
+        // Aborted before anything was touched: the old row is still there.
         self::assertSame(1, (int) $this->connection->fetchOne("SELECT COUNT(*) FROM tl_consho_product_list_price WHERE country = ''"));
     }
 

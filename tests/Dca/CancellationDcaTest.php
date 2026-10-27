@@ -6,9 +6,9 @@ use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Abo-7, P57/P59: Die Kündigung ist der Eingangsnachweis. Was der Kunde erklärt
- * hat, ist im Backend nicht änderbar; entschieden wird nur über eine
- * außerordentliche Kündigung.
+ * Abo-7, P57/P59: the cancellation is the proof of receipt. What the customer
+ * declared cannot be changed in the backend; the only decision taken there is
+ * about an extraordinary cancellation.
  */
 class CancellationDcaTest extends TestCase
 {

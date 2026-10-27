@@ -6,8 +6,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Filesystem\Path;
 
 /**
- * Keeps the invoice archive folder protected (Michael, 2026-09-24: "wird ein
- * Ordner ausgewählt, sollte der gleich automatisch gesperrt werden").
+ * Keeps the invoice archive folder protected — a folder is
+ * protected the moment it is chosen.
  *
  * An invoice carries a name, an address and what someone bought. In a public
  * folder every PDF is a download for anyone who guesses the file name — and

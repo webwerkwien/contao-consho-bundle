@@ -9,8 +9,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\VoucherListListen
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
- * WG13: Die Liste zeigt den Code in Gruppen und Geld als Geld — roh stünde
- * dort „50.0000" (Fall 30).
+ * WG13: the list shows the code in groups and money as money — raw it
+ * would read "50.0000".
  */
 class VoucherListListenerTest extends TestCase
 {
@@ -44,7 +44,7 @@ class VoucherListListenerTest extends TestCase
     }
 
     /**
-     * Abnahme WG-2: Der Kopf der Bewegungen zeigte „Saldo 20.0000".
+     * WG-2: the header of the movements showed „Saldo 20.0000".
      */
     public function testDerKopfDerBewegungenZeigtGeldAlsGeld(): void
     {

@@ -7,8 +7,8 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Migration\DecisionSentMigration;
 
 /**
- * E10: alte Entscheidungen bekommen 0 statt NULL, damit sie nicht für immer
- * in der Warnung stehen — und die Migration läuft genau einmal.
+ * E10: old decisions get 0 instead of NULL, so that they do not stay in
+ * the warning for ever — and the migration runs exactly once.
  */
 final class DecisionSentMigrationTest extends TestCase
 {

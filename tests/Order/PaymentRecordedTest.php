@@ -30,11 +30,11 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Folgen einer erfassten Zahlung (D-1, Spec D 5.4, Entscheidungen Z1, Z3, A2).
+ * The consequences of a recorded payment (D-1, Spec D 5.4, decisions Z1, Z3, A2).
  *
- * Der Saldo kommt aus dem echten Leser gegen SQLite; nur die Sperre
- * (FOR UPDATE, das SQLite nicht kennt) und die Nebenwirkungen nach außen
- * sind Doubles.
+ * The balance comes from the real reader against SQLite; only the lock
+ * (FOR UPDATE, which SQLite does not know) and the side effects outside
+ * are doubles.
  */
 final class PaymentRecordedTest extends TestCase
 {
@@ -66,7 +66,7 @@ final class PaymentRecordedTest extends TestCase
         WithdrawalSchema::create($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -106,7 +106,7 @@ final class PaymentRecordedTest extends TestCase
         $this->pay('40');
         $this->recorded()->handle(self::ORDER, true, 100);
 
-        // Erstattung und neue Zahlung: kein zweites „Zahlung erhalten".
+        // Refund and new payment: no second "payment received".
         $this->pay('-40');
         $this->pay('40');
         $this->recorded()->handle(self::ORDER, false, 200);
@@ -151,8 +151,8 @@ final class PaymentRecordedTest extends TestCase
     }
 
     /**
-     * Abo-5 (P35): Die Zahlung, die die Bestellung begleicht, weckt ein
-     * ruhendes Abo sofort — eine Teilzahlung fragt gar nicht erst.
+     * Abo-5 (P35): the payment that settles the order wakes a dormant
+     * subscription at once — a partial payment does not even ask.
      */
     public function testDieBegleichendeZahlungFragtNachDenAbos(): void
     {
@@ -173,8 +173,9 @@ final class PaymentRecordedTest extends TestCase
     }
 
     /**
-     * Abnahme Abo-5: „wieder aktiv" kam eine Sekunde vor „Zahlung erhalten".
-     * Erst die Zahlung, dann das Abo — und ohne Bestellseite trotzdem das Abo.
+     * Abo-5: "active again" came one second before "payment received".
+     * First the payment, then the subscription — and without an order page the
+     * subscription all the same.
      */
     public function testErstDieZahlungsmailDannDasAbo(): void
     {

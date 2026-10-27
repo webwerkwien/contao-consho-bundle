@@ -17,8 +17,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Payment\FakeRecurringHandler;
 
 /**
- * Abo-4b, P99: laufende Abos, deren Mandat über eine Zahlungsart abbucht, die
- * der Shop nicht mehr anbietet — dieselbe Frage wie beim Abrechnen.
+ * Abo-4b, P99: running subscriptions whose mandate charges through a payment method
+ * the shop no longer offers — the same question as when billing.
  */
 final class MandateMethodIssueSourceTest extends TestCase
 {
@@ -37,22 +37,22 @@ final class MandateMethodIssueSourceTest extends TestCase
         $c->insert('tl_consho_payment_method', ['id' => 6, 'type' => 'invoice', 'title' => 'Auf Rechnung', 'published' => 1]);
         $c->insert('tl_consho_payment_method', ['id' => 8, 'type' => FakeRecurringHandler::TYPE, 'title' => 'Karte', 'published' => 1]);
         $c->insert('tl_consho_payment_method', ['id' => 9, 'type' => FakeRecurringHandler::TYPE, 'title' => 'Alte Karte', 'published' => 0]);
-        // Ein Modul, das nicht abbuchen kann.
+        // A module that cannot charge.
         $c->insert('tl_consho_payment_method', ['id' => 10, 'type' => 'invoice', 'title' => 'Rechnung 2', 'published' => 1]);
-        // Veröffentlicht, aber dem Shop nicht zugeordnet.
+        // Published, but not assigned to the shop.
         $c->insert('tl_consho_payment_method', ['id' => 11, 'type' => FakeRecurringHandler::TYPE, 'title' => 'Fremde Karte', 'published' => 1]);
     }
 
     public function testNurLaufendeAboMitNichtMehrAbbuchenderZahlungsart(): void
     {
-        $this->subscription(1, 8);                  // bucht ab
-        $this->subscription(2, 9);                  // unveröffentlicht → Befund
-        $this->subscription(3, 10);                 // kann nicht abbuchen → Befund
-        $this->subscription(4, 11, 'suspended');    // nicht im Shop, ruhend → Befund
-        $this->subscription(5, 12);                 // gelöscht → Befund
-        $this->subscription(6, 9, 'ended');         // beendet → nichts
-        $this->subscription(7, 9, 'active', '');    // ohne Mandat → nichts
-        $this->subscription(8, 9, 'paused');        // pausiert → Befund (P106)
+        $this->subscription(1, 8);                  // charges
+        $this->subscription(2, 9);                  // unpublished → finding
+        $this->subscription(3, 10);                 // cannot charge → finding
+        $this->subscription(4, 11, 'suspended');    // not in the shop, suspended → finding
+        $this->subscription(5, 12);                 // deleted → finding
+        $this->subscription(6, 9, 'ended');         // ended → nothing
+        $this->subscription(7, 9, 'active', '');    // without a mandate → nothing
+        $this->subscription(8, 9, 'paused');        // paused → finding (P106)
 
         $issues = $this->source()->issues();
 

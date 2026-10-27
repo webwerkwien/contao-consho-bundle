@@ -55,7 +55,7 @@ class DbalLegalTextSource
         /*
          * The same conditions as the finding (LegalReadiness): element
          * visible and inside its window, article published and inside its
-         * window. Both reviews of 2026-09-22 found this half missing here too.
+         * window. This half was missing here too once.
          *
          * It has to be the same set, and that is not tidiness: the finding
          * decides whether the checkout opens, this decides what the checkout

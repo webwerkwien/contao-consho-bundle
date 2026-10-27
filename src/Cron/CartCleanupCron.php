@@ -7,7 +7,7 @@ use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Cart\CartLifetime;
 
 /**
- * Removes baskets nobody came back to (5.1, decision 2026-09-16).
+ * Removes baskets nobody came back to (5.1).
  *
  * This is a data protection job as much as a tidiness one: from C-5 on,
  * checkoutData carries addresses, a VAT ID result and a date of birth. A

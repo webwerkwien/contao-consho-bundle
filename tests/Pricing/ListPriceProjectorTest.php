@@ -39,7 +39,7 @@ class ListPriceProjectorTest extends TestCase
 
     public function testProjectsNetAndTheGrossOfTheHomeCountry(): void
     {
-        // Netto ist gespeichert, das Brutto entsteht mit dem Satz des Heimatlands (C25).
+        // Net is stored, the gross amount comes from the home country's rate (C25).
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([]);
         $writer->expects(self::once())->method('write')->with(1, 'EUR', 'AT', '10.0000', '12.0000');
@@ -49,7 +49,7 @@ class ListPriceProjectorTest extends TestCase
 
     public function testTwoEuroShopsInDifferentCountriesGetTwoRows(): void
     {
-        // Derselbe Nettopreis, zwei Brutto: 20 % in Österreich, 19 % in Deutschland.
+        // The same net price, two gross amounts: 20 % in Austria, 19 % in Germany.
         $written = [];
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([]);
@@ -82,8 +82,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testAMarketWithoutARateLosesItsRowInsteadOfKeepingAWrongGross(): void
     {
-        // Italien hat keinen Satz für die Klasse: keine Zeile, das Produkt ist dort
-        // nicht bepreist — und die Startseite meldet den fehlenden Satz.
+        // Italy has no rate for the class: no row, the product is not priced
+        // there — and the start page reports the missing rate.
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([
             ['currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000', 'subscriptionRule' => 0, 'alsoSubscription' => false],
@@ -152,12 +152,12 @@ class ListPriceProjectorTest extends TestCase
         self::assertSame([], $this->projector($this->oneEuroPrice(), $writer)->verify());
     }
 
-    // ── Löschen, was keinen Preis mehr hat ──────────────────────────────
+    // ── Deleting what no longer has a price ──────────────────────────────
 
     public function testRebuildDeletesTheRowOfAProductWhosePricesAreGone(): void
     {
-        // Produkt 2 hat keine Preiszeile mehr, aber noch eine Projektionszeile.
-        // Vorher hat rebuild nur geschrieben — das Produkt blieb mit altem Preis in der Liste.
+        // Product 2 no longer has a price row, but still a projection row.
+        // Previously rebuild only wrote — the product stayed in the list with its old price.
         $repository = $this->createMock(PriceRepositoryInterface::class);
         $repository->method('findProductIdsWithPrices')->willReturn([]);
         $repository->method('findCurrencies')->willReturn([]);
@@ -188,20 +188,20 @@ class ListPriceProjectorTest extends TestCase
         $writer->expects(self::once())->method('write')->with(1, 'EUR', 'AT', '10.0000', '12.0000');
         $writer->expects(self::once())->method('delete')->with(1, 'CHF', 'CH');
 
-        // Geändert durch I-1: die EUR-AT-Zeile ist gespeichert und unverändert
-        // (net 10.0000/gross 12.0000 wie berechnet) — sie zählt nicht mehr mit,
-        // nur die gelöschte CHF-CH-Zeile. Vorher 2.
+        // Changed by I-1: the EUR-AT row is stored and unchanged
+        // (net 10.0000/gross 12.0000 as calculated) — it no longer counts,
+        // only the deleted CHF-CH row does. Previously 2.
         self::assertSame(1, $this->projector($repository, $writer, markets: [['EUR', 'AT'], ['CHF', 'CH']], rates: ['AT' => '20.0000', 'CH' => '8.1000'])->refresh([1, 1]));
     }
 
-    // ── I-1: refresh() zählt nur echte Änderungen ───────────────────────
+    // ── I-1: refresh() counts only real changes ─────────────────────────
 
     public function testRefreshWritesAnUnchangedRowButDoesNotCountIt(): void
     {
-        // Der Grenzen-Cron ruft refresh() für einen fälligen, aber unveränderten
-        // Preis jede Minute auf (I-1) — write() muss laufen, damit der tstamp
-        // sich bewegt, die Zählung aber 0 bleiben, sonst würde jede Minute
-        // invalidiert, ohne dass sich am Brutto etwas ändert.
+        // The boundary cron calls refresh() every minute for a price that is due but
+        // unchanged (I-1) — write() must run so that the tstamp
+        // moves, but the count must stay 0, otherwise every minute would
+        // invalidate without anything changing in the gross amount.
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([['currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000', 'subscriptionRule' => 0, 'alsoSubscription' => false]]);
         $writer->expects(self::once())->method('write')->with(1, 'EUR', 'AT', '10.0000', '12.0000');
@@ -211,8 +211,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testRefreshComparesSqliteNumericFormAsDecimalsNotStrings(): void
     {
-        // SQLite liefert NUMERIC uneinheitlich zurück — '12' statt '12.0000'.
-        // Ein Stringvergleich hielte das fälschlich für eine Änderung.
+        // SQLite returns NUMERIC inconsistently — '12' instead of '12.0000'.
+        // A string comparison would wrongly take that for a change.
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([['currency' => 'EUR', 'country' => 'AT', 'net' => '10', 'gross' => '12', 'subscriptionRule' => 0, 'alsoSubscription' => false]]);
         $writer->expects(self::once())->method('write')->with(1, 'EUR', 'AT', '10.0000', '12.0000');
@@ -231,8 +231,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testRefreshCountsAStoredNetThatDiffersWhileTheGrossIsTheSame(): void
     {
-        // Beide Beträge müssen übereinstimmen — ein abweichendes Netto allein
-        // ist ebenfalls eine Änderung.
+        // Both amounts must match — a differing net alone
+        // is a change as well.
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([['currency' => 'EUR', 'country' => 'AT', 'net' => '9.0000', 'gross' => '12.0000', 'subscriptionRule' => 0, 'alsoSubscription' => false]]);
         $writer->expects(self::once())->method('write')->with(1, 'EUR', 'AT', '10.0000', '12.0000');
@@ -242,8 +242,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testVerifyReportsARowWithoutPriceWithoutChangingAnything(): void
     {
-        // Genau dieser Fall war für verify unsichtbar: Die Prüfmenge kam nur aus
-        // der Preistabelle, eine Zeile ohne Preis stand nie zur Prüfung.
+        // Exactly this case was invisible to verify: the set to check came only from
+        // the price table, a row without a price was never up for checking.
         $repository = $this->createMock(PriceRepositoryInterface::class);
         $repository->method('findProductIdsWithPrices')->willReturn([]);
         $repository->method('findCurrencies')->willReturn([]);
@@ -271,8 +271,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testVerifyReportsNothingForAMarketWithoutPriceAndWithoutRow(): void
     {
-        // Ein Markt, in dem der Artikel keinen Preis hat, und keine Zeile dazu:
-        // Es fehlt nichts, also meldet verify nichts.
+        // A market in which the article has no price, and no row for it:
+        // nothing is missing, so verify reports nothing.
         $repository = $this->createMock(PriceRepositoryInterface::class);
         $repository->method('findProductIdsWithPrices')->willReturn([1]);
         $repository->method('findCurrencies')->willReturn(['EUR', 'CHF']);
@@ -286,7 +286,7 @@ class ListPriceProjectorTest extends TestCase
         self::assertSame([], $this->projector($repository, $writer, markets: [['EUR', 'AT'], ['CHF', 'CH']], rates: ['AT' => '20.0000', 'CH' => '8.1000'])->verify());
     }
 
-    // ── Vererbung (A-4b, E2) ────────────────────────────────────────────
+    // ── Inheritance (A-4b, E2) ────────────────────────────────────────────
 
     public function testAVariantWithoutPricesOfItsOwnIsProjectedWithTheMainProductsPrice(): void
     {
@@ -310,8 +310,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testWhenTheMainProductLosesItsPriceAnInheritingVariantLosesItsRowToo(): void
     {
-        // Geändert wird nur das Hauptprodukt — die Variante muss trotzdem mit,
-        // sonst stünde sie mit dem geerbten, gelöschten Preis in der Liste.
+        // Only the main product is changed — the variant must still come along,
+        // otherwise it would stay in the list with the inherited, deleted price.
         $deleted = [];
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->willReturn([['currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000', 'subscriptionRule' => 0, 'alsoSubscription' => false]]);
@@ -328,7 +328,7 @@ class ListPriceProjectorTest extends TestCase
 
     public function testADeletedProductLosesItsRows(): void
     {
-        // Das Produkt steht nicht mehr in tl_consho_product — der Baum kennt es nicht.
+        // The product is no longer in tl_consho_product — the tree does not know it.
         $writer = $this->createMock(ProjectionWriterInterface::class);
         $writer->method('readAll')->with(5)->willReturn([['currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000', 'subscriptionRule' => 0, 'alsoSubscription' => false]]);
         $writer->expects(self::once())->method('delete')->with(5, 'EUR', 'AT');
@@ -336,13 +336,13 @@ class ListPriceProjectorTest extends TestCase
         $this->projector($this->repositoryWith([]), $writer, [])->refresh([5]);
     }
 
-    // ── Märkte abgleichen (C25) ─────────────────────────────────────────
+    // ── Reconciling markets (C25) ─────────────────────────────────────────
 
     public function testSyncMarketsBuildsOnceWithoutAStoredFingerprintAndThenDoesNothing(): void
     {
-        // Ohne gespeicherten Fingerabdruck (z. B. nach der Migration) baut
-        // syncMarkets() genau einmal neu — mit einem write() für EUR/AT; ein
-        // zweiter Aufruf mit unveränderten Märkten schreibt nichts mehr.
+        // Without a stored fingerprint (e.g. after the migration)
+        // syncMarkets() rebuilds exactly once — with one write() for EUR/AT; a
+        // second call with unchanged markets writes nothing more.
         $stored = null;
 
         $writer = $this->statefulWriter($stored);
@@ -356,9 +356,9 @@ class ListPriceProjectorTest extends TestCase
 
     public function testAChangedHomeCountryRebuilds(): void
     {
-        // Der Shop zog von DE nach AT: Jede Zeile trägt das Brutto des falschen
-        // Landes. Erst mit DE synchronisieren (setzt den Fingerabdruck), dann
-        // mit einem Projektor über AT auf demselben gespeicherten Stand.
+        // The shop moved from DE to AT: every row carries the gross amount of the wrong
+        // country. First synchronise with DE (sets the fingerprint), then
+        // with a projector for AT on the same stored state.
         $stored = null;
 
         $this->projector($this->oneEuroPrice(), $this->statefulWriter($stored), markets: [['EUR', 'DE']], rates: ['DE' => '19.0000'])->syncMarkets();
@@ -370,7 +370,7 @@ class ListPriceProjectorTest extends TestCase
 
     public function testTheOrderOfMarketsDoesNotMatter(): void
     {
-        // M-1: [EUR,AT],[EUR,DE] und [EUR,DE],[EUR,AT] sind derselbe Fingerabdruck.
+        // M-1: [EUR,AT],[EUR,DE] and [EUR,DE],[EUR,AT] are the same fingerprint.
         $stored = null;
 
         $this->projector($this->oneEuroPrice(), $this->statefulWriter($stored), markets: [['EUR', 'AT'], ['EUR', 'DE']], rates: ['AT' => '20.0000', 'DE' => '19.0000'])->syncMarkets();
@@ -383,9 +383,9 @@ class ListPriceProjectorTest extends TestCase
 
     public function testAMarketWithoutASinglePriceableArticleBuildsOnlyOnce(): void
     {
-        // I-2: IT hat keinen Satz für die Klasse, also nie eine geschriebene
-        // Zeile — der Fingerabdruck kommt trotzdem aus den Shop-Märkten, nicht
-        // aus den Zeilen, und ändert sich beim zweiten Aufruf nicht.
+        // I-2: IT has no rate for the class, so never a written
+        // row — the fingerprint still comes from the shop markets, not
+        // from the rows, and does not change on the second call.
         $stored = null;
 
         $writer = $this->statefulWriter($stored);
@@ -399,8 +399,8 @@ class ListPriceProjectorTest extends TestCase
 
     public function testRebuildLeavesTheFingerprintBehind(): void
     {
-        // Ein rebuild() (z. B. consho:price:rebuild) setzt den Fingerabdruck
-        // mit, ohne dass syncMarkets() gelaufen ist.
+        // A rebuild() (e.g. consho:price:rebuild) sets the fingerprint
+        // as well, without syncMarkets() having run.
         $stored = null;
 
         $this->projector($this->oneEuroPrice(), $this->statefulWriter($stored))->rebuild();
@@ -412,10 +412,10 @@ class ListPriceProjectorTest extends TestCase
 
     public function testTheFirstPriceInANewCurrencyDoesNotRebuild(): void
     {
-        // Der Fingerabdruck kommt aus den Märkten der Shops, nicht aus den
-        // bepreisten. Wird der erste CHF-Preis gespeichert, zieht
-        // PriceRefreshTriggerListener dieses eine Produkt nach — ein Neubau des
-        // ganzen Katalogs beim nächsten Speichern einer Seite wäre verschwendet.
+        // The fingerprint comes from the shops' markets, not from the
+        // priced ones. When the first CHF price is saved,
+        // PriceRefreshTriggerListener updates this one product — a rebuild of the
+        // whole catalogue at the next save of a page would be wasted.
         $stored = null;
         $markets = [['EUR', 'AT'], ['CHF', 'CH']];
         $rates = ['AT' => '20.0000', 'CH' => '8.1000'];
@@ -435,11 +435,11 @@ class ListPriceProjectorTest extends TestCase
     }
 
     /**
-     * Ein zustandsbehafteter Writer-Mock: der gespeicherte Fingerabdruck lebt
-     * in $stored, außerhalb des Mocks — per Referenz an eine Closure gereicht,
-     * die ihn liefert bzw. setzt. Ein neuer Aufruf dieser Methode liefert einen
-     * neuen Mock (für eigene write()-/delete()-Erwartungen), der auf demselben
-     * gespeicherten Stand aufsetzt — wie zwei Anfragen an derselben Datenbank.
+     * A stateful writer mock: the stored fingerprint lives
+     * in $stored, outside the mock — passed by reference to a closure
+     * that returns or sets it. A new call of this method returns a
+     * new mock (for its own write()/delete() expectations) that builds on the same
+     * stored state — like two requests against the same database.
      */
     private function statefulWriter(int|null &$stored): MockObject&ProjectionWriterInterface
     {
@@ -476,7 +476,7 @@ class ListPriceProjectorTest extends TestCase
         $taxClasses = $this->createMock(ArticleTaxClassesInterface::class);
         $taxClasses->method('taxClassOf')->willReturn(1);
 
-        // PriceCalculator ist final — also echt, mit demselben Repository.
+        // PriceCalculator is final — so the real one, with the same repository.
         return new ListPriceProjector(
             $repository,
             new ArticlePriceResolver(new PriceCalculator($repository), $repository, new BasePriceCalculator(), $this->grossCalculator($rates), $taxClasses),

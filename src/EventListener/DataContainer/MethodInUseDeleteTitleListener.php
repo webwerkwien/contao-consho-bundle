@@ -7,9 +7,8 @@ use Contao\CoreBundle\DependencyInjection\Attribute\AsHook;
 use Webwerkwien\ContaoConshoBundle\Catalog\CatalogReferences;
 
 /**
- * Says WHY the delete button of a shipping or payment method is grey
- * (Michael, 2026-09-25, on "Paket": „der Lösch-Button grau, obwohl ich als
- * Admin drinnen bin"). The method's delete voter refuses the delete of a
+ * Says WHY the delete button of a shipping or payment method is grey —
+ * even for an administrator. The method's delete voter refuses the delete of a
  * method an order references (CatalogReferences); Contao only greys the
  * icon, which reads like a missing permission.
  *
@@ -56,7 +55,7 @@ final class MethodInUseDeleteTitleListener
                 /*
                  * `title` alone lands in the icon's ALT (operations.html.twig,
                  * the disabled branch has no link around it) — and a browser
-                 * shows no alt on hover. Seen on c5 on 2026-09-25. The icon
+                 * shows no alt on hover. The icon
                  * itself carries the title.
                  */
                 $operation['title'] = $text;

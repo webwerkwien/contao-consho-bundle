@@ -17,19 +17,19 @@ class RecipientResolverTest extends TestCase
     public function testTheCustomerGetsTheOrderConfirmation(): void
     {
         $recipients = $this->resolver->forCustomer(
-            ['email' => 'kunde@example.org', 'firstname' => 'Michael', 'lastname' => 'Morgenbesser', 'language' => 'de'],
+            ['email' => 'kunde@example.org', 'firstname' => 'Eva', 'lastname' => 'Example', 'language' => 'de'],
         );
 
         self::assertCount(1, $recipients);
         self::assertSame('kunde@example.org', $recipients[0]->email);
-        self::assertSame('Michael Morgenbesser', $recipients[0]->name);
+        self::assertSame('Eva Example', $recipients[0]->name);
         self::assertSame('de', $recipients[0]->language);
     }
 
     /**
-     * The order carries its own language since task 1, and this is what it is
-     * for: a mail resent a year later goes out in the language the customer
-     * ordered in, not that of the back end user pressing the button.
+     * The order carries its own language, and this is what it is for: a mail
+     * resent a year later goes out in the language the customer ordered in,
+     * not that of the back end user pressing the button.
      */
     public function testTheOrderLanguageDecidesNotTheBackendLanguage(): void
     {

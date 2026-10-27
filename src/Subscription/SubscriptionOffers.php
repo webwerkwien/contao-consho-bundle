@@ -8,9 +8,9 @@ namespace Webwerkwien\ContaoConshoBundle\Subscription;
  * ask here; a second copy of "sale modes + rule groups" is the copy that
  * forgets one of them.
  *
- * Until variant A (2026-10-08) a third rule stood here: "sameTerm" only for a
- * business. Michael: „nicht automatisch, der Betreiber muss diese Jahresabos
- * auf Geschäftskunden limitieren" — the rule's customer groups do that now,
+ * Until variant A a third rule stood here: "sameTerm" only for a
+ * business. Not automatically any more: the operator limits such yearly
+ * plans to business customers — the rule's customer groups do that now,
  * and a note (SameTermOpenIssueSource) names a rule left open.
  *
  * 0 stands for the one-time sale, as in tl_consho_price.subscriptionRule.

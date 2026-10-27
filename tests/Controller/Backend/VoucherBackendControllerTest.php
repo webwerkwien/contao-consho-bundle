@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Controller\Backend\VoucherBackendController;
 
 /**
- * WG13: Was das Backend als Betrag und Datum annimmt.
+ * WG13: what the back end accepts as an amount and a date.
  */
 class VoucherBackendControllerTest extends TestCase
 {

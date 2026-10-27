@@ -13,7 +13,7 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CatalogCacheTagLi
 use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 
 /**
- * Produkt 7 mit Variante 8, Preis 21 an der Variante.
+ * Product 7 with variant 8, price 21 on the variant.
  */
 class CatalogCacheTagListenerTest extends TestCase
 {
@@ -33,7 +33,7 @@ class CatalogCacheTagListenerTest extends TestCase
 
     public function testSavingAVariantAddsTheListingsAndItsMainProduct(): void
     {
-        // So liefert der Kern: eigener Tag und Tabellen-Tag (Modus 1, keine ptable).
+        // This is what the core delivers: own tag and table tag (mode 1, no ptable).
         $core = ['contao.db.tl_consho_product.8', 'contao.db.tl_consho_product'];
 
         self::assertSame(
@@ -44,7 +44,7 @@ class CatalogCacheTagListenerTest extends TestCase
 
     public function testSavingAPriceAddsTheListingsAndTheMainProduct(): void
     {
-        // Über ptable hängt der Kern den Tag der Variante an.
+        // Via ptable the core adds the variant's tag.
         $core = ['contao.db.tl_consho_price.21', 'contao.db.tl_consho_product.8'];
 
         self::assertSame(
@@ -83,7 +83,7 @@ class CatalogCacheTagListenerTest extends TestCase
 
     public function testSubmittingInvalidatesTheRecordAgain(): void
     {
-        // Nur eine Übersetzung geändert → kein UPDATE → der Kern entwertet nichts.
+        // Only a translation changed → no UPDATE → the core invalidates nothing.
         $dc = $this->createMock(DC_Table::class);
         $dc->expects(self::once())->method('invalidateCacheTags');
 
@@ -93,14 +93,14 @@ class CatalogCacheTagListenerTest extends TestCase
     public function testHangsOnEveryTableItNeeds(): void
     {
         /*
-         * Fehlt eine Tabelle, zeigt eine gecachte Seite den alten Stand bis zum
-         * Ablauf — und nichts schlägt dabei fehl.
+         * If a table is missing, a cached page shows the old state until it
+         * expires — and nothing fails along the way.
          */
-        // tl_consho_subscription_rule seit Abo-2: Titel und Bedingungen einer
-        // Regel stehen in der Modellwahl jeder Produktseite, die sie anbietet.
-        // Versandarten und ihre Preise seit Connect-1: Das JSON-LD der
-        // Produktseite nennt die Versandkosten (K3). Zusatzfelder seit ZW-4:
-        // ihr Titel steht unter „Angaben" jeder Produktseite des Typs.
+        // tl_consho_subscription_rule since Abo-2: the title and conditions of a
+        // rule are in the model choice of every product page that offers it.
+        // Shipping methods and their prices since Connect-1: the JSON-LD of the
+        // product page names the shipping costs (K3). Custom fields since ZW-4:
+        // their title is under "Details" on every product page of the type.
         self::assertSame(
             ['tl_consho_custom_field', 'tl_consho_facet_page', 'tl_consho_manufacturer', 'tl_consho_price', 'tl_consho_product', 'tl_consho_product_type', 'tl_consho_property_group', 'tl_consho_property_option', 'tl_consho_shipping_method', 'tl_consho_shipping_price', 'tl_consho_shop', 'tl_consho_subscription_rule', 'tl_consho_tax_class', 'tl_consho_tax_rate'],
             $this->tablesOf(['onProduct', 'onPrice', 'onFacetPage', 'onShared'], 'config.oninvalidate_cache_tags'),
@@ -110,8 +110,8 @@ class CatalogCacheTagListenerTest extends TestCase
             $this->tablesOf(['onProductUndo', 'onPriceUndo', 'onFacetPageUndo', 'onSharedUndo'], 'config.onundo'),
         );
 
-        // Genau die Tabellen mit Feldern außerhalb des eigenen UPDATE — beim
-        // Zusatzfeld die Übersetzung des Titels.
+        // Exactly the tables with fields outside their own UPDATE — for the
+        // custom field, the translation of the title.
         self::assertSame(
             ['tl_consho_custom_field', 'tl_consho_manufacturer', 'tl_consho_product', 'tl_consho_product_type', 'tl_consho_property_group', 'tl_consho_property_option'],
             $this->tablesOf(['onSubmit'], 'config.onsubmit'),

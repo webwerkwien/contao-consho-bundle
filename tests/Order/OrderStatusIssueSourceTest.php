@@ -16,8 +16,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * D-7, M3 und M4 — mit dem echten OrderBalanceReader: Die SQL-Vorauswahl darf
- * nur eingrenzen, entscheiden muss der Saldo.
+ * D-7, M3 and M4 — with the real OrderBalanceReader: the SQL preselection
+ * may only narrow down, the balance has to decide.
  */
 final class OrderStatusIssueSourceTest extends TestCase
 {
@@ -36,7 +36,7 @@ final class OrderStatusIssueSourceTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
         DcaSchema::create($this->connection, 'tl_consho_order');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -90,8 +90,8 @@ final class OrderStatusIssueSourceTest extends TestCase
     }
 
     /**
-     * Die Vorauswahl hält eine storniert-und-erstattete Bestellung für einen
-     * Kandidaten (Zahlungen ≠ Summe); der Saldo sagt: nichts offen.
+     * The preselection takes a cancelled-and-refunded order for a candidate
+     * (payments ≠ total); the balance says: nothing open.
      */
     public function testDieVorauswahlEntscheidetNicht(): void
     {
@@ -112,8 +112,9 @@ final class OrderStatusIssueSourceTest extends TestCase
     }
 
     /**
-     * M4: nur der stornierende Zielstatus, in jedem der drei Felder. „Nach
-     * Zahlung → versandt" ist kein Befund: bei Nachnahme trifft es zu.
+     * M4: only the cancelling target status, in each of the three fields.
+     * "After payment → shipped" is not an issue: with cash on delivery it
+     * applies.
      */
     public function testEinStornierenderStatusAlsAutomatischesZiel(): void
     {
@@ -131,8 +132,8 @@ final class OrderStatusIssueSourceTest extends TestCase
     }
 
     /**
-     * Fable-Review D-7, S1: „wenn alles erledigt" → storniert kann greifen
-     * (OrderStatusAdvancerTest) — dort ist die Einstellung kein Fehler.
+     * D-7: "when everything is done" → cancelled can apply
+     * (OrderStatusAdvancerTest) — there the setting is not an error.
      */
     public function testWennAllesErledigtIstDarfStornieren(): void
     {
@@ -142,8 +143,8 @@ final class OrderStatusIssueSourceTest extends TestCase
     }
 
     /**
-     * Fable-Review D-7, K2: Der Hinweis gehört zum Shop der Bestellung, auch
-     * wenn ihr Status (fälschlich) einem anderen Shop gehört.
+     * D-7: the notice belongs to the order's shop, even when its status
+     * (wrongly) belongs to another shop.
      */
     public function testGruppiertNachDemShopDerBestellung(): void
     {
@@ -155,8 +156,8 @@ final class OrderStatusIssueSourceTest extends TestCase
     }
 
     /**
-     * Fable-Review D-7, S2: Contao fragt die Hinweise auf jeder Backend-Seite
-     * ab. Die Liste kommt für ein paar Minuten aus dem Cache.
+     * D-7: Contao queries the notices on every backend page. The list comes
+     * from the cache for a few minutes.
      */
     public function testDasErgebnisKommtAusDemCache(): void
     {

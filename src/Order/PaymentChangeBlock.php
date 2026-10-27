@@ -19,15 +19,14 @@ enum PaymentChangeBlock: string
 
     /**
      * The operator's status says the order is settled: it locks changes, or
-     * it counts as paid or cancelled (Michael, 2026-09-25, E3). The operator
+     * it counts as paid or cancelled (E3). The operator
      * holds the order still; the customer must not rebuild it underneath.
      */
     case StatusLocks = 'statusLocks';
 
     /**
-     * The payment method was changed once already (Michael, 2026-09-25,
-     * acceptance: „da so Dokumente generiert werden, empfehle ich, dass der
-     * Gast das pro Bestellung nur einmal machen kann"). Every change writes a
+     * The payment method was changed once already — once per order, because each
+     * change generates documents. Every change writes a
      * cancellation and an invoice; the spec left it unlimited, and a customer
      * clicking back and forth filled two number ranges for nothing.
      */
@@ -37,7 +36,7 @@ enum PaymentChangeBlock: string
     case MethodUnavailable = 'methodUnavailable';
 
     /**
-     * A withdrawal was accepted (D-3, Fable review B1). A method's fee or
+     * A withdrawal was accepted (D-3). A method's fee or
      * discount is worked out on the whole basket; after part of it was
      * withdrawn, a change would rebuild the payment lines on goods the
      * customer no longer buys. The operator settles it — or the customer pays
@@ -46,10 +45,9 @@ enum PaymentChangeBlock: string
     case AfterWithdrawal = 'afterWithdrawal';
 
     /**
-     * An order of a subscription past its payment term (Fable review Abo-5,
-     * S2). A change would give it a new term or none — and so lift the rest
+     * An order of a subscription past its payment term (Abo-5). A change would give it a new term or none — and so lift the rest
      * of the subscription without a payment (P39) or put it off. Before the
-     * term the change stays open, as Michael decided for follow-up orders.
+     * term the change stays open, as decided for follow-up orders.
      */
     case Overdue = 'overdue';
 }

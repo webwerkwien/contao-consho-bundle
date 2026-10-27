@@ -49,18 +49,18 @@ class DeliverabilityCheckerTest extends TestCase
     }
 
     /**
-     * Sending as bestellung@kundenshop.at through a Gmail account. This is the
+     * Sending as bestellung@example-shop.at through a mail provider's account. This is the
      * case a ban on sendmail:// would let straight through — which is why the
      * check hangs on alignment and not on the transport type.
      */
     public function testDetectsAMismatchBetweenSenderAndAuthenticatedDomain(): void
     {
         $checker = $this->checkerWith([
-            'kundenshop.at' => ['v=spf1 -all'],
-            '_dmarc.kundenshop.at' => ['v=DMARC1; p=reject'],
+            'example-shop.at' => ['v=spf1 -all'],
+            '_dmarc.example-shop.at' => ['v=DMARC1; p=reject'],
         ]);
 
-        $report = $checker->check('bestellung@kundenshop.at', 'someone@gmail.com');
+        $report = $checker->check('bestellung@example-shop.at', 'someone@mailprovider.example');
 
         self::assertFalse($report->isAligned);
         self::assertContains(DeliverabilityProblem::AlignmentMismatch, $report->problems);
@@ -69,18 +69,18 @@ class DeliverabilityCheckerTest extends TestCase
     /**
      * Relaxed alignment, the way DMARC itself defines it: a subdomain of the
      * sender domain counts as aligned. Without this, the everyday setup of
-     * sending as shop@kunde.at through smtp.kunde.at would be reported as a
+     * sending as shop@example.at through smtp.example.at would be reported as a
      * problem — and a check that cries wolf is a check nobody reads.
      */
     public function testASubdomainOfTheSenderDomainCountsAsAligned(): void
     {
         $checker = $this->checkerWith([
-            'kunde.at' => ['v=spf1 -all'],
-            '_dmarc.kunde.at' => ['v=DMARC1; p=none'],
+            'example.at' => ['v=spf1 -all'],
+            '_dmarc.example.at' => ['v=DMARC1; p=none'],
         ]);
 
-        self::assertTrue($checker->check('shop@kunde.at', 'noreply@mail.kunde.at')->isAligned);
-        self::assertTrue($checker->check('shop@mail.kunde.at', 'noreply@kunde.at')->isAligned);
+        self::assertTrue($checker->check('shop@example.at', 'noreply@mail.example.at')->isAligned);
+        self::assertTrue($checker->check('shop@mail.example.at', 'noreply@example.at')->isAligned);
     }
 
     /**
@@ -89,9 +89,9 @@ class DeliverabilityCheckerTest extends TestCase
      */
     public function testALookalikeDomainIsNotAligned(): void
     {
-        $checker = $this->checkerWith(['kunde.at' => ['v=spf1 -all']]);
+        $checker = $this->checkerWith(['example.at' => ['v=spf1 -all']]);
 
-        self::assertFalse($checker->check('shop@kunde.at', 'a@boesekunde.at')->isAligned);
+        self::assertFalse($checker->check('shop@example.at', 'a@badexample.at')->isAligned);
     }
 
     /**
@@ -115,10 +115,10 @@ class DeliverabilityCheckerTest extends TestCase
      * nothing, falls back to the organisational domain — a subdomain without
      * its own record is covered by the parent policy.
      *
-     * Found on 2026-09-09 against real DNS: an address at a subdomain was reported
-     * as having no DMARC although the parent domain carries p=quarantine and the
-     * subdomain inherits it. A check that reports a healthy setup as broken
-     * teaches operators to ignore it.
+     * Without that fallback, an address at a subdomain is reported against
+     * real DNS as having no DMARC although the parent domain carries
+     * p=quarantine and the subdomain inherits it. A check that reports a
+     * healthy setup as broken teaches operators to ignore it.
      */
     public function testDmarcOnTheParentDomainCountsForASubdomain(): void
     {
@@ -191,10 +191,10 @@ class DeliverabilityCheckerTest extends TestCase
 
     public function testTheReportNamesTheDomainsItJudged(): void
     {
-        $report = $this->checkerWith([])->check('shop@example.net', 'a@gmail.com');
+        $report = $this->checkerWith([])->check('shop@example.net', 'a@mailprovider.example');
 
         self::assertSame('example.net', $report->senderDomain);
-        self::assertSame('gmail.com', $report->authenticatedDomain);
+        self::assertSame('mailprovider.example', $report->authenticatedDomain);
     }
 
     /**

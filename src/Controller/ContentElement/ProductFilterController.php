@@ -26,7 +26,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
  * A separate element because filters stand in a side column and the listing in
  * the main one. Since 5.7 layout sections take content elements, so ONE filter
  * element in the layout serves every category page
- * (docs/block-b-katalog-frontend.md, 3.3).
+ * (Block B, 3.3).
  *
  * ── Which listing ─────────────────────────────────────────────────────────
  *

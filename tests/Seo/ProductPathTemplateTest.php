@@ -16,9 +16,9 @@ class ProductPathTemplateTest extends TestCase
     }
 
     /**
-     * Die Artikelnummer ist weder eindeutig noch Pflicht: Zwei Hauptprodukte mit
-     * derselben Nummer bekämen eine Adresse, eines ohne Nummer keine (Michael,
-     * 2026-10-22: „Variante 1"). Neben {alias} bleibt {sku} erlaubt.
+     * The SKU is neither unique nor required: two main products with the
+     * same number would get one address, one without a number none. {sku}
+     * stays allowed next to {alias}.
      */
     public function testDieArtikelnummerAlleinIdentifiziertKeinProdukt(): void
     {

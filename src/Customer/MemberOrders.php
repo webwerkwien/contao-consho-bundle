@@ -9,7 +9,7 @@ use Doctrine\DBAL\Connection;
  *
  *  - Always the orders placed under the account, in the shop of the page.
  *  - The guest orders under the account's address only once that address is
- *    CONFIRMED (Michael, 2026-09-28: „ok, mit Bestätigungsmail bauen").
+ *    CONFIRMED, by a confirmation mail.
  *    Contao's "Persönliche Daten" changes tl_member.email without any check;
  *    unconfirmed, an account could take on somebody else's address and read
  *    their guest orders — address, articles, documents — without a single

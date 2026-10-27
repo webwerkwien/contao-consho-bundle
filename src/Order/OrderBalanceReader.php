@@ -11,7 +11,7 @@ use Doctrine\DBAL\Connection;
  * The one place that answers "what is still open" — the order list, the
  * order page and the status check all ask here. Until D-1 the list and the
  * page each counted on their own, and the list counted shipping and payment
- * lines as goods (found in C-10): every order with shipping would have stayed
+ * lines as goods (C-10): every order with shipping would have stayed
  * "partly shipped" forever once deliveries existed.
  *
  * ── What counts ──────────────────────────────────────────────────────────
@@ -105,8 +105,7 @@ final class OrderBalanceReader implements OrderBalanceReaderInterface
         }
 
         /*
-         * A service marked "Leistung erbracht" is delivered in full (Michael,
-         * 2026-10-07, A4: „wie empfohlen") — it never goes into a parcel, so
+         * A service marked "Leistung erbracht" is delivered in full (A4) — it never goes into a parcel, so
          * without this it stayed "Lieferung: offen" in the list and "Zu liefern"
          * on the dashboard forever. After `anyShipped` on purpose: that one
          * means a parcel left, and a performed service is not one.

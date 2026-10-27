@@ -6,7 +6,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A delivery handler that shows what it delivered on the order page (block
- * licence, LZ-1; Michael, 2026-10-12). Optional, like
+ * licence, LZ-1). Optional, like
  * RevocableDeliveryHandlerInterface: a handler without it shows nothing there.
  *
  * The core keeps the rules (E1–E4): only on the order page, never in a mail;

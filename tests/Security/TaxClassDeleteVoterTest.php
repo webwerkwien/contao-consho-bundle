@@ -17,8 +17,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Subscription\SubscriptionSchema;
 
 /**
- * Steuerklasse 1 hängt an einem Produkt, Steuerklasse 2 an einer Versandart,
- * Steuerklasse 3 an nichts. Klasse 9 hat nur Sätze — die sind Kindzeilen.
+ * Tax class 1 belongs to a product, tax class 2 to a shipping method,
+ * tax class 3 to nothing. Class 9 has only rates — those are child rows.
  */
 class TaxClassDeleteVoterTest extends TestCase
 {
@@ -27,7 +27,7 @@ class TaxClassDeleteVoterTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        foreach (['tl_consho_tax_class', 'tl_consho_tax_rate', 'tl_consho_product', 'tl_consho_shipping_method', 'tl_consho_payment_method'] as $table) {
+        foreach (['tl_consho_tax_class', 'tl_consho_tax_rate', 'tl_consho_product', 'tl_consho_shipping_method', 'tl_consho_payment_method', 'tl_consho_voucher'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
         SubscriptionSchema::create($this->connection);
@@ -49,9 +49,9 @@ class TaxClassDeleteVoterTest extends TestCase
     public function testEineKlasseAnEinerVersandartIstNichtLoeschbar(): void
     {
         /*
-         * Das war der Punkt aus C-6, der C-7 überlebt hat. Er steht hier
-         * neben dem Produkt, weil ein Schutz, der nur die Versandart kennt,
-         * die halbe Antwort wäre.
+         * This was the gap from C-6 that survived C-7. It sits here next to the
+         * product, because a guard that only knows the shipping method would be
+         * half the answer.
          */
         self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote(new DeleteAction('tl_consho_tax_class', ['id' => '2'])));
     }
@@ -63,17 +63,17 @@ class TaxClassDeleteVoterTest extends TestCase
 
     public function testEigeneSaetzeSindKeinGrundZuVerweigern(): void
     {
-        // tl_consho_tax_rate ist Kindtabelle (ctable): Die Sätze gehen mit in
-        // den Papierkorb, sie halten die Klasse nicht fest.
+        // tl_consho_tax_rate is a child table (ctable): the rates go into the
+        // recycle bin with it, they do not hold on to the class.
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote(new DeleteAction('tl_consho_tax_class', ['id' => '9'])));
     }
 
     public function testAuchEinUnveroeffentlichtesProduktHaeltDieKlasseFest(): void
     {
         /*
-         * Es wird wieder veröffentlicht, und dann wäre die Klasse weg. Der
-         * Schaden entsteht ohnehin erst beim Anzeigen des Preises — der
-         * Verweis ist schon vorher tot.
+         * It gets published again, and then the class would be gone. The damage
+         * only shows when the price is displayed anyway — the reference is dead
+         * before that.
          */
         $this->connection->insert('tl_consho_product', ['id' => 7, 'title' => 'Entwurf', 'published' => 0, 'taxClass' => 3]);
 

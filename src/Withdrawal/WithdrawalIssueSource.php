@@ -12,7 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
  * Two findings about withdrawals for the back end start page (D-3). Neither
  * blocks the checkout — this is not a readiness source.
  *
- *  - **Open withdrawals** (F11, Michael 2026-09-27): received and not
+ *  - **Open withdrawals** (F11): received and not
  *    decided, or accepted and not refunded — per shop, with the earliest day a
  *    refund falls due (receipt + 14 days, § 357 Abs. 1 BGB, § 14 Abs. 1
  *    FAGG). Withdrawals are rare; the operator must not have to look for them.
@@ -69,7 +69,7 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
      * One finding per shop, with the day the first refund falls due.
      *
      * A shop that was deleted keeps its withdrawals — the refund is still
-     * owed. A join on the shop dropped them silently (review WA, K5); they
+     * owed. A join on the shop dropped them silently (WA); they
      * come as a general finding now, named by the shop's former id.
      *
      * @param list<array<string, mixed>> $rows ordered by shop, then receipt
@@ -136,7 +136,7 @@ final class WithdrawalIssueSource implements ConfigurationIssueSource
                 [
                     'shop' => (string) $shop['title'],
                     'types' => implode(', ', array_map(
-                        // default.php, which the start page has loaded (review D-3, S1).
+                        // default.php, which the start page has loaded (D-3).
                         static fn (string $type): string => (string) ($GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'][$type] ?? $type),
                         $missing,
                     )),

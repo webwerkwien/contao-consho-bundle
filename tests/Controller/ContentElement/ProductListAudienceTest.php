@@ -59,18 +59,19 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 require_once __DIR__.'/../../Notification/OrderConfirmationTest.php';
 
 /**
- * Für wen die Produktliste rechnet (C-4).
+ * Whom the product list calculates for (C-4).
  *
- * ⚠️ Warum es diesen Test gibt, obwohl getResponse() laut ProductListControllerTest
- * „in der Abnahme geprüft" wird: C-4 ersetzt in dieser Methode ein fest
- * verdrahtetes `$showsNet = false` durch eine Frage an PriceAudienceResolver.
- * Ein Test, der den Resolver direkt füttert, prüft nicht, ob der Controller
- * ihn überhaupt fragt — und die Abnahme im Browser prüft einen Fall, nicht
- * vier (Fälle 23 und 24 der Vault-Notiz „Prüfungen, die nicht prüfen was man
- * glaubt").
+ * ⚠️ Why this test exists although getResponse() is, according to
+ * ProductListControllerTest, checked in the browser: C-4 replaces a
+ * hard-wired `$showsNet = false` in this method with a question to
+ * PriceAudienceResolver. A test that feeds the resolver directly does not
+ * check whether the controller asks it at all — and a check in the browser
+ * covers one case, not four. A check can run and still leave the gaps
+ * standing, and the error can sit in how the object is put together while
+ * only the finished parts are checked.
  *
- * Deshalb nur die Zielgruppen-Frage hier, mit dem kleinsten Aufbau, der eine
- * Kachel zustande bringt: ein Shop, ein Startpunkt, ein Produkt mit Preis.
+ * Hence only the audience question here, with the smallest setup that
+ * produces a tile: one shop, one start point, one product with a price.
  */
 class ProductListAudienceTest extends TestCase
 {
@@ -92,8 +93,8 @@ class ProductListAudienceTest extends TestCase
         $this->insertShop(['id' => self::SHOP, 'title' => 'Shop', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(1, 'de', self::SHOP);
 
-        // Für DbalPinRepository: Die Liste fragt nach angehefteten Produkten,
-        // auch wenn keines angeheftet ist.
+        // For DbalPinRepository: the list asks for pinned products, even when
+        // none is pinned.
         $this->connection->executeStatement(
             "CREATE TABLE tl_content (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,13 +115,13 @@ class ProductListAudienceTest extends TestCase
         $this->insertProduct(['id' => self::PRODUCT, 'title' => 'Schwedenbitter', 'alias' => 'schwedenbitter', 'published' => 1]);
         $this->insertProductShop(['pid' => self::PRODUCT, 'shop' => self::SHOP]);
 
-        // 12,00 brutto = 10,00 netto bei 20 %. Beide Spalten stehen in der
-        // Projektion, seit C-1a, genau für diesen Fall.
+        // 12.00 gross = 10.00 net at 20 %. Both columns are in the projection,
+        // since C-1a, exactly for this case.
         $this->insertListPrice(['pid' => self::PRODUCT, 'currency' => 'EUR', 'country' => 'AT', 'net' => '10.0000', 'gross' => '12.0000']);
 
-        // Die Sichtbarkeitsprojektion baut der echte Projektor, nicht dieser
-        // Test: Eine von Hand geschriebene Zeile prüfte am Ende die eigene
-        // Abschrift der Regeln statt der Regeln (Fall 23g).
+        // The visibility projection is built by the real projector, not by this
+        // test: a hand-written row would in the end check the test's own copy of
+        // the rules instead of the rules.
         (new VisibilityProjector(
             $this->connection,
             new VisibilityRows(new VisibilityCriteria()),
@@ -138,16 +139,15 @@ class ProductListAudienceTest extends TestCase
         self::assertFalse($data['showsNet']);
         self::assertSame('', $data['ownPriceGroup']);
 
-        // Der ROHE Wert der Kachel, nicht der formatierte: Er sagt, welche
-        // Spalte der Projektion gelesen wurde — und genau das ist die Frage.
+        // The RAW value of the tile, not the formatted one: it says which column
+        // of the projection was read — and that is exactly the question.
         self::assertSame('12', $data['products'][0]->price);
     }
 
     public function testEinMitgliedDerNettogruppeSiehtNetto(): void
     {
-        // Die Verdrahtung, um die es hier geht: Der Controller fragt den
-        // Resolver, und die Antwort erreicht sowohl die Kachel als auch die
-        // Aussage für das Template.
+        // The wiring this is about: the controller asks the resolver, and the
+        // answer reaches both the tile and the statement for the template.
         $this->netPriceGroups([3]);
 
         $data = $this->render([3]);
@@ -168,8 +168,8 @@ class ProductListAudienceTest extends TestCase
 
     public function testOhneAuswahlAmShopSiehtAuchEinHaendlerBrutto(): void
     {
-        // Der frisch angelegte Shop. Ein Vorgabewert „Angemeldete sehen netto"
-        // wäre hier grün und falsch.
+        // The freshly created shop. A default "logged-in users see net" would be
+        // green here and wrong.
         $this->netPriceGroups([]);
 
         self::assertFalse($this->render([3])['showsNet']);
@@ -177,26 +177,26 @@ class ProductListAudienceTest extends TestCase
 
     public function testDerHinweisErscheintNurFuerEineGruppeMitPreisen(): void
     {
-        // E1: Die Kachel zeigt den Listenpreis, weil die Projektion keine
-        // Gruppendimension hat. Der Hinweis sagt, wo der eigene Preis steht —
-        // und nur dem, der einen hat.
+        // E1: the tile shows the list price because the projection has no group
+        // dimension. The notice says where one's own price is — and only to
+        // whoever has one.
         $this->netPriceGroups([]);
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '8.0000', 'currency' => 'EUR', 'customerGroup' => 3]);
 
         self::assertSame('Händler', $this->render([3])['ownPriceGroup']);
         self::assertSame('', $this->render([4])['ownPriceGroup']);
 
-        // Und nie einem Gast: Eine Gruppe kommt vom Betreiber, nicht vom
-        // Anmelden — „als Kunde zahlen Sie weniger" wäre für fast jeden Gast
-        // ein Versprechen, das der Shop nicht hält.
+        // And never to a guest: a group comes from the operator, not from
+        // logging in — "as a customer you pay less" would be a promise to almost
+        // every guest that the shop does not keep.
         self::assertSame('', $this->render()['ownPriceGroup']);
     }
 
     public function testDerGruppenpreisAendertDieKachelNicht(): void
     {
-        // Die Entscheidung aus Block A 3.6, hier festgehalten: Die Kachel
-        // liest die Projektion, und die kennt nur den Listenpreis. Sonst
-        // stünde hier 8,00 — und die Sortierung daneben wäre eine andere.
+        // The decision from Block A 3.6, recorded here: the tile reads the
+        // projection, and that knows only the list price. Otherwise this would
+        // say 8.00 — and the sorting next to it would be a different one.
         $this->netPriceGroups([3]);
         $this->insertPrice(['pid' => self::PRODUCT, 'net' => '8.0000', 'currency' => 'EUR', 'customerGroup' => 3]);
 
@@ -216,7 +216,7 @@ class ProductListAudienceTest extends TestCase
     }
 
     /**
-     * @param list<int>|null $memberGroups null = niemand angemeldet
+     * @param list<int>|null $memberGroups null = nobody logged in
      *
      * @return array<string, mixed>
      */
@@ -226,11 +226,11 @@ class ProductListAudienceTest extends TestCase
         $page->method('__get')->willReturnCallback(static fn (string $key): mixed => ['id' => self::PAGE, 'type' => 'regular', 'rootId' => 1, 'language' => 'de'][$key] ?? null);
 
         /*
-         * ⚠️ __isset, nicht nur __get. Der Controller liest `$page->language ?? ''`,
-         * und der Null-Koaleszenz-Operator fragt bei magischen Eigenschaften
-         * ZUERST __isset(); ein Doppel, das dort false sagt, liefert '' und
-         * ruft __get nie. Die Liste suchte dann in der Sprache "" und fand
-         * nichts — sichtbar allein daran, dass die Kacheln fehlten.
+         * ⚠️ __isset, not just __get. The controller reads `$page->language ?? ''`,
+         * and for magic properties the null coalescing operator asks __isset()
+         * FIRST; a double that says false there returns '' and never calls
+         * __get. The list then searched in the language "" and found nothing —
+         * visible only in that the tiles were missing.
          */
         $page->method('__isset')->willReturn(true);
 
@@ -326,8 +326,8 @@ class ProductListAudienceTest extends TestCase
     }
 
     /**
-     * Echter FrontendUser ohne Framework, wie in CartResolverTest: Der Resolver
-     * entscheidet an `instanceof FrontendUser`.
+     * A real FrontendUser without the framework, as in CartResolverTest: the
+     * resolver decides on `instanceof FrontendUser`.
      *
      * @param list<int>|null $groups
      */

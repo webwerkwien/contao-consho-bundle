@@ -24,12 +24,13 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Widerruf speichern, dann bestätigen (Spec D 6.1, Schritt 4). Echte Salden
- * und echtes Fenster auf SQLite; die Mail ist ein Spion, ihr Inhalt steht in
+ * Record a withdrawal, then confirm it (Spec D 6.1, step 4). Real balances
+ * and a real window on SQLite; the mail is a spy, its content is covered in
  * OrderEventMailTest.
  *
- * Schema wie die DCA (Prüfungsnotiz, Fall 31): tl_consho_withdrawal mit
- * (`pid`, `number`) eindeutig, `part` und `message` NULL-fähig.
+ * Schema as the DCA has it (a test schema must use the production column
+ * names): tl_consho_withdrawal with (`pid`, `number`) unique, `part` and
+ * `message` nullable.
  */
 final class WithdrawalRecorderTest extends TestCase
 {
@@ -51,13 +52,13 @@ final class WithdrawalRecorderTest extends TestCase
 
     protected function setUp(): void
     {
-        // K2: the remainder is read under the order's lock; SQLite drops the clause.
+        // The remainder is read under the order's lock; SQLite drops the clause.
         $this->connection = SqliteWithoutRowLocks::connection();
         SqliteWithoutRowLocks::$locked = [];
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_order');
         DcaSchema::create($this->connection, 'tl_consho_order_status');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         DcaSchema::create($this->connection, 'tl_consho_payment');
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
@@ -104,8 +105,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * Abo-8, P77: Eine Abo-Zeile ist nur ganz widerrufbar. Das Formular bietet
-     * sie nur ganz an; ein Teil kommt nur aus einem veränderten Formular.
+     * Abo-8, P77: A subscription line can only be withdrawn as a whole. The
+     * form only offers it as a whole; a part can only come from a tampered form.
      */
     public function testEineAboZeileNurGanz(): void
     {
@@ -133,8 +134,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * Die Nummer „-Wn+1" ist schon vergeben (ein gleichzeitiger Widerruf):
-     * der eindeutige Schlüssel weist ab, es gilt die nächste.
+     * The number "-Wn+1" is already taken (a simultaneous withdrawal): the
+     * unique key rejects it, the next one applies.
      */
     public function testBelegteNummerWirdUebersprungen(): void
     {
@@ -144,8 +145,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * Bestellnummern sind nur je Shop eindeutig: dieselbe Nummer in einem
-     * anderen Shop darf den Widerruf nicht blockieren.
+     * Order numbers are only unique per shop: the same number in another shop
+     * must not block the withdrawal.
      */
     public function testGleicheBestellnummerEinesAnderenShops(): void
     {
@@ -155,10 +156,10 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * Nachlese K2: Zwei gleichzeitige Widerrufe derselben Restmenge gingen
-     * beide durch. Die Restmenge wird jetzt unter der Sperre der Bestellung
-     * gelesen — SQLite kennt keine Sperre, also belegt der Test, DASS sie
-     * genommen wird, und zwar bevor geprüft wird.
+     * Nachlese: Two simultaneous withdrawals of the same remaining quantity both
+     * went through. The remaining quantity is now read under the order's lock
+     * — SQLite has no lock, so the test shows THAT it is taken, and before
+     * the check.
      */
     public function testRestmengeUnterDerSperreDerBestellung(): void
     {
@@ -211,9 +212,9 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * WA, B1 (Michael, 2026-10-22): Das Fenster rechnet ab Versand, die Frist
-     * ab Erhalt. Was danach eingeht, wird gespeichert, bestätigt und markiert
-     * — nicht mehr abgelehnt. Bis dahin: Closed, nichts gespeichert.
+     * WA, B1: The window counts from shipping, the period from receipt. What
+     * comes in after it is stored, confirmed and flagged — no longer rejected.
+     * Until then: Closed, nothing stored.
      */
     public function testNachFensterendeGespeichertUndMarkiert(): void
     {
@@ -240,8 +241,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * B1: Nur der zeitliche Schluss wird zur Markierung. Ohne Widerrufsfunktion
-     * (Frist 0) bleibt es eine Ablehnung — da ist nichts abgelaufen.
+     * B1: Only the closing by time becomes a flag. Without the withdrawal
+     * function (period 0) it remains a rejection — nothing has expired there.
      */
     public function testOhneWiderrufsfunktionWeiterAbgelehnt(): void
     {
@@ -254,9 +255,9 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * WA, A1–A3: Passt keine Bestellung, wird trotzdem gespeichert — ohne
-     * Bestellung, mit dem Shop, der eingetippten Bestellnummer und der
-     * eingegebenen Adresse; bestätigt wird an diese Adresse.
+     * WA, A1–A3: If no order matches, it is stored anyway — without an order,
+     * with the shop, the order number typed in and the address entered; the
+     * confirmation goes to that address.
      */
     public function testNichtZugeordnetWirdGespeichertUndAnDieEingegebeneAdresseBestaetigt(): void
     {
@@ -293,8 +294,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * A3: Ist die Obergrenze verbraucht, wird trotzdem gespeichert — nur die
-     * Mail fällt aus, wie bei einem ausgefallenen Mailserver.
+     * A3: If the limit is used up, it is stored anyway — only the mail is
+     * skipped, as with a failed mail server.
      */
     public function testUeberDerObergrenzeGespeichertAberNichtBestaetigt(): void
     {
@@ -312,8 +313,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * A3: Je Adresse begrenzt, nicht für alle zusammen — sonst sperrte ein
-     * Fremder mit seinen Versuchen die Bestätigung eines anderen.
+     * A3: Limited per address, not for all together — otherwise a stranger
+     * with their attempts would block someone else's confirmation.
      */
     public function testDieObergrenzeJeAdresseZaehltJedeAdresseFuerSich(): void
     {
@@ -338,8 +339,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * Der Widerruf gilt mit dem Eingang — ein ausgefallener Mailserver ändert
-     * nichts daran, nur `confirmationSentAt` bleibt leer.
+     * The withdrawal is valid on receipt — a failed mail server changes nothing
+     * about that, only `confirmationSentAt` stays empty.
      */
     public function testOhneMailBleibtDerWiderrufStehen(): void
     {
@@ -361,8 +362,8 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
-     * Review WA, K2 und K3: eine Flut auf EINE Adresse zehrt das Kontingent
-     * des Shops nicht auf, und die Grenze ist eine Warnung, kein Fehler.
+     * WA: a flood to ONE address does not use up the shop's quota, and the
+     * limit is a warning, not an error.
      */
     public function testDieAdresseZuerstUndDieGrenzeAlsWarnung(): void
     {

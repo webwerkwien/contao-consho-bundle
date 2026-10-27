@@ -23,8 +23,8 @@ class DbalOrderConfirmationSourceTest extends TestCase
     }
 
     /**
-     * Nach einem Wechsel der Zahlungsart (C-10) trägt eine Bestellung eine
-     * stornierte und eine neue Rechnung. Angehängt wird die, die gilt.
+     * After a change of payment method (C-10) an order carries a cancelled and
+     * a new invoice. The valid one is attached.
      */
     public function testDieStornierteRechnungWirdUebergangen(): void
     {
@@ -39,8 +39,8 @@ class DbalOrderConfirmationSourceTest extends TestCase
     }
 
     /**
-     * C-10: Die Mail nach dem Wechsel liest Storno und neue Rechnung per Id —
-     * aber nur Belege DIESER Bestellung.
+     * C-10: The mail after the change reads cancellation and new invoice by
+     * id — but only documents of THIS order.
      */
     public function testEinBelegWirdNurUeberSeineBestellungGefunden(): void
     {
@@ -85,8 +85,8 @@ class DbalOrderConfirmationSourceTest extends TestCase
     }
 
     /**
-     * Der Name der Betreiberkopie steht im Mail-Kopf, und ein Kopf ist kein
-     * HTML: Contaos Kodierung („Kräuter &amp; Co") muss vorher weg.
+     * The name of the operator copy stands in the mail header, and a header is
+     * not HTML: Contao's encoding ("Kräuter &amp; Co") has to go first.
      */
     public function testDerBetreibernameKommtDekodiert(): void
     {
@@ -104,7 +104,7 @@ class DbalOrderConfirmationSourceTest extends TestCase
 
     public function testDerStartpunktFolgtDerSpracheDerBestellung(): void
     {
-        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT '')");
+        $this->createPageTable();
         $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de']);
         $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en']);
         $this->connection->insert('tl_page', ['id' => 6, 'type' => 'regular', 'consho_shop' => 1, 'language' => 'en']);
@@ -112,9 +112,38 @@ class DbalOrderConfirmationSourceTest extends TestCase
 
         self::assertSame(5, $this->source()->rootOf(1, 'en'));
         self::assertSame(2, $this->source()->rootOf(1, 'de'));
-        // Keine passende Sprache: irgendein Startpunkt des Shops, stets derselbe.
+        // No matching language and no fallback root: the lowest id, always the same one.
         self::assertSame(2, $this->source()->rootOf(1, 'fr'));
         self::assertNull($this->source()->rootOf(9, 'de'));
+    }
+
+    public function testOhnePassendeSpracheGiltDerFallbackStartpunkt(): void
+    {
+        $this->createPageTable();
+        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de']);
+        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'fallback' => '1']);
+
+        self::assertSame(5, $this->source()->rootOf(1, 'fr'));
+        // The language still comes first.
+        self::assertSame(2, $this->source()->rootOf(1, 'de'));
+    }
+
+    public function testEinUnveroeffentlichterStartpunktKommtZuletzt(): void
+    {
+        $this->createPageTable();
+        $this->connection->insert('tl_page', ['id' => 2, 'type' => 'root', 'consho_shop' => 1, 'language' => 'de', 'published' => '']);
+        $this->connection->insert('tl_page', ['id' => 5, 'type' => 'root', 'consho_shop' => 1, 'language' => 'en', 'fallback' => '1']);
+        $this->connection->insert('tl_page', ['id' => 7, 'type' => 'root', 'consho_shop' => 2, 'language' => 'de', 'published' => '']);
+
+        // The German root is offline: its links would lead nowhere.
+        self::assertSame(5, $this->source()->rootOf(1, 'de'));
+        // Better an offline root than none.
+        self::assertSame(7, $this->source()->rootOf(2, 'de'));
+    }
+
+    private function createPageTable(): void
+    {
+        $this->connection->executeStatement("CREATE TABLE tl_page (id INTEGER PRIMARY KEY, type TEXT NOT NULL DEFAULT '', consho_shop INTEGER NOT NULL DEFAULT 0, language TEXT NOT NULL DEFAULT '', fallback TEXT NOT NULL DEFAULT '', published TEXT NOT NULL DEFAULT '1')");
     }
 
     private function source(): DbalOrderConfirmationSource

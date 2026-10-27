@@ -7,8 +7,8 @@ use Webwerkwien\ContaoConshoBundle\Shipping\ShippingLimits;
 use Webwerkwien\ContaoConshoBundle\Shipping\ShippingLine;
 
 /**
- * E-5, V4: Grenzen je Stück — längste Seite, Gurtmaß, Gewicht. 0 heißt ohne
- * Grenze, ein Artikel ohne Maße passt.
+ * E-5, V4: Limits per item — longest side, girth, weight. 0 means no
+ * limit, an article without dimensions fits.
  */
 class ShippingLimitsTest extends TestCase
 {
@@ -18,8 +18,8 @@ class ShippingLimitsTest extends TestCase
     }
 
     /**
-     * Die längste Seite ist die längste, gleich in welchem Feld sie steht:
-     * Ein Brett von 120 × 20 × 2, als „Breite 120" erfasst, bleibt 120 lang.
+     * The longest side is the longest, no matter which field it is in:
+     * a board of 120 × 20 × 2, entered as "width 120", stays 120 long.
      */
     public function testDieLaengsteSeiteGleichInWelchemFeld(): void
     {
@@ -31,7 +31,7 @@ class ShippingLimitsTest extends TestCase
 
     public function testGurtmassMitDerLaengstenSeiteAlsLaenge(): void
     {
-        // 120 + 2×60 + 2×60 = 360; als 60 + 2×120 + 2×60 gerechnet wären es 420.
+        // 120 + 2×60 + 2×60 = 360; computed as 60 + 2×120 + 2×60 it would be 420.
         $limits = new ShippingLimits('0.0000', '360.0000');
 
         self::assertTrue($limits->admits($this->piece('60', '120', '60')));

@@ -9,7 +9,7 @@ use Doctrine\DBAL\Connection;
 /**
  * A copied product takes its shops, properties and variant options along.
  *
- * Found at the acceptance of Abo-5 (2026-09-30): "Speichern und duplizieren"
+ * Before Abo-5, "Speichern und duplizieren"
  * copied the row, the prices and the subscription rules — but not the shop
  * assignment. The copy was published and reachable nowhere (a main product
  * is visible only where it is assigned, VisibilityCriteria::assignedToShop).
@@ -19,9 +19,7 @@ use Doctrine\DBAL\Connection;
  * and child tables, and these fields have no column.
  *
  * ⚠️ Variants are NOT copied along with their main product: they are rows of
- * the same table, and `ctable` names only prices and translations. (The first
- * version of this comment claimed the opposite, without looking — review
- * Abo-6, S3.) A copied VARIANT does come through here, with its own id; its
+ * the same table, and `ctable` names only prices and translations. A copied VARIANT does come through here, with its own id; its
  * variant options stay behind — copied, they would make a second variant with
  * the same combination under the same main product, and the variant matrix
  * would silently take the first.

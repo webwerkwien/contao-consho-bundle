@@ -64,11 +64,10 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
     }
 
     /**
-     * Mail-Transport und Heimatland (11.3). Sie standen bis zum zweiten
-     * Review vom 2026-09-22 in DbalConfigurationIssueSource — zusammen mit
-     * der ganzen Steuerdiagnose, die dann bei jedem Checkout-Aufruf im
-     * Frontend mitlief, eine Abfrage je Steuerklasse je Shop. Hier kosten
-     * sie eine Abfrage, die es ohnehin gibt.
+     * Mail transport and home country (11.3). They used to be in
+     * DbalConfigurationIssueSource — together with the whole tax diagnosis,
+     * which then ran on every checkout call in the front end, one query per
+     * tax class per shop. Here they cost a query that is there anyway.
      *
      * @return list<ConfigurationIssue>
      */
@@ -100,8 +99,7 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
          * all is a different situation, already reported as CurrencyMissing /
          * RootWithoutCurrency, and saying it twice trains people to skim.
          *
-         * 🔴 PUBLISHED ONLY. Found on c5 on 2026-09-22, in the acceptance of
-         * C-5 itself: two unpublished test start points of shop 1 had no
+         * 🔴 PUBLISHED ONLY. In C-5, two unpublished start points of a shop had no
          * checkout page, so this finding fired, and through the readiness
          * check it BLOCKED THE CHECKOUT of a shop whose live start point was
          * set up correctly. An unpublished start point serves nobody — a
@@ -147,7 +145,7 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
          * article of that page. The other is an element nested in a CONTENT
          * element — an element group, an accordion — which carries
          * `ptable = 'tl_content'` and whose `pid` is the outer element. The
-         * review of 2026-09-22 caught the first version claiming to handle
+         * first version claimed to handle
          * "anything nested" while only joining tl_article: a shop with its
          * checkout inside an accordion would have been reported as empty and,
          * through the readiness check, BLOCKED.
@@ -200,7 +198,7 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
      * The other two shop pages: basket and order (11.3, first row).
      *
      * They arrived with C-6, which first put them in the legal source next
-     * door. The review of 2026-09-22 moved them here, where the checkout page
+     * door, and moved here, where the checkout page
      * already lives: a missing page is a site that is not finished, not a shop
      * that may not sell.
      *
@@ -210,7 +208,7 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
      * visitor staring at nothing after adding an article.
      *
      * The order page is checked for its element since C-10, which brought the
-     * element (Michael, 2026-09-25, E5). Before that an empty page was all an
+     * element (E5). Before that an empty page was all an
      * operator could honestly produce.
      *
      * @return list<ConfigurationIssue>
@@ -306,12 +304,11 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
     /**
      * A root page that actually serves somebody. Written once — five queries
      * use it, and five copies would be five chances to forget `published`
-     * again (the C-5 acceptance).
+     * again (C-5).
      */
     /**
      * An article or element that renders now: its flag, and inside its
-     * start/stop — as in DbalLegalReadinessIssueSource. Found at the deploy of
-     * C-10: the order page's article was unpublished, and the finding said
+     * start/stop — as in DbalLegalReadinessIssueSource. In C-10 the order page's article was unpublished, and the finding said
      * nothing, because only `invisible` was asked.
      */
     private static function visible(string $alias, string $flag): string
@@ -341,9 +338,9 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
     }
 
     /**
-     * Die volle Minute, wie Contao sie für `start`/`stop` vergleicht. Eine
-     * Sekunde wäre genauer und würde die Abfrage bei jedem Aufruf neu
-     * ausführen lassen — Contao selbst rundet hier ebenso.
+     * The full minute, as Contao compares it for `start`/`stop`. A second would
+     * be more precise and would make the query run anew on every call — Contao
+     * itself rounds the same way here.
      */
     private function minute(): string
     {
@@ -351,7 +348,7 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
     }
 
     /**
-     * Titel je Shop, in der Reihenfolge, in der die Abfrage sie lieferte.
+     * Titles per shop, in the order the query returned them.
      *
      * @param list<array<string, mixed>> $rows
      *

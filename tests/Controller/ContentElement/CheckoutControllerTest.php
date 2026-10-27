@@ -88,16 +88,17 @@ use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Verdrahtung des Checkout-Elements.
+ * The wiring of the checkout element.
  *
- * ⚠️ Warum es diesen Test gibt: Der Rechenschritt ist einzeln geprüft, aber
- * ein Test, der den Rechner direkt füttert, prüft nicht, ob der Controller ihn
- * überhaupt fragt — und ob ein Formular dort ankommt, wo es hin soll. Genau
- * diese Lücke war am 2026-09-21 der Befund zu `basePriceNet` (Fall 24 der
- * Vault-Notiz „Prüfungen, die nicht prüfen was man glaubt").
+ * ⚠️ Why this test exists: the calculation step is checked on its own, but
+ * a test that feeds the calculator directly does not check whether the
+ * controller asks it at all — and whether a form arrives where it is meant
+ * to go. Exactly this gap was the issue with `basePriceNet`: the error sat
+ * in how the parts are put together, and only the finished parts were
+ * checked.
  *
- * Der Warenkorb läuft hier echt über SQLite; Preise, Versand- und
- * Zahlungsarten sind Doubles, weil sie an dieser Frage nichts ändern.
+ * The cart runs for real over SQLite here; prices, shipping and payment
+ * methods are doubles because they change nothing about this question.
  */
 class CheckoutControllerTest extends TestCase
 {
@@ -110,19 +111,19 @@ class CheckoutControllerTest extends TestCase
     private const ARTICLE = 7;
 
     /**
-     * Die Bestellseite am Startpunkt. Ohne sie beantwortet der Kaufklick
-     * `noOrderPage` — und das ist kein Testdetail, sondern die Absicht:
-     * Eine Bestellung, deren Bestätigung niemand sehen kann, entsteht nicht.
+     * The order page at the start point. Without it the purchase click answers
+     * `noOrderPage` — and that is not a test detail but the intent: an order
+     * whose confirmation nobody can see does not come into being.
      */
     private const ORDER_PAGE = 456;
 
-    /** Auf 0 gesetzt heißt: Der Startpunkt nennt keine Bestellseite. */
+    /** Set to 0 means: the start point names no order page. */
     private int $orderPage = self::ORDER_PAGE;
 
     /**
-     * Genau 43 base64url-Zeichen. CartToken::fromRequest() filtert auf die
-     * Form, die generate() erzeugt — ein kürzeres Testtoken fällt durch, und
-     * der Controller fände dann nie einen Warenkorb.
+     * Exactly 43 base64url characters. CartToken::fromRequest() filters for
+     * the form generate() produces — a shorter test token fails, and the
+     * controller would then never find a cart.
      */
     private const TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
@@ -138,13 +139,13 @@ class CheckoutControllerTest extends TestCase
 
     private bool $termsRequired = false;
 
-    /** F-3: der Artikel des Tests ist digital. */
+    /** F-3: the test's article is digital. */
     private bool $digital = false;
 
-    // DL1: die Art des digitalen Artikels — digital oder Dienstleistung.
+    // DL1: the kind of the digital article — digital or service.
     private string $digitalKind = 'digital';
 
-    // Abo-2: die Gruppen des Mitglieds.
+    // Abo-2: the member's groups.
 
     /** @var list<int> */
     private array $memberGroups = [];
@@ -154,21 +155,21 @@ class CheckoutControllerTest extends TestCase
     /** @var list<string> */
     private array $deliveryCountries = [];
 
-    // DL4: Deutschland mit eigenem Satz (19 %); sonst kennt nur AT einen.
+    // DL4: Germany with its own rate (19 %); otherwise only AT knows one.
     private bool $germanRate = false;
 
     private ShippingCountryCoverage|null $coverage = null;
 
-    // Block GARAN: null — kein Label, wie bisher.
+    // Block GARAN: null — no label, as before.
     private DurabilityLabelImages|null $durability = null;
 
-    // Block H: die Warenkorbregeln, wo ein Test sie braucht.
+    // Block H: the cart rules, where a test needs them.
     private \Webwerkwien\ContaoConshoBundle\Cart\Discount\CartDiscounts|null $discounts = null;
 
     /**
-     * Gemockt, nicht echt: Was der Kaufklick AUSLÖST, prüft OrderPlacerTest
-     * gegen eine Verbindung, die Transaktionen mitschreibt. Hier geht es um
-     * die vier Prüfungen davor und darum, wohin die Antwort führt.
+     * Mocked, not real: what the purchase click TRIGGERS is checked by
+     * OrderPlacerTest against a connection that records transactions. This is
+     * about the four checks before it and where the response leads.
      */
     private PurchaseHandlerInterface&MockObject $purchaseHandler;
 
@@ -214,9 +215,8 @@ class CheckoutControllerTest extends TestCase
 
         self::assertSame(2, CheckoutController::stepOf($request, 3));
 
-        // Außerhalb des Bereichs wird eingefangen, nicht zurückgewiesen: Ein
-        // Checkout, der wegen einer 9 in der Adresse gar nicht erscheint, ist
-        // die schlechtere Antwort.
+        // Out of range is caught, not rejected: a checkout that does not appear
+        // at all because of a 9 in the address is the worse answer.
         self::assertSame(3, CheckoutController::stepOf(Request::create('https://example.org/?consho_step=9'), 3));
         self::assertSame(1, CheckoutController::stepOf(Request::create('https://example.org/?consho_step=-4'), 3));
         self::assertSame(1, CheckoutController::stepOf(Request::create('https://example.org/'), 3));
@@ -233,9 +233,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Abnahme C-10: Die Lieferadresse fragte Anrede und E-Mail ab, und beides
-     * ging nirgends hin. Jedes Feld, das sie anbietet, braucht seine Spalte an
-     * der Bestellung — gelesen aus der echten DCA, nicht abgeschrieben.
+     * C-10: the delivery address asked for salutation and e-mail, and neither
+     * went anywhere. Every field it offers needs its column on the order —
+     * read from the real DCA, not copied.
      */
     public function testDieLieferadresseFragtNurWasDieBestellungBehaelt(): void
     {
@@ -263,9 +263,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 4.3: Enthält der Warenkorb nichts Versendbares, entfällt der Baustein
-     * „Versand" — hier über den leeren Warenkorb, den einzigen Fall, den C
-     * schon kennt.
+     * 4.3: if the cart contains nothing shippable, the "Versand" (shipping)
+     * section is dropped — here via the empty cart, the only case that C
+     * already knows.
      */
     public function testOhneVersandbaresFaelltDerVersandbausteinWeg(): void
     {
@@ -276,8 +276,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testDieAntwortIstPrivatUndWirdNichtGespeichert(): void
     {
-        // Diese Seite zeigt die Adresse eines Besuchers. Ein geteilter Cache
-        // darf sie nicht halten, auch nicht für eine Sekunde.
+        // This page shows a visitor's address. A shared cache must not hold it,
+        // not even for a second.
         $response = $this->respond();
 
         self::assertTrue($response->headers->hasCacheControlDirective('private'));
@@ -304,9 +304,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 Der einzige Nebeneffekt im ganzen Checkout — und er darf nur beim
-     * Abschicken passieren, nie beim Anzeigen. Liefe er im Rechenschritt,
-     * kostete jeder Seitenaufruf eine Anfrage nach Brüssel.
+     * 🔴 The only side effect in the whole checkout — and it may only happen
+     * on submission, never on display. If it ran in the calculation step,
+     * every page view would cost a request to Brussels.
      */
     public function testEineUidWirdBeimAbschickenGeprueftUndNichtBeimAnzeigen(): void
     {
@@ -331,8 +331,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testEineUnveraenderteUidWirdNichtNochEinmalGeprueft(): void
     {
-        // Wer die Adresse zweimal abschickt, soll VIES nicht zweimal
-        // beschäftigen — das Rate-Limit dort ist echt.
+        // Whoever submits the address twice should not keep VIES busy twice —
+        // the rate limit there is real.
         $fields = [
             'consho_checkout_block' => 'address',
             'billing_lastname' => 'Muster',
@@ -352,7 +352,7 @@ class CheckoutControllerTest extends TestCase
 
     public function testErneutPruefenFragtNochEinmal(): void
     {
-        // C15: der Knopf für ein nicht erreichbares VIES.
+        // C15: the button for an unreachable VIES.
         $fields = [
             'consho_checkout_block' => 'address',
             'billing_lastname' => 'Muster',
@@ -372,7 +372,7 @@ class CheckoutControllerTest extends TestCase
 
     public function testEineUnvollstaendigeAdresseFuehrtZumAdressschrittZurueck(): void
     {
-        // C2 und C13: nie still weiter, immer zurück zum Baustein.
+        // C2 and C13: never silently on, always back to the section.
         $target = $this->post(['consho_checkout_block' => 'address', 'billing_lastname' => 'Muster'], step: 1);
 
         self::assertStringEndsWith('consho_step=1', $target);
@@ -408,9 +408,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Ein POST ohne den Namen dieses Elements ist ein anderes Formular auf
-     * derselben Seite. Es darf hier weder etwas speichern noch eine
-     * Weiterleitung auslösen — dieselbe Regel wie im Warenkorb-Element.
+     * A POST without this element's name is another form on the same page.
+     * It must neither store anything here nor trigger a redirect — the same
+     * rule as in the cart element.
      */
     public function testEinFremdesFormularWirdNichtBeantwortet(): void
     {
@@ -425,8 +425,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 11.2: Eine Warnung sperrt den Checkout dieses Shops — und zwar BEVOR der
-     * Besucher eine Adresse tippt, nicht erst beim Kaufklick.
+     * 11.2: a warning blocks this shop's checkout — and BEFORE the visitor
+     * types an address, not only at the purchase click.
      */
     public function testEineSperrendeWarnungHaeltDenCheckoutAn(): void
     {
@@ -440,18 +440,17 @@ class CheckoutControllerTest extends TestCase
 
     public function testEinHinweisSperrtNicht(): void
     {
-        // Ein Shop, den eine Notiz über eine doppelte GTIN anhält, erzieht
-        // seinen Betreiber dazu, Notizen zu übersehen — und dann auch die
-        // Warnungen.
+        // A shop that a notice about a duplicate GTIN stops trains its operator
+        // to overlook notices — and then the warnings as well.
         $this->blockers = [new StaticIssueSource([new ConfigurationIssue(ConfigurationFinding::DuplicateGtin)])];
 
         self::assertSame(['address'], $this->render()['blocks']);
     }
 
     /**
-     * Nicht jede Warnung sperrt: Eine abgedriftete Projektion ist ernst und
-     * hat mit dem Bestellen nichts zu tun — `consho:price:rebuild` richtet
-     * sie, während der Shop weiterverkauft.
+     * Not every warning blocks: a drifted projection is serious and has
+     * nothing to do with ordering — `consho:price:rebuild` fixes it while
+     * the shop keeps selling.
      */
     public function testEineWarnungAusserhalbDerListeSperrtNicht(): void
     {
@@ -461,10 +460,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 C14, und im Review vom 2026-09-22 als blosses Template-Flag
-     * aufgefallen: Der Hinweis stand da, das Adressformular nahm daneben
-     * weiter Eingaben an. „Ist die Gastbestellung aus, bleibt nur das
-     * Anmelden" ist eine Sperre.
+     * 🔴 C14, and more than a template flag: the notice was there, while the
+     * address form next to it kept accepting input. "If guest ordering is off,
+     * only logging in remains" is a lock.
      */
     public function testOhneGastbestellungWirdNichtsAngeboten(): void
     {
@@ -490,8 +488,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testDieLaenderKommenAlsAuswahlUndNichtAlsFreitext(): void
     {
-        // „Österreich" statt „AT" hätte keinen Steuersatz und damit keinen
-        // Preis — der Besucher läse eine Meldung über seinen Warenkorb.
+        // "Österreich" instead of "AT" would have no tax rate and therefore no
+        // price — the visitor would read a message about their cart.
         $countries = $this->render()['countries'];
 
         self::assertArrayHasKey('AT', $countries);
@@ -499,9 +497,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * E-5, V3 (Spec A 707): Von den Lieferländern nur die, in die eine
-     * Versandart liefert. Die Schweiz ist angehakt, aber keine Versandart
-     * fährt hin — sie fehlt, und die Startseite sagt es
+     * E-5, V3: of the delivery countries only those a shipping
+     * method delivers to. Switzerland is ticked, but no shipping method goes
+     * there — it is missing, and the start page says so
      * (ShippingCountryCoverageTest).
      */
     public function testDieAuswahlZeigtNurLaenderMitVersandart(): void
@@ -519,16 +517,16 @@ class CheckoutControllerTest extends TestCase
 
         self::assertSame(['AT', 'DE'], array_keys($view['countries']));
 
-        // Fable-Review E, S2: Die Rechnungsadresse bleibt bei den Lieferländern
-        // des Shops — geprüft wird das LIEFERland, und eine Schweizer Rechnung
-        // an ein österreichisches Paket ist ein gewöhnlicher Fall.
+        // E: the billing address stays with the shop's delivery countries —
+        // what is checked is the DELIVERY country, and a Swiss invoice for an
+        // Austrian parcel is an ordinary case.
         self::assertSame(['AT', 'DE', 'CH'], array_keys($view['billing_countries']));
     }
 
     /**
-     * Michael, 2026-09-28: Beträge an den Optionen, „wenn es einen gibt".
-     * Das Paket kostet 5,00 netto, also 6,00 brutto; die Vorkasse nichts —
-     * sie bekommt keinen Betrag, kein „0,00 €".
+     * Amounts on the options, "where there is one". The parcel costs 5.00
+     * net, so 6.00 gross; prepayment nothing — it gets no amount, no
+     * "0,00 €".
      */
     public function testDieOptionenTragenIhrenBetragWennEsEinenGibt(): void
     {
@@ -541,8 +539,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testDieAuswahlWirdAufDieLieferlaenderDesShopsGeschnitten(): void
     {
-        // Ein Land anzubieten, in das der Shop nicht liefert, führt den
-        // Besucher durch das halbe Formular bis zu einer Ablehnung.
+        // Offering a country the shop does not deliver to leads the visitor
+        // through half the form to a rejection.
         $this->deliveryCountries = ['AT'];
 
         $countries = $this->render()['countries'];
@@ -551,9 +549,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Abo-2, P12 (A10, F9): Ein Abo braucht ein Kundenkonto — auch in einem
-     * Shop, der Gastbestellungen erlaubt. Dieselbe Sperre wie C14, nicht nur
-     * ein Hinweis.
+     * Abo-2, P12 (A10, F9): a subscription needs a customer account — even in
+     * a shop that allows guest orders. The same lock as C14, not just a
+     * notice.
      */
     public function testEinAboVerlangtDieAnmeldungAuchMitGastbestellung(): void
     {
@@ -563,8 +561,8 @@ class CheckoutControllerTest extends TestCase
 
         self::assertTrue($data['login_required']);
         self::assertArrayNotHasKey('blocks', $data);
-        // Abnahme auf c5: „Dieser Shop verlangt ein Konto" stimmte nicht — der
-        // Shop erlaubt Gäste, das Abo verlangt es.
+        // "Dieser Shop verlangt ein Konto" (this shop requires an account) would
+        // be wrong — the shop allows guests, the subscription requires it.
         self::assertSame('subscription', $data['login_reason']);
     }
 
@@ -587,7 +585,7 @@ class CheckoutControllerTest extends TestCase
 
     public function testEineVerlaengerungGehtDurchDieKasse(): void
     {
-        // Abo-7b (P70): verlängerbar — die Kasse läuft, die Zeile nennt das Abo.
+        // Abo-7b (P70): renewable — the checkout runs, the line names the subscription.
         $this->memberId = 5;
         $this->cartId = $this->repository->create(null, 5, self::SHOP, 1_000);
         $this->repository->addRenewal($this->cartId, self::ARTICLE, '1.0000', 5, 31, 1_000);
@@ -600,8 +598,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testEineNichtMehrMoeglicheVerlaengerungHaeltDieKasseAuf(): void
     {
-        // Inzwischen anderswo verlängert oder überfällig: gesagt, bevor eine
-        // Adresse getippt wird; die gewöhnliche Zeile davor ändert nichts.
+        // Renewed elsewhere in the meantime or overdue: said before an address
+        // is typed; the ordinary line before it changes nothing.
         $this->memberId = 5;
         $this->cartId = $this->repository->create(null, 5, self::SHOP, 1_000);
         $this->repository->addItem($this->cartId, self::ARTICLE, '1.0000', 1_000);
@@ -615,8 +613,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testEinAngemeldetesMitgliedDarfAuchOhneGastbestellung(): void
     {
-        // Die Gegenrichtung zur Sperre: `guestCheckout` verbietet Gästen den
-        // Checkout, nicht Mitgliedern.
+        // The opposite direction of the lock: `guestCheckout` forbids guests
+        // the checkout, not members.
         $this->guestCheckout = false;
         $this->memberId = 5;
         $this->cartId = $this->repository->create(null, 5, self::SHOP, 1_000);
@@ -628,21 +626,22 @@ class CheckoutControllerTest extends TestCase
         self::assertSame(['address'], $data['blocks']);
     }
 
-    // ── Aufbau ───────────────────────────────────────────────────────────
+    // ── Setup ────────────────────────────────────────────────────────────
 
     private function itemId(): int
     {
         return (int) $this->cartConnection->fetchOne('SELECT id FROM tl_consho_cart_item WHERE pid = ?', [$this->cartId]);
     }
 
-    // ── Der Kaufklick (C-6, 7.3 Schritt 1) ──────────────────────────────────
+    // ── The purchase click (C-6, 7.3 step 1) ────────────────────────────────
 
     /**
-     * Der Regelfall: Alles stimmt, die Prüfsumme passt — und seit C-7 führt
-     * der Klick auf die Bestellseite, mit dem Ansichts-Token in der Adresse.
+     * The regular case: everything is right, the checksum matches — and since
+     * C-7 the click leads to the order page, with the view token in the
+     * address.
      *
-     * Das Token steht im Klartext nur hier und in der Weiterleitung; in der
-     * Datenbank liegt sein Hash, und aus dem ist es nicht zurückzurechnen.
+     * The token is in plain text only here and in the redirect; the database
+     * holds its hash, and it cannot be recomputed from that.
      */
     public function testEinVollstaendigerKaufklickBestelltUndFuehrtZurBestellseite(): void
     {
@@ -655,16 +654,16 @@ class CheckoutControllerTest extends TestCase
 
         self::assertSame('https://example.org/bestellung.html?consho_order='.str_repeat('a', 64), $target);
 
-        // C-9: die Bestätigung an den Startpunkt der Seite — seit C-10 mit dem
-        // Token der MAIL, nicht dem der Umleitung: Nur ein Klick über den Link
-        // aus der Mail belegt die Adresse (Abnahme 2026-09-25).
+        // C-9: the confirmation to the page's start point — since C-10 with the
+        // token of the MAIL, not that of the redirect: only a click via the link
+        // from the mail proves the address.
         self::assertSame([[77, self::ROOT, 'https://example.org/bestellung.html?consho_order='.str_repeat('c', 64)]], $this->confirmations->calls);
     }
 
     /**
-     * C-11: Nach Commit und Mail startet die Zahlung; ein Anbieter mit
-     * Weiterleitung bekommt den Käufer, ein Fehlschlag landet mit Hinweis auf
-     * der Bestellseite.
+     * C-11: after commit and mail the payment starts; a provider with a
+     * redirect gets the buyer, a failure lands on the order page with a
+     * notice.
      */
     public function testNachDemKaufFuehrtEineOnlineZahlungZumAnbieter(): void
     {
@@ -678,15 +677,14 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * C-12 (Michael, 2026-09-26: „ja, gleich umsetzen"): Nach dem Kauf geht
-     * der Warenkorb-Cookie — mit ihm bekam der Käufer 30 Tage lang keine
-     * Seite aus dem Cache (Contao sendet `Vary: Cookie`).
+     * C-12: after the purchase the cart cookie goes — with it the buyer got
+     * no page from the cache for 30 days (Contao sends `Vary: Cookie`).
      */
     public function testNachDemKaufWirdDerWarenkorbCookieGeloescht(): void
     {
         $this->purchaseHandler = $this->createMock(PurchaseHandlerInterface::class);
         $this->purchaseHandler->method('place')->willReturnCallback(function (): PlacedOrder {
-            // Was die Kauftransaktion tut: der Warenkorb verliert seinen Hash.
+            // What the purchase transaction does: the cart loses its hash.
             $this->cartConnection->update('tl_consho_cart', ['tokenHash' => null, 'state' => 'converted'], ['id' => $this->cartId]);
 
             return new PlacedOrder(77, str_repeat('a', 64), false, str_repeat('c', 64));
@@ -712,8 +710,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Seit C-3b trägt ein Cookie einen Warenkorb je Shop. Ein Kauf im einen
-     * darf den offenen im anderen nicht verwaisen lassen.
+     * Since C-3b a cookie carries one cart per shop. A purchase in one must
+     * not orphan the open one in the other.
      */
     public function testEinOffenerWarenkorbInEinemAnderenShopHaeltDenCookie(): void
     {
@@ -732,8 +730,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * C-12: Ein abgelehnter Kauf nennt dem Käufer nichts Genaues — der Grund
-     * gehört ins Log. Bis 2026-09-26 stand das nur im Kommentar.
+     * C-12: a rejected purchase tells the buyer nothing specific — the reason
+     * belongs in the log.
      */
     public function testEinAbgelehnterKaufLandetImLog(): void
     {
@@ -760,10 +758,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Der frühe Doppelklick (7.3 Schritt 3) findet die Bestellung schon
-     * angelegt. Sein Käufer hat die Mail der ersten Anfrage — eine zweite
-     * Bestätigung derselben Bestellung wäre falsch. Und eine zweite Zahlung
-     * erst recht (C-11).
+     * The early double click (7.3 step 3) finds the order already created. Its
+     * buyer has the mail of the first request — a second confirmation of the
+     * same order would be wrong. And a second payment all the more (C-11).
      */
     public function testDerDoppelklickSendetKeineZweiteBestaetigung(): void
     {
@@ -782,24 +779,25 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 F2 des Reviews vom 2026-09-23: **der späte Doppelklick.**
+     * 🔴 **The late double click.**
      *
-     * Die zweite Anfrage, die noch vor dem Commit an der Zeilensperre hängt,
-     * fängt `OrderPlacer` ab — sie findet `converted` und bekommt dieselbe
-     * Bestellung. Wer erst danach ankommt (zurück im Browser, noch einmal
-     * abgeschickt), findet gar keinen Warenkorb mehr: `markConverted()` setzt
-     * `tokenHash` auf NULL, `CartResolver` sucht nur nach `open`.
+     * The second request, which still hangs on the row lock before the
+     * commit, is caught by `OrderPlacer` — it finds `converted` and gets the
+     * same order. Whoever only arrives afterwards (back in the browser,
+     * submitted again) finds no cart at all any more: `markConverted()` sets
+     * `tokenHash` to NULL, `CartResolver` only looks for `open`.
      *
-     * Vorher fiel diese Anfrage durch alle Zweige und die Kasse rendete
-     * „Ihr Warenkorb ist leer" — die falsche Auskunft für jemanden, der gerade
-     * gekauft hat.
+     * Before, this request fell through all branches and the checkout rendered
+     * "Ihr Warenkorb ist leer" (your cart is empty) — the wrong answer for
+     * someone who has just bought.
      */
     public function testEinKaufklickOhneWarenkorbSagtDassBereitsBestelltWurde(): void
     {
         $this->purchaseHandler->expects(self::never())->method('place');
 
-        // Ohne Korb-Cookie findet CartResolver nichts — genau die Lage nach
-        // markConverted(), nur ohne den Umweg über eine zweite Anfrage.
+        // Without a cart cookie CartResolver finds nothing — exactly the
+        // situation after markConverted(), only without the detour via a second
+        // request.
         $request = Request::create(
             'https://example.org/kasse.html?consho_step=3',
             'POST',
@@ -819,17 +817,17 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 **Die Zusicherung, auf der die Adressvorbelegung steht.**
+     * 🔴 **The assertion the address prefill stands on.**
      *
-     * Vorbelegt wird in `stateOf()`, und das bedient sowohl das Rendern als
-     * auch den Kaufklick. Also rechnet der Klick genau das nach, was im
-     * Formular stand — die Prüfsumme geht auf, **ohne dass auf ein GET
-     * geschrieben wird**. C-6 hat den Rechenschritt eigens nebenwirkungsfrei
-     * gebaut; würde hier gespeichert, wäre das dahin.
+     * Prefilling happens in `stateOf()`, and that serves both rendering and
+     * the purchase click. So the click recalculates exactly what was in the
+     * form — the checksum matches **without anything being written on a
+     * GET**. C-6 built the calculation step free of side effects on purpose;
+     * storing here would undo that.
      *
-     * Der Kunde tippt in diesem Test **nichts** in die Adresse: Er wählt
-     * Versand und Zahlung und kauft. Ginge die Prüfsumme nicht auf, käme
-     * `consho_purchase=checksumMismatch` statt der Bestellseite.
+     * The customer types **nothing** into the address in this test: they
+     * choose shipping and payment and buy. If the checksum did not match,
+     * `consho_purchase=checksumMismatch` would come instead of the order page.
      */
     public function testMitVorbelegterAdresseGehtDiePruefsummeAuf(): void
     {
@@ -844,12 +842,12 @@ class CheckoutControllerTest extends TestCase
             'email' => 'eva@example.org',
         ]);
 
-        // Der Warenkorb hängt am Mitglied, nicht am Cookie — CartResolver
-        // fragt für ein angemeldetes Mitglied `findForMember()`.
+        // The cart hangs off the member, not off the cookie — CartResolver asks
+        // `findForMember()` for a logged-in member.
         $this->cartId = $this->repository->create(null, 5, self::SHOP, 1_000);
         $this->repository->addItem($this->cartId, self::ARTICLE, '1.0000', 1_000);
 
-        // Nur Versand und Zahlung — die Adresse kommt aus dem Konto.
+        // Only shipping and payment — the address comes from the account.
         $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_method' => '4'], step: 2);
         $this->post(['consho_checkout_block' => 'payment', 'consho_payment_method' => '9'], step: 2);
 
@@ -862,24 +860,23 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 **Die Prüfsumme geht auf und die Adresse ist trotzdem weg** — der
-     * Blocker aus dem Fremdmodell-Review vom 2026-09-23.
+     * 🔴 **The checksum matches and the address is gone anyway.**
      *
-     * Mit AGB-Pflicht las `purchase()` die Checkout-Daten noch einmal **aus
-     * der Warenkorbzeile**. Bis zur Vorbelegung war das dasselbe wie
-     * `$state->data`; seither nicht mehr, denn die Vorbelegung geschieht in
-     * `stateOf()` **im Speicher** und auf einem GET wird nichts geschrieben.
-     * Die Bestellung bekam die leere Adresse, die der Kunde nie gesehen hat.
+     * With terms required, `purchase()` read the checkout data once more
+     * **from the cart row**. Until prefilling existed that was the same as
+     * `$state->data`; since then it is not, because prefilling happens in
+     * `stateOf()` **in memory** and nothing is written on a GET. The order got
+     * the empty address the customer never saw.
      *
-     * ⚠️ **Warum drei grüne Tests daran vorbeigingen** — beides Regel 24:
-     * Alle drei Vorbelegungs-Tests liefen mit `termsRequired = false`, also
-     * genau an dem Zweig vorbei, der den Zustand ersetzt. Und der Mock des
-     * Kaufabwicklers nahm jedes Argument an, ohne es anzusehen: Der Test
-     * prüfte die Weiterleitung, nicht das Bestellte. Deshalb sieht dieser
-     * hier in `place()` hinein.
+     * ⚠️ **Why three green tests missed it** — both times the test copied
+     * instead of going through the real place: all three prefill tests ran
+     * with `termsRequired = false`, so exactly past the branch that replaces
+     * the state. And the mock of the order placer accepted every argument
+     * without looking at it: the test checked the redirect, not what was
+     * ordered. That is why this one looks into `place()`.
      *
-     * Die Abnahme auf c5 konnte es auch nicht sehen: Dort steht
-     * `termsRequired` bei beiden Testshops auf 0.
+     * A check by hand would not have seen it either where `termsRequired` is
+     * 0 in every shop.
      */
     public function testMitAgbPflichtKommtDieVorbelegteAdresseAuchAmKaufAn(): void
     {
@@ -927,12 +924,12 @@ class CheckoutControllerTest extends TestCase
         self::assertSame('Hauptstr. 1', $übergeben->data->billing->street);
         self::assertSame('AT', $übergeben->data->billing->country);
 
-        // Und der Haken ist trotzdem gesetzt — es geht nicht darum, den Zweig
-        // auszubauen, sondern darum, aus welchem Zustand er weiterrechnet.
+        // And the checkbox is ticked anyway — the point is not to remove the
+        // branch, but from which state it continues calculating.
         self::assertGreaterThan(0, $übergeben->data->termsAcceptedAt);
 
-        // Mit dem Kauf wird die Vorbelegung zur Adresse des Kunden: Ab hier
-        // steht sie auch in der Zeile, nicht nur im Speicher.
+        // With the purchase the prefill becomes the customer's address: from
+        // here on it is in the row too, not only in memory.
         self::assertSame('Muster', $this->repository->checkoutDataOf($this->cartId)->billing->lastname);
     }
 
@@ -959,9 +956,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Ein Gast bekommt nichts — auch dann nicht, wenn zufällig ein Mitglied
-     * mit derselben Nummer existiert (Michael, 2026-09-23: ein Cookie belegt
-     * nicht, wer davorsitzt).
+     * A guest gets nothing — not even if a member with the same number
+     * happens to exist (a cookie does not prove who sits in front of it).
      */
     public function testEinGastBekommtKeineFremdeAdresse(): void
     {
@@ -974,8 +970,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Und die Weiterleitung von oben kommt als Fahne im Template an — an der
-     * Stelle, an der sonst „Ihr Warenkorb ist leer" steht.
+     * And the redirect from above arrives as a flag in the template — at the
+     * place where "Ihr Warenkorb ist leer" (your cart is empty) otherwise stands.
      */
     public function testDerHinweisAufDieBestellungErreichtDasTemplate(): void
     {
@@ -989,11 +985,11 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 Ohne Bestellseite am Startpunkt entsteht KEINE Bestellung.
+     * 🔴 Without an order page at the start point NO order is created.
      *
-     * CheckoutReadiness sperrt so einen Shop schon vor dem Rendern, das hier
-     * ist der Gurt zu diesem Hosenträger. Der Fall, den es zu vermeiden gilt,
-     * ist der andere: bestellen und dann nichts vorzuweisen haben.
+     * CheckoutReadiness already blocks such a shop before rendering; this is
+     * the belt to those braces. The case to avoid is the other one: ordering
+     * and then having nothing to show for it.
      */
     public function testOhneBestellseiteWirdNichtBestellt(): void
     {
@@ -1011,9 +1007,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * 🔴 Der Kern von 7.3 Schritt 1: Hat sich zwischen Anzeige und Klick etwas
-     * geändert, wird NICHT bestellt — und auch nicht still korrigiert. Wer
-     * €13,90 gelesen hat und €15,40 abgebucht bekäme, ist nicht gefragt worden
+     * 🔴 The core of 7.3 step 1: if something changed between display and
+     * click, NO order is placed — and nothing is silently corrected either.
+     * Whoever read €13.90 and would be charged €15.40 has not been asked
      * (§ 8 FAGG).
      */
     public function testEineAbweichendePruefsummeBestelltNicht(): void
@@ -1030,8 +1026,8 @@ class CheckoutControllerTest extends TestCase
 
     public function testEineFehlendePruefsummeBestelltNicht(): void
     {
-        // Ein altes Template, ein Bot, ein abgeschnittener POST: ohne das Feld
-        // ist nichts bestätigt worden.
+        // An old template, a bot, a truncated POST: without the field nothing
+        // has been confirmed.
         $this->kaufbereit();
 
         $target = $this->post(['consho_checkout_block' => 'review'], step: 3);
@@ -1068,10 +1064,10 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * F-3, F15/F16: Bei digitalen Positionen fragt der Checkout einen
-     * Verbraucher nach der Zustimmung zum vorzeitigen Beginn — freiwillig.
-     * Mit Häkchen wird der Zeitpunkt des Klicks festgehalten, ohne wird
-     * trotzdem bestellt. Der Kauf erfährt, dass kein Geschäftskunde kauft.
+     * F-3, F15/F16: with digital lines the checkout asks a consumer for
+     * consent to early performance — voluntarily. With the checkbox the time
+     * of the click is recorded, without it the order is placed anyway. The
+     * purchase learns that no business customer is buying.
      */
     public function testZustimmungZumVorzeitigenBeginn(): void
     {
@@ -1116,9 +1112,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Körperliche Ware: keine Frage, und ein eingeschleustes Häkchen wird
-     * nicht festgehalten — ein Beleg über einen Verzicht, nach dem nie
-     * gefragt wurde, wäre keiner.
+     * Physical goods: no question, and a smuggled-in checkbox is not
+     * recorded — a record of a waiver that was never asked for would be none.
      */
     public function testOhneDigitalePositionKeineZustimmung(): void
     {
@@ -1136,8 +1131,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Verlangt der Shop kein Häkchen, ist auch nichts festzuhalten: Ein
-     * Zeitpunkt ohne Zustimmung wäre ein Beleg über etwas, das nie geschah.
+     * If the shop requires no checkbox, there is nothing to record either: a
+     * point in time without consent would be a record of something that never
+     * happened.
      */
     public function testOhneAgbPflichtWirdKeinZeitpunktGeschrieben(): void
     {
@@ -1152,14 +1148,14 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Ein Zustand, aus dem gar nicht gekauft werden kann, geht zu dem
-     * Baustein zurück, der ihn verursacht hat — nicht in eine Kaufmeldung.
-     * Dieselbe Regel wie überall im Checkout (C2, C13).
+     * A state from which no purchase is possible at all goes back to the
+     * section that caused it — not into a purchase message. The same rule as
+     * everywhere in the checkout (C2, C13).
      */
     public function testEinUnfertigerZustandFuehrtZumBausteinZurueck(): void
     {
-        // Keine Adresse, keine Arten: der Kaufklick kommt gar nicht bis zur
-        // Prüfsumme.
+        // No address, no methods: the purchase click does not even get as far
+        // as the checksum.
         $target = $this->post([
             'consho_checkout_block' => 'review',
             'consho_fingerprint' => 'egal',
@@ -1169,8 +1165,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Review H, P3: die Rabattzeile der Prüfseite aus dem Controller, nicht
-     * aus einem handgebauten Array. 50,00 netto in AT = 60,00; 10 %.
+     * H: the review page's discount line from the controller, not from a
+     * hand-built array. 50.00 net in AT = 60.00; 10 %.
      */
     public function testDerRabattStehtAufDerPruefseite(): void
     {
@@ -1184,8 +1180,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Review H, S2: Ab 61 € — die 60,00 reichen nicht. Die Prüfseite sagt,
-     * was fehlt, statt den Rabatt still verschwinden zu lassen.
+     * H: from € 61 — the 60.00 are not enough. The review page says what is
+     * missing instead of letting the discount silently disappear.
      */
     public function testDerVerfehlteMindestbestellwertStehtAufDerPruefseite(): void
     {
@@ -1225,9 +1221,9 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Die wesentlichen Merkmale über dem Knopf (§ 8 Abs. 2 FAGG): was, wie
-     * viel, wie teuer. Brutto für Gäste und gewöhnliche Mitglieder; für die
-     * Nettogruppe netto seit der Abo-Nachlese (P75, Test darunter).
+     * The main characteristics above the button (§ 8 (2) FAGG): what, how
+     * many, how expensive. Gross for guests and ordinary members; net for the
+     * net group since the Abo-Nachlese (P75, test below).
      */
     public function testDieVorlageBekommtDieWesentlichenMerkmale(): void
     {
@@ -1243,8 +1239,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Block GARAN: § 8 Abs. 1 FAGG nennt Z 12a unter dem, was unmittelbar vor
-     * dem Knopf steht — das Label an der Position.
+     * Block GARAN: § 8 (1) FAGG names Z 12a among what stands directly before
+     * the button — the label on the line.
      */
     public function testDiePruefseiteZeigtDasGaranLabelAnDerPosition(): void
     {
@@ -1260,8 +1256,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Abo-2 (A10): Die Bedingungen über dem Knopf — dort, wo § 8 FAGG die
-     * Laufzeit verlangt. Mit dem Bruttobetrag, der über dem Knopf steht.
+     * Abo-2 (A10): the terms above the button — where § 8 FAGG requires the
+     * duration. With the gross amount that stands above the button.
      */
     public function testDiePruefseiteNenntDieBedingungenDesAbos(): void
     {
@@ -1272,15 +1268,14 @@ class CheckoutControllerTest extends TestCase
 
         $lines = $this->render(steps: 3, step: 3)['review_lines'];
 
-        // 50,00 netto + 20 % = 60,00.
+        // 50.00 net + 20 % = 60.00.
         self::assertSame('Bedingungen 5 zu 60.0000', $lines[0]['terms']);
     }
 
     /**
-     * DL4, Review DL (S1, zweites Review L4): Ein Dienstleistungs-Abo für
-     * einen deutschen Kunden — die Prüfseite rechnet den Bedingungstext mit
-     * dem Land der Zeile (AT, Shop), nicht mit dem Lieferland (DE), so wie
-     * OrderFactory ihn einfriert.
+     * DL4: a service subscription for a German customer — the review page
+     * calculates the terms text with the country of the line (AT, shop), not
+     * with the delivery country (DE), the way OrderFactory freezes it.
      */
     public function testDieBedingungenEinerDienstleistungRechnenImLandDesShops(): void
     {
@@ -1299,13 +1294,13 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Abo-Nachlese, P75 (Review Abo-2, H1): Die Nettogruppe liest auf der
-     * Prüfseite netto wie auf Produktseite und im Warenkorb.
+     * Abo-Nachlese, P75 (Abo-2): the net group reads net on the review page,
+     * as on the product page and in the cart.
      */
     public function testDieNettogruppeLiestDiePruefseiteNetto(): void
     {
-        // Derselbe Aufbau wie in testGleicheLaufzeitGiltFuerDieNettogruppe():
-        // was PriceAudienceResolver liest, und Gruppe 3 als Nettogruppe.
+        // The same setup as in testGleicheLaufzeitGiltFuerDieNettogruppe():
+        // what PriceAudienceResolver reads, and group 3 as the net group.
         $this->cartConnection->executeStatement("CREATE TABLE tl_member_group (id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '')");
         DcaSchema::create($this->cartConnection, 'tl_consho_price');
         DcaSchema::create($this->cartConnection, 'tl_consho_product_shop');
@@ -1321,18 +1316,18 @@ class CheckoutControllerTest extends TestCase
         self::assertSame('Bedingungen 5 zu 50.0000', $lines[0]['terms']);
         self::assertStringContainsString('50', $lines[0]['amount']);
         self::assertStringNotContainsString('60', $lines[0]['amount']);
-        // Review L1: „zzgl. USt." an den Zeilen.
+        // "zzgl. USt." (plus VAT) on the lines.
         self::assertTrue($this->render(steps: 3, step: 3)['review_net']);
 
-        // Review H, L2: der Versand auch netto — 5,00, nicht 6,00 —, an der Option wie auf der Prüfseite.
+        // H: shipping net as well — 5.00, not 6.00 — on the option as on the review page.
         $data = $this->render(steps: 3, step: 3);
         self::assertStringContainsString('5,00', $data['review_shipping']['amount']);
         self::assertStringContainsString('5,00', $data['option_amounts']['shipping'][4]);
     }
 
     /**
-     * Review H, L2: der Rabatt der Nettogruppe netto wie im Warenkorb — 10 %
-     * von 50,00 netto sind −5,00, nicht −6,00.
+     * H: the net group's discount net as in the cart — 10 % of 50.00 net is
+     * −5.00, not −6.00.
      */
     public function testDieNettogruppeLiestDenRabattNetto(): void
     {
@@ -1343,7 +1338,7 @@ class CheckoutControllerTest extends TestCase
         $this->memberId = 5;
         $this->memberGroups = [3];
         $this->cartId = $this->repository->create(null, 5, self::SHOP, 1_000);
-        // Einmalkauf: ein Abo zählt für Warenkorbregeln nie (W3).
+        // One-time purchase: a subscription never counts for cart rules (W3).
         $this->repository->addItem($this->cartId, self::ARTICLE, '1.0000', 1_000);
         $this->cartRule([]);
 
@@ -1359,13 +1354,13 @@ class CheckoutControllerTest extends TestCase
         $this->kaufbereit();
 
         self::assertFalse($this->render(steps: 3, step: 3)['review_net']);
-        // Gegenprobe zu L2: brutto.
+        // Counter-check: gross.
         self::assertStringContainsString('6,00', $this->render(steps: 3, step: 3)['review_shipping']['amount']);
     }
 
     /**
-     * Abo-2, P14 (A12): Der Kasten nennt die Widerrufsart der digitalen
-     * Zeilen — hier eine Dienstleistung.
+     * Abo-2, P14 (A12): the box names the withdrawal type of the digital
+     * lines — here a service.
      */
     public function testDerZustimmungskastenKenntDieWiderrufsart(): void
     {
@@ -1380,9 +1375,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Abo-7b, Review S5 (Michael, 2026-10-01: „Hinweis in der Kasse sollte da
-     * sein"): ohne Zustimmung geht die Lizenz erst nach der Frist über — beim
-     * Kasten gesagt, nur wenn eine Verlängerung im Korb liegt.
+     * Abo-7b: without consent the licence only passes after the period — said
+     * at the box only when a renewal is in the cart.
      */
     public function testEineVerlaengerungSagtWasOhneZustimmungGeschieht(): void
     {
@@ -1417,8 +1411,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Die Prüfsumme, die die Vorlage im laufenden Zustand ausgibt — genau die,
-     * die ein Besucher abschicken würde.
+     * The checksum the template outputs in the current state — exactly the
+     * one a visitor would submit.
      */
     private function fingerprint(): string
     {
@@ -1426,12 +1420,12 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Adresse, Versandart und Zahlungsart gesetzt: der Zustand, aus dem heraus
-     * gekauft werden darf.
+     * Address, shipping method and payment method set: the state from which
+     * purchasing is allowed.
      */
     /**
-     * Nur digitale Positionen: Der Zustellschritt bietet die elektronische
-     * Zustellung (id 0) an, nicht die Versandart 4 (F-2).
+     * Digital lines only: the delivery step offers electronic delivery
+     * (id 0), not shipping method 4 (F-2).
      */
     private function kaufbereitDigital(string $country = 'AT'): void
     {
@@ -1468,7 +1462,7 @@ class CheckoutControllerTest extends TestCase
     /**
      * @param array<string, string> $fields
      *
-     * @return string die Adresse, auf die weitergeleitet wird
+     * @return string the address it redirects to
      */
     private function post(array $fields, int $step = 1): string
     {
@@ -1534,12 +1528,11 @@ class CheckoutControllerTest extends TestCase
         $model->method('__get')->willReturnCallback(static fn (string $key): mixed => $row[$key] ?? null);
 
         /*
-         * ⚠️ __isset, nicht nur __get — dasselbe wie beim PageModel in
-         * ProductListAudienceTest. Der Controller liest `$model->conshoSteps ?? 3`,
-         * und `??` fragt bei magischen Eigenschaften ZUERST __isset(); ein
-         * Doppel, das dort false sagt, liefert immer die 3. Ohne diese Zeile
-         * war der Test für „ein Schritt zeigt alle vier Bausteine" grün gegen
-         * drei Schritte.
+         * ⚠️ __isset, not just __get — the same as with the PageModel in
+         * ProductListAudienceTest. The controller reads `$model->conshoSteps ?? 3`,
+         * and for magic properties `??` asks __isset() FIRST; a double that
+         * says false there always returns 3. Without this line the test for
+         * "one step shows all four sections" was green against three steps.
          */
         $model->method('__isset')->willReturnCallback(static fn (string $key): bool => isset($row[$key]));
 
@@ -1561,7 +1554,7 @@ class CheckoutControllerTest extends TestCase
             static fn (string $key): mixed => ['id' => self::PAGE, 'type' => 'regular', 'rootId' => self::ROOT, 'language' => 'de'][$key] ?? null,
         );
 
-        // __isset, nicht nur __get — siehe ProductListAudienceTest.
+        // __isset, not just __get — see ProductListAudienceTest.
         $page->method('__isset')->willReturn(true);
 
         return $page;
@@ -1592,11 +1585,11 @@ class CheckoutControllerTest extends TestCase
         );
 
         /*
-         * ⚠️ __isset, zum dritten Mal an diesem Tag. Der Controller liest
-         * `$shop->deliveryCountries ?? null`, und `??` fragt bei magischen
-         * Eigenschaften ZUERST __isset(); ein Doppel, das dort false sagt,
-         * liefert null — die Länderauswahl blieb ungeschnitten, und der Test
-         * dazu war grün gegen das falsche Verhalten.
+         * ⚠️ __isset, for the third time in this file. The controller reads
+         * `$shop->deliveryCountries ?? null`, and for magic properties `??`
+         * asks __isset() FIRST; a double that says false there returns null —
+         * the country selection stayed uncut, and the test for it was green
+         * against the wrong behaviour.
          */
         $shop->method('__isset')->willReturn(true);
 
@@ -1636,14 +1629,13 @@ class CheckoutControllerTest extends TestCase
             new CartTitles($this->cartConnection),
             $this->purchaseHandler,
 
-            // Die echte Klasse gegen dasselbe SQLite, kein Doppel: Was sie tut,
-            // hängt an einer Abfrage auf `tl_member`, und genau die soll der
-            // Test mitfahren (Punkt 1 der Hausregeln).
+            // The real class against the same SQLite, no double: what it does
+            // depends on a query on `tl_member`, and that query is exactly what
+            // the test should run through.
             new MemberCheckoutDefaults(
                 $this->cartConnection,
-                // Derselbe Normalisierer wie für die getippte Adresse oben:
-                // Die Vorbelegung war sonst der eine Weg auf die Rechnung,
-                // der an ihm vorbeiführt (Review 2026-09-23).
+                // The same normaliser as for the typed address above: otherwise the
+                // prefill would be the one path onto the invoice that bypasses it.
                 new AddressNormalizer($this->countries(), new PhoneNormalizer()),
             ),
             $this->confirmations,
@@ -1663,8 +1655,8 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Ein angemeldetes Mitglied, wenn `$this->memberId` gesetzt ist — echter
-     * FrontendUser ohne Framework, wie in CartResolverTest.
+     * A logged-in member if `$this->memberId` is set — a real FrontendUser
+     * without the framework, as in CartResolverTest.
      */
     private function tokenStorage(): TokenStorageInterface
     {
@@ -1734,12 +1726,12 @@ class CheckoutControllerTest extends TestCase
     }
 
     /**
-     * Der Satz selbst ist in SubscriptionTermsTest geprüft; hier zählt, welche
-     * Regel und welcher Betrag hineingehen.
+     * The sentence itself is checked in SubscriptionTermsTest; what counts
+     * here is which rule and which amount go into it.
      */
     /**
-     * Abo-7b: die Prüfung selbst steht in SubscriptionRenewalTest; hier zählt,
-     * wer gefragt wird. Abo 31 ist verlängerbar, Abo 32 nicht mehr.
+     * Abo-7b: the check itself is in SubscriptionRenewalTest; what counts here
+     * is who is asked. Subscription 31 is renewable, subscription 32 no longer.
      */
     private function renewals(): SubscriptionRenewal
     {
@@ -1837,7 +1829,7 @@ class CheckoutControllerTest extends TestCase
 }
 
 /**
- * Eine Befundquelle mit vorgegebenem Inhalt.
+ * An issue source with given content.
  */
 final class StaticIssueSource implements ConfigurationIssueSource
 {
@@ -1855,8 +1847,9 @@ final class StaticIssueSource implements ConfigurationIssueSource
 }
 
 /**
- * Macht getResponse() aufrufbar. Als benannte Klasse, nicht anonym: PHPStan
- * kennt sonst nur den Typ der Elternklasse und hält respond() für undefiniert.
+ * Makes getResponse() callable. As a named class, not anonymous: PHPStan
+ * otherwise only knows the parent class's type and considers respond()
+ * undefined.
  */
 final class TestableCheckoutController extends CheckoutController
 {
@@ -1867,9 +1860,10 @@ final class TestableCheckoutController extends CheckoutController
 }
 
 /**
- * Merkt sich, welche UIDs geprüft wurden. Eine eigene Klasse, weil eine
- * Referenz in einem beförderten Konstruktor-Argument nicht geht — und weil
- * „wurde VIES gefragt" die Frage dieses Tests ist, nicht ein Nebenaspekt.
+ * Remembers which VAT IDs were checked. A class of its own, because a
+ * reference in a promoted constructor argument does not work — and
+ * because "was VIES asked" is the question of this test, not a side
+ * issue.
  */
 final class VatIdSpy implements VatIdValidatorInterface
 {

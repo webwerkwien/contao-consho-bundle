@@ -23,7 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSource;
 /**
  * "Vertrag widerrufen" for a buyer without the mail (D-2, W1, W2, E4, E6).
  *
- * ── Matched, or stored unassigned (WA, 2026-10-22) ────────────────────────
+ * ── Matched, or stored unassigned (WA) ────────────────────────────────────
  *
  * Do order number AND e-mail match an order of THIS shop, the withdrawal
  * belongs to it and is confirmed as on the order page. Do they not, it is
@@ -33,7 +33,7 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSource;
  * of the confirmation (§ 356a Abs. 2 BGB, § 13a Abs. 3 FAGG), not for a key
  * the shop insists on; until WA a typo meant "nicht gefunden" and nothing
  * stored (W2). The answer is the same either way — no number, no "no longer
- * possible" (review WA, S1) — so the form tells a stranger nothing; what
+ * possible" (WA) — so the form tells a stranger nothing; what
  * limits the mail to a typed address is the cap per shop and per address in
  * the recorder.
  *
@@ -127,7 +127,7 @@ class WithdrawalController extends AbstractContentElementController
         // The confirmation may now go to this address: it has to be one.
         // FILTER_VALIDATE_EMAIL takes at most 254 characters, so it fits the
         // column (255); the name has no such check and is cut to it — on MySQL
-        // in strict mode it would otherwise be a 500 (review WA, S4).
+        // in strict mode it would otherwise be a 500 (WA).
         if (false === filter_var($input['email'], \FILTER_VALIDATE_EMAIL)) {
             return 'emailInvalid';
         }
@@ -151,17 +151,17 @@ class WithdrawalController extends AbstractContentElementController
         // Whatever the order refuses — no withdrawal right, cancelled before
         // shipping, a follow-up order, released content — is stored as not
         // assigned instead of answered: a "no longer possible" told a
-        // stranger that the order exists (review WA, S1; Michael, 2026-10-22).
+        // stranger that the order exists (WA).
         // The operator assigns it and rejects it with a reason.
         if (WithdrawalOutcome::Recorded !== $result?->outcome) {
             $result = $this->recorder->recordUnassigned($shopId, $language, $input['orderNumber'], $input['email'], $input['name'], $input['part'], $input['message'], time());
         }
 
-        // Without the number: its shape (WEB-00073-W1 or W-00001) said whether
+        // Without the number: its shape (SHOP-00001-W1 or W-00001) said whether
         // the order was found. It is in the confirmation mail. And one answer
         // whether the mail went out or not: only the unassigned path has a
         // mail limit, so "not confirmed" after a few tries told a miss from a
-        // hit (second review WA, B1). A mail that did not go out is in the
+        // hit (WA). A mail that did not go out is in the
         // log and in the back end (confirmationSentAt).
         throw new RedirectResponseException($this->pageAddress($request, [
             self::NOTICE_PARAM => 'done',

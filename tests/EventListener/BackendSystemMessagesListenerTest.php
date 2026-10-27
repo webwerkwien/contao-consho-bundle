@@ -45,8 +45,8 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * Dashboard DB2: wer das Dashboard öffnen darf, sieht auf der Startseite
-     * die Warnungen und statt der Hinweise eine Zeile mit Link.
+     * Dashboard DB2: whoever may open the dashboard sees the warnings on the
+     * start page and, instead of the notices, one line with a link.
      */
     public function testMitDashboardStehenDieHinweiseDortUndHierNurIhreZahl(): void
     {
@@ -89,9 +89,9 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * Das Quittieren — ein Hinweis wird gespeichert und die Seite als GET neu
-     * geladen; eine Warnung und ein Fingerabdruck, der nichts Aktuelles
-     * beschreibt, nicht. Je Ausgang ein Fall (Punkt 43).
+     * Acknowledging — a notice is saved and the page reloaded as a GET; a
+     * warning and a fingerprint that describes nothing current are not. One
+     * case per exit.
      */
     public function testEinQuittierterHinweisWirdGespeichertUndDieSeiteNeuGeladen(): void
     {
@@ -147,15 +147,15 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * Die Kästen des Dashboards (DB3): gezählt wird, was die Liste zeigt —
-     * Warnungen immer, Hinweise nur ungesehene.
+     * The dashboard boxes (DB3): what the list shows is counted — warnings
+     * always, notices only unseen ones.
      */
     public function testDieKaestenZaehlenWasDieListeZeigt(): void
     {
         $quittiert = new ConfigurationIssue(ConfigurationFinding::DuplicateVatId, ['vatId' => 'ATU1', 'shops' => 'A, B']);
         $offen = new ConfigurationIssue(ConfigurationFinding::DuplicateGtin, ['gtin' => '1', 'count' => '2']);
         $warnung = new ConfigurationIssue(ConfigurationFinding::TaxRateMissing, ['country' => 'IT', 'taxClass' => 'X']);
-        // Ungleiche Zahlen: ein vertauschter Zähler fällt sonst nicht auf (Review 2026-10-10).
+        // Unequal numbers: otherwise a swapped counter goes unnoticed.
         $zweite = new ConfigurationIssue(ConfigurationFinding::TaxRateMissing, ['country' => 'FR', 'taxClass' => 'X']);
 
         $summary = (new BackendSystemMessagesListener(
@@ -197,8 +197,8 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * Ein Redakteur mit Einrichtung und Produkten — die Module, in denen die
-     * Befunde dieser Tests behoben werden (H1).
+     * An editor with setup and products — the modules in which the findings of
+     * these tests are fixed (H1).
      *
      * @param list<string> $modules
      */
@@ -214,8 +214,8 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * H1: Ein Befund erscheint nur, wer eines der Module öffnen darf, in denen
-     * er behoben wird — Warnungen eingeschlossen (H2).
+     * H1: a finding appears only to those who may open one of the modules in
+     * which it is fixed — warnings included (H2).
      */
     public function testNurWerDasModulOeffnenDarfSiehtDenBefund(): void
     {
@@ -244,8 +244,8 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * H4: Die Zeile auf der Startseite zählt nur, was das Dashboard diesem
-     * Benutzer zeigt.
+     * H4: the line on the start page counts only what the dashboard shows this
+     * user.
      */
     public function testDieHinweiszeileZaehltNurSichtbare(): void
     {
@@ -259,8 +259,8 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * Quittiert wird für alle — ein Hinweis, den dieser Benutzer nicht sieht,
-     * darf er also auch nicht per Hand wegklicken.
+     * Acknowledging applies to everyone — so a notice this user does not see
+     * may not be clicked away by hand either.
      */
     public function testEinVerborgenerHinweisLaesstSichNichtQuittieren(): void
     {
@@ -273,9 +273,9 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * H3: Jeder Befund hat eine Antwort, und jedes genannte Modul gibt es —
-     * ein Tippfehler im Modulnamen versteckte den Befund vor allen außer dem
-     * Administrator.
+     * H3: every finding has an answer, and every module named exists — a typo
+     * in the module name hid the finding from everyone except the
+     * administrator.
      */
     public function testJederBefundNenntBestehendeModule(): void
     {
@@ -343,12 +343,11 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * 🔴 Auf c5 beim Messen der C-6-Befunde gefunden (2026-09-22): Ein Shop
-     * namens „Testshop 2 (DE)" erschien als „Testshop 2 &#40;DE&#41;".
+     * 🔴 A shop named "Shop (DE)" appeared as "Shop &#40;DE&#41;".
      *
-     * Contao speichert die Klammern kodiert; specialchars() allein macht aus
-     * dem `&` ein `&amp;`, und der Betreiber liest die Entity. Er sucht dann
-     * nach einem Shop, der so heißt.
+     * Contao stores the brackets encoded; specialchars() alone turns the `&`
+     * into `&amp;`, and the operator reads the entity. They then look for a
+     * shop that is called that.
      */
     public function testEntitiesAusDerDatenbankWerdenLesbar(): void
     {
@@ -397,11 +396,11 @@ class BackendSystemMessagesListenerTest extends TestCase
 
     public function testDerHinweisZuMehrerenShopsSperrtNichtsUndLaesstSichWegklicken(): void
     {
-        // 🔴 „Hinweis" muss mehr sein als ein Wort im Code: Mehrere Shops sind
-        // erlaubt und gewollt (Block A, 4.0), eine Warnung sperrte nach 11.2
-        // den Checkout des Shops. Belegt an der einzigen Maschinerie, die es
-        // dafür heute gibt — der Befund landet im Hinweis-Kasten und trägt den
-        // Knopf, den ausschließlich Hinweise tragen.
+        // 🔴 "Notice" must be more than a word in the code: several shops are
+        // allowed and intended (Block A, 4.0), while a warning would lock the
+        // shop's checkout under 11.2. Proven on the only machinery that exists
+        // for it today — the finding lands in the notice box and carries the
+        // button that only notices carry.
         $html = $this->listenerWith([
             new ConfigurationIssue(ConfigurationFinding::MultipleShopsShareMembers, ['shops' => 'Kräuterhaus, Almhütte']),
         ])();
@@ -461,9 +460,9 @@ class BackendSystemMessagesListenerTest extends TestCase
      * @param list<ConfigurationIssue> $issues
      */
     /**
-     * N1: Die Einrichtungsseite liest die Startpunkt-Befunde auch von
-     * unveröffentlichten Startpunkten; issues() bleibt bei den veröffentlichten,
-     * auch nach einem Aufruf von issuesForSetup().
+     * N1: the setup page also reads the root page findings of unpublished root
+     * pages; issues() stays with the published ones, even after a call of
+     * issuesForSetup().
      */
     public function testFuerDieEinrichtungFragtErDieVarianteDerQuelle(): void
     {
@@ -500,7 +499,7 @@ class BackendSystemMessagesListenerTest extends TestCase
     }
 
     /**
-     * Review Abo-7, S2: between unpacking and contao:migrate a source reads a
+     * Abo-7: between unpacking and contao:migrate a source reads a
      * column that is not there yet. It is logged and skipped; the others
      * still speak, and the back end page does not answer 500.
      */

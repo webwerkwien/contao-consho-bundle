@@ -5,11 +5,11 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Die Maske zeigt Dezimalfelder mit dem Trennzeichen der Backend-Sprache
- * (DecimalFieldListener) — „2,5“. Speichern geht nur, wenn das Feld das Komma
- * wieder in einen Punkt verwandelt, und das tut Contao nur bei rgxp `digit`.
- * Ohne es landete „25,00“ in der Spalte: so stand es seit D-1 am Betrag einer
- * Zahlung, gefunden beim Bau des Listeners (2026-10-24).
+ * The form shows decimal fields with the separator of the backend language
+ * (DecimalFieldListener) — "2,5". Saving only works if the field turns the
+ * comma back into a point, and Contao does that only for rgxp `digit`.
+ * Without it, "25,00" ended up in the column: that is how it stood on the
+ * amount of a payment since D-1.
  */
 class DecimalFieldsTakeACommaTest extends TestCase
 {
@@ -31,9 +31,9 @@ class DecimalFieldsTakeACommaTest extends TestCase
     }
 
     /**
-     * Beträge zeigt die Maske mit zwei Stellen, Mengen ohne Nullen. Ein neues
-     * Betragsfeld ohne die Markierung erschiene als „25,5“ — diese Liste
-     * zwingt dazu, es einzuordnen.
+     * The form shows amounts with two decimals, quantities without trailing
+     * zeros. A new amount field without the marker would appear as "25,5" — this
+     * list forces it to be classified.
      */
     public function testBetragsfelderSindMarkiert(): void
     {

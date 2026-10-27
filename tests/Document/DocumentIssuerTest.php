@@ -125,10 +125,10 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * C-10 (7.5): Der Storno entsteht aus dem Schnappschuss DER RECHNUNG, nicht
-     * aus der Bestellung — die ist beim Wechsel der Zahlungsart schon umgestellt
-     * oder wird es gleich. Eine Rechnung ändert sich nie, also darf auch ihr
-     * Gegenstück nichts anderes sagen als sie.
+     * C-10 (7.5): The cancellation is built from the snapshot OF THE INVOICE,
+     * not from the order — that has already been switched over when the
+     * payment method changes, or is about to be. An invoice never changes, so
+     * its counterpart must not say anything different from it either.
      */
     public function testDerStornoSpiegeltDenSchnappschussDerRechnung(): void
     {
@@ -136,7 +136,7 @@ class DocumentIssuerTest extends TestCase
         $repository->method('findDocumentRow')->with(42)->willReturn($this->invoiceRow());
         $repository->method('findCancellationOf')->willReturn(null);
 
-        // Die Bestellung wird nicht gefragt.
+        // The order is not asked.
         $repository->expects(self::never())->method('findOrderRow');
         $repository->expects(self::never())->method('findOrderItemRows');
 
@@ -166,27 +166,27 @@ class DocumentIssuerTest extends TestCase
         self::assertSame('-2.0000', $captured['items'][0]['taxAmount']);
         self::assertSame('-12.0000', $captured['items'][0]['lineTotal']);
 
-        // Die Menge bleibt: storniert wird ein Stück zu minus zehn, nicht
-        // minus ein Stück — sonst höben sich die beiden Vorzeichen auf.
+        // The quantity stays: one piece at minus ten is cancelled, not minus
+        // one piece — otherwise the two signs would cancel each other out.
         self::assertSame('1.0000', $captured['items'][0]['quantity']);
         self::assertSame(['net' => '-10.00', 'tax' => '-2.00', 'gross' => '-12.00'], $captured['taxSummary']['20.0000']);
 
         self::assertSame(['number' => 'RE-00001', 'issuedAt' => '1790000000'], $captured['cancels']);
 
-        // Ein Storno fordert keine Zahlung: kein Zahlungsblock, kein Giro-Code,
-        // kein Lieferzeitraum.
+        // A cancellation demands no payment: no payment block, no giro code,
+        // no delivery period.
         self::assertSame(['instructions' => '', 'details' => []], $captured['payment']);
         self::assertNull($captured['delivery']);
 
-        // Absender und Empfänger wie auf der Rechnung, nicht wie heute.
+        // Issuer and recipient as on the invoice, not as today.
         self::assertSame(['company' => 'Damals GmbH'], $captured['issuer']);
         self::assertSame('Muster', $captured['order']['lastname']);
     }
 
     /**
-     * D-3 (F2, F3): die Rechnungskorrektur — Aussteller und Kunde aus dem
-     * Schnappschuss der Rechnung, die Zeilen aus dem Widerruf, die Summen aus
-     * der Steuerzusammenfassung dieser Zeilen, eigener Nummernkreis.
+     * D-3 (F2, F3): the invoice correction — issuer and customer from the
+     * snapshot of the invoice, the lines from the withdrawal, the totals from
+     * the tax summary of those lines, a number range of its own.
      */
     public function testDieRechnungskorrekturNimmtDieZeilenDesWiderrufs(): void
     {
@@ -324,9 +324,9 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * C-8: Was der Beleg über die Bestellung hinaus sagt — Absender, Logo,
-     * Zahlung, Betreibertexte —, liest die Quelle beim Ausstellen, mit der
-     * Bestellzeile als Frage, und es landet im Schnappschuss.
+     * C-8: What the document says beyond the order — issuer, logo, payment,
+     * operator texts — the source reads at issue, with the order row as the
+     * question, and it ends up in the snapshot.
      */
     public function testDerKontextDerQuelleLandetImSchnappschuss(): void
     {
@@ -361,9 +361,9 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * C-8, Liefertag: Die Rechnung bekommt den voraussichtlichen
-     * Lieferzeitraum, gezählt ab dem Tag der Ausstellung — ein Storno nicht,
-     * er verweist auf eine Rechnung, die ihn schon nennt.
+     * C-8, delivery date: The invoice gets the expected delivery period,
+     * counted from the day of issue — a cancellation does not, it refers to an
+     * invoice that already names it.
      */
     public function testNurDieRechnungNenntDenLieferzeitraum(): void
     {
@@ -397,9 +397,45 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * E-6b (Michael, 2026-09-28): Ist schon eine Sendung gemeldet, nennt die
-     * Rechnung den Tag der Lieferung — nach einer Teillieferung dazu den Tag,
-     * an dem der Rest voraussichtlich folgt.
+     * L-1: An invoice issued before shipping that the customer pays in
+     * advance says so in its snapshot (formatVersion 11) — the printed note
+     * hangs on the flag, not on today's payment method.
+     */
+    public function testDieVorauszahlungWirdMitDemLieferzeitraumEingefroren(): void
+    {
+        $deliveries = [];
+
+        foreach ([true, false] as $advance) {
+            $repository = $this->createMock(DocumentRepositoryInterface::class);
+            $repository->method('findOrderRow')->willReturn(['orderNumber' => 'WEB-1']);
+            $repository->method('findOrderItemRows')->willReturn([]);
+            $repository->method('insert')->willReturnCallback(static function (int $o, int $s, DocumentType $t, string $n, int $issuedAt, int $r, array $payload) use (&$deliveries, $advance): int {
+                $deliveries[$advance ? 'advance' : 'onAccount'] = $payload['delivery'] ?? null;
+
+                return 1;
+            });
+
+            $source = $this->createStub(DocumentSourceInterface::class);
+            $source->method('contextFor')->willReturn([
+                'issuer' => [], 'logo' => null, 'payment' => ['instructions' => '', 'details' => [], 'advance' => $advance],
+                'notes' => ['footer' => '', 'reverseCharge' => ''], 'deliveryDays' => ['min' => 2, 'max' => 5],
+            ]);
+
+            $allocator = $this->createStub(NumberAllocatorInterface::class);
+            $allocator->method('next')->willReturn('X-1');
+
+            (new DocumentIssuer($repository, $allocator, new DocumentPayloadBuilder(), $source))->issue(1, 3, DocumentType::Invoice);
+        }
+
+        self::assertTrue($deliveries['advance']['advance'] ?? null);
+        self::assertSame('expected', $deliveries['advance']['kind'] ?? null);
+        self::assertArrayNotHasKey('advance', (array) $deliveries['onAccount']);
+    }
+
+    /**
+     * E-6b: If a shipment has already been reported, the invoice names the
+     * day of delivery — after a partial delivery also the day on which the
+     * rest is expected to follow.
      */
     public function testNachDerSendungDasLieferdatum(): void
     {
@@ -408,7 +444,7 @@ class DocumentIssuerTest extends TestCase
         self::assertSame(['from' => date('Y-m-d', $shippedAt), 'to' => date('Y-m-d', $shippedAt), 'kind' => 'delivered'],
             $this->deliveryAfter(['shippedAt' => $shippedAt, 'complete' => true, 'remainderDays' => 5]));
 
-        // Donnerstag + 5 Werktage = Donnerstag der Folgewoche.
+        // Thursday + 5 working days = Thursday of the following week.
         $partial = $this->deliveryAfter(['shippedAt' => $shippedAt, 'complete' => false, 'remainderDays' => 5]);
         self::assertSame(['from', 'to', 'kind'], array_keys($partial));
         self::assertSame('partial', $partial['kind']);
@@ -450,10 +486,10 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * Giro-Code (C-8): Der Wunsch der Zahlungsart wird zum fertigen Inhalt,
-     * mit der eben vergebenen Rechnungsnummer als Verwendungszweck. Ohne
-     * Wunsch keiner — und ein Storno fordert keine Zahlung, also auch dann
-     * keiner, wenn die Zahlungsart ihn will.
+     * Giro code (C-8): The wish of the payment method becomes the finished
+     * content, with the invoice number just assigned as the remittance
+     * information. No wish, no code — and a cancellation demands no payment,
+     * so none either when the payment method wants one.
      */
     public function testNurDieRechnungMitDemWunschTraegtDenGiroCode(): void
     {
@@ -466,14 +502,14 @@ class DocumentIssuerTest extends TestCase
         self::assertArrayNotHasKey('giroCode', $this->issueWith(DocumentType::Invoice, false, $bank)['payment']);
         self::assertArrayNotHasKey('giroCode', $this->issueWith(DocumentType::Cancellation, true, $bank)['payment']);
 
-        // Der Wunsch selbst landet nie im Schnappschuss, nur der Code.
+        // The wish itself never ends up in the snapshot, only the code.
         self::assertSame(['instructions', 'details', 'meansCode'], array_keys($this->issueWith(DocumentType::Invoice, false, $bank)['payment']));
     }
 
     /**
-     * Passen die Daten nicht (hier: keine IBAN), entsteht die Rechnung
-     * trotzdem — ohne Code. Die Nummer ist da schon vergeben; ein Abbruch
-     * hinterließe eine Lücke im Nummernkreis.
+     * If the data do not fit (here: no IBAN), the invoice is created anyway
+     * — without a code. The number has already been assigned at that point;
+     * aborting would leave a gap in the number range.
      */
     public function testOhneGueltigeBankdatenEntstehtDieRechnungOhneCode(): void
     {
@@ -481,9 +517,9 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * F3b: Die mit einer Erstattung ausgestellte Rechnung nennt die ganze
-     * Bestellung und wird sofort korrigiert — ein Code über ihren Betrag
-     * verlangte zu viel. Trotz Wunsch der Zahlungsart also keiner.
+     * F3b: The invoice issued together with a refund names the whole order and
+     * is corrected immediately — a code over its amount would demand too much.
+     * So none, despite the payment method's wish.
      */
     public function testDieRechnungZurErstattungTraegtKeinenGiroCode(): void
     {
@@ -493,11 +529,11 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * E-2 (Z1, Z5): Eine Rechnung „Auf Rechnung" nennt „Zahlbar bis" —
-     * Kalendertage ab dem Ausstellungstag — und die Bestellung merkt sich das
-     * Ende dieses Tages. Jede Rechnung, die Zahlung verlangt, schreibt den
-     * Wert, eine ohne Ziel 0: sonst bliebe nach einem Wechsel der Zahlungsart
-     * das Ziel der alten stehen.
+     * E-2 (Z1, Z5): An invoice "on account" names "payable by" — calendar days
+     * from the day of issue — and the order remembers the end of that day.
+     * Every invoice that demands payment writes the value, one without a due
+     * date writes 0: otherwise the due date of the old one would remain after
+     * a change of payment method.
      */
     public function testDasZahlungszielWirdEingefrorenUndAnDerBestellungVermerkt(): void
     {
@@ -519,8 +555,8 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * Die Rechnung, die mit einer Erstattung entsteht (D-3, F3b), fordert
-     * keine Zahlung — also auch kein Ziel, und die Bestellung bleibt unberührt.
+     * The invoice that comes with a refund (D-3, F3b) demands no payment — so
+     * no due date either, and the order stays untouched.
      */
     public function testDieRechnungZurErstattungNenntKeinZiel(): void
     {
@@ -569,10 +605,10 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * WG12: Was vor der Rechnung schon bezahlt ist — ein Gutschein beim Kauf,
-     * eine Teilzahlung vor dem Versand —, steht im Schnappschuss, und Giro-Code
-     * und Zahlungsziel verlangen nur den Rest. Bis dahin forderten beide den
-     * ganzen Betrag.
+     * WG12: What has already been paid before the invoice — a voucher at
+     * purchase, a partial payment before shipping — is in the snapshot, and
+     * giro code and due date only ask for the rest. Until then both demanded
+     * the whole amount.
      */
     public function testNachEinerTeilzahlungVerlangtDieRechnungNurDenRest(): void
     {
@@ -594,12 +630,12 @@ class DocumentIssuerTest extends TestCase
         self::assertSame('0.0000', $payload['payment']['outstanding']);
         self::assertArrayNotHasKey('giroCode', $payload['payment']);
         self::assertArrayNotHasKey('dueDate', $payload['payment']);
-        // Das Ziel einer früheren Rechnung darf nicht stehen bleiben.
+        // The due date of an earlier invoice must not remain.
         self::assertSame([0], $due);
     }
 
     /**
-     * Eine Erstattung zählt mit: was zurückging, ist wieder offen.
+     * A refund counts too: what went back is open again.
      */
     public function testEineErstattungMindertDasBezahlte(): void
     {
@@ -611,7 +647,7 @@ class DocumentIssuerTest extends TestCase
     }
 
     /**
-     * Ein Storno verlangt keine Zahlung — es nennt auch keine.
+     * A cancellation demands no payment — it names none either.
      */
     public function testDasStornoNenntKeineZahlungen(): void
     {

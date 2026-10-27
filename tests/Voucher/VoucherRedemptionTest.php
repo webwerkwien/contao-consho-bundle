@@ -14,9 +14,9 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherRedemption;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
 
 /**
- * WG-5 (6.5, E4, E5): Beim Kaufklick zahlt jeder Gutschein, was die Seite
- * zeigte — Bewegung `redeem` und Zahlung an der Bestellung, die aufeinander
- * zeigen. Kann er es nicht mehr, wird nichts gebucht.
+ * WG-5 (6.5, E4, E5): At the purchase click every voucher pays what the page
+ * showed — a `redeem` movement and a payment on the order, pointing at each
+ * other. If it no longer can, nothing is booked.
  */
 class VoucherRedemptionTest extends TestCase
 {
@@ -40,14 +40,14 @@ class VoucherRedemptionTest extends TestCase
     {
         $this->redemption()->redeem(77, $this->draft([[1, '30.00'], [2, '10.00']]), self::NOW);
 
-        // Zahlen, nicht Zeichenketten: SQLite gibt '20' zurück, MySQL '20.0000' (Fall 30).
+        // Numbers, not strings: SQLite returns '20', MySQL '20.0000'.
         self::assertEquals([20, 0], $this->connection->fetchFirstColumn('SELECT balance FROM tl_consho_voucher ORDER BY id'));
 
         $payments = $this->connection->fetchAllAssociative('SELECT id, pid, amount, method, reference, receivedAt FROM tl_consho_payment ORDER BY id');
         self::assertCount(2, $payments);
         self::assertSame(77, (int) $payments[0]['pid']);
         self::assertEquals(30, $payments[0]['amount']);
-        // E5: nur die letzte Gruppe.
+        // E5: only the last group.
         self::assertSame('Gift voucher …MDSN', $payments[0]['method']);
         self::assertSame('voucher:1', $payments[0]['reference']);
         self::assertSame(self::NOW, (int) $payments[0]['receivedAt']);
@@ -60,8 +60,25 @@ class VoucherRedemptionTest extends TestCase
     }
 
     /**
-     * E4: zwischen Seite und Klick anderswo eingelöst — der Saldo reicht
-     * nicht mehr. Die Ausnahme rollt in OrderPlacer alles zurück.
+     * EZ-4 (F1): what a single-purpose voucher pays carries the tax of its
+     * sale — rate, country and the tax in the amount, on the currency's
+     * places. A multi-purpose voucher's payment carries none.
+     */
+    public function testEinEinzweckGutscheinZahltMitDerSteuerSeinesVerkaufs(): void
+    {
+        $this->connection->update('tl_consho_voucher', ['taxClass' => 3, 'taxRate' => '20.0000', 'taxCountry' => 'AT'], ['id' => 1]);
+
+        $this->redemption()->redeem(77, $this->draft([[1, '25.00'], [2, '10.00']]), self::NOW);
+
+        $payments = $this->connection->fetchAllAssociative('SELECT prepaidTaxRate, prepaidTaxCountry, prepaidTax FROM tl_consho_payment ORDER BY id');
+        // 25 × 20 / 120 = 4.1666… → 4.17
+        self::assertEquals([20, 'AT', 4.17], array_values($payments[0]));
+        self::assertEquals([0, '', 0], array_values($payments[1]));
+    }
+
+    /**
+     * E4: redeemed elsewhere between page and click — the balance is no
+     * longer enough. The exception rolls everything back in OrderPlacer.
      */
     public function testReichtDerSaldoNichtMehrWirdNichtBestellt(): void
     {
@@ -87,8 +104,8 @@ class VoucherRedemptionTest extends TestCase
     }
 
     /**
-     * Review WG-7, L1: erst alle Gutscheine gesperrt, in Id-Reihenfolge —
-     * auch wenn der Korb sie andersherum nennt.
+     * WG-7: all vouchers locked first, in id order —
+     * even if the cart names them the other way round.
      */
     public function testSperrtZuerstAlleInIdReihenfolge(): void
     {

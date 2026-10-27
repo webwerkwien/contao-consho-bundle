@@ -131,9 +131,9 @@ class ProductAliasListenerTest extends TestCase
     }
 
     /**
-     * Die alte Adresse zeichnet ProductAddressListener für den ganzen
-     * Speichervorgang auf — geprüft in Tests\Seo\AliasRedirectTest und
-     * Tests\Seo\ProductAddressRedirectTest gegen SQLite.
+     * ProductAddressListener records the old URL for the whole save — checked
+     * in Tests\Seo\AliasRedirectTest and Tests\Seo\ProductAddressRedirectTest
+     * against SQLite.
      */
     private function listener(AliasFactory $aliases): ProductAliasListener
     {

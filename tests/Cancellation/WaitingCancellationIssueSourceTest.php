@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo-7 (Michael, 2026-09-30): wartende außerordentliche Kündigungen als
- * Befund je Shop.
+ * Abo-7: waiting extraordinary cancellations as a
+ * finding per shop.
  */
 final class WaitingCancellationIssueSourceTest extends TestCase
 {
@@ -34,7 +34,7 @@ final class WaitingCancellationIssueSourceTest extends TestCase
     {
         $received = (new \DateTimeImmutable('2026-09-30 12:00'))->getTimestamp();
 
-        // Wartend (2 in Shop 1, eine davon älter), entschieden, ordentlich, anderer Shop.
+        // Waiting (2 in shop 1, one of them older), decided, ordinary, another shop.
         $this->cancellation(1, 'WEB-1-1-K2', 'extraordinary', null, $received + 3600);
         $this->cancellation(1, 'WEB-1-1-K1', 'extraordinary', null, $received);
         $this->cancellation(1, 'WEB-1-1-K3', 'extraordinary', $received, $received);
@@ -52,7 +52,7 @@ final class WaitingCancellationIssueSourceTest extends TestCase
 
     public function testEinBeendetesAboWartetNicht(): void
     {
-        // Review Abo-Nachlese, L2: per Storno des Kaufs beendet (P72).
+        // Abo-Nachlese: ended by cancelling the purchase (P72).
         $this->cancellation(1, 'WEB-1-1-K1', 'extraordinary', null, 1);
         $this->connection->update('tl_consho_subscription', ['state' => 'ended'], ['id' => 1]);
 

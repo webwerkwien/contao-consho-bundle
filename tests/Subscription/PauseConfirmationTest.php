@@ -13,8 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\PauseScheduled;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abo pausieren (P110): die Bestätigung an die neueste Bestellung des Abos —
- * deren Anschrift und Sprache, wie bei der Erinnerung.
+ * Pausing a subscription (P110): the confirmation goes to the subscription's newest order —
+ * its address and language, as with the reminder.
  */
 final class PauseConfirmationTest extends TestCase
 {

@@ -7,8 +7,8 @@
  * Only net is stored (C22). The mask takes an amount "gross | net" and turns it
  * into net on save, with the rate of the product's tax class in the reference
  * country; on load it shows the amount from net again — see
- * PriceInputListener. docs/block-a-fundament.md, section 3.1, and
- * docs/block-c-warenkorb-checkout.md, section 5.3.
+ * PriceInputListener. Block A, section 3.1, and
+ * Block C, section 5.3.
  */
 $GLOBALS['TL_DCA']['tl_consho_price'] = [
     'config' => [
@@ -76,12 +76,12 @@ $GLOBALS['TL_DCA']['tl_consho_price'] = [
             // Options: the shops' currencies (PriceInputListener). No
             // submitOnChange: an auto-submit stores the row, so a saved price
             // would go live in the new currency with the old net before anyone
-            // clicks Save (decision 2026-09-15). The country is checked against
+            // clicks Save. The country is checked against
             // the currency on save. A stored currency outside the options would
             // be offered as "(unknown)" and accepted — saveCurrency() rejects it.
             //
-            // The column default is empty, not 'EUR' (2026-09-21, Michael:
-            // "loud rather than silent, and more international"). The mask has
+            // The column default is empty, not 'EUR' :
+            // loud rather than silent, and more international. The mask has
             // preselected the right currency since C-1b — CoupledPriceInputListener
             // overwrites this default per request — but that only reaches the mask.
             // A row written past it, by a model, the CLI or a migration, used to
@@ -167,7 +167,6 @@ $GLOBALS['TL_DCA']['tl_consho_price'] = [
          * for it: the field renders as 01.01.1970 rather than empty, the back
          * end submits that date back, CET turns it into -3600, and the unsigned
          * column rejects it with SQLSTATE[22003]. NULL means "no boundary".
-         * See the vault note "Eigene Tabelle mit Backend-Maske in Contao 5".
          *
          * Date AND time, and the same rule as Contao's start/stop: from
          * inclusive, to exclusive. With a date alone, "valid to 30.09." ended
@@ -196,8 +195,8 @@ $GLOBALS['TL_DCA']['tl_consho_price'] = [
          * isAssociative: the options [0 => Einmalkauf, 1 => …, 2 => …] happen
          * to be a list, and Contao then takes the LABELS as values
          * (Widget::getAttributesFromDca(), ArrayUtil::isAssoc()). The mask
-         * sent "Monatsabo", and the price was saved as a one-time sale —
-         * found on c5 in the Abo-1 acceptance.
+         * sent "Monatsabo", and the price was saved as a one-time sale
+         * (Abo-1).
          */
         'subscriptionRule' => [
             'inputType' => 'select',

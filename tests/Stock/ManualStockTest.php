@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Connect Stufe 2, CW-2: eine Buchung von Hand mit ausdrücklicher Menge und
- * Benutzer — ohne Maske, ohne Anfrage.
+ * Connect stage 2, CW-2: a manual booking with an explicit quantity and
+ * user — without a form, without a request.
  */
 class ManualStockTest extends TestCase
 {
@@ -44,8 +44,8 @@ class ManualStockTest extends TestCase
     }
 
     /**
-     * Ohne vorheriges Speichern in der Maske gibt es noch keine Zeile — ein
-     * Befehl kommt genau so an.
+     * Without a previous save in the form there is no row yet — a command
+     * arrives exactly like that.
      */
     public function testLegtDieZeileBeiBedarfAn(): void
     {
@@ -72,8 +72,8 @@ class ManualStockTest extends TestCase
     }
 
     /**
-     * Ein Hauptprodukt mit Varianten ist kein Artikel: gebucht wird an der
-     * Variante.
+     * A main product with variants is not an article: the booking goes to the
+     * variant.
      */
     public function testHauptproduktMitVariantenKeineBuchung(): void
     {

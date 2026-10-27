@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SaleModes;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Typ 1 ist digital, Typ 2 körperlich, Typ 3 eine Dienstleistung. Regeln 5 und 9 gibt es, 7 ist gelöscht.
+ * Type 1 is digital, type 2 physical, type 3 a service. Rules 5 and 9 exist, 7 is deleted.
  */
 class SaleModesTest extends TestCase
 {
@@ -18,7 +18,7 @@ class SaleModesTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        // Aus der DCA; saleOnce mit der Vorgabe an (P1).
+        // From the DCA; saleOnce with its default on (P1).
         DcaSchema::create($this->connection, 'tl_consho_product');
         DcaSchema::create($this->connection, 'tl_consho_product_type');
         DcaSchema::create($this->connection, 'tl_consho_subscription_rule');
@@ -32,7 +32,7 @@ class SaleModesTest extends TestCase
 
     public function testEinBestehendesProduktIstEinEinmalkauf(): void
     {
-        // P1: Die Vorgabe der Spalte macht aus jedem Produkt beim Update einen Einmalkauf.
+        // P1: the column's default turns every product into a one-off purchase on update.
         $this->connection->insert('tl_consho_product', ['id' => 1, 'productType' => 1]);
 
         $settings = (new SaleModes($this->connection))->of(1);
@@ -69,7 +69,7 @@ class SaleModesTest extends TestCase
 
     public function testOhneHakenBeimAboZaehltDieGespeicherteAuswahlNicht(): void
     {
-        // Das Häkchen entfernt, die Auswahl bleibt in der Spalte stehen.
+        // The tick removed, the selection stays in the column.
         $this->product(1, rules: ['5'], subscription: false);
 
         self::assertSame([], (new SaleModes($this->connection))->of(1)->rules);
@@ -77,7 +77,7 @@ class SaleModesTest extends TestCase
 
     public function testKoerperlicheWareIstImmerEinEinmalkauf(): void
     {
-        // Ein Paket ohne Häkchen wäre sonst unverkäuflich.
+        // A package without a tick would otherwise be unsellable.
         $this->product(1, rules: ['5'], once: false, type: 2);
 
         $settings = (new SaleModes($this->connection))->of(1);
@@ -88,7 +88,7 @@ class SaleModesTest extends TestCase
 
     public function testOhneTypGiltKoerperlich(): void
     {
-        // Wie DbalArticleShippingData: das Merkmal schaltet Pflichten ein.
+        // Like DbalArticleShippingData: the property switches obligations on.
         $this->product(1, rules: ['5'], once: false, type: 0);
 
         self::assertSame([0], (new SaleModes($this->connection))->of(1)->priceRules());
@@ -96,7 +96,7 @@ class SaleModesTest extends TestCase
 
     public function testDieVarianteLiestDasGrundprodukt(): void
     {
-        // P2: eigene Werte der Variante zählen nicht.
+        // P2: the variant's own values do not count.
         $this->product(1, rules: ['5'], once: false, type: 3);
         $this->connection->insert('tl_consho_product', ['id' => 2, 'pid' => 1, 'productType' => 1, 'saleOnce' => 1, 'saleSubscription' => 0]);
 
@@ -108,7 +108,7 @@ class SaleModesTest extends TestCase
 
     public function testEineDienstleistungDarfEinAboSein(): void
     {
-        // DL1: Mitgliedschaft im Fitnesscenter.
+        // DL1: a gym membership.
         $this->product(1, rules: ['5'], once: false, type: 3);
 
         $settings = (new SaleModes($this->connection))->of(1);

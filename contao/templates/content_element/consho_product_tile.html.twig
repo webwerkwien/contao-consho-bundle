@@ -72,7 +72,7 @@
         {#- Abo-2b, P89: the figure is the one-time price, and the product can
             also be had as a plan — which one and for how much, the product
             page says. After the tax notice, which belongs to the price
-            (acceptance Abo-2b). -#}
+            (Abo-2b). -#}
         {#- Block G (G7): only where stock is kept, never the number. #}
         {% if product.stock|default('') %}
             <p class="consho-tile__stock consho-tile__stock--{{ product.stock }}">{{ ("CONSHO.stock." ~ product.stock)|trans({}, "contao_default") }}</p>
@@ -82,28 +82,27 @@
         {% endif %}
 
         {#
-            Kaufknopf auf der Kachel, am Listenelement eingeschaltet
-            (Michael, 2026-09-22). Drei Bedingungen, und alle drei müssen sein:
+            Purchase button on the tile, switched on at the list element.
+            Three conditions, and all three must hold:
 
-            - `tilePurchase` — der Betreiber hat es an dieser Liste gewollt.
-              Ab Werk aus, damit eine Übersicht nicht ungefragt zum Kaufregal
-              wird.
-            - `product.isBuyable` — kein Hauptprodukt MIT Varianten. Dort gibt
-              es keinen kaufbaren Artikel, solange niemand gewählt hat; die
-              Kachel verlinkt dann wie bisher auf die Detailseite.
-            - `product.formattedPrice` — ohne Preis gibt es kein Angebot, und
-              ein Kaufknopf über einer leeren Preiszeile ist eines.
+            - `tilePurchase` — the operator wanted it on this list. Off by
+              default, so that an overview does not turn into a shop shelf
+              unasked.
+            - `product.isBuyable` — no main product WITH variants. There is no
+              buyable article there until someone has chosen; the tile then
+              links to the detail page as before.
+            - `product.formattedPrice` — without a price there is no offer, and
+              a purchase button above an empty price line would be one.
 
-            ⚠️ Menge OHNE Feld: die Mindestmenge des Produkts, still. Wer eine
-            andere will, geht auf die Detailseite oder ändert sie im Warenkorb.
-            Ein Zahlenfeld je Kachel machte jede Kachel höher und brächte die
-            Schrittweite mit, die dort niemand sieht.
+            ⚠️ Quantity WITHOUT a field: the product's minimum quantity, silently.
+            Whoever wants another goes to the detail page or changes it in the
+            cart. A number field per tile would make every tile taller and bring
+            the step size along, which nobody sees there.
 
-            ⚠️ KEIN CSRF-Feld, anders als im Warenkorb und im Checkout: Die
-            Add-Route ist ausgenommen (`_token_check: false`, C11) und über
-            `SameSite=Lax` plus Origin-Prüfung geschützt. Genau deshalb — eine
-            Liste ist geteilt gecacht, und ein Token darin wäre das eines
-            fremden Besuchers.
+            ⚠️ NO CSRF field, unlike the cart and the checkout: the add route is
+            exempt (`_token_check: false`, C11) and protected by `SameSite=Lax`
+            plus an Origin check. That is exactly why — a list is cached shared,
+            and a token in it would be some other visitor's.
         #}
         {% if tilePurchase|default(false) and product.isBuyable and product.formattedPrice and product.stock|default('') != 'unavailable' %}
             <form class="consho-tile__purchase" method="post" action="{{ path("consho_cart_add") }}">
@@ -111,9 +110,9 @@
                 <input type="hidden" name="page" value="{{ purchasePage|default(0) }}">
                 <input type="hidden" name="quantity" value="{{ product.purchaseQuantity }}">
                 <button type="submit" class="consho-tile__purchase-submit">
-                    {#- Der Titel gehört in die Beschriftung: Auf einer Seite
-                        mit zwölf Kacheln liest ein Screenreader sonst zwölfmal
-                        „In den Warenkorb" ohne Unterschied. -#}
+                    {#- The title belongs in the label: on a page with twelve
+                        tiles a screen reader would otherwise read "In den Warenkorb"
+                        twelve times without a difference. -#}
                     {{ "CONSHO.tile.purchase"|trans([product.title], "contao_default") }}
                 </button>
             </form>

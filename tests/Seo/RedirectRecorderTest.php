@@ -149,11 +149,11 @@ class RedirectRecorderTest extends TestCase
         self::assertSame(0, $this->recorder()->record(999, ProductPathTemplate::fromString('{alias}'), self::NOW));
     }
 
-    // ── Language (M-3, Aufgabe 4) ───────────────────────────────────────
+    // ── Language (M-3, task 4) ──────────────────────────────────────────
 
     public function testItRecordsThePathsOfTheRootPagesOwnLanguage(): void
     {
-        // Two startpoints on the same shop, one de, one en — the case Aufgabe
+        // Two startpoints on the same shop, one de, one en — the case task
         // 4 exists for. Recording for the English startpoint must write the
         // English alias, not the German one.
         $this->connection->update('tl_page', ['language' => 'de'], ['id' => 1]);
@@ -188,9 +188,9 @@ class RedirectRecorderTest extends TestCase
 
     public function testARecorderWithoutTranslationsIsUnchanged(): void
     {
-        // Der Prüfstein: ein einsprachiger Shop — kein Startpunkt trägt eine
-        // Sprache, keine Übersetzung existiert — zeichnet exakt auf wie vor
-        // dieser Änderung.
+        // The touchstone: a single-language shop — no start point carries a
+        // language, no translation exists — records exactly as before
+        // this change.
         $written = $this->recorder()->record(123, ProductPathTemplate::fromString('{alias}'), self::NOW);
 
         self::assertSame(2, $written);

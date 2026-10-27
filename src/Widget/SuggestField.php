@@ -9,9 +9,8 @@ use Contao\TextField;
  * A text field that suggests the values already in use (Block G, G-7, E5 a) —
  * the browser's own <datalist>, no script.
  *
- * Michael, 2026-10-05: "ich will aber vermeiden, dass ein und der selbe
- * Lieferant mehrere Schreibweisen bekommt … Dropdown wo man auch neuen
- * Lieferanten anlegen kann (ohne DB)". Contao has no select that creates
+ * One and the same supplier must not get several spellings; a drop-down
+ * that also takes a new supplier, without a table of its own. Contao has no select that creates
  * entries; this is the nearest: typing offers the names in use, a new one is
  * simply typed. The suggestions come from the field's options_callback;
  * SupplierListener matches spelling variants on save.

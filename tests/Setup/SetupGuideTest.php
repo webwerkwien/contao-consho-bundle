@@ -22,7 +22,8 @@ class SetupGuideTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        // Review I (6): Contaos eigene DCA, nicht abgeschrieben (Fall 31).
+        // I: Contao's own DCA, not copied — a copied schema can dodge the
+        // production column names.
         DcaSchema::createCore($this->connection, 'tl_page');
         DcaSchema::create($this->connection, 'tl_consho_shop');
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Shop DE']);
@@ -30,8 +31,8 @@ class SetupGuideTest extends TestCase
 
     public function testOhneWaehrungAmStartpunktIstErNichtBereit(): void
     {
-        // Review I, S1: diese Befunde sperren die Kasse nicht — sie zeigt
-        // ohne Währung einfach nichts. „Bereit" darf das nicht übersehen.
+        // I: these findings do not lock the checkout — without a currency it
+        // simply shows nothing. "Ready" must not overlook that.
         $this->page(['id' => 1, 'type' => 'root', 'consho_shop' => 1]);
 
         foreach (SetupGuide::UNSELLABLE as $finding) {
@@ -41,14 +42,14 @@ class SetupGuideTest extends TestCase
             self::assertSame(StepState::OPEN, $this->stepStatus($setup->steps, SetupStep::Shop), $finding->value);
         }
 
-        // Gegenprobe: die Domain fehlt — das stört Mails aus dem Cron, nicht den Kauf.
+        // Control case: the domain is missing — that disturbs mails from the cron, not the purchase.
         self::assertTrue((new SetupGuide($this->connection))->forShop(1, 'Shop DE', [new ConfigurationIssue(ConfigurationFinding::StartPointWithoutDomain, [], 1)], self::NOW)->ready);
     }
 
     public function testDieFehlendeWaehrungEinesShopsSperrtNichtDenAnderen(): void
     {
-        // Zweites Review I, B1: die Befunde kamen mit Shop 0, und Shop 0 hieß
-        // „alle". Diesmal aus der echten Quelle, nicht von Hand gebaut.
+        // I: the findings came with shop 0, and shop 0 meant "all". This time
+        // from the real source, not built by hand.
         $this->connection->update('tl_consho_shop', ['currencies' => serialize(['EUR'])], ['id' => 1]);
         $this->connection->insert('tl_consho_shop', ['id' => 2, 'title' => 'Shop CH', 'currencies' => serialize(['CHF'])]);
         $this->page(['id' => 1, 'type' => 'root', 'consho_shop' => 1, 'consho_currency' => 'EUR']);
@@ -63,7 +64,7 @@ class SetupGuideTest extends TestCase
     }
 
     /**
-     * Veröffentlicht, wenn nichts anderes gesagt ist — Contaos Vorgabe ist 0.
+     * Published unless said otherwise — Contao's default is 0.
      *
      * @param array<string, mixed> $row
      */
@@ -74,8 +75,8 @@ class SetupGuideTest extends TestCase
 
     public function testOhneStartpunktIstDerShopNichtBereitAuchOhneBefund(): void
     {
-        // I7: ohne Startpunkt meldet keine Seitenprüfung etwas — die
-        // Kaufsperre allein hielte den Shop für bereit.
+        // I: without a root page no page check reports anything — the purchase
+        // lock alone would consider the shop ready.
         $setup = (new SetupGuide($this->connection))->forShop(1, 'Shop DE', [], self::NOW);
 
         self::assertFalse($setup->ready);
@@ -117,10 +118,9 @@ class SetupGuideTest extends TestCase
     }
 
     /**
-     * N1: Die Einrichtungsseite liest ihre Schritte auch von unveröffentlichten
-     * Startpunkten. Ob der Shop verkauft, entscheiden die veröffentlichten —
-     * ein halbfertiger Zusatz-Startpunkt nimmt einem laufenden Shop nicht das
-     * „bereit".
+     * N1: the setup page also reads its steps from unpublished root pages.
+     * Whether the shop sells is decided by the published ones — a half-finished
+     * additional root page does not take the "ready" away from a running shop.
      */
     public function testDieSchritteLesenAlleStartpunkteBereitNurDieVeroeffentlichten(): void
     {
@@ -135,7 +135,7 @@ class SetupGuideTest extends TestCase
         self::assertSame([1], array_column($setup->roots, 'id'));
         self::assertSame([1, 2], array_column($setup->assigned, 'id'));
 
-        // Der Knopf „Seiten anlegen" darf am unveröffentlichten handeln, der Cache nicht.
+        // The "Create pages" button may act on the unpublished one, the cache may not.
         $guide = new SetupGuide($this->connection);
         self::assertNull($guide->root(2, self::NOW));
         self::assertSame(1, $guide->root(2, self::NOW, assigned: true)['shop'] ?? null);

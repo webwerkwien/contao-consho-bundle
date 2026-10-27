@@ -13,9 +13,9 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalAssignment;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 
 /**
- * „Bestellung zuordnen" (WA, A4): ein Widerruf ohne Bestellung bekommt seine
- * Bestellung — nur im eigenen Shop, nur einmal, und mit der Markierung, die er
- * beim Eingang bekommen hätte.
+ * "Assign order" (WA, A4): a withdrawal without an order gets its order —
+ * only in its own shop, only once, and with the flag it would have got on
+ * receipt.
  */
 final class WithdrawalAssignmentTest extends TestCase
 {
@@ -60,7 +60,7 @@ final class WithdrawalAssignmentTest extends TestCase
         self::assertSame([7, 'W-00005', self::RECEIVED, 'WEB-0073', 0], [(int) $row['pid'], $row['number'], (int) $row['receivedAt'], $row['orderReference'], (int) $row['afterWindow']]);
     }
 
-    /** Die Bestellung eines anderen Shops ist der Vertrag eines anderen Händlers. */
+    /** The order of another shop is the contract of another merchant. */
     public function testNurImEigenenShop(): void
     {
         self::assertNull($this->assignment()->findOrder(5, 'WEB-00080'));
@@ -71,7 +71,7 @@ final class WithdrawalAssignmentTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_withdrawal WHERE id = 5'));
     }
 
-    /** Zwei Bearbeiter zugleich: der zweite findet es erledigt, statt umzuhängen. */
+    /** Two editors at once: the second finds it done instead of reassigning. */
     public function testNurEinmal(): void
     {
         self::assertTrue($this->assignment()->assign(5, 7)->done);
@@ -84,8 +84,8 @@ final class WithdrawalAssignmentTest extends TestCase
     }
 
     /**
-     * Die Markierung sagt, was sie beim Eingang gesagt hätte: Zum Zeitpunkt
-     * des EINGANGS lag das Fenster der Bestellung schon hinter ihm.
+     * The flag says what it would have said on receipt: at the time of
+     * RECEIPT the order's window already lay behind it.
      */
     public function testDerSpaeteEingangWirdMarkiert(): void
     {
@@ -100,9 +100,8 @@ final class WithdrawalAssignmentTest extends TestCase
     }
 
     /**
-     * Review WA, S2 (Michael, 2026-10-22: „wie empfohlen"): was zu keiner
-     * Bestellung gehört, verlässt die offenen Aufgaben — abgelehnt mit
-     * interner Begründung, die Erklärung bleibt, wie sie kam.
+     * WA: what belongs to no order leaves the open tasks — rejected with an
+     * internal reason, the declaration stays as it came.
      */
     public function testOhneBestellungAbweisen(): void
     {

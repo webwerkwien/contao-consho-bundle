@@ -164,8 +164,8 @@ class AddToCartController
          * `rootId` is empty — and "the root of this page" collapses to the
          * page itself, which carries no `consho_shop`. Every page a visitor
          * actually buys from is a sub page, so without this the route answered
-         * 400 to every single request (found on c5 on 2026-09-20, with a green
-         * suite behind it — the page double handed out `rootId` unasked).
+         * 400 to every single request — with a green suite behind
+         * it, because the page double handed out `rootId` unasked.
          *
          * The front end index calls loadDetails() before it hands a page to a
          * content element; that is why ProductDetailController and the two
@@ -236,7 +236,7 @@ class AddToCartController
          * word. -1 is offered by nothing and ends as "not offered".
          *
          * Who is asking decides what is offered (P11): the visitor's groups —
-         * since variant A (2026-10-08) alone; "sameTerm" is no longer held
+         * since variant A alone; "sameTerm" is no longer held
          * back from consumers by the core, the rule's groups do it.
          */
         $planInput = $request->request->has('subscriptionRule') ? $request->request->getString('subscriptionRule') : '0';
@@ -316,7 +316,7 @@ class AddToCartController
         }
 
         /*
-         * No success notice in "back to the page" mode (decided 2026-09-20).
+         * No success notice in "back to the page" mode.
          * The answer there is the number in the mini basket going up — a theme
          * can make it wiggle. And it settles a second thing: a notice has no
          * expiry, so one written here would sit in the row until the basket
@@ -422,7 +422,7 @@ class AddToCartController
      *
      * ⚠️ The target of a "back to the page" redirect is the REFERER, and after
      * a refusal that referer already carries consho_notice. Appending blindly
-     * broke in both directions (found in the C-3c review):
+     * broke in both directions (C-3c):
      *
      *   - a refusal corrected and re-clicked succeeded, and the visitor was
      *     sent back to ...?consho_notice=invalid_quantity — the mini basket
@@ -471,7 +471,7 @@ class AddToCartController
 
         /*
          * A refusal goes BACK to where the click happened, whatever
-         * afterAddToCart says (C-3c, reversing the 2026-09-20 decision). The
+         * afterAddToCart says (C-3c, reversing the earlier decision). The
          * reason now rides in the address and is rendered by the buy button,
          * so the page the visitor came from is the one place that can show it.
          *

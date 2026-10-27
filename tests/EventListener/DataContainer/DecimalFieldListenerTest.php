@@ -9,10 +9,10 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\DecimalFieldListener;
 
 /**
- * Dezimalfelder zeigt die Maske in der Sprache des Backends, ohne die Nullen
- * der Spalte: „1“ statt „1.0000“, „2,5“ statt „2.5000“, Beträge mit zwei
- * Stellen. Gemeldet von Michael am 2026-10-24 an der Mindestmenge der
- * Preismaske.
+ * The form shows decimal fields in the backend language, without the
+ * column's zeros: "1" instead of "1.0000", "2,5" instead of "2.5000",
+ * amounts with two decimals. It showed on the minimum quantity of the
+ * price form.
  */
 class DecimalFieldListenerTest extends TestCase
 {
@@ -86,9 +86,9 @@ class DecimalFieldListenerTest extends TestCase
     }
 
     /**
-     * Die Maske zeigt „2,5“, gespeichert ist „2.5000“: für Contao ist das eine
-     * Änderung, und ein Speichern ohne Änderung schriebe eine neue Version und
-     * liefe durch jeden onbeforesubmit, als hätte jemand die Menge geändert.
+     * The form shows "2,5", what is stored is "2.5000": for Contao that is a
+     * change, and a save without a change would write a new version and run
+     * through every onbeforesubmit as if somebody had changed the quantity.
      */
     public function testUnveraendertGespeichertIstKeineAenderung(): void
     {
@@ -112,9 +112,9 @@ class DecimalFieldListenerTest extends TestCase
     }
 
     /**
-     * contao-ai und Connect rufen onbeforesubmit beim Schreiben ebenfalls auf.
-     * Dort kommt der Wert nicht aus der Maske, und ein leerer Satz Werte wäre
-     * ein UPDATE ohne Spalten.
+     * contao-ai and Connect call onbeforesubmit when writing as well. There
+     * the value does not come from the form, and an empty set of values would
+     * be an UPDATE without columns.
      */
     public function testAusserhalbDerMaskeBleibtAllesStehen(): void
     {

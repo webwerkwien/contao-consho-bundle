@@ -55,8 +55,8 @@ interface PaymentHandlerInterface
      * ⚠️ `Succeeded` only when the handler has VERIFIED it — a signature on
      * the return, or a question to the provider. The return address is typed
      * into a browser and can be typed by anyone; the order page says "the
-     * provider reports the payment as completed" on this answer alone
-     * (Michael, 2026-09-26: the page says only what it can prove). Anything
+     * provider reports the payment as completed" on this answer alone,
+     * and the page says only what it can prove. Anything
      * unverified is `Pending`. `Failed` and `Cancelled` stop no money and
      * need no proof.
      *

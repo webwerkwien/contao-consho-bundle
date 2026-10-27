@@ -49,4 +49,20 @@ class OrderPageLink
             OrderController::TOKEN_PARAM => $this->tokens->issue((int) $order['id'], TokenPurpose::ViewOrder, null, true),
         ]));
     }
+
+    /**
+     * The "Lost password" page of the order's start point (K1), without a
+     * token — null where the start point names none.
+     *
+     * @param array<string, mixed> $order a row of tl_consho_order
+     */
+    public function passwordPage(array $order): string|null
+    {
+        $this->framework->initialize();
+
+        $rootId = $this->source->rootOf((int) ($order['shop'] ?? 0), (string) ($order['language'] ?? ''));
+        $root = null === $rootId ? null : $this->framework->getAdapter(PageModel::class)->findById($rootId);
+
+        return $root instanceof PageModel ? $this->pageUrls->passwordOfRoot($root) : null;
+    }
 }

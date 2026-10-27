@@ -21,8 +21,7 @@ use Webwerkwien\ContaoConshoBundle\Customer\CustomerDirectory;
  *    stay as they are: the document is the accounting voucher, kept by a
  *    legal duty (Art. 17 Abs. 3 lit. b DSGVO; the duties: § 132 BAO, § 212
  *    UGB, § 147 AO, § 257 HGB). Not § 35 Abs. 3 BDSG — that one is about
- *    retention periods set by statute of association or contract (Fable
- *    review D-5, S3).
+ *    retention periods set by statute of association or contract (D-5).
  *  - Without a period in the shop: marked, nothing anonymised — the finding
  *    on the start page asks for the period.
  *  - Now, whatever the period: baskets, pending confirmations (tl_opt_in),
@@ -70,7 +69,7 @@ class CustomerErasure
         $files = [];
 
         /*
-         * One transaction for the whole request (acceptance D-5: a failure in
+         * One transaction for the whole request (D-5: a failure in
          * the last step left the first ones written). The archived files go
          * only after it has committed — a file cannot be rolled back.
          */
@@ -177,7 +176,7 @@ class CustomerErasure
             );
 
             // Contao's versions of the account keep the whole row, the Consho
-            // fields included (Fable review D-5). Contao does not remove them
+            // fields included (D-5). Contao does not remove them
             // when the member is deleted either.
             $this->connection->delete('tl_version', ['fromTable' => 'tl_member', 'pid' => $memberId]);
 
@@ -193,7 +192,7 @@ class CustomerErasure
             //
             // 🔴 The LIKE escape is `!`, not a backslash: `ESCAPE '\'` is fine
             // in SQLite and a syntax error in MariaDB, where the backslash
-            // escapes the closing quote (acceptance D-5, a 500 on c5 that no
+            // escapes the closing quote (D-5, a 500 that no
             // test could see).
             foreach ($this->connection->fetchFirstColumn("SELECT id FROM tl_consho_cart WHERE LOWER(checkoutData) LIKE ? ESCAPE '!'", [self::basketPattern($email)]) as $id) {
                 $carts[] = (int) $id;

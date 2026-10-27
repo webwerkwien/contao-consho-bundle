@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 /**
  * One schema for the D-5 tests, with the production column names — every
  * column the anonymisation touches, under the name the DCA gives it
- * (Prüfungsnotiz, Fall 31: a test schema that avoids the real names cannot
- * find what the real names break).
+ * (a test schema that avoids the real names cannot find what the real
+ * names break).
  */
 final class PrivacySchema
 {
@@ -28,7 +28,7 @@ final class PrivacySchema
             consho_confirmedEmail TEXT NOT NULL DEFAULT '', consho_confirmedEmailAt INTEGER NULL)");
 
         // Every Consho table from its DCA, so a personal column added there
-        // reaches the anonymisation tests without a copy to update (Fall 31/57).
+        // reaches the anonymisation tests without a copy to update.
         foreach ([
             'tl_consho_order', 'tl_consho_order_item', 'tl_consho_document', 'tl_consho_payment', 'tl_consho_delivery',
             'tl_consho_complaint', 'tl_consho_order_token', 'tl_consho_cart', 'tl_consho_cart_item', 'tl_consho_payment_attempt',
@@ -41,7 +41,7 @@ final class PrivacySchema
 
         WithdrawalSchema::create($c);
 
-        // Abo-DSGVO: built from the DCAs, not copied (Fall 31). The
+        // Abo-DSGVO: built from the DCAs, not copied. The
         // subscription and the entitlement come with WithdrawalSchema.
         // Abo-4b: the payment method a mandate charges through (P98).
         // Block G (G12): the stock notices of a member.

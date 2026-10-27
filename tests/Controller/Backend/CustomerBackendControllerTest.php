@@ -27,8 +27,8 @@ use Webwerkwien\ContaoConshoBundle\Controller\Backend\CustomerBackendController;
 use Webwerkwien\ContaoConshoBundle\Customer\CustomerDirectory;
 
 /**
- * D-4, K2/K6 — die Seite „Kunden": Liste mit Filter und Suche, dazu ein
- * Kunde mit seinen Bestellungen. Mit der echten Vorlage und Sprachdatei.
+ * D-4, K2/K6 — the page "Kunden" (customers): list with filter and search,
+ * plus a customer with their orders. With the real template and language file.
  */
 final class CustomerBackendControllerTest extends TestCase
 {
@@ -36,7 +36,7 @@ final class CustomerBackendControllerTest extends TestCase
 
     protected function setUp(): void
     {
-        // The shared D-5 schema: production column names (Fall 31).
+        // The shared D-5 schema: production column names, so the tests hit what production hits.
         $this->connection = PrivacySchema::create();
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Wien']);
         $this->connection->insert('tl_member', ['id' => 5, 'firstname' => 'Erika', 'lastname' => 'Konto', 'email' => 'erika@example.org']);
@@ -62,14 +62,14 @@ final class CustomerBackendControllerTest extends TestCase
         self::assertStringContainsString('Max &lt;b&gt; Gast', $html, 'Kundeneingabe maskiert');
         self::assertStringContainsString('Erika Konto', $html);
         self::assertStringContainsString('Mitglied <span class="tl_gray">+ Gast</span>', $html);
-        // Die Anzahl steht wie bei Contao in „Anzeigen" (Abnahme D-5).
+        // The count sits in "Anzeigen" (show), as in Contao (D-5).
         self::assertStringContainsString('<label for="consho_customer_page">Anzeigen</label>', $html);
         self::assertStringContainsString('<option value="1" selected>1 - 2</option>', $html);
         self::assertStringContainsString('/contao?do=consho_customer&amp;shop=1&amp;customer=m%3A5', $html);
-        // Das Mitgliedskonto im Popup: sein „Zurück" führte zu „Mitglieder".
+        // The member account in the popup: its "back" led to "Mitglieder" (members).
         self::assertStringContainsString("Backend.openModalIframe({title:'Mitgliedskonto\\u0020\\u00F6ffnen', url:this.href+'&amp;popup=1&amp;nb=1'})", $html);
 
-        // Wie die Bestellliste (Michael): Operationen rechts, Filter hinter „Filtern".
+        // Like the order list: operations on the right, filters behind "Filtern".
         self::assertStringContainsString('class="tl_file_list tl_right_nowrap"', $html);
         self::assertStringContainsString('<img src="archive.svg"', $html);
         self::assertStringContainsString('<img src="member.svg"', $html);
@@ -130,7 +130,7 @@ final class CustomerBackendControllerTest extends TestCase
         self::assertStringNotContainsString('consho_customer_page', $html);
     }
 
-    /** D-5, L1: die Auskunft kommt als ZIP, nie aus einem Cache. */
+    /** D-5, L1: the data access report comes as a ZIP, never from a cache. */
     public function testDieAuskunftKommtAlsZip(): void
     {
         $html = $this->controller('/contao?do=consho_customer&shop=1&customer=m:5')();
@@ -149,7 +149,7 @@ final class CustomerBackendControllerTest extends TestCase
         }
     }
 
-    /** D-5, L3: ohne Häkchen nichts; mit Häkchen gelöscht bzw. vermerkt. */
+    /** D-5, L3: without the checkbox nothing; with it deleted or noted respectively. */
     public function testDieLoeschungBrauchtDasHaekchen(): void
     {
         $this->connection->update('tl_consho_shop', ['retentionYears' => 7], ['id' => 1]);
@@ -171,7 +171,7 @@ final class CustomerBackendControllerTest extends TestCase
         self::assertContains(['addInfo', 'Laufende Abos, werden nach Vertragsende anonymisiert: WEB-2-1.'], $messages, 'Abo-DSGVO, P87');
     }
 
-    /** D-5 (Fable-Review S4): Löschen verlangt das Bearbeitungsrecht an den Bestellungen. */
+    /** D-5: deleting requires the edit right on the orders. */
     public function testOhneBearbeitungsrechtKeineLoeschung(): void
     {
         $this->granted = false;

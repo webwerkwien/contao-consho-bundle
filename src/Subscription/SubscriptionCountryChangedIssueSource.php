@@ -9,8 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
 
 /**
  * Running subscriptions whose customer names another country in the account
- * than on the subscription's last invoice (Abo-Nachlese; review S1, Michael,
- * 2026-10-01: „ja, S1 und S2 wie empfohlen"). The follow-up invoices keep the
+ * than on the subscription's last invoice (Abo-Nachlese). The follow-up invoices keep the
  * previous address (SubscriptionBiller): the billing country is the tax
  * country of a digital subscription, and a move abroad touches tax, reverse
  * charge and the contract — the operator's to decide, not the cron's.

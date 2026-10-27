@@ -90,11 +90,10 @@ $GLOBALS['TL_DCA']['tl_consho_tax_rate'] = [
          * With `default 0` the field renders as 01.01.1970 instead of empty,
          * so "leave empty for always" becomes impossible to follow. Worse, the
          * back end then submits that date back: in CET it parses to -3600, and
-         * an unsigned column rejects it with SQLSTATE[22003]. Measured on
-         * the test server on 2026-09-09 — saving the very first rate failed.
+         * an unsigned column rejects it with SQLSTATE[22003] —
+         * saving the very first rate failed.
          *
-         * NULL means "no boundary". See the vault note "Eigene Tabelle mit
-         * Backend-Maske in Contao 5", trap 1.
+         * NULL means "no boundary".
          *
          * Date only, unlike tl_consho_price (date and time): a tax rate changes
          * at the start of a day. validTo includes that whole day, so the date is

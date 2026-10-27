@@ -42,7 +42,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxRateNotFound;
  * the goods by their delivery, electronically supplied services by § 3a
  * Abs. 5 UStG (§ 3a Abs. 13 lit. a UStG 1994). So one basket can hold lines
  * of two countries, and the country is chosen per line from the kind of the
- * product type (docs/block-dienstleistung.md, section 3). A business customer
+ * product type (Block DL, section 3). A business customer
  * with a verified VAT ID gets reverse charge on the whole basket, as before.
  *
  * This is deliberately NOT the checkout state (C-5). It knows nothing about
@@ -114,7 +114,7 @@ final class CartPricer
              * Asked of SubscriptionOffers, the one place (Abo-2, P11) — a rule
              * taken off the product, "one-time" unticked, a type switched to
              * physical, a group left: the price row may still be there, the
-             * offer is not (Fable review Abo-2, F1).
+             * offer is not (Abo-2).
              */
             if (null !== $this->offers) {
                 $offered[$item->articleId] ??= $this->offers->offered($item->articleId, $customerGroups);
@@ -138,7 +138,7 @@ final class CartPricer
 
             $lineNet = BigDecimal::of($price->unitNet)->multipliedBy($item->quantity)->toScale(4, RoundingMode::HalfUp);
             $kind = ProductKind::stored($kinds[$item->articleId]['kind'] ?? null);
-            $taxCountry = $kind->taxCountry($customerCountry, $shopCountry, $taxAtDestination);
+            $taxCountry = $kind->taxCountry($customerCountry, $shopCountry, $taxAtDestination, $kinds[$item->articleId]['singlePurpose'] ?? false);
 
             try {
                 $lineGross = $this->grossCalculator->gross((string) $lineNet, $price->taxClassId, $taxCountry, $now);

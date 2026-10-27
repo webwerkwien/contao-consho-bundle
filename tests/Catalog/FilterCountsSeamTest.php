@@ -9,10 +9,10 @@ use Webwerkwien\ContaoConshoBundle\Catalog\FilterPanelBuilder;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductQuery;
 
 /**
- * Die Andockstelle für die Filterzahlen (Entscheidung Michael, 2026-09-14):
- * Ein Modul für große Kataloge muss die Zählung austauschen können, ohne den
- * Kern zu ändern. Das hält nur, solange FilterPanelBuilder allein die
- * Schnittstelle kennt und der Alias dort steht, wo ein Modul ihn umbiegt.
+ * The docking point for the filter counts: a module for large catalogues
+ * must be able to replace the counting without changing the core. That
+ * holds only as long as FilterPanelBuilder alone knows the interface and
+ * the alias sits where a module redirects it.
  */
 class FilterCountsSeamTest extends TestCase
 {

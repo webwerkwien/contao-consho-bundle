@@ -7,10 +7,10 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WindowState;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindow;
 
 /**
- * Frist und Verfügbarkeit (Spec D 6.2, W4; Abschnitt 11: an den Grenzen).
+ * Period and availability (Spec D 6.2, W4; section 11: at the limits).
  *
- * Letzter Versand 01.10.2026 10:00 Wien, 14 Tage + 7 Tage Puffer: offen bis
- * 22.10.2026 23:59:59 Wien.
+ * Last shipment 01.10.2026 10:00 Vienna, 14 days + 7 days buffer: open
+ * until 22.10.2026 23:59:59 Vienna.
  */
 final class WithdrawalWindowTest extends TestCase
 {
@@ -42,8 +42,9 @@ final class WithdrawalWindowTest extends TestCase
     }
 
     /**
-     * Die Zeitzone der Installation, nicht UTC: Ein Versand um 00:30 Wiener
-     * Zeit ist in UTC noch der Vortag — und die Frist wäre einen Tag kürzer.
+     * The time zone of the installation, not UTC: a shipment at 00:30 Vienna
+     * time is still the day before in UTC — and the period would be one day
+     * shorter.
      */
     public function testDerTagZaehltInDerZeitzoneDerInstallation(): void
     {
@@ -73,7 +74,7 @@ final class WithdrawalWindowTest extends TestCase
         self::assertFalse($window->isOpenAt($this->shipped));
     }
 
-    /** E7: storniert, bevor etwas versandt war — der Vertrag ist schon beendet. */
+    /** E7: cancelled before anything was shipped — the contract has already ended. */
     public function testStorniertOhneVersandHatKeineFunktion(): void
     {
         $window = WithdrawalWindow::of(14, 7, true, false, true, null, $this->vienna);

@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\FilterGroupOption
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Gruppen, die ein Filterelement anbieten darf (conshoGroups).
+ * The groups that a filter element may offer (conshoGroups).
  */
 class FilterGroupOptionsListenerTest extends TestCase
 {
@@ -19,7 +19,7 @@ class FilterGroupOptionsListenerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Aus der DCA: alias NOT NULL DEFAULT ''.
+        // From the DCA: alias NOT NULL DEFAULT ''.
         DcaSchema::create($this->connection, 'tl_consho_property_group');
     }
 
@@ -33,7 +33,7 @@ class FilterGroupOptionsListenerTest extends TestCase
 
     public function testLeavesOutAGroupThatIsNotFilterable(): void
     {
-        // Ein Link darauf würde beim Klicken still verworfen (Entscheidung 6).
+        // A link to it would be silently discarded when clicked.
         $this->group(1, 'Farbe', 'colour');
         $this->group(2, 'Aktion', 'sale', filterable: false);
 
@@ -42,7 +42,7 @@ class FilterGroupOptionsListenerTest extends TestCase
 
     public function testLeavesOutAGroupWithoutAlias(): void
     {
-        // Ohne Alias kann die Gruppe nie in cq stehen.
+        // Without an alias the group can never be in cq.
         $this->group(1, 'Farbe', 'colour');
         $this->group(2, 'Halb angelegt', '');
 
@@ -51,8 +51,9 @@ class FilterGroupOptionsListenerTest extends TestCase
 
     public function testLeavesOutAGroupWhoseAliasTheAddressCannotCarry(): void
     {
-        // Contaos Alias-Prüfung lässt Großbuchstaben durch, der Codec nicht —
-        // FilterOptionRepository lässt die Gruppe deshalb im Frontend weg.
+        // Contao's alias check lets uppercase letters through, the codec does
+        // not — FilterOptionRepository therefore leaves the group out in the
+        // front end.
         $this->group(1, 'Farbe', 'colour');
         $this->group(2, 'Größe', 'Groesse');
 

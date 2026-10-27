@@ -23,10 +23,10 @@ use Webwerkwien\ContaoConshoBundle\Tests\Notification\SpyTransport;
 require_once __DIR__.'/../Confirmation/EmailConfirmationTest.php';
 
 /**
- * D-4, K3 — die Regeln hinter „Bestellungen als Gast anzeigen". Der Angriff,
- * gegen den sie stehen: Ein Konto trägt unter „Persönliche Daten" eine fremde
- * Adresse ein und fordert die Bestätigung an. Die Mail geht an die
- * rechtmäßige Inhaberin — ein Klick von ihr darf dem Konto nichts freigeben.
+ * D-4, K3 — the rules behind "show orders as a guest". The attack they
+ * stand against: an account enters someone else's address under "personal
+ * data" and requests the confirmation. The mail goes to the rightful
+ * owner — a click from her must not unlock anything for the account.
  */
 final class GuestOrderConfirmationTest extends TestCase
 {
@@ -59,8 +59,8 @@ final class GuestOrderConfirmationTest extends TestCase
     }
 
     /**
-     * Der Angriff: Konto 6 hat Erikas Adresse eingetragen und die Mail
-     * angefordert. Erika klickt — in ihrem eigenen Browser, nicht als Konto 6.
+     * The attack: account 6 has entered Erika's address and requested the
+     * mail. Erika clicks — in her own browser, not as account 6.
      */
     public function testDieEmpfaengerinKannFuerEinFremdesKontoNichtsBestaetigen(): void
     {
@@ -72,7 +72,7 @@ final class GuestOrderConfirmationTest extends TestCase
         self::assertSame('login', $service->state($token, 0, ''), 'nicht angemeldet');
         self::assertSame('login', $service->confirm($token, 0, '', 1000));
 
-        // Angemeldet in ihrem EIGENEN Konto 5 mit derselben Adresse.
+        // Logged in to her OWN account 5 with the same address.
         self::assertSame('otherAccount', $service->state($token, 5, 'erika@example.org'));
         self::assertSame('otherAccount', $service->confirm($token, 5, 'erika@example.org', 1000));
 

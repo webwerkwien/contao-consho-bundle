@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
 /*
- * Sätze zu den Befunden aus ConfigurationCheck und DeliverabilityChecker.
+ * Sentences for the findings of ConfigurationCheck and DeliverabilityChecker.
  *
- * Die Prüfklassen liefern nur Codes und die einzusetzenden Werte — die
- * Formulierung gehört hierher, damit sie übersetzbar bleibt und die
- * Prüfklassen nichts von Contao wissen müssen.
+ * The check classes only return codes and the values to insert — the
+ * wording belongs here, so that it stays translatable and the check classes
+ * need to know nothing about Contao.
  */
 $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'taxRateMissing' => 'Die Shop-Konfiguration „%shop%" hat für %country% nicht hinterlegt, wie die Gruppe „%taxClass%" dort besteuert wird. Ohne Eintrag scheitern Bestellungen aus diesem Land im Checkout; ist es das Heimatland des Shops, zeigt er für die Gruppe keine Preise.',
@@ -67,7 +67,8 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'durabilityNestedUnused' => 'Das geschachtelte GARAN-Label von Produkt „%product%" erscheint nicht auf den Kacheln. Es braucht ein volles Label mit gültiger Dauer, das der Klick öffnet, und einen öffentlichen Ordner. Das volle Label ergänzen, den Ordner auf „Öffentlich" setzen oder das geschachtelte Label entfernen.',
     'mailFooterEmpty' => 'Die Shop-Konfiguration „%shop%" hat weder eine Firma noch eine Fußzeile — die Mails an Kunden sagen nicht, wer sie schickt. Was in geschäftlichen Mails stehen muss (etwa § 14 UGB, § 63 GewO), hängt an Rechtsform und Land. Unter „Rechnungsabsender" Firma und „Fußzeile (Rechnung und Mails)" ausfüllen.',
     'mailLogoTooLarge' => 'Das Logo der Shop-Konfiguration „%shop%" ist %size% KB groß. Es steckt in jeder Mail an Kunden; schwere Mails landen eher im Spam. Eine kleinere PNG- oder JPG-Datei hochladen (bis 100 KB).',
-    'voucherTaxed' => 'Wertgutschein „%product%" hat eine Steuerklasse, die nicht als „nicht steuerbar" markiert ist. Er wird beim Verkauf besteuert, und was man damit kauft, noch einmal.',
+    'voucherTaxed' => 'Wertgutschein „%product%" hat eine Steuerklasse, die nicht als „nicht steuerbar" markiert ist. Er wird beim Verkauf besteuert, und was man damit kauft, noch einmal. Ist er ein Einzweck-Gutschein, im Produkt „Einzweck-Gutschein" einschalten.',
+    'singlePurposeVoucherNotTaxed' => 'Einzweck-Gutschein „%product%" hat eine Steuerklasse „nicht steuerbar". Er wird ohne Umsatzsteuer verkauft und deshalb als Mehrzweck-Gutschein ausgegeben. Eine Steuerklasse mit Steuersatz wählen.',
     'notTaxableClassOnGoods' => 'Produkt „%product%" ist kein Wertgutschein, hat aber eine Steuerklasse „nicht steuerbar". Es wird ohne Umsatzsteuer verkauft.',
     'voucherValueMissing' => 'Wertgutschein „%product%" hat keinen Wert. Ein gekaufter Gutschein ist so viel wert, wie dafür bezahlt wurde.',
     'ossThresholdNear' => 'Die Fernverkäufe an Privatkunden in anderen EU-Ländern (%business%) haben %year% 80 % der Lieferschwelle von 10.000 € erreicht. Umsätze außerhalb von Consho zählen mit. Über der Schwelle ist die Umsatzsteuer des Kundenlandes zu berechnen — dafür „Steuer im Bestimmungsland" in der Shop-Konfiguration einschalten. Einzelheiten unter „Steuermeldung".',
@@ -86,6 +87,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'registrationPathMissingNoGuests' => 'Im Shop „%shop%" ist „Bestellung ohne Konto" aus, also braucht jeder Kauf ein Kundenkonto — aber kein Registrierungsmodul gibt neuen Konten die Kundengruppe, schaltet sie frei und erlaubt die Anmeldung. Neue Kunden können dann nicht bestellen. Am Registrierungsmodul „Anmeldung erlauben" und „Konten sofort freischalten" setzen, oder „Kontoaktivierung" mit der Kundengruppe des Shops unter „Standardgruppen". Legen Sie die Kundenkonten selbst an, ist nichts zu tun.',
     'customerPageLocksOut' => 'Die Seite „%page%" (Shop „%shop%") zeigt Kunden ihre Bestellungen oder Abos, ist aber geschützt, ohne diese Gruppen zuzulassen: %groups%. Deren Mitglieder bekommen „Zugriff verweigert", ohne Eintrag im Log. In der Seitenstruktur unter „Zugriffsschutz" die Gruppen ergänzen — auch auf der Elternseite, wenn der Schutz von dort kommt.',
     'loginPageMissing' => 'Shop „%shop%": Startpunkte mit geschützten Kundenseiten, aber ohne veröffentlichte 401-Seite: %roots%. Wer abgemeldet eine solche Seite öffnet, sieht Contaos allgemeine Fehlerseite statt der Anmeldung. Direkt unter dem Startpunkt eine Seite vom Typ „401 Nicht authentifiziert" mit einem Login-Modul anlegen und dort „Zur zuletzt besuchten Seite" setzen — sonst landet der Kunde nach der Anmeldung auf der Weiterleitungsseite des Moduls statt auf seiner Kundenseite.',
+    'accountPasswordPageMissing' => 'Shop „%shop%": Startpunkte ohne Seite „Passwort vergessen": %roots%. Gäste können deshalb auf der Bestellseite kein Kundenkonto aus ihrer Bestellung anlegen. Legen Sie unter dem Startpunkt eine veröffentlichte, nicht geschützte Seite mit Contaos Modul „Passwort vergessen" an und wählen Sie sie am Startpunkt unter „Seite „Passwort vergessen"". Eine Seite unter einem anderen Startpunkt zählt nicht: Das Konto käme sonst in die Kundengruppe des anderen Shops.',
     'cancellationPageMissing' =>'Shop „%shop%" verkauft Abos, aber diese Startpunkte haben keine erreichbare Seite mit „Verträge hier kündigen": %roots%. Am Startpunkt unter „Seite ‚Verträge hier kündigen‘" eine veröffentlichte Seite ohne Anmeldepflicht wählen, auf der das Element „Verträge hier kündigen" steht. Ob § 312k BGB für den Shop gilt, beurteilen Sie.',
     'mandateMethodUnavailable' => 'Abos im Shop „%shop%" buchen über eine Zahlungsart ab, die nicht mehr verfügbar ist: %count% (%numbers%). Ihre Folgebestellungen gehen „Auf Rechnung". Ist die Zahlungsart wieder veröffentlicht und dem Shop zugeordnet, wird wieder abgebucht.',
     'subscriptionsSuspended' => 'Ruhende Abos im Shop „%shop%": %count% (%numbers%). Eine Rechnung ist über Zahlungsziel und Nachfrist offen, der Zugang ruht. Consho kündigt nicht und mahnt nicht; sobald die Zahlung in der Bestellung erfasst ist, lebt das Abo von selbst wieder auf.',
@@ -116,7 +118,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'noticeParamStripped' => 'Die Umgebungsvariable QUERY_PARAMS_ALLOW_LIST ist gesetzt und lässt diese Parameter nicht durch: %param%. Der geteilte Cache entfernt sie, bevor die Anfrage ankommt — der Checkout kommt dann nicht über den ersten Schritt, jeder Link zur Bestellseite endet mit 404, und eine abgelehnte Hinzufügung erscheint wortlos. Tragen Sie „consho_.*" in die Liste ein.',
 ];
 
-// Die Teile des Befunds „Produkt passt nicht zu seiner Art" (DL5).
+// The parts of the finding "product does not fit its kind" (DL5).
 $GLOBALS['TL_LANG']['CONSHO']['kindMismatch'] = [
     'kinds' => ['physical' => '„Ware"', 'digital' => '„Digitales"', 'service' => '„Dienstleistung"', 'voucher' => '„Wertgutschein"'],
     'delivery' => 'eine Auslieferungsart',
@@ -128,7 +130,7 @@ $GLOBALS['TL_LANG']['CONSHO']['kindMismatch'] = [
 ];
 
 /*
- * Meldungen aus Speicher-Callbacks. Sie erscheinen direkt am Feld.
+ * Messages from save callbacks. They appear right at the field.
  */
 $GLOBALS['TL_LANG']['CONSHO']['errors'] = [
     'facetStateEmpty' => '„%s" ergibt keine gültige Filterkombination. Erwartet wird Gruppe:Option, mehrere getrennt durch Semikolon — zum Beispiel colour:red;volume:250ml.',
@@ -169,14 +171,14 @@ $GLOBALS['TL_LANG']['CONSHO']['errors'] = [
 ];
 
 /*
- * Überschrift des Abschnitts je Übersetzungssprache, in allen fünf übersetzten
- * Tabellen dieselbe — deshalb hier und nicht fünfmal in den Tabellendateien.
+ * Heading of the section per translation language, the same in all five
+ * translated tables — hence here and not five times in the table files.
  */
 $GLOBALS['TL_LANG']['CONSHO']['translationLegend'] = 'Übersetzung: %s';
 
 /*
- * Beschriftung des Knopfes an einem Hinweis. Nur Hinweise tragen ihn —
- * Warnungen lassen sich nicht wegklicken.
+ * Label of the button on a notice. Only notices carry it — warnings cannot
+ * be dismissed.
  */
 $GLOBALS['TL_LANG']['CONSHO']['acknowledge'] = 'Zur Kenntnis genommen';
 
@@ -189,9 +191,9 @@ $GLOBALS['TL_LANG']['CONSHO']['deliverability'] = [
 ];
 
 /*
- * Beschriftung des Seitentyps. Contao mischt die registrierten Typen in die
- * Auswahl (PageTypeOptionsListener); ohne diesen Eintrag stünde dort der rohe
- * Schlüssel.
+ * Label of the page type. Contao mixes the registered types into the
+ * selection (PageTypeOptionsListener); without this entry the raw key would
+ * stand there.
  */
 $GLOBALS['TL_LANG']['PTY']['consho_product'] = ['Consho Produktseite', 'Die Seite, unter der alle Produktdetailseiten liegen. Die Adresse je Produkt bestimmt die Adressvorlage an dieser Seite.'];
 
@@ -212,8 +214,8 @@ $GLOBALS['TL_LANG']['CONSHO']['sort'] = [
     'sorting' => 'Eigene Reihenfolge',
 ];
 $GLOBALS['TL_LANG']['CONSHO']['priceFrom'] = 'ab';
-// Block H (H-2): Störer und Zusatz zum durchgestrichenen Bezugspreis. Der Wortlaut
-// ist Sache des Betreibers (§ 9a PrAG, § 11 PAngV verlangen den Preis, nicht die Worte).
+// Block H (H-2): badge and note next to the struck-through reference price. The wording
+// is the operator's (§ 9a PrAG, § 11 PAngV require the price, not the words).
 $GLOBALS['TL_LANG']['CONSHO']['promotion']['badge'] = 'Aktion';
 $GLOBALS['TL_LANG']['CONSHO']['promotion']['reference'] = 'niedrigster Preis der letzten 30 Tage';
 
@@ -233,9 +235,9 @@ $GLOBALS['TL_LANG']['CONSHO']['unitSymbols'] = [
 ];
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxNotice'] = 'inkl. USt., zzgl. Versandkosten';
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxNoticeNet'] = 'zzgl. USt., zzgl. Versandkosten';
-// Ohne Versand: digitale Produkte und Dienstleistungen (Abnahme DL, Fund 2).
+// Without shipping: digital products and services (DL).
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxOnly'] = 'inkl. USt.';
-// Abnahme WG-7: nicht steuerbar (Wertgutschein) — kein Steuersatz, nur der Versand.
+// WG-7: not taxable (gift voucher) — no tax rate, only the shipping.
 $GLOBALS['TL_LANG']['CONSHO']['priceShippingOnly'] = 'zzgl. Versandkosten';
 $GLOBALS['TL_LANG']['CONSHO']['priceTaxOnlyNet'] = 'zzgl. USt.';
 $GLOBALS['TL_LANG']['CONSHO']['ownPriceGroup'] = 'Sie sind als %s angemeldet — Ihren Preis sehen Sie auf der Produktseite.';
@@ -265,11 +267,11 @@ $GLOBALS['TL_LANG']['CTE']['consho_cart'] = ['Warenkorb', 'Zeigt den Warenkorb d
 
 $GLOBALS['TL_LANG']['CONSHO']['cart'] = [
     'quantity' => 'Menge',
-    // Platzhalter: der Titel der Zeile. Die sichtbare Spaltenüberschrift heißt
-    // weiterhin nur „Menge" — dieser Text ist die Beschriftung des einzelnen
-    // Feldes, das ohne den Titel in jeder Zeile gleich hieße.
+    // Placeholder: the title of the line. The visible column heading is still
+    // just "Menge" — this text is the label of the single field, which without
+    // the title would read the same in every line.
     'quantityOf' => 'Menge: %s',
-    // Abo-7b (P67): eine Zeile aus „Lizenz verlängern".
+    // Abo-7b (P67): a line from "Lizenz verlängern".
     'renews' => 'verlängert Abo %s — Lizenz und Schlüssel bleiben',
     'quantityHint' => 'Mindestmenge %1$s, Schrittweite %2$s.',
     'add' => 'In den Warenkorb',
@@ -299,8 +301,8 @@ $GLOBALS['TL_LANG']['CONSHO']['cart'] = [
 $GLOBALS['TL_LANG']['CTE']['consho_mini_cart'] = ['Mini-Warenkorb', 'Anzahl und Summe des Warenkorbs, auch in einem Layout-Bereich. Wird als ESI-Fragment geladen und nimmt die Seite deshalb nicht aus dem Cache.'];
 
 /*
- * Beide Texte stehen unsichtbar neben Zahl und Betrag: Eine „2" und ein Betrag
- * ohne Wort sind mit einem Screenreader nicht zu deuten.
+ * Both texts stand invisibly next to number and amount: a "2" and an amount
+ * without a word cannot be made sense of with a screen reader.
  */
 $GLOBALS['TL_LANG']['CONSHO']['miniCart'] = [
     'label' => 'Warenkorb',
@@ -309,23 +311,23 @@ $GLOBALS['TL_LANG']['CONSHO']['miniCart'] = [
 
 
 /*
- * Der Checkout (C-5). Die Schrittnamen sind bewusst nicht die Bausteinnamen:
- * bei einem Schritt heißt er „Bestellung", bei vieren heißen sie einzeln —
- * der Besucher liest eine Nummer, keine Architektur.
+ * The checkout (C-5). The step names are deliberately not the block names:
+ * with one step it is called "Bestellung", with four they are named one by
+ * one — the visitor reads a number, not an architecture.
  */
 $GLOBALS['TL_LANG']['CONSHO']['checkout'] = [
     'empty' => 'Ihr Warenkorb ist leer. Legen Sie etwas hinein, um zu bestellen.',
     /*
-     * Der späte Doppelklick (F2): Die Bestellung gibt es, den Warenkorb nicht
-     * mehr. Bewusst ohne Bestellnummer und ohne Link — diese Seite kann nicht
-     * belegen, wer fragt, und die Bestätigung ist per Mail unterwegs.
+     * The late double click (F2): the order exists, the cart does not any more.
+     * Deliberately without order number and without link — this page cannot
+     * prove who is asking, and the confirmation is on its way by mail.
      */
     'alreadyOrdered' => 'Ihre Bestellung ist bereits eingegangen. Die Einzelheiten stehen in Ihrer Bestätigungsmail – doppelt bestellt wurde nichts.',
     'steps' => 'Schritte der Bestellung',
     /*
-     * Ein Name je Bausteingruppe, nicht je Nummer: welche Gruppen es gibt,
-     * entscheidet CheckoutBlock::steps(), und ein durchnummerierter Name wäre
-     * bei jeder anderen Schrittzahl falsch.
+     * One name per block group, not per number: which groups exist is decided
+     * by CheckoutBlock::steps(), and a numbered name would be wrong with any
+     * other number of steps.
      */
     'step' => [
         'address_shipping_payment_review' => 'Bestellung',
@@ -383,8 +385,8 @@ $GLOBALS['TL_LANG']['CONSHO']['checkout'] = [
         'newWindow' => ' (öffnet in einem neuen Fenster)',
     ],
     /*
-     * Die drei zugelassenen Beschriftungen des Kaufknopfs. Welche gilt, steht
-     * am Shop; dass es nur diese drei sind, steht in BuyButtonLabel.
+     * The three permitted labels of the purchase button. Which one applies is
+     * set on the shop; that there are only these three is in BuyButtonLabel.
      */
     'buy' => [
         'paymentRequired' => 'Zahlungspflichtig bestellen',
@@ -437,8 +439,8 @@ $GLOBALS['TL_LANG']['CONSHO']['checkout']['address']['shippingHint'] = '— nur 
 // The invoice (C-8). Labels only — every value comes from the snapshot.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['invoice'] = 'Rechnung';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['cancellation'] = 'Stornorechnung';
-// Die Nummernkreise, wie die Maske sie nennt — hier, weil Befunde auf der
-// Startseite erscheinen, wo tl_consho_number_range nicht geladen ist (Fable-Review D-3, S1).
+// The number ranges as the form names them — here, because findings appear
+// on the start page, where tl_consho_number_range is not loaded (D-3).
 $GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'] = [
     'order' => 'Bestellnummer',
     'invoice' => 'Rechnungsnummer',
@@ -446,10 +448,10 @@ $GLOBALS['TL_LANG']['CONSHO']['numberRangeTypes'] = [
     'creditNote' => 'Rechnungskorrektur-Nummer',
     'cancellation' => 'Stornonummer',
 ];
-// D-3, F2: nicht „Gutschrift" — die ist steuerlich die Abrechnung durch den Empfänger (§ 14 Abs. 2 UStG, § 11 Abs. 7 UStG 1994).
+// D-3, F2: not "Gutschrift" — for tax purposes that is a settlement by the recipient (§ 14 Abs. 2 UStG, § 11 Abs. 7 UStG 1994).
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['creditNote'] = 'Rechnungskorrektur';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['types']['deliveryNote'] = 'Lieferschein';
-// dev#2: der Lieferschein (consho_delivery_note.html.twig).
+// dev#2: the delivery note (consho_delivery_note.html.twig).
 $GLOBALS['TL_LANG']['CONSHO']['deliveryNote'] = [
     'number' => 'Lieferscheinnummer',
     'date' => 'Datum',
@@ -469,7 +471,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['cancels'] = 'Storniert Rechnung';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['corrects'] = 'Korrigiert Rechnung';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['withdrawal'] = 'Widerruf';
 // %s, not %date%: Contao fills contao_default with vsprintf, and "%d" in
-// "%date%" asks for a second argument (c5, 2026-09-25).
+// "%date%" asks for a second argument.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['cancelsDate'] = 'vom %s';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['orderDate'] = 'Bestelldatum';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['subscription'] = 'Abo';
@@ -478,6 +480,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryPeriod'] = 'Voraussichtl. Lief
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryDate'] = 'Lieferdatum';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryPartial'] = '%s (Teillieferung)';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['deliveryRest'] = 'Restlieferung voraussichtl.';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['advance'] = 'Diese Rechnung rechnet über eine Vorauszahlung ab, die Lieferung erfolgt nach Zahlungseingang.';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['dueDate'] = 'Zahlbar bis';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['billingAddress'] = 'Rechnungsadresse';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['shippingAddress'] = 'Lieferadresse';
@@ -504,6 +507,10 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['refunded'] = 'Erstattet';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['outstanding'] = 'Offener Betrag';
 // Wertgutscheine (WG3): the line of a voucher sold with a "nicht steuerbar" class.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['notTaxable'] = 'nicht steuerbar';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['singlePurposeVoucher'] = 'Einzweck-Gutschein';
+// Wertgutscheine (EZ-4): tax a single-purpose voucher already carried at its sale.
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['prepaidTax'] = 'davon mit %1$s bereits versteuert (%2$s)';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['taxDue'] = 'Verbleibende Umsatzsteuer';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['shippingMethod'] = 'Versandart';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['paymentMethod'] = 'Zahlungsart';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['payment'] = 'Zahlung';
@@ -512,7 +519,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['iban'] = 'IBAN';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['bic'] = 'BIC';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['bankName'] = 'Bank';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['reference'] = 'Verwendungszweck';
-// The grey delete button of a shipping or payment method (C-9, wording: Michael 2026-09-25).
+// The grey delete button of a shipping or payment method (C-9).
 $GLOBALS['TL_LANG']['CONSHO']['methodInUse'] = 'Das Element ist mit mind. einer Bestellung verknüpft und darf nicht mehr gelöscht werden.';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['giroCode'] = 'Zum Bezahlen mit der Banking-App scannen';
 
@@ -554,8 +561,8 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['introC
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['subject'] = 'Folgebestellung %s zum Abo %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['intro'] = 'Folgebestellung %s zum Abo %s angelegt, „Auf Rechnung", Zeitraum %s bis %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionSuspended']['subject'] = 'Ihr Abo %s ruht';
-// Abo-5, second review: after a change to online payment the invoice is
-// cancelled and the order number stands here — "die Rechnung WEB-…" was wrong.
+// Abo-5: after a change to online payment the invoice is cancelled,
+// so the order number stands here rather than the invoice's.
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionSuspended']['intro'] = 'die Zahlung zu %s für Ihr Abo %s war am %s fällig und ist noch offen: %s. Bis zum Zahlungseingang ruht Ihr Zugang.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionSuspended']['resume'] = 'Sobald die Zahlung eingegangen ist, steht Ihnen der Zugang wieder zur Verfügung — Sie müssen dafür nichts weiter tun. Die Zahlungsdaten finden Sie auf Ihrer Bestellseite.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionSuspended']['operator']['subject'] = 'Abo %s ruht: %s offen';
@@ -634,14 +641,14 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['intro'] = 'Ihren Wi
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['subject'] = 'Ihr Widerruf %s zur Bestellung %s: Erstattung';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['intro'] = 'wir haben Ihren Widerruf %s zur Bestellung %s bearbeitet.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['payout'] = 'Wir erstatten Ihnen %s mit demselben Zahlungsmittel, mit dem Sie bezahlt haben, sofern wir nichts anderes vereinbart haben.';
-// WG-6 (WG11): der Teil, der auf den Gutschein zurückgeht.
+// WG-6 (WG11): the part that goes back to the voucher.
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['vouchers'] = 'Davon schreiben wir %s Ihrem Gutschein gut, mit dem Sie bezahlt haben.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['credit'] = 'Der Betrag, den Sie zu zahlen haben, verringert sich um %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['documentAttached'] = 'Die Belege finden Sie im Anhang: %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['remaining'] = 'Bitte überweisen Sie nur den verbleibenden Betrag von %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['valueCompensation'] = 'Für die bis zu Ihrem Widerruf erbrachte Leistung behalten wir einen Wertersatz von %s ein.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['subscriptionEnded'] = 'Ihr Abo %s ist mit dem Widerruf beendet.';
-// „Meine Bestellungen" (D-4, K3).
+// "Meine Bestellungen" (D-4, K3).
 $GLOBALS['TL_LANG']['CTE']['consho_my_orders'] = ['Meine Bestellungen', 'Die Bestellungen des angemeldeten Mitglieds in diesem Shop, jede mit einem Link zur Bestellseite. Bestellungen als Gast unter der Kontoadresse erscheinen, sobald das Mitglied die Adresse per Mail bestätigt hat. Gehört auf eine geschützte Seite des Kundenkontos.'];
 $GLOBALS['TL_LANG']['CONSHO']['myOrders'] = [
     'empty' => 'Sie haben in diesem Shop noch keine Bestellung aufgegeben.',
@@ -673,7 +680,7 @@ $GLOBALS['TL_LANG']['CONSHO']['statusFields'] = [
     'statusWhenSettled' => 'Status, wenn alles erledigt ist',
 ];
 
-// Menüpunkt „Kunden" (D-4, K2).
+// Menu item "Kunden" (D-4, K2).
 // Block R (R10): the fields an e-invoice needs, for the finding.
 $GLOBALS['TL_LANG']['CONSHO']['eInvoiceFields'] = [
     'invoiceCompany' => 'Firmenname',
@@ -857,7 +864,7 @@ $GLOBALS['TL_LANG']['CONSHO']['customers'] = [
     'reset' => 'Zurücksetzen',
     'opShow' => 'Kunde und Bestellungen anzeigen',
     'noMember' => 'Gast — kein Mitgliedskonto',
-    // D-5: Auskunft und Löschung.
+    // D-5: data access and erasure.
     'colErasure' => 'Löschung verlangt',
     'privacyLegend' => 'Auskunft und Löschung',
     'privacyHelp' => 'Die Auskunft ist eine ZIP-Datei mit allen Daten dieser Person (daten.json, maschinenlesbar) und den Belegen als PDF. Consho verschickt sie nicht: Prüfen Sie die Identität und ergänzen Sie die Angaben, die Art. 15 Abs. 1 DSGVO verlangt.',
@@ -873,7 +880,7 @@ $GLOBALS['TL_LANG']['CONSHO']['customers'] = [
     'erasedRunning' => 'Laufende Abos, werden nach Vertragsende anonymisiert: %s.',
     'erasedAround' => 'Warenkörbe, offene Bestätigungen, Consho-Felder des Kontos und Reklamationsnotizen sind gelöscht.',
 ];
-// Bestätigung einer E-Mail-Adresse (D-4, K3a) — gemeinsam, dann je Zweck.
+// Confirmation of an e-mail address (D-4, K3a) — shared, then per purpose.
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmEmail']['hello'] = 'Guten Tag,';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmEmail']['validity'] = 'Der Link gilt 24 Stunden.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmEmail']['notYou'] = 'Haben Sie das nicht angefordert, klicken Sie nicht auf den Link — dann ändert sich nichts.';
@@ -885,14 +892,26 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['subject'] = 'Wi
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['intro'] = 'Zur Bestellung %s ist ein Widerruf eingegangen (%s).';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['source'] = ['orderPage' => 'über die Bestellseite', 'form' => 'über das Widerrufsformular'];
 
-// Neuer Link zur Bestellseite (D-6, T4).
+// New link to the order page (D-6, T4).
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['subject'] = 'Ihr Link zur Bestellung %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['intro'] = 'Sie haben einen neuen Link zu Ihrer Bestellung %s angefordert. Darüber sehen Sie den Stand der Bestellung und Ihre Belege.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['button'] = 'Bestellung anzeigen';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['validity'] = 'Der Link gilt 90 Tage. Danach können Sie auf der Bestellseite jederzeit einen neuen anfordern.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['notYou'] = 'Haben Sie das nicht angefordert, können Sie diese Mail ignorieren. Der Link wurde nur an Sie geschickt.';
 
-// Die Bestellseite (C-10).
+// "Kundenkonto anlegen" on the order page (K1).
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['subject'] = 'Ihr Kundenkonto: Passwort festlegen';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['intro'] = 'Sie haben auf der Seite Ihrer Bestellung ein Kundenkonto angelegt. Es wird geöffnet, sobald Sie Ihr Passwort festlegen. Ihre Adressen aus der Bestellung sind schon eingetragen, und im Konto sehen Sie Ihre Bestellungen.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['username'] = 'Ihr Benutzername: %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['button'] = 'Passwort festlegen';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['validity'] = 'Der Link gilt 24 Stunden. Legen Sie bis dahin kein Passwort fest, wird das Konto wieder gelöscht. Sie können es jederzeit erneut auf der Seite Ihrer Bestellung anlegen.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountCreate']['notYou'] = 'Haben Sie das nicht angefordert, können Sie diese Mail ignorieren. Ohne Passwort wird kein Konto geöffnet.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['subject'] = 'Sie haben bereits ein Kundenkonto';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['intro'] = 'Sie wollten auf der Seite Ihrer Bestellung ein Kundenkonto anlegen. Zu Ihrer E-Mail-Adresse gibt es bereits eines, mit dem Benutzernamen %s. Haben Sie das Passwort vergessen, können Sie hier ein neues festlegen.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['button'] = 'Passwort vergessen';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['accountExists']['notYou'] = 'Haben Sie das nicht angefordert, können Sie diese Mail ignorieren. An Ihrem Konto wurde nichts geändert.';
+
+// The order page (C-10).
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['title'] = 'Ihre Bestellung %s';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['linkRequest'] = [
     'title' => 'Link zur Bestellung anfordern',
@@ -947,10 +966,19 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['notice'] = [
     'withdrawInvalid' => 'Die Angaben zu den Artikeln passen nicht zur Bestellung. Bitte prüfen Sie die Mengen.',
     'withdrawNothingSelected' => 'Bitte geben Sie bei mindestens einem Artikel eine Menge an oder wählen Sie die ganze Bestellung.',
     'withdrawNameMissing' => 'Bitte geben Sie Ihren Namen an.',
+    // K1: one sentence for a new account and an existing one (K1-5).
+    'accountRequested' => 'Wir haben Ihnen eine E-Mail an die Adresse dieser Bestellung geschickt. Darin steht, wie es weitergeht. Sehen Sie auch im Spam-Ordner nach.',
+    'accountTooMany' => 'Sie haben das gerade schon mehrmals angefordert. Bitte versuchen Sie es später noch einmal.',
+    'accountUnavailable' => 'Für diese Bestellung lässt sich hier kein Kundenkonto anlegen.',
+];
+$GLOBALS['TL_LANG']['CONSHO']['orderPage']['account'] = [
+    'title' => 'Kundenkonto anlegen',
+    'text' => 'Mit einem Kundenkonto sehen Sie alle Ihre Bestellungen an einem Ort, und Ihre Adressen sind beim nächsten Einkauf schon eingetragen. Wir schicken Ihnen eine E-Mail, mit der Sie Ihr Passwort festlegen.',
+    'submit' => 'Kundenkonto anlegen',
 ];
 
-// Die Widerrufsfunktion (D-2). „Vertrag widerrufen" und „Widerruf bestätigen"
-// sind gesetzlich vorgegeben (§ 356a BGB, § 13a FAGG) — nicht umformulieren.
+// The withdrawal function (D-2). "Vertrag widerrufen" and "Widerruf bestätigen"
+// are prescribed by law (§ 356a BGB, § 13a FAGG) — do not rephrase them.
 $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'button' => 'Vertrag widerrufen',
     'confirm' => 'Widerruf bestätigen',
@@ -966,16 +994,16 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'whole' => '%s (Abo, %s — nur ganz)',
     'message' => 'Nachricht (optional)',
     'back' => 'Zurück zur Bestellung',
-    // WA, B2 (Michael, 2026-10-22): neutral between du and Sie.
+    // WA, B2: neutral between du and Sie.
     'late' => 'Nach unseren Daten ist die Frist abgelaufen. Der Widerruf wird entsprechend geprüft.',
     'received' => 'Eingegangene Widerrufe',
     'receivedEntry' => '%s, eingegangen am %s',
     'confirmed' => 'Eingangsbestätigung per E-Mail versandt',
     'unconfirmed' => 'Eingangsbestätigung per E-Mail ausstehend',
 
-    // Das Element für Käufer ohne die Bestellmail (W1, E6).
-    // WA (2026-10-22): the address the confirmation goes to — the order's,
-    // where they match, else the one typed here.
+    // The element for buyers without the order mail (W1, E6).
+    // WA: the address the confirmation goes to — the order's, where they
+    // match, else the one typed here.
     'formIntro' => 'Geben Sie Ihre Bestellnummer, Ihre E-Mail-Adresse und Ihren Namen an. Sie erhalten sofort eine Eingangsbestätigung per E-Mail.',
     'orderNumber' => 'Bestellnummer',
     'orderEmail' => 'E-Mail-Adresse (am besten die der Bestellung)',
@@ -983,15 +1011,15 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'tooMany' => 'Zu viele Versuche. Bitte versuchen Sie es in einer Viertelstunde erneut.',
     'missing' => 'Bitte füllen Sie Bestellnummer, E-Mail-Adresse und Name aus.',
     'emailInvalid' => 'Bitte geben Sie eine gültige E-Mail-Adresse an — an sie geht die Eingangsbestätigung.',
-    // Review WA, S1/B1: eine Antwort für alle Fälle — ohne Nummer (ihre Form
-    // verriet, ob die Bestellung gefunden wurde) und ohne „nicht versandt"
-    // (nur der Weg ohne Bestellung hat eine Mail-Grenze).
+    // WA: one answer for every case — no number (its shape told whether
+    // the order was found) and no "not sent" (only the path without an
+    // order has a mail limit).
     'done' => 'Ihr Widerruf ist eingegangen und gespeichert. Die Eingangsbestätigung mit der Nummer des Widerrufs geht an die angegebene E-Mail-Adresse.',
 
-    // Im Befund „Widerrufsfrist unter 14 Tagen", wenn keine Lieferländer gewählt sind.
+    // In the finding "withdrawal period under 14 days" when no delivery countries are chosen.
     'allCountries' => 'alle Länder',
 ];
-// „Meine Abos" (Abo-7, P60).
+// "Meine Abos" (Abo-7, P60).
 $GLOBALS['TL_LANG']['CONSHO']['mySubscriptions'] = [
     'empty' => 'Sie haben in diesem Shop kein Abo.',
     'number' => 'Abo',
@@ -1001,11 +1029,11 @@ $GLOBALS['TL_LANG']['CONSHO']['mySubscriptions'] = [
     'actions' => 'Aktionen',
     'cancel' => 'Kündigen',
     'pending' => 'Außerordentliche Kündigung eingegangen, noch nicht entschieden',
-    // Abo-7b (P67): neues Abo zu heutigen Bedingungen, Lizenz und Schlüssel bleiben.
+    // Abo-7b (P67): a new subscription on today's terms; licence and key stay.
     'renew' => 'Lizenz verlängern',
     'renewedBy' => 'verlängert durch %s',
     'states' => ['active' => 'läuft', 'suspended' => 'ruht (offene Rechnung)', 'paused' => 'pausiert bis %s', 'ending' => 'gekündigt zum %s', 'ended' => 'beendet', 'upcoming' => 'beginnt am %s'],
-    // Abo pausieren (P101, P107).
+    // Pausing a subscription (P101, P107).
     'pause' => 'Pausieren',
     'pauseAnnounced' => 'Pause ab %s bis %s angekündigt',
     'withdrawPause' => 'Pause zurücknehmen',
@@ -1027,7 +1055,7 @@ $GLOBALS['TL_LANG']['CONSHO']['mySubscriptions'] = [
         'expired' => 'Diese Bestätigungsseite ist nicht mehr abrufbar. Ihre Kündigung ist gespeichert; die Eingangsbestätigung haben Sie per E-Mail erhalten.',
     ],
 ];
-// Kündigung (Abo-7, § 312k BGB). Die zwei Knopftexte sind gesetzlich vorgegeben.
+// Cancellation (Abo-7, § 312k BGB). The two button texts are prescribed by law.
 $GLOBALS['TL_LANG']['CONSHO']['cancellation'] = [
     'button' => 'Verträge hier kündigen',
     'confirm' => 'jetzt kündigen',
@@ -1059,7 +1087,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cancellation'] = [
         'ended' => 'Dieses Abo ist bereits beendet.',
     ],
 ];
-// Online-Zahlung (C-11). Die Seite sagt nur, was sie belegen kann (Michael, 2026-09-26).
+// Online payment (C-11). The page only says what it can prove.
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['online'] = [
     'confirmed' => 'Zahlung eingegangen (vom Zahlungsanbieter bestätigt).',
     'reported' => 'Der Zahlungsanbieter meldet die Zahlung als abgeschlossen. Sobald die Bestätigung eintrifft, erscheint sie hier.',
@@ -1072,7 +1100,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['regenerated'] = 'Neu erzeugt aus den g
 $GLOBALS['TL_LANG']['CONSHO']['invoiceArchiveFolder']['missing'] = 'ist nicht gewählt oder existiert nicht mehr';
 $GLOBALS['TL_LANG']['CONSHO']['invoiceArchiveFolder']['public'] = 'ist öffentlich (über „%s")';
 
-// Versandkosten (E-6, V5).
+// Shipping costs (E-6, V5).
 $GLOBALS['TL_LANG']['CTE']['consho_shipping_costs'] = ['Versandkosten', 'Die Versandarten des Shops mit Ländern, Preisen und Grenzen — aus den Daten der Versandarten, nicht von Hand. Gehört auf die am Startpunkt gewählte Versandkostenseite.'];
 $GLOBALS['TL_LANG']['CONSHO']['shippingCosts'] = [
     'none' => 'Derzeit sind keine Versandarten hinterlegt.',
@@ -1092,38 +1120,36 @@ $GLOBALS['TL_LANG']['CONSHO']['shippingCosts'] = [
     'codWithFee' => 'Nachnahme möglich, zzgl. Nachnahmegebühr; sie steht im Checkout.',
 ];
 
-// Telefon für den Paketdienst (E-6, V6).
+// Phone number for the parcel service (E-6, V6).
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['problem']['phoneMissing'] = 'Der Paketdienst dieser Versandart braucht eine Telefonnummer des Empfängers.';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhone'] = 'Telefon für den Paketdienst';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['shippingPhoneHint'] = 'Der Paketdienst meldet sich damit vor der Zustellung.';
 
-// Die Versandart für einen Warenkorb nur mit digitalen Positionen (F-2, F14).
+// The shipping method for a cart with digital lines only (F-2, F14).
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['electronicDelivery'] = 'Elektronische Zustellung';
 
-// Zustimmung zum vorzeitigen Beginn bei digitalen Inhalten (F-3, F15), eng am
-// Wortlaut von § 356 Abs. 6 BGB und § 18 Abs. 1 Z 11 FAGG. Änderbar wie jede
-// Beschriftung über die eigene Sprachdatei — den Wortlaut verantwortet der Betreiber.
+// Consent to the early start for digital content (F-3, F15), close to the
+// wording of § 356 Abs. 6 BGB and § 18 Abs. 1 Z 11 FAGG. Changeable like any
+// label through the project's own language file — the operator is responsible for the wording.
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['digitalConsent'] = 'Ich stimme ausdrücklich zu, dass Sie vor Ablauf der Widerrufsfrist mit der Bereitstellung der digitalen Inhalte beginnen. Mir ist bekannt, dass ich durch diese Zustimmung mit Beginn der Bereitstellung mein Widerrufsrecht verliere.';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['digitalConsentHint'] = 'Freiwillig. Ohne Zustimmung erhalten Sie die digitalen Inhalte nach Ablauf der Widerrufsfrist.';
-// Abo-Nachlese (P75): Zeilen der Nettogruppe auf der Prüfseite.
+// Abo-Nachlese (P75): lines of the net group on the review page.
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['reviewNet'] = 'zzgl. USt.';
-// Abo-7b: eine Verlängerung im Warenkorb.
+// Abo-7b: a renewal in the cart.
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['renewalConsentHint'] = 'Bei einer Lizenzverlängerung gilt das auch für Ihre bestehende Lizenz: Ohne Zustimmung läuft sie erst nach Ablauf der Widerrufsfrist im neuen Abo weiter. Endet Ihr bisheriges Abo vorher, ist die Lizenz bis dahin nicht nutzbar.';
-// Für Produkte mit „Widerruf wie: Dienstleistung" (Abo-2, P14, A12). Nahe am
-// Wortlaut von § 10 FAGG („ausdrücklich … Verlangen", Bestätigung des Verlusts
-// bei vollständiger Vertragserfüllung) und § 356 Abs. 5 Nr. 2 BGB (ausdrückliche
-// Zustimmung, Kenntnis vom Erlöschen) — am 2026-09-29 im Primärtext gelesen.
-// Änderbar wie jede Beschriftung; den Wortlaut verantwortet der Betreiber.
+// For products whose withdrawal works like a service (Abo-2, P14, A12), close
+// to § 10 FAGG and § 356 Abs. 5 Nr. 2 BGB, read in the primary text on
+// 2026-09-29. The operator can change it and is responsible for the wording.
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['digitalConsentService'] = 'Ich verlange ausdrücklich, dass Sie vor Ablauf der Widerrufsfrist mit der Erbringung der Dienstleistung beginnen. Mir ist bekannt, dass ich mein Widerrufsrecht mit vollständiger Vertragserfüllung durch Sie verliere.';
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['digitalConsentHintService'] = 'Freiwillig. Ohne dieses Verlangen beginnen wir erst nach Ablauf der Widerrufsfrist.';
-// Inhalte und Dienstleistungen im selben Korb (Abnahme DL, Fund 3).
+// Content and services in the same cart (DL).
 $GLOBALS['TL_LANG']['CONSHO']['checkout']['digitalConsentHintMixed'] = 'Freiwillig. Ohne Zustimmung erhalten Sie die digitalen Inhalte und beginnen wir mit den Leistungen erst nach Ablauf der Widerrufsfrist.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['digitalConsentService'] = 'Sie haben vor Vertragsausführung ausdrücklich verlangt, dass wir vor Ablauf der Widerrufsfrist mit der Erbringung der Dienstleistung beginnen, und bestätigt, dass Sie Ihr Widerrufsrecht mit vollständiger Vertragserfüllung durch uns verlieren.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['digitalConsent'] = 'Sie haben vor Vertragsausführung ausdrücklich zugestimmt, dass wir vor Ablauf der Widerrufsfrist mit der Bereitstellung der digitalen Inhalte beginnen, und bestätigt, dass Sie durch diese Zustimmung mit Beginn der Bereitstellung Ihr Widerrufsrecht verlieren.';
 
-// Abo-Bedingungen an Produktseite, Warenkorb, Kasse und Bestellzeile (Abo-2, P15).
-// SubscriptionTerms setzt sie mit „ · " zusammen. `day`/`days` stehen nach „mit"
-// (Dativ: „mit 14 Tagen Frist"), `dayNominative`/`daysNominative` allein
+// Subscription terms on the product page, cart, checkout and order line (Abo-2, P15).
+// SubscriptionTerms joins them with " · ". `day`/`days` follow "mit"
+// (dative: „mit 14 Tagen Frist"), `dayNominative`/`daysNominative` stand alone
 // („Kündigungsfrist 30 Tage").
 $GLOBALS['TL_LANG']['CONSHO']['subscription'] = [
     'once' => '%s einmalig',
@@ -1149,9 +1175,9 @@ $GLOBALS['TL_LANG']['CONSHO']['subscription'] = [
     'renewalRefused' => 'Die Lizenz von Abo %s lässt sich nicht mehr verlängern. Bitte entfernen Sie die Zeile im Warenkorb.',
 ];
 
-// Berechtigungen auf der Bestellseite (F-5).
+// Entitlements on the order page (F-5).
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['entitlements'] = 'Digitale Inhalte';
-// DL3: Dienstleistungen werden freigeschaltet, nicht bereitgestellt.
+// DL3: services are activated, not provided.
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['entitlementsServices'] = 'Leistungen';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['entitlementsMixed'] = 'Digitale Inhalte und Leistungen';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['serviceUnlocked'] = 'freigeschaltet';
@@ -1163,7 +1189,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['resting'] = 'ruht, bis die offene Re
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['download'] = 'Herunterladen';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['downloadOf'] = '%s herunterladen';
 
-// Mails zu digitalen Inhalten (F-7, F20).
+// Mails about digital content (F-7, F20).
 $GLOBALS['TL_LANG']['CONSHO']['mail']['paymentReceived']['ready'] = [
     'digital' => 'Ihre digitalen Inhalte stehen jetzt auf Ihrer Bestellseite bereit.',
     'service' => 'Ihre Leistungen sind jetzt freigeschaltet; Sie sehen sie auf Ihrer Bestellseite.',
@@ -1176,7 +1202,7 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['vouchersIssued'] = [
     'intro' => 'vielen Dank für Ihre Bestellung %s. Hier ist Ihr Gutschein:',
     'attached' => 'Jeder Gutschein liegt dieser E-Mail als PDF bei — zum Ausdrucken oder Weitergeben.',
 ];
-// Wertgutscheine (WG-5, E3): Einlösung. %1$s der Code (…MDSN), %2$s ein Betrag.
+// Wertgutscheine (WG-5, E3): redemption. %1$s the code (…MDSN), %2$s an amount.
 $GLOBALS['TL_LANG']['CONSHO']['cart']['voucher'] = [
     'code' => 'Gutschein einlösen',
     'apply' => 'Einlösen',
@@ -1195,6 +1221,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cart']['voucher'] = [
         'blocked' => 'Gutschein %1$s ist gesperrt.',
         'expired' => 'Gutschein %1$s ist abgelaufen.',
         'otherCurrency' => 'Gutschein %1$s gilt nicht in dieser Währung.',
+        'notApplicable' => 'Gutschein %1$s passt zu keinem Artikel in diesem Einkauf.',
         'unknown' => 'Gutschein %1$s gilt in diesem Shop nicht.',
     ],
     'after' => 'Danach bleiben %2$s auf dem Gutschein %1$s.',
@@ -1216,7 +1243,7 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['digital']['now'] = 'Die d
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['digital']['afterPayment'] = 'Die digitalen Inhalte Ihrer Bestellung stellen wir auf Ihrer Bestellseite bereit, sobald Ihre Zahlung eingegangen ist.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['digital']['afterPeriod'] = 'Die digitalen Inhalte Ihrer Bestellung stellen wir nach Ablauf der Widerrufsfrist am %s auf Ihrer Bestellseite bereit.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['digital']['afterBoth'] = 'Die digitalen Inhalte Ihrer Bestellung stellen wir auf Ihrer Bestellseite bereit, sobald Ihre Zahlung eingegangen und die Widerrufsfrist am %s abgelaufen ist.';
-// DL3: dieselben Zeitpunkte für Dienstleistungen und gemischte Bestellungen.
+// DL3: the same points in time for services and mixed orders.
 $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['service'] = [
     'now' => 'Die Leistungen Ihrer Bestellung schalten wir frei; Sie sehen sie auf Ihrer Bestellseite.',
     'afterPayment' => 'Die Leistungen Ihrer Bestellung schalten wir frei, sobald Ihre Zahlung eingegangen ist.',
@@ -1230,7 +1257,7 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['confirmation']['mixed'] = [
     'afterBoth' => 'Die digitalen Inhalte und Leistungen Ihrer Bestellung stellen wir bereit bzw. schalten sie frei, sobald Ihre Zahlung eingegangen und die Widerrufsfrist am %s abgelaufen ist.',
 ];
 
-// Block G: Verfügbarkeit (G7). Die Zahl nur im Warenkorb, wo sie über die Menge entscheidet.
+// Block G: availability (G7). The number only in the cart, where it decides the quantity.
 $GLOBALS['TL_LANG']['CONSHO']['stock'] = [
     'available' => 'lieferbar',
     'few' => 'nur noch wenige',
@@ -1240,7 +1267,7 @@ $GLOBALS['TL_LANG']['CONSHO']['stock'] = [
     'availableFrom' => 'wieder lieferbar ab %s',
 ];
 
-// Block G (G12, G15): „Benachrichtigen, wenn wieder da" — nur für angemeldete Kunden.
+// Block G (G12, G15): "Benachrichtigen, wenn wieder da" — only for logged-in customers.
 $GLOBALS['TL_LANG']['CONSHO']['mail']['stockAvailable']['subject'] = 'Wieder lieferbar: %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['stockAvailable']['intro'] = '„%s" ist wieder lieferbar. Sie wollten benachrichtigt werden.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['stockAvailable']['button'] = 'Zum Artikel';
@@ -1270,8 +1297,8 @@ $GLOBALS['TL_LANG']['CONSHO']['stockNotice'] = [
     ],
 ];
 
-// Block H (H-4): Rabattcode im Warenkorb. Platzhalter: %1$s der Code, %2$s der
-// fehlende Betrag bis zum Mindestbestellwert.
+// Block H (H-4): discount code in the cart. Placeholders: %1$s the code, %2$s the
+// amount still missing to the minimum order value.
 $GLOBALS['TL_LANG']['CONSHO']['cart']['discount'] = [
     'code' => 'Rabattcode',
     'apply' => 'Einlösen',

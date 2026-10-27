@@ -11,8 +11,8 @@ use Webwerkwien\ContaoConshoBundle\Controller\Page\ProductPageController;
 use Webwerkwien\ContaoConshoBundle\Seo\StartPointProductPageIssueSource;
 
 /**
- * Nebenfund GARAN (`/shop2/` → 500): Ein Startpunkt, dessen erste Seite —
- * nach Contaos Regel in findFirstPublishedByPid() — eine Produktseite ist.
+ * GARAN (`/shop2/` → 500): a start point whose first page —
+ * by Contao's rule in findFirstPublishedByPid() — is a product page.
  */
 class StartPointProductPageIssueSourceTest extends TestCase
 {
@@ -47,8 +47,8 @@ class StartPointProductPageIssueSourceTest extends TestCase
 
     public function testNachContaosRegelUebersprungenesZaehltNicht(): void
     {
-        // Unveröffentlicht, abgelaufen und ein Typ ohne Adresse überspringt
-        // Contao — die erste Seite ist dann die Startseite.
+        // Contao skips unpublished, expired and a type without an address
+        // — the first page is then the start page.
         $this->page(10, 64, ProductPageController::TYPE, 'Produkt alt', published: false);
         $this->page(11, 96, 'folder', 'Ordner');
         $this->page(12, 112, ProductPageController::TYPE, 'Produkt abgelaufen', stop: '100');
@@ -59,9 +59,9 @@ class StartPointProductPageIssueSourceTest extends TestCase
     }
 
     /**
-     * Eine Seite mit dem Alias „index" beantwortet die Adresse des Startpunkts
-     * selbst — dann leitet Contao nicht weiter (c5: „Contao Official Demo",
-     * Fehlalarm beim ersten Deploy). Auch tiefer im Baum.
+     * A page with the alias "index" answers the start point's address
+     * itself — then Contao does not redirect (as in the "Contao Official
+     * Demo", which would otherwise raise a false alarm). Also deeper in the tree.
      */
     public function testMitIndexSeiteLeitetNichtsWeiter(): void
     {
@@ -78,10 +78,10 @@ class StartPointProductPageIssueSourceTest extends TestCase
     }
 
     /**
-     * Review 2026-10-10, W1: Contao nimmt die Index-Route nur für eine
-     * öffentliche Seite (start/stop, PublishedFilter) mit Adresse
-     * (RouteProvider). Abgelaufen, noch nicht freigegeben oder ein Typ ohne
-     * Adresse — dann leitet der Startpunkt wieder weiter.
+     * Contao takes the index route only for a
+     * public page (start/stop, PublishedFilter) with an address
+     * (RouteProvider). Expired, not yet released or a type without an
+     * address — then the start point redirects again.
      */
     public function testIndexSeiteOhneRouteVerhindertNichts(): void
     {
@@ -102,8 +102,8 @@ class StartPointProductPageIssueSourceTest extends TestCase
     }
 
     /**
-     * Review 2026-10-10, W2: Maßgeblich ist `sorting`, nicht die Id; und eine
-     * Seite, deren Start noch aussteht, überspringt Contao.
+     * What counts is `sorting`, not the id; and Contao skips a
+     * page whose start is still pending.
      */
     public function testErsteSeiteNachSortingUndStart(): void
     {

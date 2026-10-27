@@ -15,7 +15,7 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
         'enableVersioning' => true,
 
         // A copied delivery would carry reportedAt along: a parcel counted
-        // twice, locked and undeletable (Fable review of D-1, S1).
+        // twice, locked and undeletable (D-1).
         'notCopyable' => true,
         'doNotCopyRecords' => true,
         'sql' => ['keys' => ['id' => 'primary', 'pid' => 'index']],
@@ -58,7 +58,7 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],

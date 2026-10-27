@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\PaymentListListen
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Abnahme Abo-5: „Gesamtsumme 1.2000" und „1.2000 (Überweisung)" in der
- * Zahlungsliste — die rohe Dezimalzahl aus Fall 30.
+ * Abo-5: „Gesamtsumme 1.2000" and „1.2000 (Überweisung)" in the payment
+ * list — the raw decimal number as MySQL/MariaDB returns a `decimal(10,4)`.
  */
 final class PaymentListListenerTest extends TestCase
 {

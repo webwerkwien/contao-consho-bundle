@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\LockedRecordListener;
 
 /**
- * Die Maske einer gesperrten Zahlung (D-1, A2; Review 2, B1).
+ * The form of a locked payment (D-1, A2).
  */
 final class LockedRecordListenerTest extends TestCase
 {
@@ -22,7 +22,7 @@ final class LockedRecordListenerTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
         $this->connection->insert('tl_consho_payment', ['id' => 1, 'lockedAt' => 100]);
         $this->connection->insert('tl_consho_payment', ['id' => 2]);
@@ -39,9 +39,9 @@ final class LockedRecordListenerTest extends TestCase
     }
 
     /**
-     * B1: „Version wiederherstellen" schrieb die alte Zeile — mit lockedAt
-     * NULL — am Voter vorbei zurück. Ohne Versionsmenü läuft DC_Table weder
-     * Vergleich noch Wiederherstellen.
+     * "Restore version" wrote the old row — with lockedAt NULL — back past the
+     * voter. Without a version menu, DC_Table runs neither comparison nor
+     * restore.
      */
     public function testEineGesperrteZahlungOeffnetSchreibgeschuetztUndOhneVersionen(): void
     {
@@ -64,9 +64,9 @@ final class LockedRecordListenerTest extends TestCase
     }
 
     /**
-     * Review CW-6, K2: „Mehrere bearbeiten" umging den Schreibschutz. Das
-     * Speichern lehnt eine gesperrte Zahlung ab; der Speichervorgang, der
-     * sperrt, sieht sie noch offen (gefragt wird die gespeicherte Zeile).
+     * CW-6: "Edit multiple" bypassed the write protection. Saving rejects a locked
+     * payment; the save that locks it still sees it open (the stored row is
+     * what is asked).
      */
     public function testDasSpeichernLehntEineGesperrteZahlungAb(): void
     {

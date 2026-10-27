@@ -25,9 +25,9 @@ class CartPricerTest extends TestCase
 
     public function testDieZeilensummeEntstehtAusNettoMalMengeUndErstDannBrutto(): void
     {
-        // 8.3333 netto × 3 = 24.9999 netto → 29.9999 brutto bei 20 %.
-        // Einzelbrutto 10.00 × 3 wären 30.00 — ein Cent daneben, und die
-        // Rechnung widerspräche später dem Warenkorb.
+        // 8.3333 net × 3 = 24.9999 net → 29.9999 gross at 20 %.
+        // Unit gross 10.00 × 3 would be 30.00 — one cent off, and the
+        // invoice would later contradict the cart.
         $pricer = $this->pricer(['8.3333' => 7]);
 
         $view = $pricer->price(
@@ -44,8 +44,8 @@ class CartPricerTest extends TestCase
 
     public function testEinePositionOhnePreisFliegtRausUndWirdGemeldet(): void
     {
-        // Kein Preis im Land des Shops heißt: nicht verkäuflich. Sie mit 0,00
-        // zu zeigen wäre ein Angebot, das niemand gemacht hat.
+        // No price in the shop's country means: not for sale. Showing it at 0.00
+        // would be an offer nobody made.
         $pricer = $this->pricer([]);
 
         $view = $pricer->price([new CartItemRow(1, 7, '1.0000', 1_000)], 'EUR', 'AT', 'AT', 1_000);
@@ -56,9 +56,9 @@ class CartPricerTest extends TestCase
 
     public function testOhneSteuersatzFuerKlasseUndLandFliegtDieZeileGenauSoRaus(): void
     {
-        // Zweiter Weg in dieselbe Lage: Preis ja, Satz nein. Auch das heißt
-        // nicht verkäuflich — ein Brutto mit geratenem Satz wäre ein Preis,
-        // dem die Bestellung später widerspricht.
+        // A second way into the same situation: price yes, rate no. That too
+        // means not for sale — a gross amount with a guessed rate would be a
+        // price the order later contradicts.
         $pricer = $this->pricer(['10.0000' => 7], ['DE' => '19.0000']);
 
         $view = $pricer->price([new CartItemRow(1, 7, '1.0000', 1_000)], 'EUR', 'AT', 'AT', 1_000);
@@ -69,8 +69,8 @@ class CartPricerTest extends TestCase
 
     public function testEineAbozeileWirdMitIhrerRegelBepreist(): void
     {
-        // Abo-2: derselbe Artikel zweimal, einmal als Monatsabo (Regel 5),
-        // einmal als Einmalkauf — zwei Zeilen, zwei Preise.
+        // Abo-2: the same article twice, once as a monthly subscription (rule 5),
+        // once as a one-off purchase — two lines, two prices.
         $view = $this->rulePricer()->price(
             [new CartItemRow(1, 7, '2.0000', 1_000, 5), new CartItemRow(2, 7, '1.0000', 1_000)],
             'EUR',
@@ -85,8 +85,8 @@ class CartPricerTest extends TestCase
 
     public function testEineUnbepreisteAbozeileWirdMitIhrerZeilenIdGemeldet(): void
     {
-        // Regel 6 hat keinen Preis. Der Artikel steht auch als Einmalkauf im
-        // Korb — nur die Zeilen-Id sagt, welche der beiden blockiert.
+        // Rule 6 has no price. The article is also in the cart as a one-off
+        // purchase — only the line id tells which of the two is blocking.
         $view = $this->rulePricer()->price(
             [new CartItemRow(1, 7, '1.0000', 1_000), new CartItemRow(2, 7, '1.0000', 1_000, 6)],
             'EUR',
@@ -102,8 +102,8 @@ class CartPricerTest extends TestCase
 
     public function testDerWarenkorbFragtDieAngeboteMitDenGruppen(): void
     {
-        // P11: Die Gruppen der Regel prüft SubscriptionOffers — seit
-        // Variante A entscheiden sie allein, auch über „volle Mindestlaufzeit".
+        // P11: the rule's groups are checked by SubscriptionOffers — since
+        // variant A they alone decide, also about "full minimum term".
         $offers = $this->createMock(SubscriptionOffers::class);
         $offers->expects(self::once())->method('offered')->with(7, [4])->willReturn([0 => null]);
 
@@ -112,9 +112,9 @@ class CartPricerTest extends TestCase
 
     public function testEinModellDasDasProduktNichtMehrAnbietetIstNichtVerkaeuflich(): void
     {
-        // Fable-Review Abo-2, F1: Der Betreiber nimmt Regel 5 vom Produkt,
-        // während sie im Warenkorb liegt. Die Preiszeile steht noch — sie ist
-        // aber kein Angebot mehr, und die Zeile darf nicht zur Bestellung werden.
+        // Abo-2: the operator removes rule 5 from the product
+        // while it sits in the cart. The price line is still there — but it
+        // is no longer an offer, and the line must not become an order.
         $items = [new CartItemRow(1, 7, '1.0000', 1_000, 5), new CartItemRow(2, 7, '1.0000', 1_000)];
 
         $view = $this->rulePricer($this->offersOf([0]))->price($items, 'EUR', 'AT', 'AT', 1_000);
@@ -125,9 +125,9 @@ class CartPricerTest extends TestCase
 
     public function testEinEinmalkaufDenDasProduktNichtMehrAnbietetIstNichtVerkaeuflich(): void
     {
-        // Dasselbe in die andere Richtung: „Einmalkauf" abgehakt, die alte
-        // Einmalkauf-Zeile im Korb — oder der Produkttyp wurde körperlich und
-        // bietet das Abo nicht mehr an (A13).
+        // The same in the other direction: "one-off purchase" unticked, the old
+        // one-off line in the cart — or the product type became physical and
+        // no longer offers the subscription (A13).
         $items = [new CartItemRow(1, 7, '1.0000', 1_000, 5), new CartItemRow(2, 7, '1.0000', 1_000)];
 
         self::assertSame([2], $this->rulePricer($this->offersOf([5]))->price($items, 'EUR', 'AT', 'AT', 1_000)->unpricedItems);
@@ -142,7 +142,7 @@ class CartPricerTest extends TestCase
     }
 
     /**
-     * @param list<int> $rules was das Produkt anbietet; 0 = Einmalkauf
+     * @param list<int> $rules what the product offers; 0 = one-off purchase
      */
     private function offersOf(array $rules): SubscriptionOffers
     {
@@ -170,8 +170,8 @@ class CartPricerTest extends TestCase
             1_000,
         );
 
-        // Die Summen tragen die Stellen der Währung, die Menge nicht: eine
-        // Menge ist kein Geld und bleibt vierstellig (Kilogramm-Artikel).
+        // The totals carry the currency's decimals, the quantity does not: a
+        // quantity is not money and keeps four decimals (articles sold by the kilogram).
         self::assertSame('25.00', $view->net);
         self::assertSame('30.00', $view->gross);
         self::assertSame('3.0000', $view->quantity);
@@ -188,10 +188,10 @@ class CartPricerTest extends TestCase
 
     public function testEinWarenkorbNurMitUnbezahlbaremIstNichtLeer(): void
     {
-        // Überraschend genug, um festgehalten zu werden: keine einzige Zeile
-        // in den Summen, und trotzdem nicht leer. Sonst zeigte die
-        // Warenkorbseite „Ihr Warenkorb ist leer", während eine Position
-        // darin liegt, die der Besucher nicht einmal entfernen könnte.
+        // Surprising enough to be pinned down: not a single line in the
+        // totals, and still not empty. Otherwise the cart page would show
+        // "Your cart is empty" while it holds a line item the visitor could
+        // not even remove.
         $view = $this->pricer([])->price([new CartItemRow(1, 7, '1.0000', 1_000)], 'EUR', 'AT', 'AT', 1_000);
 
         self::assertSame([], $view->lines);
@@ -201,9 +201,9 @@ class CartPricerTest extends TestCase
 
     public function testEineMengeMitNachkommastellen(): void
     {
-        // Ein Produkt, das in Kilogramm verkauft wird: 2,5 × 4,4000 = 11,0000
-        // netto, brutto 13,2000. Die Spalte ist decimal(10,4), damit genau
-        // das geht.
+        // A product sold by the kilogram: 2.5 × 4.4000 = 11.0000
+        // net, gross 13.2000. The column is decimal(10,4) so that exactly
+        // this works.
         $view = $this->pricer(['4.4000' => 7])->price(
             [new CartItemRow(1, 7, '2.5000', 1_000)],
             'EUR',
@@ -219,10 +219,10 @@ class CartPricerTest extends TestCase
 
     public function testZweiSteuerklasseninEinemWarenkorb(): void
     {
-        // Der Fall, für den die Summen zeilenweise gebildet werden: 20 % auf
-        // die eine Zeile, 10 % auf die andere. Ein Gesamtnetto von 20,0000
-        // hätte keinen Satz, mit dem man es verbruttet — 10,0000 → 12,0000
-        // und 10,0000 → 11,0000 ergeben zusammen 23,0000.
+        // The case for which the totals are built line by line: 20 % on
+        // one line, 10 % on the other. A total net of 20.0000 would have no
+        // rate to turn it into gross — 10.0000 → 12.0000 and
+        // 10.0000 → 11.0000 add up to 23.0000.
         $view = $this->pricerWithClasses(
             [7 => ['10.0000', 1], 9 => ['10.0000', 2]],
             [1 => '20.0000', 2 => '10.0000'],
@@ -239,23 +239,22 @@ class CartPricerTest extends TestCase
         self::assertSame('20.00', $view->net);
         self::assertSame('23.00', $view->gross);
 
-        // Die Klasse reist an der Zeile mit — C-5 teilt die Versandsteuer
-        // danach auf (C4), und ein zweiter Blick in den Katalog an jener
-        // Stelle wäre eine Kopie genau dieser Zuordnung.
+        // The class travels with the line — C-5 splits the shipping tax
+        // by it (C4), and a second look into the catalogue at that point
+        // would be a copy of exactly this assignment.
         self::assertSame(1, $view->lines[0]->taxClassId);
         self::assertSame(2, $view->lines[1]->taxClassId);
     }
 
     public function testDieSummeEntstehtAusDenGerundetenZeilenNichtAusDenRohen(): void
     {
-        // Befund 5, mit genau dem Zahlenbeispiel aus dem Abschlussreview:
-        // 8.3367 netto, 20 %, zwei Zeilen à Menge 1.
+        // The worked example: 8.3367 net, 20 %, two lines with quantity 1 each.
         //
-        //   Zeilenbrutto roh  : 10.0040  → angezeigt 10,00, zweimal = 20,00
-        //   Summe aus den rohen: 20.0080 → angezeigt 20,01
+        //   line gross raw     : 10.0040  → shown as 10.00, twice = 20.00
+        //   sum of the raw ones: 20.0080 → shown as 20.01
         //
-        // Der Besucher rechnet 10,00 + 10,00 und liest 20,01. Kein Eckfall:
-        // es braucht keinen Gleichstand, nur genug angesammelte Reste.
+        // The visitor adds 10.00 + 10.00 and reads 20.01. Not an edge case:
+        // it needs no tie, only enough accumulated remainders.
         $view = $this->pricerWithClasses(
             [7 => ['8.3367', 1], 9 => ['8.3367', 1]],
             [1 => '20.0000'],
@@ -267,24 +266,24 @@ class CartPricerTest extends TestCase
             1_000,
         );
 
-        // Die Zeile selbst bleibt vierstellig: Netto ist der Anker, und das
-        // Zeilenbrutto entsteht weiterhin aus dem ungerundeten Zeilennetto.
+        // The line itself keeps four decimals: net is the anchor, and the
+        // line gross is still derived from the unrounded line net.
         self::assertSame('8.3367', $view->lines[0]->lineNet);
         self::assertSame('10.0040', $view->lines[0]->lineGross);
 
-        // Gerundet wird die Zeile, bevor sie in die Summe geht.
+        // The line is rounded before it goes into the total.
         self::assertSame('20.00', $view->gross);
         self::assertSame('16.68', $view->net);
     }
 
     public function testDieAngezeigteZeileIstGenauDerBetragDerInDieSummeGing(): void
     {
-        // Die Zusicherung, an der die Änderung hängt: CartPricer rundet die
-        // Zeile für die Summe, MoneyFormatter rundet sie für die Anzeige —
-        // und beide müssen dieselbe Zahl erzeugen, sonst steht unter einer
-        // Spalte wieder eine Summe, die ihre eigenen Zeilen nicht ergibt.
-        // Sie tun es, weil beide dieselbe Stellenzahl (Currencies) und
-        // dieselbe Rundungsart (half up) verwenden.
+        // The assertion the change hinges on: CartPricer rounds the line
+        // for the total, MoneyFormatter rounds it for display — and both must
+        // produce the same number, otherwise a column again ends in a total
+        // its own lines do not add up to.
+        // They do, because both use the same number of decimals (Currencies)
+        // and the same rounding mode (half up).
         $view = $this->pricerWithClasses(
             [7 => ['8.3367', 1], 9 => ['8.3367', 1]],
             [1 => '20.0000'],
@@ -307,18 +306,18 @@ class CartPricerTest extends TestCase
     }
 
     /**
-     * @param array<string, int>    $netByArticle Netto => Artikel-Id
-     * @param array<string, string> $rates        ISO-Code => Satz
+     * @param array<string, int>    $netByArticle net => article id
+     * @param array<string, string> $rates        ISO code => rate
      */
     private function pricer(array $netByArticle, array $rates = ['AT' => '20.0000']): CartPricer
     {
-        // Der Test steht auf Doubles: die Preisauflösung selbst ist in
-        // ArticlePriceResolverTest geprüft, hier geht es um Zeilen und Summen.
-        // GrossCalculator ist final und wird deshalb echt gebaut (TaxFixture),
-        // mit festen Sätzen — nur so bleibt die Rundung die des Hauses.
+        // The test stands on doubles: the price resolution itself is tested in
+        // ArticlePriceResolverTest; here it is about lines and totals.
+        // GrossCalculator is final and is therefore built for real (TaxFixture),
+        // with fixed rates — only that way the rounding stays the shop's own.
         $prices = new class(array_flip($netByArticle)) implements CartLinePriceSource {
             /**
-             * @param array<int, string> $netOf Artikel-Id => Netto
+             * @param array<int, string> $netOf article id => net
              */
             public function __construct(private readonly array $netOf)
             {
@@ -330,8 +329,8 @@ class CartPricerTest extends TestCase
             }
         };
 
-        // Keine Varianten in diesen Tests: jeder Artikel ist sein eigenes
-        // Hauptprodukt.
+        // No variants in these tests: every article is its own
+        // main product.
         $tree = $this->createMock(ArticleTreeInterface::class);
         $tree->method('articlesOf')->willReturnCallback(
             static fn (array $ids): array => array_combine($ids, $ids),
@@ -341,8 +340,8 @@ class CartPricerTest extends TestCase
     }
 
     /**
-     * Artikel 7: Einmalkauf 80, Monatsabo (Regel 5) 1, Regel 6 ohne Preis.
-     * Satz 0 %, damit brutto gleich netto ist — Thema ist die Regel.
+     * Article 7: one-off purchase 80, monthly subscription (rule 5) 1, rule 6 without a price.
+     * Rate 0 % so that gross equals net — the subject is the rule.
      */
     private function rulePricer(SubscriptionOffers|null $offers = null): CartPricer
     {
@@ -366,13 +365,13 @@ class CartPricerTest extends TestCase
     }
 
     /**
-     * Wie pricer(), nur mit einer Steuerklasse je Artikel und einem Satz je
-     * Klasse. TaxFixture kann das nicht: FixedTaxRates liefert absichtlich
-     * einen Satz je Land, gleich welche Klasse gefragt wird — für Tests, in
-     * denen die Steuer nicht das Thema ist. Hier ist sie es.
+     * Like pricer(), only with one tax class per article and one rate per
+     * class. TaxFixture cannot do that: FixedTaxRates deliberately returns
+     * one rate per country, whatever class is asked for — for tests in
+     * which tax is not the subject. Here it is.
      *
-     * @param array<int, array{0: string, 1: int}> $articles Artikel-Id => [Netto, Steuerklasse]
-     * @param array<int, string>                   $rates    Steuerklasse => Satz
+     * @param array<int, array{0: string, 1: int}> $articles article id => [net, tax class]
+     * @param array<int, string>                   $rates    tax class => rate
      */
     private function pricerWithClasses(array $articles, array $rates): CartPricer
     {

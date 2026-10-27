@@ -11,9 +11,9 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\OrderAftercareBut
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * F13 — Michael: „das Icon für Widerrufe ist immer grün und anwählbar, es wäre
- * besser wenn es nur bei einem widerruf so ist"; „was für das Widerruf icon
- * gilt, gilt auch für die Reklamation".
+ * F13: the withdrawal icon was always green and clickable; it should be so
+ * only when there is a withdrawal. What holds for the withdrawal icon holds
+ * for the complaint as well.
  */
 final class OrderAftercareButtonListenerTest extends TestCase
 {

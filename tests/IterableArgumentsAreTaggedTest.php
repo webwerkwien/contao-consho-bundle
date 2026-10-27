@@ -8,29 +8,29 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * Jedes `iterable`-Konstruktorargument braucht einen Tag — sonst baut der
- * Container gar nicht erst.
+ * Every `iterable` constructor argument needs a tag — otherwise the
+ * container does not even build.
  *
- * 🔴 **Am 2026-09-22 im Review gefunden**, bevor es auf einen Server kam.
- * `CheckoutReadiness` nahm `private readonly iterable $sources` ohne
- * `#[AutowireIterator]`:
+ * 🔴 `CheckoutReadiness` once took `private readonly iterable $sources`
+ * without `#[AutowireIterator]`:
  *
  *     Cannot autowire service "CheckoutReadiness": argument "$sources" is
  *     type-hinted "iterable", you should configure its value explicitly.
  *
- * `iterable` ist ein Builtin-Typ. Symfonys AutowirePass leitet daraus nichts
- * ab, und ohne Vorgabewert bleibt nur der Abbruch — **derselbe Ausgang wie bei
- * der Mehrdeutigkeit am 2026-09-21:** `cache:clear` bricht ab, der alte
- * Container bleibt stehen, die Website läuft weiter mit dem alten Code, und
- * das frisch Deployte erscheint einfach nicht.
+ * `iterable` is a builtin type. Symfony's AutowirePass derives nothing from
+ * it, and without a default value the only outcome is the abort — **the
+ * same outcome as with the ambiguous autowiring (AutowiringIsUnambiguousTest):**
+ * `cache:clear` aborts, the old container stays in place, the website keeps
+ * running the old code, and what was just deployed simply does not appear.
  *
- * ⚠️ **Warum die 2309 Tests daran vorbeigingen** — dieselbe Ursache wie damals:
- * Tests bauen die Klassen direkt (`new CheckoutReadiness($quellen)`) und nie
- * den Container. Siehe [Prüfungen, die nicht prüfen was man glaubt], Regel 25:
- * „Baut der Test das Objekt selbst, oder lässt er es bauen?"
+ * ⚠️ **Why the 2309 tests missed it** — the same cause as there: tests
+ * build the classes directly (`new CheckoutReadiness($quellen)`) and never
+ * the container. Does the test build the object itself, or let the
+ * container build it?
  *
- * Der Schwestertest ist AutowiringIsUnambiguousTest — der fragt, ob der
- * Container WÄHLEN kann, dieser, ob er überhaupt etwas zu wählen findet.
+ * The sister test is AutowiringIsUnambiguousTest — it asks whether the
+ * container can CHOOSE, this one whether it finds anything to choose from
+ * at all.
  */
 class IterableArgumentsAreTaggedTest extends TestCase
 {
@@ -47,9 +47,9 @@ class IterableArgumentsAreTaggedTest extends TestCase
             }
 
             /*
-             * Ein Vorgabewert rettet den Aufbau — der Container setzt dann ein
-             * leeres iterable ein. Das ist legitim, aber selten gewollt, und
-             * es steht dem Autor frei; kaputt geht dabei nichts.
+             * A default value rescues the build — the container then injects an
+             * empty iterable. That is legitimate but rarely intended, and it is up
+             * to the author; nothing breaks.
              */
             if ($parameter->isDefaultValueAvailable()) {
                 continue;
@@ -77,12 +77,12 @@ class IterableArgumentsAreTaggedTest extends TestCase
 
     public function testDerTestFindetUeberhauptArgumente(): void
     {
-        // Ein Test, der nichts findet, wäre immer grün.
+        // A test that finds nothing would always be green.
         self::assertGreaterThan(200, \count($this->constructorArguments()));
     }
 
     /**
-     * Jeder Konstruktor-Parameter jeder eigenen Klasse.
+     * Every constructor parameter of every class of our own.
      *
      * @return list<array{class-string, \ReflectionParameter}>
      */

@@ -30,7 +30,7 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
  * cancellation is its `endsAt`, and until then it is assessed like any other.
  *
  * An `ended` subscription is not suspended any more, but what rested when it
- * ended comes free once nothing is overdue (P64, review Abo-6 L4) — without a
+ * ended comes free once nothing is overdue (P64, Abo-6) — without a
  * mail: "active again" would be untrue. It never starts to rest once ended.
  */
 class SubscriptionDelinquency
@@ -105,13 +105,11 @@ class SubscriptionDelinquency
         /*
          * A renewal and its predecessor share one licence (Abo-7b): whoever
          * holds it speaks, the other stays silent — otherwise every overdue
-         * invoice of the old contract came twice, under two numbers (review
-         * S3, second review S-2).
+         * invoice of the old contract came twice, under two numbers.
          *
          * The renewed one without the licence: it has moved on, the renewal
          * rests in its place. A state left `suspended` from before the move is
-         * set back without a mail — nothing of it rests any more (second
-         * review, L-1).
+         * set back without a mail — nothing of it rests any more.
          */
         $holds = false !== $this->connection->fetchOne('SELECT 1 FROM tl_consho_entitlement WHERE subscription = ? LIMIT 1', [$subscriptionId]);
 
@@ -175,7 +173,7 @@ class SubscriptionDelinquency
             return null;
         }
 
-        // Paid while its pause runs (review Abo pausieren): back to paused,
+        // Paid while its pause runs (Abo pausieren): back to paused,
         // without "wieder aktiv" — the access rests for the pause anyway.
         $pauseFrom = (int) ($subscription['pauseFrom'] ?? 0);
 
@@ -225,7 +223,7 @@ class SubscriptionDelinquency
          * open makes it rest here — otherwise "Lizenz verlängern" would be a
          * way out of an unpaid invoice. One step back only: an invoice of the
          * predecessor's own predecessor that falls overdue after this renewal
-         * was bought is not counted here (review Abo-7b, L4; open point).
+         * was bought is not counted here (Abo-7b; open point).
          */
         $candidates = $this->connection->fetchAllKeyValue(
             'SELECT id, paymentDueAt FROM tl_consho_order

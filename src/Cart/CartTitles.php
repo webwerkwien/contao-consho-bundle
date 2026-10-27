@@ -39,7 +39,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationJoin;
  *
  * ── …plus the VARIANT's values ───────────────────────────────────────────
  *
- * "Wanderstock, rot, L" (spec C, E2; Michael, 2026-10-08: "nur die Werte").
+ * "Wanderstock, rot, L" (spec C, E2: the values only).
  * The item number distinguishes the lines; the values describe them, and an
  * invoice line "Wanderstock" is worthless to the buyer. Values only, no axis
  * names, in the order of the detail page's axes (VariantRepository::axes():

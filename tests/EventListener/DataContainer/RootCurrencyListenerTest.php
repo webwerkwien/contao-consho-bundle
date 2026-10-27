@@ -11,16 +11,16 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopCurrencies;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Gegen SQLite statt gegen einen Mock von ShopCurrencies: der Dienst ist final
- * und liest selbst, und genau sein Ergebnis — sortiert, entdoppelt, ohne stillen
- * Vorgabewert — entscheidet hier über Sichtbarkeit, Optionen und Ablehnung.
+ * Against SQLite instead of a mock of ShopCurrencies: the service is final
+ * and reads by itself, and exactly its result — sorted, deduplicated,
+ * without a silent default — decides visibility, options and rejection here.
  */
 class RootCurrencyListenerTest extends TestCase
 {
     /**
-     * So aufgebaut wie die echte Palette nach contao/dca/tl_page.php: die
-     * Währung steht hinter dem Shop, nicht davor. Das ist keine Deko — beim
-     * Speichern arbeitet DC_Table die Palettenfelder der Reihe nach ab.
+     * Built like the real palette according to contao/dca/tl_page.php: the
+     * currency comes after the shop, not before. That is not decoration — when
+     * saving, DC_Table processes the palette fields in order.
      */
     private const PALETTE = '{title_legend},title,alias,type;{consho_legend},consho_shop,consho_currency,consho_cartPage;{publish_legend},published';
 
@@ -35,7 +35,7 @@ class RootCurrencyListenerTest extends TestCase
 
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        // Nur die beiden Spalten, die ShopCurrencies liest — wie in
+        // Only the two columns that ShopCurrencies reads — as in
         // ShopCurrenciesTest.
         DcaSchema::create($this->connection, 'tl_consho_shop');
     }
@@ -46,10 +46,10 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Fall 1: Ein Shop mit genau einer Währung stellt nichts zur Wahl. Das Feld
-     * verschwindet aus der Palette, und der Wert kommt trotzdem an — sonst
-     * stünde der Startpunkt ohne Währung da, weil zu einem Feld außerhalb der
-     * Palette auch kein Speicher-Callback läuft.
+     * Case 1: a shop with exactly one currency offers no choice. The field
+     * disappears from the palette, and the value still arrives — otherwise the
+     * root page would stand there without a currency, because no save callback
+     * runs for a field outside the palette either.
      */
     public function testEineEinzigeWaehrungBlendetDasFeldAusUndSetztDenWertBeimSpeichern(): void
     {
@@ -66,9 +66,9 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Fall 2: Mehrere Währungen sind eine Wahl, also gibt es ein Feld — und
-     * darin genau die Währungen dieses Shops, sortiert. Nicht die ganze
-     * ISO-Liste: die steht am Shop, weil dort festgelegt wird, was möglich ist.
+     * Case 2: several currencies are a choice, so there is a field — and in it
+     * exactly the currencies of this shop, sorted. Not the whole ISO list: that
+     * is on the shop, because that is where it is decided what is possible.
      */
     public function testMehrereWaehrungenZeigenDasFeldMitGenauDiesenOptionen(): void
     {
@@ -86,29 +86,29 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Fall 3: Der eigentliche Riegel. Die Optionsliste allein hält nichts auf —
-     * Contao hängt einen gespeicherten Wert außerhalb der Optionen als
-     * „Unknown option" wieder an und nimmt ihn beim Speichern zurück
-     * (SelectMenu::generate()). Die Meldung nennt die Währung, sonst sucht die
-     * Redakteurin sie in einer Liste, in der sie gerade nicht mehr steht.
+     * Case 3: the actual bolt. The option list alone stops nothing — Contao
+     * appends a stored value outside the options again as "Unknown option" and
+     * takes it back on save (SelectMenu::generate()). The message names the
+     * currency, otherwise the editor looks for it in a list in which it no
+     * longer appears.
      */
     public function testEineNichtMehrErlaubteWaehrungWirdBeimSpeichernAbgelehnt(): void
     {
         $this->insertShop(1, serialize(['EUR', 'CHF']));
 
-        // Die Meldung nennt auch den Shop: Wer mehrere Konfigurationen führt,
-        // kann mit „der Shop dieses Startpunkts" nichts anfangen.
+        // The message also names the shop: whoever runs several configurations
+        // can make nothing of "the shop of this root page".
         $this->expectExceptionMessage('nicht erlaubt: USD im Shop Shop 1');
 
         $this->listener()->save('USD', $this->dc(7, 1, 'USD'));
     }
 
     /**
-     * Der Schreibpfad des sichtbaren Feldes. Ohne diesen Test überlebte ein
-     * `return '';` die ganze Suite — und leerte bei jedem Speichern eines
-     * Mehrwährungs-Startpunkts still die Währung, die die Redakteurin gerade
-     * gewählt hat. Nachsetzen würde sie niemand: Bei zwei oder mehr Währungen
-     * wählt `resolve()` ausdrücklich nicht.
+     * The write path of the visible field. Without this test a `return '';`
+     * survived the whole suite — and on every save of a multi-currency root
+     * page silently emptied the currency the editor had just chosen. Nobody
+     * would set it again: with two or more currencies, `resolve()` explicitly
+     * does not choose.
      */
     public function testEineErlaubteWaehrungWirdDurchgereicht(): void
     {
@@ -118,9 +118,9 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Leer geht durch. Ein leeres Pflichtfeld erreicht den Speicher-Callback
-     * gar nicht — der Zweig zählt erst, wenn das Feld seine Pflicht verliert.
-     * Ohne ihn würde eine leere Eingabe als unbekannte Währung abgelehnt.
+     * Empty passes. An empty mandatory field does not reach the save callback
+     * at all — the branch only counts once the field loses its mandatory flag.
+     * Without it an empty input would be rejected as an unknown currency.
      */
     public function testEinLeererWertWirdNichtAlsUnbekannteWaehrungAbgelehnt(): void
     {
@@ -130,11 +130,11 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Die Abweichung vom Vorbild `saveCurrency()`, das nicht normalisiert:
-     * Die Migration aus Schritt 3 schreibt diese Spalte unmittelbar, nie durch
-     * eine Maske. `ShopCurrencies` schreibt die Shop-Seite aus genau diesem
-     * Grund groß — ohne dieselbe Behandlung hier würde ein übernommenes „eur"
-     * als unbekannt abgelehnt, obwohl der Shop EUR annimmt.
+     * The deviation from the model `saveCurrency()`, which does not normalise:
+     * the migration from step 3 writes this column directly, never through a
+     * form. `ShopCurrencies` upper-cases the shop side for exactly this reason
+     * — without the same treatment here a taken-over "eur" would be rejected as
+     * unknown, although the shop accepts EUR.
      */
     public function testEinKleingeschriebenerCodeWirdGrossGeschriebenStattAbgelehnt(): void
     {
@@ -144,9 +144,9 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Contao ruft einen options_callback auch ohne Datensatz, etwa für den
-     * Filter über der Seitenliste. Ohne Startpunkt gibt es keinen Shop und
-     * damit nichts anzubieten — aber auch keinen Fehler.
+     * Contao calls an options_callback even without a record, for instance for
+     * the filter above the page list. Without a root page there is no shop and
+     * so nothing to offer — but no error either.
      */
     public function testOhneDatensatzGibtEsKeineOptionenUndKeinenFehler(): void
     {
@@ -156,10 +156,10 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Über „mehrere bearbeiten → überschreiben" gibt es gar keine Palette
-     * (`DC_Table::overrideAll()` ruft `getPalette()` nicht), die Währung kann
-     * also auch auf einer Seite **ohne** Shop landen. Dann darf die Meldung
-     * keinen Shop behaupten, den es nicht gibt.
+     * Via "edit multiple → override" there is no palette at all
+     * (`DC_Table::overrideAll()` does not call `getPalette()`), so the currency
+     * can also land on a page **without** a shop. Then the message must not
+     * claim a shop that does not exist.
      */
     public function testOhneShopNenntDieMeldungKeinenShop(): void
     {
@@ -169,10 +169,10 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Der Grund für die Feldreihenfolge, und der einzige Test, der ihn
-     * einfangen kann: Die Feld-Callbacks müssen den **gerade gewählten** Shop
-     * sehen, nicht den zuletzt gespeicherten. Auf `getCurrentRecord()` fällt
-     * dieser Test um, auf `getActiveRecord()` steht er.
+     * The reason for the field order, and the only test that can catch it: the
+     * field callbacks must see the shop **just chosen**, not the last saved one.
+     * On `getCurrentRecord()` this test falls over, on `getActiveRecord()` it
+     * stands.
      */
     public function testDieOptionenFolgenDemGeradeGewaehltenShop(): void
     {
@@ -186,10 +186,10 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Dieselbe Verwechslung auf dem Schreibweg: Die alte Währung EUR gehört
-     * zum alten Shop 1 und ist im gerade gewählten Shop 2 nicht mehr zulässig.
-     * Am gespeicherten Satz gemessen ginge sie durch — und der Startpunkt
-     * stünde mit einer Währung da, die sein Shop nicht annimmt.
+     * The same mix-up on the write path: the old currency EUR belongs to the
+     * old shop 1 and is no longer allowed in the shop 2 just chosen. Measured
+     * against the saved record it would pass — and the root page would stand
+     * there with a currency its shop does not accept.
      */
     public function testDasSpeichernPrueftGegenDenGeradeGewaehltenShop(): void
     {
@@ -202,8 +202,8 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Fall 4: Ein Startpunkt ohne Shop-Konfiguration hat keine Währung, die
-     * irgendwo gälte. Das Feld ist dann nicht leer, sondern gar nicht da.
+     * Case 4: a root page without a shop configuration has no currency that
+     * would apply anywhere. The field is then not empty but not there at all.
      */
     public function testEinStartpunktOhneShopHatDasFeldNicht(): void
     {
@@ -216,10 +216,10 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Ohne Datensatz ist kein Shop bekannt, also gilt keine Währung, also kein
-     * Feld — dieselbe Richtung wie überall sonst in der Klasse. Ein
-     * Abbruch-Wächter wie in `tl_files::adjustPalettes()` hätte das Gegenteil
-     * bewirkt: zeigen, wo am wenigsten bekannt ist.
+     * Without a record no shop is known, so no currency applies, so no field —
+     * the same direction as everywhere else in the class. An abort guard as in
+     * `tl_files::adjustPalettes()` would have done the opposite: show where the
+     * least is known.
      */
     public function testOhneDatensatzVerschwindetDasFeld(): void
     {
@@ -230,14 +230,14 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Der Callback hängt an tl_page und läuft damit beim Speichern **jeder**
-     * Seite. Eine gewöhnliche Unterseite trägt keinen Shop und darf deshalb
-     * unberührt bleiben — auch ohne eine einzige Abfrage.
+     * The callback hangs on tl_page and therefore runs when **any** page is
+     * saved. An ordinary subpage carries no shop and may therefore stay
+     * untouched — even without a single query.
      *
-     * ⚠️ Die fehlende Tabelle ist der eigentliche Prüfstein, nicht Kulisse:
-     * Ohne den frühen Ausstieg fragte ShopCurrencies auch für Shop 0 die
-     * Datenbank und liefe hier in einen Fehler. Mit der Tabelle wäre der Test
-     * zahnlos — das Ergebnis wäre über beide Wege dasselbe (gemessen).
+     * ⚠️ The missing table is the actual touchstone, not scenery: without the
+     * early exit ShopCurrencies would query the database for shop 0 as well and
+     * run into an error here. With the table the test would be toothless — the
+     * result would be the same on both paths (measured).
      */
     public function testEineSeiteOhneShopWirdNichtAngefasst(): void
     {
@@ -247,9 +247,9 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Wird dem Startpunkt der Shop genommen, gilt auch seine Währung nicht
-     * mehr. Sie bliebe sonst als unsichtbarer Rest stehen: Das Feld ist ohne
-     * Shop ausgeblendet, niemand sähe den Wert je wieder.
+     * If the root page loses its shop, its currency no longer applies either.
+     * Otherwise it would remain as an invisible leftover: without a shop the
+     * field is hidden, nobody would ever see the value again.
      */
     public function testMitDemShopFaelltAuchDieWaehrung(): void
     {
@@ -261,9 +261,8 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * Der gespeicherte Wert wird gelesen, nicht nur der eingereichte: Eine
-     * Änderung an irgendeinem anderen Feld darf eine gültige Währung nicht
-     * verlieren.
+     * The stored value is read, not only the submitted one: a change to any
+     * other field must not lose a valid currency.
      */
     public function testEineGespeicherteWaehrungUeberlebtEineFremdeAenderung(): void
     {
@@ -273,9 +272,8 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * `valueOf()` nimmt ein Array. Ohne den Rückfall auf `[]` wäre ein
-     * fehlender Datensatz kein leerer Wert, sondern ein Typfehler mitten im
-     * Speichervorgang.
+     * `valueOf()` takes an array. Without the fallback to `[]` a missing record
+     * would not be an empty value but a type error in the middle of the save.
      */
     public function testOhneDatensatzScheitertDasSpeichernNicht(): void
     {
@@ -291,18 +289,18 @@ class RootCurrencyListenerTest extends TestCase
     }
 
     /**
-     * ⚠️ Das Doppel muss unterscheiden, was das Original unterscheidet.
+     * ⚠️ The double must distinguish what the original distinguishes.
      *
-     * `getCurrentRecord()` ist der **gespeicherte** Satz, `getActiveRecord()`
-     * derselbe Satz überlagert mit dem, was bis hierher eingereicht wurde
+     * `getCurrentRecord()` is the **stored** record, `getActiveRecord()` the
+     * same record overlaid with what has been submitted so far
      * (`DC_Table::getActiveRecord()` = `array_merge(getCurrentRecord(),
-     * arrSubmit)`). Gäben beide dasselbe zurück, wäre die ganze Testklasse
-     * blind für die Verwechslung — und genau die Verwechslung ist der Grund,
-     * warum `consho_shop` in der Palette vor `consho_currency` steht.
+     * arrSubmit)`). If both returned the same, the whole test class would be
+     * blind to the mix-up — and exactly that mix-up is the reason why
+     * `consho_shop` comes before `consho_currency` in the palette.
      *
-     * `$submittedShop` ist der gerade in der Maske gewählte Shop, der noch
-     * nicht gespeichert ist. Ohne Angabe sind beide gleich: so sieht ein
-     * Aufruf aus, bei dem der Shop nicht angefasst wurde.
+     * `$submittedShop` is the shop just chosen in the form, not yet saved.
+     * Without it both are the same: that is what a call looks like in which the
+     * shop was not touched.
      */
     private function dc(int $id, int $shopId, string $currency = '', int|null $submittedShop = null): DC_Table
     {

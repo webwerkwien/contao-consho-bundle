@@ -4,9 +4,8 @@ $GLOBALS['TL_LANG']['tl_consho_shop']['title'] = ['Name', 'Name of this shop con
 $GLOBALS['TL_LANG']['tl_consho_shop']['currencies'] = ['Accepted currencies', 'Which currencies this shop can invoice in. That hangs off the bank account, the payment method and whether a flat shipping rate carries an amount in that currency. Which currency a visitor sees is not set here but on the start page, which picks from this list.'];
 
 // Out of the palette since C-1c, the entry stays: Contao shows the label in
-// the listing and under "Details" as well.
-// Only the list and the details view still show this label — the field left
-// the mask with C-1c and the column goes after the acceptance run.
+// the listing and under "Details" as well, until the column goes in a later
+// release.
 $GLOBALS['TL_LANG']['tl_consho_shop']['currency'] = ['Former currency', 'The currency this shop had before C-1c. It was carried over to its start pages and is read nowhere any more; which currencies the shop accepts is under "Currencies".'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['country'] = ['Home country', 'The country the shop is established in. Its tax rate turns the net price into the gross price visitors see while no delivery country is known yet. Without a home country the shop shows no prices.'];
 $GLOBALS['TL_LANG']['tl_consho_shop']['fallbackLanguage'] = ['Default language', 'The language whose texts live on the record itself. A missing translation falls back to it.'];

@@ -7,9 +7,8 @@ use Brick\Math\BigDecimal;
 /**
  * Where an order stands, in two balances (spec D 5.1, decision A1).
  *
- * Michael, 2026-09-27: "eine bestellung kann nicht abgeschossen werden, wenn
- * zahlung oder versand noch offen sind, sie könnte aber abgeschlossen sein,
- * wenn kein versand aber stornierte zahlung vorliegt."
+ * An order cannot be completed while payment or shipping is still open; it
+ * can be completed with nothing shipped where the payment was cancelled.
  *
  * "Settled" is therefore not "paid and shipped" but "nothing owed in either
  * direction": a cancelled order that never shipped and whose money went back
@@ -43,9 +42,9 @@ final class OrderBalance
      * The claim of an order row: its grand total, or 0 once cancelled
      * (cancelledAt). For the checks that hold a locked order row in hand —
      * the payment method change and the payment start — so that they owe
-     * what the balance owes. Until the D-1 review they asked the grand total,
+     * what the balance owes. Until D-1 they asked the grand total,
      * and a cancelled order moved on to a flagless status ("In Klärung")
-     * could still be paid online (Fable, S4).
+     * could still be paid online.
      *
      * A cancelling STATUS is not looked at here: the callers refuse on it
      * already (statusHolds).

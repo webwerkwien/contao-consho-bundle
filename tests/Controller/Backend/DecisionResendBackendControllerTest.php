@@ -22,8 +22,8 @@ use Webwerkwien\ContaoConshoBundle\Controller\Backend\DecisionResendBackendContr
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * E10 (Review S2): „Entscheidung erneut senden" — POST, Recht auf die
- * Kündigung, die Antwort von CancellationDecision::resend() als Meldung.
+ * E10: "Entscheidung erneut senden" (resend decision) — POST, right on the
+ * cancellation, the answer of CancellationDecision::resend() as a message.
  */
 final class DecisionResendBackendControllerTest extends TestCase
 {

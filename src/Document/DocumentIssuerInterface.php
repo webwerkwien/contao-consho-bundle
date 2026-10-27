@@ -32,7 +32,8 @@ interface DocumentIssuerInterface
      * given lines, amounts already negative, against the invoice's own
      * snapshot for everything else.
      *
-     * @param list<array<string, string>> $lines in the snapshot's item shape
+     * @param list<array<string, string>> $lines   in the snapshot's item shape
+     * @param list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}> $prepaid what goes back onto single-purpose vouchers, negative (EZ-4)
      */
-    public function correct(int $invoiceId, array $lines, string $withdrawalNumber): int;
+    public function correct(int $invoiceId, array $lines, string $withdrawalNumber, array $prepaid = []): int;
 }

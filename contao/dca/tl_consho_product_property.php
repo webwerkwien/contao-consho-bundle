@@ -7,7 +7,7 @@
  * forgotten `WHERE role = 'variant'` returns wrong data silently — no error,
  * just a product with variants that are not variants. Two tables make the
  * mistake impossible. Shopware separates these for the same reason.
- * See docs/block-a-fundament.md, section 3.1.
+ * See Block A, section 3.1.
  *
  * The composite unique key stops the same property being attached twice at the
  * database level, not by a check in code.
@@ -27,8 +27,8 @@ $GLOBALS['TL_DCA']['tl_consho_product_property'] = [
                  * Covering, and that is the point. The listing asks both
                  * directions: "which options does this product carry" (the
                  * unique index above) and "which products carry this option"
-                 * — the latter for the filter counts in section 5.2 of
-                 * docs/block-b-katalog-frontend.md.
+                 * — the latter for the filter counts in Block B, section
+                 * 5.2.
                  *
                  * A single index on optionId answers the second one only down
                  * to the row: InnoDB adds the PRIMARY key to a secondary index,
@@ -37,7 +37,7 @@ $GLOBALS['TL_DCA']['tl_consho_product_property'] = [
                  * the index the answer never leaves it.
                  *
                  * The former single-column index on optionId is gone with
-                 * it. Measured on the test server on 2026-09-11: `contao:migrate
+                 * it: `contao:migrate
                  * --no-interaction` DOES apply index changes, including the
                  * DROP. Its reluctance to delete covers columns and tables —
                  * a renamed field needs --with-deletes, an index does not.

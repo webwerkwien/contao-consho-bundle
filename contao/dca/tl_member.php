@@ -9,7 +9,7 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
  * holds the delivery address. Most customers never need more than two. Orders
  * carry a frozen COPY of both — an address on an order is a historical fact,
  * not a reference, or a customer moving house would rewrite last year's
- * invoice. See docs/block-a-fundament.md, section 2.
+ * invoice. See Block A, section 2.
  *
  * Guest orders need no member at all: the address lives on the order anyway.
  *
@@ -73,7 +73,7 @@ unset($conshoShippingFields);
 
 /*
  * No salutation in the delivery address: the checkout stopped asking for it
- * (C-10, 2026-09-25) and an order has no column for it. Stored only, in no
+ * (C-10) and an order has no column for it. Stored only, in no
  * palette, so what members entered before stays in access and erasure.
  */
 $GLOBALS['TL_DCA']['tl_member']['fields']['consho_shippingSalutation'] = [
@@ -148,4 +148,15 @@ $GLOBALS['TL_DCA']['tl_member']['fields']['consho_confirmedEmail'] = [
 
 $GLOBALS['TL_DCA']['tl_member']['fields']['consho_confirmedEmailAt'] = [
     'sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false],
+];
+
+/*
+ * An account created from a guest order and not yet opened (K1): when it was
+ * created, 0 for every other account. Setting the password opens it
+ * (AccountFromOrderActivation); an account never opened goes after the
+ * password link has expired (AccountFromOrderCron). Stored only, in no
+ * palette.
+ */
+$GLOBALS['TL_DCA']['tl_member']['fields']['consho_accountPending'] = [
+    'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
 ];

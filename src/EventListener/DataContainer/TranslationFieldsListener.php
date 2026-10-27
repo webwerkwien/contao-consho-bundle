@@ -16,7 +16,7 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationWriter;
 
 /**
  * One section per translation language in the mask of every translated
- * entity — docs/mehrsprachigkeit.md, section 7.
+ * entity — Block M, section 7.
  *
  * The fields (`title__en`, …) are created when the DCA is loaded and exist
  * nowhere in the main table. Their names are also the keys of the version

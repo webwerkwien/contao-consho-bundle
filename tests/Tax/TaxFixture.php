@@ -8,7 +8,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
 use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
 
 /**
- * Baut den echten GrossCalculator über FixedTaxRates.
+ * Builds the real GrossCalculator via FixedTaxRates.
  *
  * @phpstan-require-extends \PHPUnit\Framework\TestCase
  */

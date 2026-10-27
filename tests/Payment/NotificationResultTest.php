@@ -26,7 +26,7 @@ class NotificationResultTest extends TestCase
 
     public function testBezahltMitNullIstKeinZahlungseingang(): void
     {
-        // Der Kern schreibt aus „paid" eine Zeile in tl_consho_payment (C-11).
+        // The core writes a row in tl_consho_payment from "paid" (C-11).
         $this->expectException(\InvalidArgumentException::class);
 
         NotificationResult::paid('0', 'tx_1');
@@ -45,7 +45,7 @@ class NotificationResultTest extends TestCase
 
     public function testEinBetragDerAufNullGerundetWirdIstKeinZahlungseingang(): void
     {
-        // Vor der Rundung nicht null, danach schon — die Reihenfolge in paid() entscheidet.
+        // Not zero before rounding, zero after — the order of steps in paid() decides.
         $this->expectException(\InvalidArgumentException::class);
 
         NotificationResult::paid('0.00004', 'tx_1');

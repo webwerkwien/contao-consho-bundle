@@ -6,11 +6,11 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductTile;
 
 /**
- * Die Kachel bekommt Adresse und Anzeigepreis erst im Controller — das
- * Repository kennt weder die Produktseite noch die Sprache der Anzeige.
+ * The tile gets its address and display price only in the controller — the
+ * repository knows neither the product page nor the display language.
  *
- * withLink() kopiert also eine Kachel. Eine Kopie, die ein Feld verliert, fällt
- * erst im Browser auf: ein fehlendes „ab" sieht aus wie ein richtiger Preis.
+ * withLink() therefore copies a tile. A copy that loses a field only shows
+ * in the browser: a missing "ab" looks like a correct price.
  */
 class ProductTileTest extends TestCase
 {
@@ -24,7 +24,7 @@ class ProductTileTest extends TestCase
         self::assertSame('Schwedenbitter &amp; Kräuter', $linked->title);
         self::assertSame('Nach alter Rezeptur', $linked->teaser);
         self::assertSame('uuid-1', $linked->image);
-        // Der rohe Betrag bleibt — für B-6 und für eigene Vorlagen im Template Studio.
+        // The raw amount stays — for B-6 and for custom templates in the Template Studio.
         self::assertSame('12.6000', $linked->price);
         self::assertTrue($linked->isFrom);
         self::assertSame('/produkt/schwedenbitter.html', $linked->url);
@@ -42,11 +42,11 @@ class ProductTileTest extends TestCase
     }
 
     /**
-     * 🔴 `withLink()` baut ein neues Objekt — jedes Feld, das dort vergessen
-     * wird, fällt auf seinen Vorgabewert zurück. Für `isBuyable` hiesse das:
-     * der Kaufknopf verschwindet, sobald die Kachel ihren Link bekommt, also
-     * immer. Ein Feld mehr am Konstruktor ist genau der Moment, in dem das
-     * passiert.
+     * 🔴 `withLink()` builds a new object — every field forgotten there
+     * falls back to its default value. For `isBuyable` that would mean:
+     * the buy button disappears as soon as the tile gets its link, so
+     * always. One more field on the constructor is exactly the moment this
+     * happens.
      */
     public function testWithLinkVerliertKeinFeld(): void
     {

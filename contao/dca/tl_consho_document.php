@@ -25,7 +25,7 @@ $GLOBALS['TL_DCA']['tl_consho_document'] = [
          * order a document belongs to is part of what it states; a document
          * whose affiliation can be changed afterwards is not a document.
          *
-         * Found in the A-7 acceptance on 2026-09-09: the row buttons were
+         * With three of them (A-7), the row buttons were
          * correctly reduced to "Details" while act=select still let one move
          * an invoice. notSortable lives in `config`, not in `list.sorting`.
          */
@@ -76,7 +76,7 @@ $GLOBALS['TL_DCA']['tl_consho_document'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
             // Without it Contao shows pid through the FIRST list field of
             // tl_consho_order, which is `signals` — no column, so "Info" was
-            // a 500 (ParentLabelIsAColumnTest, 2026-09-25).
+            // a 500 (ParentLabelIsAColumnTest).
             'foreignKey' => 'tl_consho_order.orderNumber',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],

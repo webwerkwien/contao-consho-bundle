@@ -10,8 +10,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\SqliteWithoutRowLocks;
 
 /**
- * Abnahme WG-7: „inkl. USt." stand unter einem nicht steuerbaren Gutschein.
- * Der Satz entfällt nur, wo ALLES Gezeigte nicht steuerbar ist.
+ * WG-7: "incl. VAT" stood under a non-taxable voucher. The sentence is
+ * only dropped where EVERYTHING shown is not taxable.
  */
 class NotTaxableArticlesTest extends TestCase
 {
@@ -28,7 +28,7 @@ class NotTaxableArticlesTest extends TestCase
         $this->connection->insert('tl_consho_tax_class', ['id' => 1, 'title' => 'Waren']);
         $this->connection->insert('tl_consho_tax_class', ['id' => 7, 'title' => 'Gutschein', 'notTaxable' => 1]);
 
-        // 13 Gutschein, 14 seine Variante ohne eigene Klasse, 4 ein Buch.
+        // 13 voucher, 14 its variant without a class of its own, 4 a book.
         $this->connection->insert('tl_consho_product', ['id' => 13, 'pid' => 0, 'taxClass' => 7]);
         $this->connection->insert('tl_consho_product', ['id' => 14, 'pid' => 13, 'taxClass' => 0]);
         $this->connection->insert('tl_consho_product', ['id' => 4, 'pid' => 0, 'taxClass' => 1]);

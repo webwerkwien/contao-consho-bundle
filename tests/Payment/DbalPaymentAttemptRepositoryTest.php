@@ -12,9 +12,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Die Abfragen hinter 7.4 gegen SQLite. lock() nicht: SQLite kennt kein FOR
- * UPDATE; die Sperre prüft die Abnahme auf c5 mit „Benachrichtigung doppelt
- * senden", und der eindeutige Schlüssel hält auch ohne sie.
+ * The queries behind 7.4 against SQLite. Not lock(): SQLite has no FOR
+ * UPDATE; the lock is checked on MySQL/MariaDB by sending the same
+ * notification twice, and the unique key holds even without it.
  */
 class DbalPaymentAttemptRepositoryTest extends TestCase
 {
@@ -23,16 +23,16 @@ class DbalPaymentAttemptRepositoryTest extends TestCase
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        // From the DCA (Fall 31): a hand-written table lacked `charge` (Abo-4b).
+        // From the DCA, not by hand: a hand-written table lacked `charge` (Abo-4b).
         DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
-        // From the DCA (acceptance WG-7, Prüfungsnotiz Punkt 56), not a copy.
+        // From the DCA (WG-7), not a copy.
         \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
     }
 
     /**
-     * Abo-4b, P94: Ein Abbuchungsversuch des Abo-Crons bleibt als solcher
-     * erkennbar — die Meldung dazu schickt „Rechnung zum Abo", nicht
-     * „Zahlung erhalten".
+     * Abo-4b, P94: a debit attempt by the subscription cron stays recognisable
+     * as one — the message for it is "subscription invoice", not "payment
+     * received".
      */
     public function testEinAbbuchungsversuchBleibtErkennbar(): void
     {
@@ -79,7 +79,7 @@ class DbalPaymentAttemptRepositoryTest extends TestCase
         self::assertSame(AttemptState::Succeeded, $attempt?->state);
         self::assertSame('T-1', $attempt->providerReference);
 
-        // Ohne Referenz bleibt die alte stehen.
+        // Without a reference the old one stays.
         $this->repository()->setState($id, AttemptState::Failed, 201);
         self::assertSame('T-1', $this->repository()->findByHash(str_repeat('a', 64))?->providerReference);
     }
@@ -99,12 +99,12 @@ class DbalPaymentAttemptRepositoryTest extends TestCase
         self::assertSame(AttemptState::Cancelled, $cancelled?->state);
         self::assertSame(AttemptState::Cancelled, $cancelled->returned);
 
-        // Die Benachrichtigung war schneller: bezahlt bleibt bezahlt.
+        // The notification was faster: paid stays paid.
         $stillPaid = $this->repository()->findByHash(str_repeat('b', 64));
         self::assertSame(AttemptState::Succeeded, $stillPaid?->state);
         self::assertSame(AttemptState::Failed, $stillPaid->returned);
 
-        // Eine Rückkehr „erfolgreich" wird vermerkt, der Zustand bleibt offen.
+        // A "successful" return is recorded, the state stays open.
         $returned = $this->repository()->findByHash(str_repeat('c', 64));
         self::assertSame(AttemptState::Open, $returned?->state);
         self::assertSame(AttemptState::Succeeded, $returned->returned);
@@ -142,7 +142,7 @@ class DbalPaymentAttemptRepositoryTest extends TestCase
         self::assertSame(['Test-Anbieter', 'T-1'], [$row['method'], $row['reference']]);
         self::assertEqualsWithDelta(13.9, (float) $row['amount'], 0.00001);
 
-        // Handeingaben ohne Versuch dürfen beliebig viele sein.
+        // Manual entries without an attempt may be any number.
         $this->connection->insert('tl_consho_payment', ['pid' => 4, 'amount' => '1']);
         $this->connection->insert('tl_consho_payment', ['pid' => 4, 'amount' => '1']);
 

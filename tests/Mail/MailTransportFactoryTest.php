@@ -25,8 +25,8 @@ class MailTransportFactoryTest extends TestCase
     }
 
     /**
-     * Ohne Grenze wartet der Käufer nach dem Kaufklick default_socket_timeout
-     * lang — meist 60 Sekunden — auf einen Mailserver, der nicht antwortet.
+     * Without a limit the buyer waits for default_socket_timeout after the
+     * purchase click — usually 60 seconds — for a mail server that does not answer.
      */
     public function testSmtpBekommtEinZeitlimitVonZehnSekunden(): void
     {

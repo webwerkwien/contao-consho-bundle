@@ -25,7 +25,7 @@ class DbalPinnedProductIssueSourceTest extends TestCase
     public function testNothingToReportWhileEveryPinFindsItsProduct(): void
     {
         $this->pin(1);
-        // Ein anderes Element mit derselben Spalte ist keine Anheftung.
+        // Another element with the same column is not a pin.
         $this->connection->insert('tl_content', ['type' => 'text', 'conshoProduct' => 99]);
 
         self::assertSame([], (new DbalPinnedProductIssueSource($this->connection))->issues());
@@ -46,7 +46,7 @@ class DbalPinnedProductIssueSourceTest extends TestCase
 
     public function testItIsANoteThatCanBeAcknowledged(): void
     {
-        // Der Shop funktioniert weiter — die Anheftung rendert nur nichts.
+        // The shop keeps working — the pin just renders nothing.
         self::assertFalse(ConfigurationFinding::PinnedProductMissing->isWarning());
     }
 

@@ -14,8 +14,7 @@
   After changing it, validate again (see DompdfRenderer).
 
   Contao resolves this file WITH its folder: @Contao/document/consho_invoice.html.twig
-  (debug:contao-twig on c5, 2026-09-24 — the first attempt left the folder
-  out and answered with a 500).
+  (debug:contao-twig — without the folder the name answers with a 500).
 
   Variables: invoice (InvoiceView::build), logo (data: URI or null),
   regenerated (bool — archive configured but this is not the stored file)
@@ -93,15 +92,14 @@
             {% endif %}
         </td>
         {# The facts beside the addresses, as on DACH invoices — below them they
-           pushed the bank details onto a second page (seen 2026-09-24). As
+           pushed the bank details onto a second page. As
            wide as their content and flush right, like the issuer above and
-           the totals below (Michael, 2026-09-24). #}
+           the totals below. #}
         <td class="facts-cell">
             <table class="facts facts-right">
                 {# The correction has its own labels: "Rechnungsnummer GS-…" above
-                   "Korrigiert Rechnung RE-…" read as a contradiction (Michael,
-                   2026-09-27: only for the correction — a cancellation is an
-                   invoice itself). #}
+                   "Korrigiert Rechnung RE-…" read as a contradiction. Only for the
+                   correction — a cancellation is an invoice itself. #}
                 {% set facts = invoice.type == 'creditNote' ? 'CONSHO.invoice.correction.' : 'CONSHO.invoice.' %}
                 <tr><th scope="row">{{ (facts ~ 'number')|trans({}, 'contao_default') }}</th><td>{{ invoice.number }}</td></tr>
                 <tr><th scope="row">{{ (facts ~ 'date')|trans({}, 'contao_default') }}</th><td>{{ invoice.issuedAt }}</td></tr>
@@ -155,7 +153,7 @@
     {% for line in invoice.lines %}
         <tr>
             <td>{{ line.position }}</td>
-            <th scope="row">{{ line.name }}{% if line.terms|default('') %}<br><small class="consho-invoice__terms">{{ line.terms }}</small>{% endif %}</th>
+            <th scope="row">{{ line.name }}{% if line.terms|default('') %}<br><small class="consho-invoice__terms">{{ line.terms }}</small>{% endif %}{% if line.singlePurpose|default(false) %}<br><small class="consho-invoice__terms">{{ 'CONSHO.invoice.singlePurposeVoucher'|trans({}, 'contao_default') }}</small>{% endif %}</th>
             <td>{{ line.sku }}</td>
             <td class="num">{{ line.quantity }}</td>
             <td class="num">{{ line.unitPrice }}</td>
@@ -193,6 +191,13 @@
 <table class="totals">
     <tr><th scope="row">{{ 'CONSHO.invoice.netTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.netTotal }}</td></tr>
     <tr><th scope="row">{{ 'CONSHO.invoice.taxTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.taxTotal }}</td></tr>
+    {# Tax a single-purpose voucher already carried (formatVersion 13, EZ-4). #}
+    {% for prepaid in invoice.prepaid|default([]) %}
+    <tr><th scope="row">{{ 'CONSHO.invoice.prepaidTax'|trans([prepaid.label, prepaid.rate], 'contao_default') }}</th><td class="num">{{ prepaid.tax }}</td></tr>
+    {% endfor %}
+    {% if invoice.taxDue|default('') %}
+    <tr><th scope="row">{{ 'CONSHO.invoice.taxDue'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.taxDue }}</td></tr>
+    {% endif %}
     <tr class="grand"><th scope="row">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.grandTotal }}</td></tr>
     {# What was paid before the invoice and what remains (formatVersion 9, WG12). #}
     {% for payment in invoice.payments|default([]) %}
@@ -203,12 +208,16 @@
     {% endif %}
 </table>
 
+{# An invoice paid in advance before shipping (L-1, formatVersion 11). #}
+{% if invoice.advance|default(false) %}
+<div class="notes">{{ 'CONSHO.invoice.advance'|trans({}, 'contao_default') }}</div>
+{% endif %}
 {% if invoice.reverseChargeNote %}
 <div class="notes">{{ invoice.reverseChargeNote|nl2br }}</div>
 {% endif %}
 
 {# Payment and footer close the invoice. In the PDF they sit at the foot of
-   the page (Michael, 2026-09-24: „Kann der Block Payment unten sitzen?"),
+   the page,
    in the HTML version they follow the totals — it has no page. #}
 {% set closing %}
 {% if invoice.paymentInstructions or invoice.bankDetails is not empty %}

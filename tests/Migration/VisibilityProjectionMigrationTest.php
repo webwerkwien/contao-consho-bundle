@@ -14,8 +14,8 @@ use Webwerkwien\ContaoConshoBundle\Tests\Catalog\CatalogSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 
 /**
- * Erstbefüllung nach dem Deploy (B-10): Ohne sie wäre jede Liste leer, bis
- * jemand consho:visibility:rebuild ruft.
+ * Initial fill after the update (B-10): without it every list would be
+ * empty until someone calls consho:visibility:rebuild.
  */
 class VisibilityProjectionMigrationTest extends TestCase
 {
@@ -30,7 +30,7 @@ class VisibilityProjectionMigrationTest extends TestCase
 
     public function testWithoutTheTablesItDoesNotRun(): void
     {
-        // Erster Durchlauf von contao:migrate, vor dem Schema-Update.
+        // First pass of contao:migrate, before the schema update.
         $this->connection->executeStatement('CREATE TABLE tl_consho_product (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 0)');
         $this->connection->insert('tl_consho_product', ['id' => 1, 'published' => 1]);
 
@@ -39,13 +39,13 @@ class VisibilityProjectionMigrationTest extends TestCase
 
     public function testOhneDieWaehrungsspalteAmStartpunktLaeuftSieNichtAn(): void
     {
-        // Enges, aber echtes Fenster: Die Sichtbarkeitstabelle steht schon,
-        // der Marker fehlt — so sieht es nach einem abgebrochenen
-        // contao:migrate aus. Im ersten Durchlauf danach, vor dem
-        // Schemaabgleich, gibt es tl_page.consho_currency noch nicht, und
-        // rebuild() fragt seit C-1c genau diese Spalte. Sagt shouldRun() hier
-        // ja, scheitert run() an der unbekannten Spalte statt schlicht nichts
-        // zu tun zu haben.
+        // A narrow but real window: the visibility table already exists,
+        // the marker is missing — that is how it looks after an aborted
+        // contao:migrate. In the first pass after that, before the schema
+        // update, tl_page.consho_currency does not exist yet, and since C-1c
+        // rebuild() queries exactly this column. If shouldRun() says yes
+        // here, run() fails on the unknown column instead of simply having
+        // nothing to do.
         $this->createCatalogSchema($this->connection);
         $this->rootPageTableBeforeC1c();
         $this->insertShop(['id' => 1, 'title' => 'Kräuterhaus', 'currency' => 'EUR', 'fallbackLanguage' => 'de', 'country' => 'AT']);
@@ -70,8 +70,8 @@ class VisibilityProjectionMigrationTest extends TestCase
 
     public function testACatalogueWithoutAnyPriceDoesNotStayPendingForever(): void
     {
-        // contao:migrate läuft, solange eine Migration fällig ist. „Tabelle
-        // leer" als Kriterium bliebe hier nach dem Neubau wahr.
+        // contao:migrate runs as long as a migration is due. "Table empty"
+        // as the criterion would stay true here after the rebuild.
         $this->catalogue();
         $this->insertProduct(['id' => 1, 'pid' => 0, 'published' => 1]);
         $this->insertProductShop(['pid' => 1, 'shop' => 1]);
@@ -109,7 +109,7 @@ class VisibilityProjectionMigrationTest extends TestCase
     }
 
     /**
-     * tl_page, wie es vor C-1c aussah — ohne consho_currency.
+     * tl_page as it looked before C-1c — without consho_currency.
      */
     private function rootPageTableBeforeC1c(): void
     {

@@ -8,7 +8,7 @@ use Contao\Model;
  * A released facet landing page.
  *
  * pid is the listing page (tl_page) it lives below — not the shop. Shop and
- * language follow from that page. See docs/block-b-katalog-frontend.md, 4.5.
+ * language follow from that page. See Block B, 4.5.
  *
  * @property int         $id
  * @property int         $pid         tl_page.id of the listing page

@@ -55,8 +55,8 @@ final class CatalogAddresses implements CatalogAddressesInterface
             /*
              * As a Uuid, never as the string: generatePublicUri() takes a
              * string for a PATH, and answered "files/<uuid>" — an address of a
-             * file that does not exist (measured on the test server,
-             * 2026-10-10; the test double had taken any string).
+             * file that does not exist (the test double had taken any
+             * string).
              */
             $uri = (string) $this->files->generatePublicUri(Uuid::fromString($uuid));
 

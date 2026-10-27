@@ -9,9 +9,9 @@ use Webwerkwien\ContaoConshoBundle\Translation\TranslationJoin;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Der Join wird als Zeichenkette gebaut, aber gegen eine echte Datenbank
- * geprüft. Eine Behauptung über den Wortlaut des SQL misst nichts: Die Frage
- * ist, welcher Text herauskommt.
+ * The join is built as a string but checked against a real database. An
+ * assertion about the wording of the SQL measures nothing: the question
+ * is which text comes out.
  */
 class TranslationJoinTest extends TestCase
 {
@@ -57,8 +57,8 @@ class TranslationJoinTest extends TestCase
 
     public function testAnEmptyTranslatedFieldFallsBackToTheRecordsOwnText(): void
     {
-        // Die Zeile existiert, das Feld ist leer — etwa weil nur der Alias
-        // gepflegt wurde. Der Rückfall gilt je FELD, nicht je Zeile.
+        // The row exists, the field is empty — for instance because only the
+        // alias was maintained. The fallback applies per FIELD, not per row.
         $this->translate(1, 'en', '');
 
         self::assertSame('Kräuterbitter', $this->titleOf(1, 'en'));
@@ -73,8 +73,8 @@ class TranslationJoinTest extends TestCase
 
     public function testInTheFallbackLanguageNoJoinIsBuilt(): void
     {
-        // Der Prüfstein der ganzen Mehrsprachigkeit: Ein einsprachiger Shop
-        // bekommt exakt die Abfrage von vorher.
+        // The touchstone of the whole multilingual support: a single-language
+        // shop gets exactly the query from before.
         $join = new TranslationJoin('tl_consho_product', 'de', 'de', 'p', 't');
 
         self::assertSame('', $join->sql());
@@ -83,10 +83,10 @@ class TranslationJoinTest extends TestCase
     }
 
     /**
-     * Mehrsprachigkeit, offene Punkte (Regionalcodes): Fällt `de-AT` auf `de`
-     * zurück oder auf die Standardsprache? Auf die Standardsprache — der
-     * Rückfall ist einstufig, `de-AT` ist eine Sprache für sich. Hier ist die
-     * Standardsprache Englisch, damit man den Unterschied sieht.
+     * Multilingual support, open points (regional codes): does `de-AT` fall
+     * back to `de` or to the default language? To the default language — the
+     * fallback has one level, `de-AT` is a language of its own. Here the
+     * default language is English, so that the difference shows.
      */
     public function testEineRegionalspracheFaelltAufDieStandardspracheZurueckNichtAufIhreHauptsprache(): void
     {
@@ -101,9 +101,9 @@ class TranslationJoinTest extends TestCase
 
     public function testTheJoinDoesNotMultiplyRows(): void
     {
-        // Ein LEFT JOIN auf eine Tabelle mit mehreren Zeilen je Produkt
-        // vervielfacht das Ergebnis, wenn die Sprachbedingung fehlt. Die
-        // Facettenzählungen wären dann zu hoch — und sähen plausibel aus.
+        // A LEFT JOIN on a table with several rows per product multiplies the
+        // result when the language condition is missing. The facet counts would
+        // then be too high — and would look plausible.
         $this->translate(1, 'en', 'Herbal Bitters');
         $this->translate(1, 'fr', 'Amer aux herbes');
 

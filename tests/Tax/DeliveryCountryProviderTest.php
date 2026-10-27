@@ -129,9 +129,9 @@ class DeliveryCountryProviderTest extends TestCase
 
     public function testTheHomeCountryIsCheckedEvenWhereTheShopDoesNotDeliver(): void
     {
-        // Mit dem Satz des Heimatlands entsteht das Brutto jeder Anzeige (C25).
-        // Ein Shop in Wien, der nur nach Deutschland liefert, braucht trotzdem
-        // die österreichischen Sätze.
+        // The gross of every display comes about with the home country's rate
+        // (C25). A shop in Vienna that only delivers to Germany still needs the
+        // Austrian rates.
         $repository = $this->createMock(TaxRateRepositoryInterface::class);
         $repository->method('findTaxClassIdsUsedByShop')->willReturn([1]);
         $repository->method('findConfiguredCountries')->willReturnMap([[1, 1_757_000_000, ['DE']]]);
@@ -142,12 +142,12 @@ class DeliveryCountryProviderTest extends TestCase
     }
 
     /**
-     * Nachlese Stufe 2: Beim Speichern der Shop-Konfiguration des Verkaufsshops
-     * kamen 26 Meldungen „Bestellung scheitert an der Steuerberechnung" für
-     * EU-Länder. Mit „Steuer im Bestimmungsland" aus rechnen Checkout,
-     * Bestellung und Katalog einen EU-Privatkunden aber mit dem Satz des
-     * Shoplands (TaxPlace::forDistanceSale) — der Satz des Lieferlands wird
-     * nie gefragt. Drittländer schon, und mit dem Schalter an auch die EU.
+     * Nachlese stage 2: Saving a shop's configuration produced 26 messages
+     * "order fails at the tax calculation" for EU countries. But with "tax in
+     * the country of destination" off, checkout, order and catalogue compute
+     * an EU consumer with the rate of the shop's country
+     * (TaxPlace::forDistanceSale) — the rate of the delivery country is never
+     * asked. Third countries are, and with the switch on, the EU too.
      */
     public function testOhneSteuerImBestimmungslandBrauchenEuLaenderKeinenEigenenSatz(): void
     {
@@ -166,7 +166,7 @@ class DeliveryCountryProviderTest extends TestCase
 
     public function testEinShopAusserhalbDerEuBrauchtJedenSatz(): void
     {
-        // Ohne EU-Heimat gibt es keine Fernverkaufsschwelle (TaxPlace).
+        // Without an EU home there is no distance-selling threshold (TaxPlace).
         $repository = $this->createMock(TaxRateRepositoryInterface::class);
         $repository->method('findTaxClassIdsUsedByShop')->willReturn([1]);
         $repository->method('findConfiguredCountries')->willReturnMap([[1, 1_757_000_000, ['CH']]]);

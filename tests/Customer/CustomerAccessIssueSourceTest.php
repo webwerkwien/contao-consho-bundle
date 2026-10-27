@@ -12,8 +12,8 @@ use Webwerkwien\ContaoConshoBundle\Customer\CustomerAccessIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * Nachlese KA5, KA6, E2: Kommt ein Kunde hinein? Registrierungsweg,
- * Kundenseite mit falschen Gruppen, fehlende 401-Seite.
+ * Nachlese KA5, KA6, E2: Can a customer get in? Registration path,
+ * customer page with the wrong groups, missing 401 page.
  */
 final class CustomerAccessIssueSourceTest extends TestCase
 {
@@ -35,11 +35,11 @@ final class CustomerAccessIssueSourceTest extends TestCase
         $this->connection->insert('tl_member_group', ['id' => 8, 'name' => 'Händler']);
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Webshop', 'customerGroup' => 7, 'netPriceGroups' => serialize(['8'])]);
 
-        // Abo-Produkt im Shop.
+        // Subscription product in the shop.
         $this->connection->insert('tl_consho_product', ['id' => 4, 'pid' => 0, 'published' => 1, 'saleSubscription' => 1]);
         $this->connection->insert('tl_consho_product_shop', ['pid' => 4, 'shop' => 1]);
 
-        // Startpunkt 1 → Konto 10 (geschützt für Kunden + Händler) → Meine Abos 11; 401-Seite 12.
+        // Start point 1 → account 10 (protected for customers + dealers) → my subscriptions 11; 401 page 12.
         $this->page(1, 0, 'root', 'Shop DE', ['consho_shop' => 1]);
         $this->page(10, 1, 'regular', 'Konto', ['protected' => 1, '"groups"' => serialize(['7', '8'])]);
         $this->page(11, 10, 'regular', 'Meine Abos');
@@ -47,7 +47,7 @@ final class CustomerAccessIssueSourceTest extends TestCase
         $this->connection->insert('tl_article', ['id' => 20, 'pid' => 11, 'published' => 1]);
         $this->connection->insert('tl_content', ['id' => 30, 'pid' => 20, 'ptable' => 'tl_article', 'type' => 'consho_my_subscriptions']);
 
-        // Registrierung mit Aktivierungsmail und Kundengruppe.
+        // Registration with activation mail and customer group.
         $this->connection->insert('tl_module', ['id' => 40, 'type' => 'registration', 'reg_allowLogin' => 1, 'reg_activate' => 1, 'reg_groups' => serialize(['7'])]);
     }
 
@@ -84,8 +84,8 @@ final class CustomerAccessIssueSourceTest extends TestCase
     }
 
     /**
-     * Abnahme 2026-10-09: Ohne „Anmeldung erlauben" legt Contao das Mitglied
-     * mit login = 0 an — freigeschaltet, aber ohne Anmeldung.
+     * Without "allow login", Contao creates the member with login = 0 —
+     * activated, but without login.
      */
     public function testOhneAnmeldungErlaubenKeinWeg(): void
     {
@@ -110,8 +110,8 @@ final class CustomerAccessIssueSourceTest extends TestCase
     }
 
     /**
-     * Ohne Gastbestellung braucht jeder Kauf ein Konto, auch
-     * ohne Abos im Shop.
+     * Without guest orders every purchase needs an account, even
+     * without subscriptions in the shop.
      */
     public function testOhneGastbestellungUndOhneAbosMeldetFehlendenWeg(): void
     {
@@ -148,8 +148,8 @@ final class CustomerAccessIssueSourceTest extends TestCase
     }
 
     /**
-     * Warnung, keine Sperre: Ein Shop, dessen Konten
-     * der Betreiber selbst anlegt, braucht keine Registrierung.
+     * A warning, not a block: a shop whose accounts the operator
+     * creates himself needs no registration.
      */
     public function testOhneGastbestellungWarntSperrtAberNicht(): void
     {
@@ -170,7 +170,7 @@ final class CustomerAccessIssueSourceTest extends TestCase
 
     public function testEigenerSchutzZaehltVorDemDerEltern(): void
     {
-        // Die Seite selbst ist für Kunden geschützt — die Eltern ließen beide zu, entscheidend ist die nächste.
+        // The page itself is protected for customers — the parents allowed both, the nearest one decides.
         $this->connection->update('tl_page', ['protected' => 1, '"groups"' => serialize(['7'])], ['id' => 11]);
 
         self::assertSame([F::CustomerPageLocksOut], $this->findings());

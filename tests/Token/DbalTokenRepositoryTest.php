@@ -9,7 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
- * C-10: Ob ein Token per Mail kam, übersteht den Weg durch die Datenbank.
+ * C-10: whether a token came by mail survives the trip through the database.
  */
 class DbalTokenRepositoryTest extends TestCase
 {

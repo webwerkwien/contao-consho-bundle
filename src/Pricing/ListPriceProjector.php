@@ -29,7 +29,7 @@ use Brick\Math\BigDecimal;
  *
  * verify() and rebuild() walk the same set: products with a price AND products
  * with a projected row, each widened to its variants. See
- * docs/block-a-fundament.md, 5.2, and docs/block-c-warenkorb-checkout.md, 5.4.
+ * Block A, 5.2, and Block C, 5.4.
  */
 final class ListPriceProjector
 {

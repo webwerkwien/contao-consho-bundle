@@ -5,7 +5,7 @@ use Contao\CoreBundle\DataContainer\PaletteManipulator;
 /*
  * Root pages select a shop configuration. n root pages : 1 shop — a
  * multilingual site is several root pages in Contao, but one shop, and its
- * order numbers have to be shared. See docs/block-a-fundament.md, section 4.
+ * order numbers have to be shared. See Block A, section 4.
  *
  * ⚠️ Both palettes are needed: Contao uses "rootfallback" for the root page
  * marked as the language fallback. Serving only "root" loses the field on the
@@ -27,6 +27,7 @@ PaletteManipulator::create()
     ->addField('consho_withdrawalFormPage', 'consho_legend', PaletteManipulator::POSITION_APPEND)
     ->addField('consho_cancellationPage', 'consho_legend', PaletteManipulator::POSITION_APPEND)
     ->addField('consho_subscriptionsPage', 'consho_legend', PaletteManipulator::POSITION_APPEND)
+    ->addField('consho_passwordPage', 'consho_legend', PaletteManipulator::POSITION_APPEND)
     ->addField('consho_termsElement', 'consho_legend', PaletteManipulator::POSITION_APPEND)
     ->addField('consho_withdrawalElement', 'consho_legend', PaletteManipulator::POSITION_APPEND)
     ->addField('consho_privacyPage', 'consho_legend', PaletteManipulator::POSITION_APPEND)
@@ -188,6 +189,20 @@ $GLOBALS['TL_DCA']['tl_page']['fields']['consho_subscriptionsPage'] = [
 ];
 
 /*
+ * The page with Contao's "Lost password" module (K1) — optional. A guest
+ * creates an account from the order page and sets the password there; without
+ * this page the order page offers no account.
+ */
+$GLOBALS['TL_DCA']['tl_page']['fields']['consho_passwordPage'] = [
+    'inputType' => 'pageTree',
+    'exclude' => true,
+    'foreignKey' => 'tl_page.title',
+    'eval' => ['fieldType' => 'radio', 'tl_class' => 'clr'],
+    'relation' => ['type' => 'hasOne', 'load' => 'lazy'],
+    'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
+];
+
+/*
  * The terms and the withdrawal instruction (C17), each as ONE content element
  * of type "text" somewhere below this root page.
  *
@@ -231,9 +246,9 @@ $GLOBALS['TL_DCA']['tl_page']['fields']['consho_withdrawalElement'] = [
  * for contracts from 27.09.2026; Art. 2 RL (EU) 2024/825, layout binding in
  * Durchführungsverordnung (EU) 2025/1960).
  *
- * ⚠️ Consho does NOT ship the notice, and that is a decision, not an omission
- * (Michael, 2026-09-22: "ich bin dagegen, dass wir Rechtstexte setzen, aber
- * alles technisch Notwendige müssen wir bereitstellen"). The notice is an A4
+ * ⚠️ Consho does NOT ship the notice, and that is a decision, not an omission:
+ * Consho sets no legal texts, but provides everything technically
+ * required. The notice is an A4
  * poster the Commission publishes per EU language, and it may not be altered,
  * cropped or re-coloured — a bundle that bundled one language's file would
  * either be wrong for the next shop or silently outdated when the Commission
@@ -248,7 +263,7 @@ $GLOBALS['TL_DCA']['tl_page']['fields']['consho_withdrawalElement'] = [
  * acceptable places, next to the header and the catalogue — so a link from
  * here satisfies them. What they also want, and what C-9 owes: the notice IN
  * THE ORDER CONFIRMATION, as an attachment rather than a linked image.
- * Established at a partner shop on 2026-09-17: a referenced image is blocked
+ * A referenced image is blocked
  * by mail clients and does not travel with the message, while § 7 Abs 3 FAGG
  * wants the § 4 information on a durable medium.
  */
@@ -274,9 +289,9 @@ $GLOBALS['TL_DCA']['tl_page']['fields']['consho_warrantyPage'] = [
  * has to be in colour, RGB (Implementing Regulation (EU) 2025/1960, Annex I).
  *
  * A file rather than the page above: a mail cannot carry a page, and a
- * linked image is not in the mail (a partner shop, 2026-09-17). Per start
+ * linked image is not in the mail. Per start
  * point for the same reason as the page — the notice exists per language.
- * Consho does not ship it (C-6, Michael 2026-09-22): it is an official
+ * Consho does not ship it (C-6): it is an official
  * document the operator takes from the Commission unchanged.
  */
 $GLOBALS['TL_DCA']['tl_page']['fields']['consho_warrantyNotice'] = [

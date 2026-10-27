@@ -10,12 +10,12 @@ use Webwerkwien\ContaoConshoBundle\Mail\SecretCipher;
 /**
  * Builds SecretCipher the way the container does, with the argument read from
  * config/services.yaml — not typed again here, or a change there would go
- * unnoticed (rule 25).
+ * unnoticed.
  *
- * On the agency site (2026-10-16) the variable was not set: the env processor
- * handed over null, the constructor refused it, and because Consho's
- * terminate listeners build the mail services on every request and every
- * console command, Contao's post-update script died with it. SecretCipherTest
+ * On an installation without the variable, the env processor handed over
+ * null, the constructor refused it, and because Consho's terminate
+ * listeners build the mail services on every request and every console
+ * command, Contao's post-update script died with it. SecretCipherTest
  * showed none of that — it always passed a string of its own.
  */
 class SecretCipherContainerTest extends TestCase
@@ -39,8 +39,8 @@ class SecretCipherContainerTest extends TestCase
     }
 
     /**
-     * N2: Ohne CONSHO_SECRET_KEY aus APP_SECRET (kernel.secret) — der Weg, den
-     * ein frisch über den Contao Manager installierter Shop nimmt.
+     * N2: Without CONSHO_SECRET_KEY from APP_SECRET (kernel.secret) — the path
+     * a shop freshly installed through the Contao Manager takes.
      */
     public function testWithoutTheVariableTheKeyComesFromTheKernelSecret(): void
     {
