@@ -5,6 +5,14 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.17] – 2026-10-27
+
+### Fixed
+
+- **"Invoices issued by" accepts only Consho, an installed module or off.** A write outside the back end, for example
+  through a console command, could store any name there; the shop then waited for a module that does not exist.
+  A module that was chosen and later removed stays selectable, as before.
+
 ## [0.1.16] – 2026-10-27
 
 ### Added
