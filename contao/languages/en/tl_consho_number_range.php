@@ -11,7 +11,7 @@ $GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['issued'] = 'Number %s h
 $GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['shared'] = 'The prefix "%s" is already used by the number range for %s. Two document types on one prefix sooner or later issue the same number — and an invoice correction or a cancellation is an invoice for VAT too. Choose a prefix of its own, e.g. "RK-" (the one the setup page suggests).';
 
 $GLOBALS['TL_LANG']['tl_consho_number_range']['types'] = [
-    'order' => 'Order number (gaps allowed)',
+    'order' => 'Order number',
     'invoice' => 'Invoice number (unbroken)',
     'deliveryNote' => 'Delivery note number',
     'creditNote' => 'Invoice correction number (unbroken)',

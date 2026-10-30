@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Address;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -157,6 +158,56 @@ class ViesVatIdValidatorTest extends TestCase
         self::assertSame(VatIdStatus::Unavailable, $validator->check('ATU12345678')->status);
     }
 
+    /**
+     * "Unavailable" leaves the reason behind in the log — afterwards it is
+     * the only place that tells a timeout from a member state that is down.
+     * The VAT ID itself stays out of it, the country is enough.
+     */
+    public function testEinFehlschlagNenntDenGrundImLog(): void
+    {
+        $logger = $this->spyLogger();
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new class('Idle timeout reached') extends \RuntimeException implements TransportExceptionInterface {};
+        });
+
+        (new ViesVatIdValidator($client, $logger))->check('ATU12345678');
+
+        self::assertSame(['warning: VIES could not check a VAT ID from AT: Idle timeout reached'], $logger->messages);
+    }
+
+    public function testEinDienstfehlerNenntDenUserError(): void
+    {
+        $logger = $this->spyLogger();
+
+        (new ViesVatIdValidator(new MockHttpClient([$this->jsonResponse(['isValid' => false, 'userError' => 'MS_MAX_CONCURRENT_REQ'])]), $logger))->check('DE123456789');
+
+        self::assertSame(['warning: VIES could not check a VAT ID from DE: MS_MAX_CONCURRENT_REQ'], $logger->messages);
+    }
+
+    public function testEinAusgefallenerMitgliedstaatWirdGenannt(): void
+    {
+        $logger = $this->spyLogger();
+
+        (new ViesVatIdValidator(new MockHttpClient([
+            $this->jsonResponse(['isValid' => false, 'userError' => 'INVALID']),
+            $this->jsonResponse(['countries' => [['countryCode' => 'DK', 'availability' => 'Unavailable']]]),
+        ]), $logger))->check('DK12345678');
+
+        self::assertSame(['warning: VIES could not check a VAT ID from DK: member state unavailable'], $logger->messages);
+    }
+
+    public function testUngueltigIstKeinFehlschlag(): void
+    {
+        $logger = $this->spyLogger();
+
+        (new ViesVatIdValidator(new MockHttpClient([
+            $this->jsonResponse(['isValid' => false, 'userError' => 'INVALID']),
+            $this->jsonResponse(['countries' => [['countryCode' => 'AT', 'availability' => 'Available']]]),
+        ]), $logger))->check('ATU00000000');
+
+        self::assertSame([], $logger->messages);
+    }
+
     public function testAnUnparseableIdIsInvalidWithoutCallingTheService(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {
@@ -228,6 +279,22 @@ class ViesVatIdValidatorTest extends TestCase
      *
      * @param array<string, mixed> $payload
      */
+    /**
+     * @return AbstractLogger&object{messages: list<string>}
+     */
+    private function spyLogger(): AbstractLogger
+    {
+        return new class extends AbstractLogger {
+            /** @var list<string> */
+            public array $messages = [];
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                $this->messages[] = $level.': '.$message;
+            }
+        };
+    }
+
     private function validatorReturning(array $payload): ViesVatIdValidator
     {
         return new ViesVatIdValidator(new MockHttpClient([

@@ -50,7 +50,7 @@ $GLOBALS['TL_DCA']['tl_consho_shipping_method'] = [
         'operations' => [
             // Own operation, pencil keeps editing the method — see tl_consho_product.
             // `primary` keeps the jump in the row — see tl_consho_product.
-            'prices' => ['href' => 'table=tl_consho_shipping_price', 'icon' => 'header.svg', 'primary' => true],
+            'prices' => ['href' => 'table=tl_consho_shipping_price', 'icon' => 'modules.svg', 'primary' => true],
             'edit',
             '!copy',
             // Core default operation (name-only, not an array): DefaultOperationsListener
@@ -119,7 +119,8 @@ $GLOBALS['TL_DCA']['tl_consho_shipping_method'] = [
             'exclude' => true,
             'options' => ['proportional', 'fixed'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_shipping_method']['taxModes'],
-            'eval' => ['mandatory' => true, 'tl_class' => 'w50'],
+            // consho-switch: as in tl_consho_price.
+            'eval' => ['mandatory' => true, 'tl_class' => 'w50 consho-switch'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => 'proportional'],
         ],
         /*

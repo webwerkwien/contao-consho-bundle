@@ -2,6 +2,8 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Address;
 
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -72,8 +74,14 @@ final class ViesVatIdValidator implements VatIdValidatorInterface
         'SERVER_BUSY',
     ];
 
-    public function __construct(private readonly HttpClientInterface $client)
-    {
+    /**
+     * The logger keeps the reason for "unavailable" — afterwards it is the
+     * only place that tells a timeout from a member state that is down.
+     */
+    public function __construct(
+        private readonly HttpClientInterface $client,
+        private readonly LoggerInterface $logger = new NullLogger(),
+    ) {
     }
 
     /**
@@ -101,9 +109,9 @@ final class ViesVatIdValidator implements VatIdValidatorInterface
             $data = null !== $requester
                 ? $this->askQualified($country, $number, $requester)
                 : $this->askSimple($country, $number);
-        } catch (HttpExceptionInterface) {
+        } catch (HttpExceptionInterface $e) {
             // Unreachable is "could not check", never "invalid".
-            return new VatIdCheckResult(VatIdStatus::Unavailable, $now);
+            return $this->unavailable($country, $e->getMessage(), $now);
         }
 
         // `valid` on the qualified route, `isValid` on the simple one.
@@ -125,16 +133,27 @@ final class ViesVatIdValidator implements VatIdValidatorInterface
         $userError = \is_string($data['userError'] ?? null) ? $data['userError'] : '';
 
         if (\in_array($userError, self::SERVICE_ERRORS, true)) {
-            return new VatIdCheckResult(VatIdStatus::Unavailable, $now);
+            return $this->unavailable($country, $userError, $now);
         }
 
         // A negative answer does not prove the number is wrong — see the note
         // on the class. Ask the status endpoint before saying so.
         if (!$this->memberStateIsAvailable($country)) {
-            return new VatIdCheckResult(VatIdStatus::Unavailable, $now);
+            return $this->unavailable($country, 'member state unavailable', $now);
         }
 
         return new VatIdCheckResult(VatIdStatus::Invalid, $now);
+    }
+
+    /**
+     * The VAT ID stays out of the log; its country is enough to tell an
+     * outage of one member state from a general one.
+     */
+    private function unavailable(string $country, string $reason, int $now): VatIdCheckResult
+    {
+        $this->logger->warning(\sprintf('VIES could not check a VAT ID from %s: %s', $country, $reason));
+
+        return new VatIdCheckResult(VatIdStatus::Unavailable, $now);
     }
 
     /**

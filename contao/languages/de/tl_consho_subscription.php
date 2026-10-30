@@ -44,7 +44,26 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['mandateMethod'] = ['Folgezahlung 
 $GLOBALS['TL_LANG']['tl_consho_subscription']['mandate'] = ['Mandat', 'Ob der Zahlungsanbieter beim ersten Kauf ein Mandat für Folgezahlungen hinterlegt hat. Der Wert selbst wird nicht angezeigt.'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['mandatePresent'] = 'vorhanden';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pause'] = ['Pausieren', 'Eine Pause ankündigen oder zurücknehmen'];
-$GLOBALS['TL_LANG']['tl_consho_subscription']['pauses'] = ['Pausen', 'Die Pausen dieses Abos'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['status'] = ['Status', ''];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['history'] =['Verlauf', 'Kündigungen und Pausen des Abos ID %s anzeigen'];
+// The title of the page (Backend::getBackendModule() reads [1] for a `key`).
+$GLOBALS['TL_LANG']['tl_consho_subscription']['subscriptionHistory'] = ['Verlauf', 'Kündigungen und Pausen des Abos ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyLegend'] = 'Kündigungen und Pausen';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyEmpty'] = 'Zu diesem Abo gibt es keine Kündigung und keine Pause.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyWhen'] = 'Eingegangen';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyType'] = 'Art';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyEntry'] = 'Eintrag';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyDetails'] = 'Einzelheiten';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyState'] = 'Stand';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyCancellation'] = 'Kündigung';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyPause'] = 'Pause';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyEffective'] = 'wirksam zum %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyMonths'] = '%d Monat(e)';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyWithdrawn'] = 'zurückgenommen am %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyEdit'] = 'Kündigung bearbeiten';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyResend'] = 'Entscheidung erneut senden';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyShow'] = 'Details anzeigen';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyBack'] = 'Zurück';
 // The title of the page (Backend::getBackendModule() reads [1] for a `key`).
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseSubscription'] = ['Pausieren', 'Abo ID %s pausieren'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseLegend'] = 'Pause';

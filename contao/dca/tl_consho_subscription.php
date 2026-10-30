@@ -41,20 +41,22 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
             'defaultSearchField' => 'subscriptionNumber',
         ],
         'label' => [
-            // Abo-8, P80: the end and the next billing next to the period.
-            // Abo pausieren (P111): until when a pause runs or is announced.
-            'fields' => ['subscriptionNumber', 'member', 'product', 'ruleTitle', 'state', 'periodUntil', 'nextBillingAt', 'endsAt', 'pauseUntil'],
+            // The state as a symbol in front, as in the withdrawal list; then
+            // the dates in their order. Abo-8, P80: the end and the next
+            // billing next to the period. Abo pausieren (P111): until when a
+            // pause runs or is announced. `status` is virtual, see below.
+            'fields' => ['status', 'subscriptionNumber', 'member', 'product', 'ruleTitle', 'startedAt', 'periodUntil', 'nextBillingAt', 'endsAt', 'pauseUntil'],
             'showColumns' => true,
         ],
         'operations' => [
-            'cancellations' => ['href' => 'table=tl_consho_cancellation', 'icon' => 'header.svg', 'primary' => true],
-            // Abo pausieren (P101, P107, P111): announce or withdraw, and the history.
-            'pause' => ['href' => 'key=pauseSubscription', 'icon' => 'stop.svg', 'primary' => true],
-            'pauses' => ['href' => 'table=tl_consho_subscription_pause', 'icon' => 'invisible.svg', 'primary' => true],
-            'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
+            // Abo pausieren (P101, P107, P111): announce or withdraw.
+            'pause' => ['href' => 'key=pauseSubscription', 'icon' => 'bundles/contaoconsho/icons/pause.svg', 'primary' => true],
+            // Cancellations and pauses on one page, newest first.
+            'history' => ['href' => 'key=subscriptionHistory', 'icon' => 'bundles/contaoconsho/icons/history.svg', 'primary' => true],
             // Abo-8, P80: the purchase order. No href: the address comes only
             // from SubscriptionOrderButtonListener, never an edit of the subscription.
-            'order' => ['icon' => 'parent.svg', 'primary' => true],
+            'order' => ['icon' => 'bundles/contaoconsho/icons/order.svg', 'primary' => true],
+            'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
         ],
     ],
 
@@ -225,6 +227,8 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
             'eval' => ['readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => 'minimum'],
         ],
+        // The list's first column: a label, no SQL, no inputType.
+        'status' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_subscription']['status']],
         'state' => [
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_subscription']['states'],
             'inputType' => 'text',

@@ -41,7 +41,7 @@ class CustomerErasure
     public const MEMBER_FIELDS = [
         'consho_shippingCompany', 'consho_shippingSalutation', 'consho_shippingFirstname', 'consho_shippingLastname',
         'consho_shippingStreet', 'consho_shippingPostal', 'consho_shippingCity', 'consho_shippingState', 'consho_shippingCountry',
-        'consho_vatId', 'consho_vatIdStatus', 'consho_vatIdRequestIdentifier', 'consho_confirmedEmail',
+        'consho_vatId', 'consho_vatIdStatus', 'consho_vatIdRequestIdentifier', 'consho_vatIdRequester', 'consho_vatIdChecked', 'consho_confirmedEmail',
     ];
 
     public function __construct(
@@ -171,7 +171,7 @@ class CustomerErasure
 
             $this->connection->update(
                 'tl_member',
-                array_fill_keys(self::MEMBER_FIELDS, '') + ['consho_vatIdCheckedAt' => null, 'consho_confirmedEmailAt' => null, 'tstamp' => $now],
+                array_fill_keys(self::MEMBER_FIELDS, '') + ['consho_vatIdCheckedAt' => null, 'consho_confirmedEmailAt' => null, 'consho_netGroupsAuto' => null, 'consho_netGroupsAutoAt' => null, 'tstamp' => $now],
                 ['id' => $memberId],
             );
 

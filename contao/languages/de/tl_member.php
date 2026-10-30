@@ -23,6 +23,8 @@ $GLOBALS['TL_LANG']['tl_member']['consho_vatId'] = ['UID-Nummer', 'Umsatzsteuer-
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdStatus'] = ['Prüfergebnis', 'Ergebnis der letzten VIES-Abfrage. Wird vom System gesetzt.'];
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdCheckedAt'] = ['Zuletzt geprüft', 'Leer bedeutet: noch nie geprüft.'];
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdRequestIdentifier'] = ['VIES-Nachweiskennung', 'Beleg der Abfrage für eine Betriebsprüfung.'];
+$GLOBALS['TL_LANG']['tl_member']['consho_vatIdRequester'] = ['Geprüft mit UID', 'Die UID des Shops, der angefragt hat. Die Nachweiskennung gilt nur für diesen.'];
+$GLOBALS['TL_LANG']['tl_member']['consho_netGroupsAutoAt'] = ['Nettopreis-Gruppen automatisch vergeben', 'Wann eine geprüfte UID das Mitglied in Nettopreis-Gruppen eingetragen hat. Speichern im Backend bestätigt diese Gruppen als von Hand vergeben; das Feld wird dann geleert.'];
 
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdStatuses'] = [
     'valid' => 'gültig',

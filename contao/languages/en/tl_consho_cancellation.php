@@ -32,4 +32,3 @@ $GLOBALS['TL_LANG']['tl_consho_cancellation']['acceptNeedsDate'] = 'To accept, p
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['rejectNeedsReason'] = 'To reject, please give a reason — it goes to the customer.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['endBeforeReceipt'] = 'The end of contract cannot be before the cancellation arrived.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['notADecision'] = 'An extraordinary cancellation is accepted or rejected.';
-$GLOBALS['TL_LANG']['tl_consho_subscription']['cancellations'] = ['Cancellations', 'Show the cancellations of subscription ID %s'];

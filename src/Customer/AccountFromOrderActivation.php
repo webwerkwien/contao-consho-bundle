@@ -28,6 +28,8 @@ final class AccountFromOrderActivation
         private readonly Connection $connection,
         private readonly RegistrationActivation $registration,
         private readonly MemberOrders $orders,
+        // Optional for the tests that build the activation by hand.
+        private readonly NetGroupAssigner|null $netGroups = null,
     ) {
     }
 
@@ -51,5 +53,9 @@ final class AccountFromOrderActivation
         $this->registration->activate($memberId, ['groups' => $row['grp']], $rootId);
         $this->connection->update('tl_member', ['consho_accountPending' => 0, 'tstamp' => $now], ['id' => $memberId]);
         $this->orders->markConfirmed($memberId, (string) $row['email'], $now);
+
+        // After the customer group: RegistrationActivation writes the groups
+        // whole. The VAT ID and its verdict came from the order.
+        $this->netGroups?->assign($memberId, $now);
     }
 }

@@ -55,8 +55,8 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
         'operations' => [
             // Own operation, pencil keeps editing the record — see tl_consho_product.
             // `primary` keeps the jumps in the row — see tl_consho_product.
-            'status' => ['href' => 'table=tl_consho_order_status', 'icon' => 'header.svg', 'primary' => true],
-            'numbers' => ['href' => 'table=tl_consho_number_range', 'icon' => 'featured.svg', 'primary' => true],
+            'status' => ['href' => 'table=tl_consho_order_status', 'icon' => 'children.svg', 'primary' => true],
+            'numbers' => ['href' => 'table=tl_consho_number_range', 'icon' => 'modules.svg', 'primary' => true],
             // Block I (I5): the setup page of this shop, a view of the dashboard —
             // the address is set by SetupButtonListener.
             'setup' => ['icon' => 'wrench.svg', 'primary' => true],
@@ -71,7 +71,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
 
     'palettes' => [
         '__selector__' => ['invoiceArchive'],
-        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
+        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups,vatIdNetGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
     ],
 
     'subpalettes' => [
@@ -242,6 +242,22 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'foreignKey' => 'tl_member_group.name',
             'eval' => ['multiple' => true, 'chosen' => true, 'tl_class' => 'w33'],
             'sql' => ['type' => 'blob', 'notnull' => false],
+        ],
+        /*
+         * A member whose VAT ID VIES confirms joins this shop's net price
+         * groups (NetGroupAssigner). Off by default: VIES proves the number is
+         * valid, not that the customer is to buy on trade terms — and the
+         * groups may unlock group prices and discounts as well.
+         *
+         * Members and groups belong to the installation, not to a shop: a
+         * member is added to the net price groups of EVERY shop with the switch
+         * on. Groups are only ever added; see consho_netGroupsAuto on tl_member.
+         */
+        'vatIdNetGroups' => [
+            'inputType' => 'checkbox',
+            'exclude' => true,
+            'eval' => ['tl_class' => 'w50 clr m12 consho-toggle'],
+            'sql' => ['type' => 'boolean', 'default' => false],
         ],
         /*
          * Ordering without an account, on by default (C14). Off leaves only

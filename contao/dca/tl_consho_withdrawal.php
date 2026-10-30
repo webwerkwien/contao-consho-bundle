@@ -53,7 +53,8 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         'operations' => [
             // D-3: the operator's page — decide, return, refund.
             'process' => ['href' => 'key=processWithdrawal', 'icon' => 'edit.svg', 'primary' => true],
-            'items' => ['href' => 'table=tl_consho_withdrawal_item', 'icon' => 'header.svg', 'primary' => true],
+            // Contao's child-records icon, in blue: the positions are only read here.
+            'items' => ['href' => 'table=tl_consho_withdrawal_item', 'icon' => 'bundles/contaoconsho/icons/items.svg', 'primary' => true],
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
         ],
     ],

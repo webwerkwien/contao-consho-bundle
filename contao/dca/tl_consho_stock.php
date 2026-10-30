@@ -46,14 +46,15 @@ $GLOBALS['TL_DCA']['tl_consho_stock'] = [
             'fields' => ['article', 'skuColumn', 'quantity', 'orderedColumn', 'stateColumn', 'availableFrom', 'noticesColumn', 'supplier'],
             'showColumns' => true,
         ],
+        // `primary`: in the header, not behind ⋯ — they are the module's work.
         'global_operations' => [
-            'purchase' => ['href' => 'key=purchase', 'icon' => 'new.svg'],
-            'purchaseLists' => ['href' => 'table=tl_consho_purchase_list', 'icon' => 'folderC.svg'],
+            'purchase' => ['href' => 'key=purchase', 'icon' => 'new.svg', 'primary' => true],
+            'purchaseLists' => ['href' => 'table=tl_consho_purchase_list', 'icon' => 'folderC.svg', 'primary' => true],
         ],
         'operations' => [
             // To the article's mask, where stock is booked (G3).
             'product' => ['icon' => 'edit.svg', 'primary' => true],
-            'movements' => ['href' => 'table=tl_consho_stock_movement', 'icon' => 'children.svg', 'primary' => true],
+            'movements' => ['href' => 'table=tl_consho_stock_movement', 'icon' => 'bundles/contaoconsho/icons/history.svg', 'primary' => true],
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
         ],
     ],

@@ -7,6 +7,7 @@ use Contao\CoreBundle\Exception\ResponseException;
 use Contao\CoreBundle\Filesystem\VirtualFilesystemInterface;
 use Contao\CoreBundle\Framework\Adapter;
 use Contao\CoreBundle\Framework\ContaoFramework;
+use Contao\CoreBundle\String\HtmlAttributes;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -73,7 +74,9 @@ final class CustomerBackendControllerTest extends TestCase
         self::assertStringContainsString('class="tl_file_list tl_right_nowrap"', $html);
         self::assertStringContainsString('<img src="archive.svg"', $html);
         self::assertStringContainsString('<img src="member.svg"', $html);
-        self::assertStringContainsString('<img src="member--disabled.svg" alt="Gast — kein Mitgliedskonto">', $html, 'der Gast hat kein Konto');
+        self::assertStringContainsString('<img src="member--disabled.svg" alt="Gastbestellung" data-contao--tooltips-target="tooltip">', $html, 'der Gast hat kein Konto, und das Icon sagt es');
+        // One tooltip per icon: Contao shows the alt, a title on the link would add a second.
+        self::assertDoesNotMatchRegularExpression('#<a class="(show|export|member) has-icon"[^>]* title=#', $html);
         self::assertStringContainsString('class="header_filter_toggle"', $html);
         self::assertStringContainsString('id="tl_content_filter"', $html);
         self::assertStringNotContainsString('CONSHO.', $html);
@@ -217,7 +220,8 @@ final class CustomerBackendControllerTest extends TestCase
         $twig = new Environment($loader, ['strict_variables' => true]);
         $twig->addGlobal('contao', ['request_token' => 'tok']);
         // Contao's backend_icon, reduced to what the test reads.
-        $twig->addFunction(new TwigFunction('backend_icon', static fn (string $src, string $alt = ''): string => \sprintf('<img src="%s" alt="%s">', $src, htmlspecialchars($alt)), ['is_safe' => ['html']]));
+        $twig->addFunction(new TwigFunction('backend_icon', static fn (string $src, string $alt = '', HtmlAttributes|null $attributes = null): string => \sprintf('<img src="%s" alt="%s"%s>', $src, htmlspecialchars($alt), (string) $attributes), ['is_safe' => ['html']]));
+        $twig->addFunction(new TwigFunction('attrs', static fn (array $attributes = []): HtmlAttributes => new HtmlAttributes($attributes)));
 
         $router = $this->createStub(UrlGeneratorInterface::class);
         $router->method('generate')->willReturnCallback(static fn (string $route, array $params): string => '/contao?'.http_build_query($params));

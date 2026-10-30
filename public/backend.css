@@ -123,6 +123,11 @@
     --consho-icon: url("../../system/themes/flexible/icons/undo.svg");
 }
 
+/* The subscription (Abo): an eye, green while active. */
+.consho-signal--visible {
+    --consho-icon: url("../../system/themes/flexible/icons/visible.svg");
+}
+
 .consho-signal--open { background-color: var(--gray, #747476); }
 .consho-signal--progress { background-color: var(--orange, #e67300); }
 .consho-signal--attention { background-color: var(--red, #c7241f); }
@@ -252,6 +257,12 @@ fieldset.consho-translation-panel > legend {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 10px 30px;
     align-items: start;
+}
+
+/* Contao gives a second .tl_show twice the top margin, meant for tables
+   stacked one below the other; side by side it shifts the right one down. */
+.consho-withdrawal-columns > .tl_show + .tl_show {
+    margin-top: 18px;
 }
 
 .consho-withdrawal-box .tl_help {
@@ -804,4 +815,9 @@ button.consho-dashboard__finding:focus-visible {
     .consho-toggle .tl_checkbox::before {
         transition: none;
     }
+}
+
+/* Subscription list and history: dates and types stay on one line. */
+.consho-nowrap {
+    white-space: nowrap;
 }

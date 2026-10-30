@@ -8,7 +8,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\CatalogReferences;
-use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\MethodInUseDeleteTitleListener;
+use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\InUseDeleteTitleListener;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
@@ -16,7 +16,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
  * says why: „Das Element ist mit mind. einer Bestellung verknüpft und darf
  * nicht mehr gelöscht werden."
  */
-class MethodInUseDeleteTitleListenerTest extends TestCase
+class InUseDeleteTitleListenerTest extends TestCase
 {
     private Connection $connection;
 
@@ -28,6 +28,7 @@ class MethodInUseDeleteTitleListenerTest extends TestCase
         $this->connection->insert('tl_consho_order', ['id' => 1, 'shippingMethod' => 2, 'paymentMethod' => 9]);
 
         $GLOBALS['TL_LANG']['CONSHO']['methodInUse'] = 'Das Element ist mit mind. einer Bestellung verknüpft und darf nicht mehr gelöscht werden.';
+        $GLOBALS['TL_LANG']['CONSHO']['recordInUse'] = 'Verwendete Items können nicht entfernt werden.';
     }
 
     protected function tearDown(): void
@@ -41,8 +42,11 @@ class MethodInUseDeleteTitleListenerTest extends TestCase
 
         self::assertSame('Das Element ist mit mind. einer Bestellung verknüpft und darf nicht mehr gelöscht werden.', $operation['title']);
 
-        // Hover shows the TITLE of the icon, not its alt (seen on a real installation).
-        self::assertStringContainsString('title="Das Element ist mit mind. einer Bestellung verknüpft', (string) $operation['iconAttributes']);
+        // Contao's tooltip shows the alt of an icon it targets; a title on top
+        // would add the browser's own tooltip (seen on a real installation).
+        $icon = (string) $operation['iconAttributes'];
+        self::assertStringContainsString('data-contao--tooltips-target="tooltip"', $icon);
+        self::assertStringNotContainsString('title=', $icon);
     }
 
     /**
@@ -69,6 +73,31 @@ class MethodInUseDeleteTitleListenerTest extends TestCase
         self::assertStringContainsString('Bestellung', (string) $this->operationFor('tl_consho_payment_method', 9, disabledByContao: true)['title']);
     }
 
+    /**
+     * Every record the delete voters guard says why, not only the methods —
+     * a shop, an order status, a value in use.
+     */
+    public function testAuchAndereVerwendeteEintraegeSagenWarum(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_shop');
+        $this->connection->insert('tl_consho_order', ['id' => 2, 'orderNumber' => 'WEB-2', 'orderStatus' => 7]);
+
+        $status = $this->operationFor('tl_consho_order_status', 7, disabledByContao: true);
+        self::assertSame('Verwendete Items können nicht entfernt werden.', $status['title']);
+        self::assertStringContainsString('data-contao--tooltips-target="tooltip"', (string) $status['iconAttributes']);
+
+        self::assertSame('Löschen ID 8', $this->operationFor('tl_consho_order_status', 8, disabledByContao: true)['title']);
+    }
+
+    public function testFremdeTabellenBleibenUnberuehrt(): void
+    {
+        $GLOBALS['TL_DCA']['tl_content']['list']['operations']['delete'] = ['href' => 'act=delete'];
+
+        (new InUseDeleteTitleListener(new CatalogReferences($this->connection)))('tl_content');
+
+        self::assertArrayNotHasKey('button_callback', $GLOBALS['TL_DCA']['tl_content']['list']['operations']['delete']);
+    }
+
     private function operationFor(string $table, int $id, bool $disabledByContao): DataContainerOperation
     {
         $GLOBALS['TL_DCA'][$table]['list']['operations']['delete'] = [
@@ -83,7 +112,7 @@ class MethodInUseDeleteTitleListenerTest extends TestCase
             },
         ];
 
-        (new MethodInUseDeleteTitleListener(new CatalogReferences($this->connection)))($table);
+        (new InUseDeleteTitleListener(new CatalogReferences($this->connection)))($table);
 
         $config = $GLOBALS['TL_DCA'][$table]['list']['operations']['delete'];
         $operation = new DataContainerOperation('delete', $config, ['id' => $id], $this->createStub(DataContainer::class));

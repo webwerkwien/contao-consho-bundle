@@ -63,7 +63,10 @@ final class AccountFromOrderTest extends TestCase
             consho_shippingCompany TEXT NOT NULL DEFAULT '', consho_shippingFirstname TEXT NOT NULL DEFAULT '', consho_shippingLastname TEXT NOT NULL DEFAULT '',
             consho_shippingStreet TEXT NOT NULL DEFAULT '', consho_shippingPostal TEXT NOT NULL DEFAULT '', consho_shippingCity TEXT NOT NULL DEFAULT '',
             consho_shippingState TEXT NOT NULL DEFAULT '', consho_shippingCountry TEXT NOT NULL DEFAULT '', consho_vatId TEXT NOT NULL DEFAULT '',
-            consho_accountPending INTEGER NOT NULL DEFAULT 0)");
+            consho_vatIdStatus TEXT NOT NULL DEFAULT '', consho_vatIdCheckedAt INTEGER NULL, consho_vatIdRequestIdentifier TEXT NOT NULL DEFAULT '',
+            consho_vatIdRequester TEXT NOT NULL DEFAULT '', consho_vatIdChecked TEXT NOT NULL DEFAULT '', consho_accountPending INTEGER NOT NULL DEFAULT 0)");
+        DcaSchema::create($this->connection, 'tl_consho_shop');
+        $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Webshop', 'vatId' => 'ATU99999999']);
         // As in Contao: the username is unique.
         $this->connection->executeStatement('CREATE UNIQUE INDEX username ON tl_member (username)');
 
@@ -113,6 +116,30 @@ final class AccountFromOrderTest extends TestCase
         self::assertStringContainsString('https://shop.test/passwort?token='.$token->getIdentifier(), $html);
         self::assertStringContainsString('Kundin@Example.org', $html, 'nennt den Benutzernamen');
         self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
+    /**
+     * The order's verdict comes along — no second VIES query on opening.
+     */
+    public function testDasPruefergebnisDerBestellungKommtMit(): void
+    {
+        $this->service()->request($this->order(['vatIdStatus' => 'valid', 'vatIdRequestIdentifier' => 'WAPI7', 'createdAt' => self::NOW - 120]), '10.0.0.1', self::NOW);
+
+        self::assertSame(
+            // The verdict, not the evidence: no time, no consultation number, no requester.
+            ['valid', null, '', ''],
+            array_values(array_map(
+                static fn ($v): mixed => is_numeric($v) ? (int) $v : $v,
+                $this->connection->fetchAssociative('SELECT consho_vatIdStatus, consho_vatIdCheckedAt, consho_vatIdRequestIdentifier, consho_vatIdRequester FROM tl_member') ?: [],
+            )),
+        );
+    }
+
+    public function testNichtErreichbarBleibtBeiDerBestellung(): void
+    {
+        $this->service()->request($this->order(['vatIdStatus' => 'unavailable']), '10.0.0.1', self::NOW);
+
+        self::assertSame('', $this->connection->fetchOne('SELECT consho_vatIdStatus FROM tl_member'));
     }
 
     public function testEineEigeneLieferadresseKommtMit(): void

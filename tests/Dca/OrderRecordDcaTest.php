@@ -73,6 +73,20 @@ class OrderRecordDcaTest extends TestCase
         self::assertTrue($GLOBALS['TL_DCA']['tl_consho_order']['config']['notDeletable']);
     }
 
+    /**
+     * The lines come from the purchase only: none added, none moved, none
+     * deleted in the back end — and no ⋯ menu with "Neu danach" on every row.
+     */
+    public function testBestellpositionenEntstehenNurBeimKauf(): void
+    {
+        $config = $GLOBALS['TL_DCA']['tl_consho_order_item']['config'];
+
+        self::assertTrue($config['notCreatable']);
+        self::assertTrue($config['notSortable']);
+        self::assertTrue($config['notDeletable']);
+        self::assertSame('bundles/contaoconsho/icons/order-items.svg', $GLOBALS['TL_DCA']['tl_consho_order']['list']['operations']['items']['icon']);
+    }
+
     public function testDerRechtstextSchnappschussIstWederAenderbarNochLoeschbar(): void
     {
         $config = $GLOBALS['TL_DCA']['tl_consho_order_legal']['config'];

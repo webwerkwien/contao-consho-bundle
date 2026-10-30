@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Dca;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
+use Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionHistoryBackendController;
 use Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionPauseBackendController;
 use Webwerkwien\ContaoConshoBundle\Subscription\RenewalKind;
 use Webwerkwien\ContaoConshoBundle\Tests\Subscription\SubscriptionSchema;
@@ -33,14 +34,15 @@ class SubscriptionDcaTest extends TestCase
             self::assertTrue($dca['config'][$flag] ?? false, $flag);
         }
 
-        // Abo-7: the only way down is to the cancellations (P57) — still no edit.
-        // Abo-8, P80: and up to the purchase order — without an href of its own.
-        // Abo pausieren (P101, P111): the pause page and the pauses, still no edit.
-        self::assertSame(['cancellations', 'pause', 'pauses', 'show', 'order'], array_keys($dca['list']['operations']));
+        // Abo pausieren (P101, P111), Abo-7 (P57): the pause page, then
+        // cancellations and pauses on one history page, the purchase order
+        // before the details (Abo-8, P80, without an href of its own) — still
+        // no edit.
+        self::assertSame(['pause', 'history', 'order', 'show'], array_keys($dca['list']['operations']));
         self::assertArrayNotHasKey('href', $dca['list']['operations']['order']);
         self::assertSame('key=pauseSubscription', $dca['list']['operations']['pause']['href']);
+        self::assertSame('key=subscriptionHistory', $dca['list']['operations']['history']['href']);
         self::assertSame(['tl_consho_cancellation', 'tl_consho_subscription_pause'], $dca['config']['ctable']);
-        self::assertSame('table=tl_consho_cancellation', $dca['list']['operations']['cancellations']['href']);
     }
 
     public function testDieAbonummerIstEindeutig(): void
@@ -78,7 +80,7 @@ class SubscriptionDcaTest extends TestCase
             require __DIR__.'/../../contao/languages/'.$language.'/tl_consho_subscription.php';
             require __DIR__.'/../../contao/languages/'.$language.'/modules.php';
 
-            foreach ([...$fields, ...$legends[1], 'show'] as $key) {
+            foreach ([...$fields, ...$legends[1], 'show', 'history', 'pause', 'order', 'subscriptionHistory'] as $key) {
                 self::assertArrayHasKey($key, $GLOBALS['TL_LANG']['tl_consho_subscription'], $language.': '.$key);
             }
 
@@ -127,5 +129,6 @@ class SubscriptionDcaTest extends TestCase
         self::assertSame(array_search('consho_order', $daily, true) + 1, array_search('consho_subscription', $daily, true));
         self::assertSame(['tl_consho_subscription', 'tl_consho_cancellation', 'tl_consho_subscription_pause'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['tables']);
         self::assertSame([SubscriptionPauseBackendController::class, '__invoke'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['pauseSubscription']);
+        self::assertSame([SubscriptionHistoryBackendController::class, '__invoke'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['subscriptionHistory']);
     }
 }

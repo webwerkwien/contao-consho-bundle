@@ -53,6 +53,17 @@ use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\CopyOperationPerm
  */
 class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
 {
+    /**
+     * The exceptions to "every operation in the row", chosen one by one: the
+     * order list had thirteen buttons per row, and these are the ones looked
+     * up now and then. A disabled one of them is not drawn in the menu — none
+     * of them is greyed out by a voter or a listener; deferPayment is hidden
+     * where it does not apply, in the row as in the menu.
+     */
+    private const IN_THE_MENU = [
+        'tl_consho_order' => ['documents', 'entitlements', 'legal', 'show', 'resendConfirmation', 'deferPayment', 'versions'],
+    ];
+
     protected function tearDown(): void
     {
         unset($GLOBALS['TL_DCA'], $GLOBALS['TL_LANG']);
@@ -391,7 +402,7 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
 
         foreach (self::operationsOf($dca) as $table => $operations) {
             foreach ($operations as $name => $operation) {
-                if (!\is_array($operation) || !str_starts_with((string) ($operation['href'] ?? ''), 'table=')) {
+                if (!\is_array($operation) || !str_starts_with((string) ($operation['href'] ?? ''), 'table=') || self::inTheMenu($table, $name)) {
                     continue;
                 }
 
@@ -445,6 +456,12 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
             foreach ($operations as $key => $operation) {
                 // Separators are not an operation.
                 if ('-' === $operation) {
+                    continue;
+                }
+
+                if (self::inTheMenu($table, \is_array($operation) ? (string) $key : (string) $operation)) {
+                    self::assertFalse(\is_array($operation) && ($operation['primary'] ?? false), $table.': "'.$key.'" is meant for the menu');
+
                     continue;
                 }
 
@@ -657,6 +674,11 @@ class EveryDeleteButtonAsksBeforeDeletingTest extends TestCase
             .'returns null, reading .textContent throws, and the click is not cancelled — the record '
             .'is deleted without a dialog.',
         );
+    }
+
+    private static function inTheMenu(string $table, string $operation): bool
+    {
+        return \in_array($operation, self::IN_THE_MENU[$table] ?? [], true);
     }
 
     /**

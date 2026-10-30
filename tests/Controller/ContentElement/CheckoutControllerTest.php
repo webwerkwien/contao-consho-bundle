@@ -46,6 +46,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutData;
 use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutState;
 use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutReadiness;
 use Webwerkwien\ContaoConshoBundle\Checkout\ShippingTaxSplitter;
+use Webwerkwien\ContaoConshoBundle\Customer\MemberVatId;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssueSource;
@@ -348,6 +349,123 @@ class CheckoutControllerTest extends TestCase
         $this->post($fields);
 
         self::assertSame(['ATU12345678'], $this->vatIdSpy->seen);
+    }
+
+    /**
+     * The member's own VAT ID goes through the result on the member: under
+     * twelve months it holds for an order taxed anyway.
+     */
+    public function testDieEigeneUidDesMitgliedsNimmtDasErgebnisAmMitglied(): void
+    {
+        $checkedAt = (int) strtotime('-3 months');
+        $this->memberWithVatId(['consho_vatIdStatus' => 'valid', 'consho_vatIdCheckedAt' => $checkedAt, 'consho_vatIdRequestIdentifier' => 'WAPIOLD', 'consho_vatIdRequester' => 'ATU99999999']);
+
+        $this->post($this->vatAddress('AT'));
+
+        self::assertSame([], $this->vatIdSpy->seen);
+        $verdict = $this->repository->checkoutDataOf($this->cartId)->vatCheck;
+        self::assertNotNull($verdict);
+        self::assertSame($checkedAt, $verdict->checkedAt);
+        self::assertSame('WAPIOLD', $verdict->requestIdentifier);
+    }
+
+    /**
+     * Reverse charge wants a result from today; the fresh one goes back to
+     * the member — the yearly check happens this way too.
+     */
+    public function testBeiReverseChargeNurEinErgebnisVonHeute(): void
+    {
+        $this->memberWithVatId(['consho_vatIdStatus' => 'valid', 'consho_vatIdCheckedAt' => (int) strtotime('-1 day'), 'consho_vatIdRequester' => 'ATU99999999']);
+
+        $this->post($this->vatAddress('DE'));
+
+        self::assertSame(['DE123456789'], $this->vatIdSpy->seen);
+        self::assertSame('WAPI1', $this->cartConnection->fetchOne('SELECT consho_vatIdRequestIdentifier FROM tl_member WHERE id = 5'));
+    }
+
+    /**
+     * A basket left overnight: the verdict in the checkout data is
+     * yesterday's, the ID unchanged. With reverse charge in reach the next
+     * submission asks again — for a guest too; without it nothing is asked.
+     */
+    public function testEinErgebnisVonGesternWirdBeiReverseChargeErneuert(): void
+    {
+        $this->deliveryCountries = ['AT', 'DE'];
+        $this->vatIdSpy->checkedAt = time();
+        $this->post($this->vatAddress('DE'));
+        self::assertCount(1, $this->vatIdSpy->seen);
+
+        // The night passes: the verdict in the basket is now yesterday's.
+        $data = $this->repository->checkoutDataOf($this->cartId);
+        $this->repository->saveCheckoutData($this->cartId, $data->withVatCheck(new VatIdCheckResult(VatIdStatus::Valid, (int) strtotime('-1 day'), null, 'WAPI1')), time());
+
+        $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_method' => '4'], step: 2);
+        self::assertSame(2, $this->seenCount());
+        self::assertSame($this->vatIdSpy->checkedAt, $this->repository->checkoutDataOf($this->cartId)->vatCheck?->checkedAt);
+
+        // Today's verdict holds for the rest of the checkout.
+        $this->post(['consho_checkout_block' => 'payment', 'consho_payment_method' => '9'], step: 2);
+        self::assertSame(2, $this->seenCount());
+    }
+
+    public function testOhneReverseChargeBleibtDasAlteErgebnis(): void
+    {
+        $this->vatIdSpy->checkedAt = (int) strtotime('-1 day');
+        $this->post($this->vatAddress('AT'));
+        self::assertSame(1, $this->seenCount());
+        $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_method' => '4'], step: 2);
+
+        self::assertSame(1, $this->seenCount());
+    }
+
+    private function seenCount(): int
+    {
+        return \count($this->vatIdSpy->seen);
+    }
+
+    /**
+     * A VAT ID typed in the checkout belongs to the order: asked as before,
+     * nothing written to the member.
+     */
+    public function testEineAndereUidSchreibtNichtsAnsMitglied(): void
+    {
+        $this->memberWithVatId(['consho_vatIdStatus' => 'valid', 'consho_vatIdCheckedAt' => (int) strtotime('-3 months'), 'consho_vatIdRequestIdentifier' => 'WAPIOLD', 'consho_vatIdRequester' => 'ATU99999999']);
+
+        $this->post([...$this->vatAddress('AT'), 'consho_vat_id' => 'DE999999999']);
+
+        self::assertSame(['DE999999999'], $this->vatIdSpy->seen);
+        self::assertSame('WAPIOLD', $this->cartConnection->fetchOne('SELECT consho_vatIdRequestIdentifier FROM tl_member WHERE id = 5'));
+    }
+
+    /**
+     * @param array<string, mixed> $vatFields
+     */
+    private function memberWithVatId(array $vatFields): void
+    {
+        // VIES answers with the moment of the query.
+        $this->vatIdSpy->checkedAt = time();
+        $this->memberId = 5;
+        $this->cartConnection->insert('tl_member', ['id' => 5, 'consho_vatId' => 'DE123456789'] + $vatFields + ['consho_vatIdChecked' => 'DE123456789']);
+        $this->cartId = $this->repository->create(null, 5, self::SHOP, 1_000);
+        $this->repository->addItem($this->cartId, self::ARTICLE, '1.0000', 1_000);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function vatAddress(string $country): array
+    {
+        return [
+            'consho_checkout_block' => 'address',
+            'billing_company' => 'Muster GmbH',
+            'billing_lastname' => 'Muster',
+            'billing_street' => 'Hauptstr. 1',
+            'billing_postal' => '1100',
+            'billing_city' => 'Wien',
+            'billing_country' => $country,
+            'billing_email' => 'eva@example.org',
+            'consho_vat_id' => 'DE 123456789',
+        ];
     }
 
     public function testErneutPruefenFragtNochEinmal(): void
@@ -1661,6 +1779,7 @@ class CheckoutControllerTest extends TestCase
             lineTerms: $this->lineTerms(),
             renewals: $this->renewals(),
             durability: $this->durability,
+            memberVatIds: new MemberVatId($this->cartConnection, $this->vatIds()),
         );
 
         $container = new Container();
@@ -1886,11 +2005,14 @@ final class VatIdSpy implements VatIdValidatorInterface
     /** @var list<string> */
     public array $seen = [];
 
+    /** When the answer says it was given; a fixed past moment unless a test needs today. */
+    public int $checkedAt = 1_000;
+
     public function check(string $vatId, string|null $requesterVatId = null): VatIdCheckResult
     {
         $this->seen[] = $vatId;
 
-        return new VatIdCheckResult(VatIdStatus::Valid, 1_000, null, 'WAPI1');
+        return new VatIdCheckResult(VatIdStatus::Valid, $this->checkedAt, null, 'WAPI1');
     }
 }
 

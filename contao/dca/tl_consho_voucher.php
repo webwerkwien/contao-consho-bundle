@@ -45,8 +45,10 @@ $GLOBALS['TL_DCA']['tl_consho_voucher'] = [
         ],
         'operations' => [
             'edit',
-            'bookings' => ['href' => 'table=tl_consho_voucher_booking', 'icon' => 'children.svg', 'primary' => true],
-            'correctVoucher' => ['href' => 'key=correctVoucher', 'icon' => 'modules.svg', 'primary' => true],
+            // Own icons: Contao has none for a history or a balance, and its
+            // plus/minus already stands for "versions" in this row.
+            'bookings' => ['href' => 'table=tl_consho_voucher_booking', 'icon' => 'bundles/contaoconsho/icons/history.svg', 'primary' => true],
+            'correctVoucher' => ['href' => 'key=correctVoucher', 'icon' => 'bundles/contaoconsho/icons/balance.svg', 'primary' => true],
             '!versions',
             '!show',
         ],

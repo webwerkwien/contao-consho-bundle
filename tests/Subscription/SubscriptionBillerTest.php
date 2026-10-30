@@ -13,6 +13,7 @@ use Webwerkwien\ContaoConshoBundle\Address\VatIdCheckResult;
 use Webwerkwien\ContaoConshoBundle\Address\VatIdStatus;
 use Webwerkwien\ContaoConshoBundle\Address\VatIdValidatorInterface;
 use Webwerkwien\ContaoConshoBundle\Checkout\MemberCheckoutDefaults;
+use Webwerkwien\ContaoConshoBundle\Customer\MemberVatId;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryReport;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryReported;
@@ -472,6 +473,26 @@ class SubscriptionBillerTest extends TestCase
         self::assertCount($warnings, $this->warnings);
     }
 
+    /**
+     * The period's verdict also goes onto the member while the VAT ID is the
+     * member's own — no group from a run without a visit.
+     */
+    public function testDasErgebnisKommtAnsMitglied(): void
+    {
+        DcaSchema::createCore($this->connection, 'tl_member');
+        $this->connection->insert('tl_member', ['id' => 7, 'username' => 'kunde', 'consho_vatId' => 'DE123456789']);
+
+        $vatIds = $this->createStub(VatIdValidatorInterface::class);
+        $vatIds->method('check')->willReturn(new VatIdCheckResult(VatIdStatus::Valid, 1_000, null, 'WAPIAAAA'));
+
+        $this->biller(vatIds: $vatIds, memberVatIds: new MemberVatId($this->connection, $vatIds))->billDue(1, $this->at('2026-02-28 11:00'));
+
+        self::assertSame(
+            ['valid', 'WAPIAAAA', 'ATU12345678', null],
+            array_values($this->connection->fetchAssociative('SELECT consho_vatIdStatus, consho_vatIdRequestIdentifier, consho_vatIdRequester, consho_netGroupsAutoAt FROM tl_member WHERE id = 7') ?: []),
+        );
+    }
+
     public function testOhneReverseChargeFragtNiemandVies(): void
     {
         $this->connection->update('tl_consho_subscription', ['reverseCharge' => 0], ['id' => 1]);
@@ -485,7 +506,7 @@ class SubscriptionBillerTest extends TestCase
         self::assertNull($draft->vatCheck);
     }
 
-    private function biller(MemberCheckoutDefaults|null $members = null, VatIdValidatorInterface|null $vatIds = null): SubscriptionBiller
+    private function biller(MemberCheckoutDefaults|null $members = null, VatIdValidatorInterface|null $vatIds = null, MemberVatId|null $memberVatIds = null): SubscriptionBiller
     {
         $orders = $this->createMock(OrderFactoryInterface::class);
         $orders->method('create')->willReturnCallback(function (OrderDraft $draft, array $lines, int $timestamp): int {
@@ -547,6 +568,7 @@ class SubscriptionBillerTest extends TestCase
             },
             $members,
             $vatIds,
+            $memberVatIds,
         );
     }
 

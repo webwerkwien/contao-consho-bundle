@@ -151,6 +151,8 @@ $conshoBackendModules = [
             'tables' => ['tl_consho_subscription', 'tl_consho_cancellation', 'tl_consho_subscription_pause'],
             // Abo pausieren (P101): announce or withdraw a pause.
             'pauseSubscription' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionPauseBackendController::class, '__invoke'],
+            // Cancellations and pauses of one subscription, on one page.
+            'subscriptionHistory' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionHistoryBackendController::class, '__invoke'],
             // E10: the decision mail on a cancellation once more.
             'resendDecision' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DecisionResendBackendController::class, 'resend'],
         ],

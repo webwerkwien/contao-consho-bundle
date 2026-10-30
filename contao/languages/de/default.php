@@ -89,6 +89,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'registrationPathMissing' => 'Shop „%shop%" verkauft Abos, und ein Abo braucht ein Kundenkonto — aber kein Registrierungsmodul gibt neuen Konten die Kundengruppe, schaltet sie frei und erlaubt die Anmeldung. Contao legt neue Mitglieder gesperrt und ohne Anmeldung an. Am Registrierungsmodul „Anmeldung erlauben" und „Konten sofort freischalten" setzen, oder „Kontoaktivierung" mit der Kundengruppe des Shops unter „Standardgruppen".',
     'registrationPathMissingNoGuests' => 'Im Shop „%shop%" ist „Bestellung ohne Konto" aus, also braucht jeder Kauf ein Kundenkonto — aber kein Registrierungsmodul gibt neuen Konten die Kundengruppe, schaltet sie frei und erlaubt die Anmeldung. Neue Kunden können dann nicht bestellen. Am Registrierungsmodul „Anmeldung erlauben" und „Konten sofort freischalten" setzen, oder „Kontoaktivierung" mit der Kundengruppe des Shops unter „Standardgruppen". Legen Sie die Kundenkonten selbst an, ist nichts zu tun.',
     'subscriptionVatIdInvalid' => 'Abos im Shop „%shop%" wurden mit Reverse Charge gekauft, aber bei der letzten Abrechnung meldete VIES die UID als ungültig: %numbers%. Diese Folgebestellung wurde mit Umsatzsteuer berechnet. Bitte mit dem Kunden klären; die nächste Abrechnung prüft die UID erneut.',
+    'netGroupVatIdLost' => 'Mitglieder, die über eine geprüfte UID automatisch in Nettopreis-Gruppen kamen, haben jetzt keine gültige UID mehr (ungültig oder gelöscht): %count% (%members%). Die Gruppen bleiben, bis Sie entscheiden. Unter „Mitglieder" die Gruppen entfernen — oder das Mitglied speichern, dann gelten sie als von Hand vergeben.',
     'customerPageLocksOut' => 'Die Seite „%page%" (Shop „%shop%") zeigt Kunden ihre Bestellungen oder Abos, ist aber geschützt, ohne diese Gruppen zuzulassen: %groups%. Deren Mitglieder bekommen „Zugriff verweigert", ohne Eintrag im Log. In der Seitenstruktur unter „Zugriffsschutz" die Gruppen ergänzen — auch auf der Elternseite, wenn der Schutz von dort kommt.',
     'orderPageProtected' => 'Die Bestellseite „%page%" (Shop „%shop%") ist geschützt, der Shop erlaubt aber Bestellungen ohne Konto. Ein Gast öffnet sie über den Link in der Bestätigungsmail und bekommt „Zugriff verweigert" statt seiner Bestellung. In der Seitenstruktur den „Zugriffsschutz" der Seite entfernen — auch auf der Elternseite, wenn der Schutz von dort kommt.',
     'loginPageMissing' => 'Shop „%shop%": Startpunkte mit geschützten Kundenseiten, aber ohne veröffentlichte 401-Seite: %roots%. Wer abgemeldet eine solche Seite öffnet, sieht Contaos allgemeine Fehlerseite statt der Anmeldung. Direkt unter dem Startpunkt eine Seite vom Typ „401 Nicht authentifiziert" mit einem Login-Modul anlegen und dort „Zur zuletzt besuchten Seite" setzen — sonst landet der Kunde nach der Anmeldung auf der Weiterleitungsseite des Moduls statt auf seiner Kundenseite.',
@@ -533,6 +534,8 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['bankName'] = 'Bank';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['reference'] = 'Verwendungszweck';
 // The grey delete button of a shipping or payment method (C-9).
 $GLOBALS['TL_LANG']['CONSHO']['methodInUse'] = 'Das Element ist mit mind. einer Bestellung verknüpft und darf nicht mehr gelöscht werden.';
+$GLOBALS['TL_LANG']['CONSHO']['recordInUse'] = 'Verwendete Items können nicht entfernt werden.';
+$GLOBALS['TL_LANG']['CONSHO']['defaultStatus'] = ['new' => 'Neu', 'paid' => 'Bezahlt', 'shipped' => 'Versendet', 'completed' => 'Abgeschlossen', 'cancelled' => 'Storniert'];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['giroCode'] = 'Zum Bezahlen mit der Banking-App scannen';
 
 // The confirmation mails (C-9). ⚠️ Placeholders are %s in order: Contao fills
@@ -886,7 +889,7 @@ $GLOBALS['TL_LANG']['CONSHO']['customers'] = [
     'filterLabel' => 'Such- und Filterfunktionen',
     'reset' => 'Zurücksetzen',
     'opShow' => 'Kunde und Bestellungen anzeigen',
-    'noMember' => 'Gast — kein Mitgliedskonto',
+    'noMember' => 'Gastbestellung',
     // D-5: data access and erasure.
     'colErasure' => 'Löschung verlangt',
     'privacyLegend' => 'Auskunft und Löschung',

@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Webwerkwien\ContaoConshoBundle\Address\Address;
 use Webwerkwien\ContaoConshoBundle\Address\AddressNormalizer;
 use Webwerkwien\ContaoConshoBundle\Address\PhoneNormalizer;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdCheckResult;
+use Webwerkwien\ContaoConshoBundle\Address\VatIdStatus;
 use Webwerkwien\ContaoConshoBundle\Address\VatIdValidatorInterface;
 use Webwerkwien\ContaoConshoBundle\Cart\Cart;
 use Webwerkwien\ContaoConshoBundle\Cart\CartAgeLimit;
@@ -41,6 +43,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\MethodOption;
 use Webwerkwien\ContaoConshoBundle\Checkout\MethodSettings;
 use Webwerkwien\ContaoConshoBundle\Checkout\PurchaseProblem;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
+use Webwerkwien\ContaoConshoBundle\Customer\MemberVatId;
 use Webwerkwien\ContaoConshoBundle\Order\BasketGoneAtPurchase;
 use Webwerkwien\ContaoConshoBundle\Order\LegalTextGoneAtPurchase;
 use Webwerkwien\ContaoConshoBundle\Order\NumberRangeNotConfigured;
@@ -158,6 +161,8 @@ class CheckoutController extends AbstractContentElementController
         private readonly NotTaxableArticles|null $notTaxable = null,
         // Block GARAN: the label before the button. Optional like the above.
         private readonly DurabilityLabelImages|null $durability = null,
+        // The VIES result kept on the member, reused for the same VAT ID.
+        private readonly MemberVatId|null $memberVatIds = null,
     ) {
     }
 
@@ -312,6 +317,7 @@ class CheckoutController extends AbstractContentElementController
             && $request->isMethod('POST')
             && CheckoutBlock::Review->value === $request->request->getString('consho_checkout_block')
         ) {
+            $this->refreshStoredForReverseCharge($cart, (string) $shop->vatId, (string) $shop->country);
             $state = $this->stateOf($cart, $shop, $currency, $language, $fallback);
 
             $redirect = new RedirectResponseException(
@@ -345,7 +351,7 @@ class CheckoutController extends AbstractContentElementController
         }
 
         if (null !== $cart && $request->isMethod('POST') && '' !== $request->request->getString('consho_checkout_block')) {
-            $this->apply($request, $cart, (string) $shop->vatId);
+            $this->apply($request, $cart, (string) $shop->vatId, (string) $shop->country);
 
             // POST/redirect/GET, and the target is decided AFTER saving — the
             // freshly calculated state may well send the visitor back rather
@@ -582,23 +588,25 @@ class CheckoutController extends AbstractContentElementController
         return $value;
     }
 
-    private function apply(Request $request, Cart $cart, string $shopVatId): void
+    private function apply(Request $request, Cart $cart, string $shopVatId, string $shopCountry): void
     {
         $block = CheckoutBlock::tryFrom($request->request->getString('consho_checkout_block'));
         $data = $this->repository->checkoutDataOf($cart->id);
 
         $data = match ($block) {
-            CheckoutBlock::Address => $this->applyAddress($request, $data, $shopVatId),
+            CheckoutBlock::Address => $this->applyAddress($request, $data, $shopVatId, $shopCountry),
             CheckoutBlock::Shipping => $this->applyShipping($request, $data),
             CheckoutBlock::Payment => $data->withPaymentMethod((int) $request->request->getString('consho_payment_method')),
             // Review is C-6; an unknown value is a form nobody built.
             default => $data,
         };
 
+        $data = $this->refreshedForReverseCharge($data, $shopVatId, $shopCountry);
+
         $this->repository->saveCheckoutData($cart->id, $data, time());
     }
 
-    private function applyAddress(Request $request, CheckoutData $data, string $shopVatId): CheckoutData
+    private function applyAddress(Request $request, CheckoutData $data, string $shopVatId, string $shopCountry): CheckoutData
     {
         $separate = '' !== $request->request->getString('consho_separate_shipping');
 
@@ -618,15 +626,96 @@ class CheckoutController extends AbstractContentElementController
          * address costs nothing. "Check again" (C15) forces one by clearing
          * the verdict first; that is the button for an unreachable VIES.
          */
-        if ('' !== $request->request->getString('consho_recheck_vat')) {
+        $recheck = '' !== $request->request->getString('consho_recheck_vat');
+
+        if ($recheck) {
             $data = $data->withVatCheck(null);
         }
 
         if ('' !== $data->vatId && null === $data->vatCheck) {
-            $data = $data->withVatCheck($this->vatIds->check($data->vatId, '' === $shopVatId ? null : $shopVatId));
+            $data = $data->withVatCheck($this->checkVatId($data, $shopVatId, $shopCountry, $recheck));
         }
 
         return $data;
+    }
+
+    /**
+     * A member's own VAT ID goes through the result kept on the member: it
+     * holds twelve months, or only from today where the order would be free
+     * of tax by reverse charge (MemberVatId). A fresh query is written back
+     * to the member — that is how the yearly check happens. Never a group:
+     * a VAT ID typed here belongs to the order, and groups come only where
+     * the member's own is set (MemberVatIdUpdate).
+     *
+     * Any other VAT ID, and every guest, is asked as before.
+     */
+    private function checkVatId(CheckoutData $data, string $shopVatId, string $shopCountry, bool $recheck): VatIdCheckResult
+    {
+        $memberId = $this->carts->memberId();
+        $requester = '' === $shopVatId ? null : $shopVatId;
+
+        if ($memberId < 1 || null === $this->memberVatIds || !$this->memberVatIds->hasVatId($memberId, $data->vatId)) {
+            return $this->vatIds->check($data->vatId, $requester);
+        }
+
+        if ($recheck) {
+            $result = $this->vatIds->check($data->vatId, $requester);
+            $this->memberVatIds->record($memberId, $data->vatId, $shopVatId, $result);
+
+            return $result;
+        }
+
+        return $this->memberVatIds->ensure($memberId, $shopVatId, self::crossBorder($data, $shopVatId, $shopCountry), time())
+            ?? $this->vatIds->check($data->vatId, $requester);
+    }
+
+    /**
+     * Whether reverse charge is in reach — as appliesReverseCharge() has it,
+     * short of the verdict itself.
+     */
+    private static function crossBorder(CheckoutData $data, string $shopVatId, string $shopCountry): bool
+    {
+        $home = strtoupper(trim($shopCountry));
+
+        return '' !== trim($shopVatId) && '' !== $home && $home !== $data->deliveryCountry();
+    }
+
+    /**
+     * A valid verdict from an earlier day does not carry reverse charge: the
+     * order is free of tax on the VAT ID as it stands on the day of the
+     * purchase (MemberVatId). The checkout data keeps a verdict while the ID
+     * is unchanged — a basket left overnight, or a delivery address switched
+     * abroad the next day, would otherwise buy on yesterday's check.
+     *
+     * Asked again on a submission only, never on display. Where the new
+     * answer changes the amounts, the fingerprint of the review no longer
+     * matches and the buy click goes back to it.
+     */
+    private function refreshedForReverseCharge(CheckoutData $data, string $shopVatId, string $shopCountry): CheckoutData
+    {
+        $check = $data->vatCheck;
+
+        if (
+            '' === $data->vatId
+            || null === $check
+            || VatIdStatus::Valid !== $check->status
+            || !self::crossBorder($data, $shopVatId, $shopCountry)
+            || MemberVatId::holds($check, true, time())
+        ) {
+            return $data;
+        }
+
+        return $data->withVatCheck($this->checkVatId($data, $shopVatId, $shopCountry, false));
+    }
+
+    private function refreshStoredForReverseCharge(Cart $cart, string $shopVatId, string $shopCountry): void
+    {
+        $data = $this->repository->checkoutDataOf($cart->id);
+        $refreshed = $this->refreshedForReverseCharge($data, $shopVatId, $shopCountry);
+
+        if ($refreshed !== $data) {
+            $this->repository->saveCheckoutData($cart->id, $refreshed, time());
+        }
     }
 
     private function addressOf(Request $request, string $prefix): Address

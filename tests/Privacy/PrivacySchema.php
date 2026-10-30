@@ -24,7 +24,7 @@ final class PrivacySchema
         $c->executeStatement("CREATE TABLE tl_member (id INTEGER PRIMARY KEY, tstamp INTEGER NOT NULL DEFAULT 0, firstname TEXT NOT NULL DEFAULT '', lastname TEXT NOT NULL DEFAULT '', email TEXT NOT NULL DEFAULT '', groups BLOB NULL,
             consho_shippingCompany TEXT NOT NULL DEFAULT '', consho_shippingSalutation TEXT NOT NULL DEFAULT '', consho_shippingFirstname TEXT NOT NULL DEFAULT '', consho_shippingLastname TEXT NOT NULL DEFAULT '',
             consho_shippingStreet TEXT NOT NULL DEFAULT '', consho_shippingPostal TEXT NOT NULL DEFAULT '', consho_shippingCity TEXT NOT NULL DEFAULT '', consho_shippingState TEXT NOT NULL DEFAULT '', consho_shippingCountry TEXT NOT NULL DEFAULT '',
-            consho_vatId TEXT NOT NULL DEFAULT '', consho_vatIdStatus TEXT NOT NULL DEFAULT '', consho_vatIdCheckedAt INTEGER NULL, consho_vatIdRequestIdentifier TEXT NOT NULL DEFAULT '',
+            consho_vatId TEXT NOT NULL DEFAULT '', consho_vatIdStatus TEXT NOT NULL DEFAULT '', consho_vatIdCheckedAt INTEGER NULL, consho_vatIdRequestIdentifier TEXT NOT NULL DEFAULT '', consho_vatIdRequester TEXT NOT NULL DEFAULT '', consho_vatIdChecked TEXT NOT NULL DEFAULT '', consho_netGroupsAuto BLOB NULL, consho_netGroupsAutoAt INTEGER NULL,
             consho_confirmedEmail TEXT NOT NULL DEFAULT '', consho_confirmedEmailAt INTEGER NULL)");
 
         // Every Consho table from its DCA, so a personal column added there

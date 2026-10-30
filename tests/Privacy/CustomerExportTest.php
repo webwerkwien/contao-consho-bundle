@@ -174,6 +174,25 @@ final class CustomerExportTest extends TestCase
         self::assertStringNotContainsString('FREMD-1', json_encode($data, JSON_THROW_ON_ERROR));
     }
 
+    /**
+     * Which groups a verified VAT ID added — by name, not as a serialised
+     * list of ids.
+     */
+    public function testAutomatischVergebeneGruppenMitNamen(): void
+    {
+        $this->connection->executeStatement("CREATE TABLE tl_member_group (id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT '')");
+        $this->connection->insert('tl_member_group', ['id' => 8, 'name' => 'Händler netto']);
+        $this->connection->update('tl_member', ['consho_netGroupsAuto' => serialize(['8']), 'consho_netGroupsAutoAt' => strtotime('2026-10-30 09:00')], ['id' => 5]);
+
+        $export = $this->export()->export(1, 'm:5', strtotime('2026-10-30 12:00'));
+        self::assertIsArray($export);
+        $data = json_decode($this->unzip($export['zip'])['daten.json'], true);
+        self::assertIsArray($data);
+
+        self::assertSame(['Händler netto'], $data['account']['consho_netGroupsAuto']);
+        self::assertSame(date(\DATE_ATOM, strtotime('2026-10-30 09:00')), $data['account']['consho_netGroupsAutoAt']);
+    }
+
     public function testEinGastOhneKonto(): void
     {
         $data = json_decode($this->unzip($this->export()->export(1, 'g:fremd@example.org', 1)['zip'] ?? '')['daten.json'], true);

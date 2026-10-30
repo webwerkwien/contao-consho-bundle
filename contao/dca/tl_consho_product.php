@@ -91,10 +91,12 @@ $GLOBALS['TL_DCA']['tl_consho_product'] = [
             // without the flag moves behind ⋯ as soon as ONE operation has it,
             // and Contao's named `edit` brings it along. In the core the jump
             // to the children is primary too (`children` in getDefaults()).
-            'prices' => ['href' => 'table=tl_consho_price', 'icon' => 'header.svg', 'primary' => true],
+            // Contao has no price icon; ours is drawn like Contao's own
+            // (Lucide strokes, the blue of its child tables).
+            'prices' => ['href' => 'table=tl_consho_price', 'icon' => 'bundles/contaoconsho/icons/price.svg', 'primary' => true],
             // F-6: the key pool. Only drawn for an article delivered from one
             // (KeyPoolListener) — a physical shop never sees it.
-            'keys' => ['href' => 'table=tl_consho_key', 'icon' => 'lock.svg', 'primary' => true],
+            'keys' => ['href' => 'table=tl_consho_key', 'icon' => 'lock-locked.svg', 'primary' => true],
             'edit',
             '!copy',
             '!delete',

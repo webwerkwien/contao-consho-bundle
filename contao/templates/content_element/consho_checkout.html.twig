@@ -44,7 +44,7 @@
         <p class="consho-checkout__renewal-refused" role="alert">{{ "CONSHO.subscription.renewalRefused"|trans([renewal_refused], "contao_default") }}</p>
     {% elseif blockers|default([]) is not empty %}
         {#
-1.2: a warning blocks the checkout of this shop. What is missing
+            11.2: a warning blocks the checkout of this shop. What is missing
             is shown in the back end — telling the customer that no payment
             method is set up helps nobody.
         #}
@@ -62,9 +62,13 @@
     {% else %}
         <nav class="consho-checkout__steps" aria-label="{{ "CONSHO.checkout.steps"|trans({}, "contao_default") }}">
             <ol>
+                {#- An earlier step is a way back, a plain link without JavaScript.
+                    A later one is not: the controller sends a visitor forward
+                    only once the blocks before are complete. #}
                 {% for number in 1..step_count %}
+                    {% set label = ("CONSHO.checkout.step." ~ step_labels[number - 1])|trans({}, "contao_default") %}
                     <li{% if number == step %} aria-current="step"{% endif %}>
-                        {{ ("CONSHO.checkout.step." ~ step_labels[number - 1])|trans({}, "contao_default") }}
+                        {% if number < step %}<a href="?consho_step={{ number }}">{{ label }}</a>{% else %}{{ label }}{% endif %}
                     </li>
                 {% endfor %}
             </ol>
@@ -353,7 +357,7 @@
                                 {#
                                     The harmonised notice on the legal guarantee
                                     (§ 4 Abs 1 Z 12 FAGG, Implementing Regulation (EU)
-025/1960). The guidelines (2.3) name the checkout
+                                    2025/1960). The guidelines (2.3) name the checkout
                                     page expressly as an acceptable place and ask for a
                                     CLICKABLE link to the same target as the QR code —
                                     the linked page carries it.

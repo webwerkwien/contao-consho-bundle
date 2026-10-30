@@ -106,19 +106,27 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
         ],
         'operations' => [
             /*
-             * `primary` on all five jumps. Without it they would move behind
-             * the ⋯ menu, because ONE operation carrying the flag switches the
-             * whole list over (`has_primary` in DataContainerOperationsBuilder)
-             * — and Contao's named `edit` brings it along. This list would be
-             * left with the pencil alone, and the five jumps are what it is
-             * for. In the core the jump to the children is primary as well.
+             * Two groups. In the row, with `primary`, what the daily work on an
+             * order needs: items, payments, deliveries, withdrawals,
+             * complaints, edit. Behind the ⋯ menu, with `'primary' => false`
+             * written out, what is looked up now and then: documents,
+             * entitlements, legal texts, details, resending the confirmation,
+             * the payment term, versions. Thirteen buttons in one row were too
+             * many to find the one needed.
+             *
+             * ONE operation carrying `primary` switches the whole list over
+             * (`has_primary` in DataContainerOperationsBuilder), and Contao's
+             * named `edit` brings it along: whatever lacks it goes to the menu.
+             * The price of the menu: an operation disabled for a user is not
+             * drawn there at all, instead of greyed out (see
+             * EveryDeleteButtonAsksBeforeDeletingTest, which lists these).
              */
-            'items' => ['href' => 'table=tl_consho_order_item', 'icon' => 'header.svg', 'primary' => true],
+            // Contao's children icon in orange, the colour of the order.
+            'items' => ['href' => 'table=tl_consho_order_item', 'icon' => 'bundles/contaoconsho/icons/order-items.svg', 'primary' => true],
 
-            // Not show.svg, which the 'show' operation already uses in this
-            // very row — the same picture would mean 'documents' once and
-            // 'details' once.
-            'documents' => ['href' => 'table=tl_consho_document', 'icon' => 'document.svg', 'primary' => true],
+            // Not show.svg, which the 'show' operation already uses — the same
+            // picture would mean 'documents' once and 'details' once.
+            'documents' => ['href' => 'table=tl_consho_document', 'icon' => 'document.svg', 'primary' => false],
 
             /*
              * The same icon means the same thing in the label and in the button
@@ -134,12 +142,12 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
             'deliveries' => ['href' => 'table=tl_consho_delivery', 'icon' => 'copy.svg', 'primary' => true],
 
             // F-4. What the customer may use from the digital lines.
-            'entitlements' => ['href' => 'table=tl_consho_entitlement', 'icon' => 'lock.svg', 'primary' => true],
+            'entitlements' => ['href' => 'table=tl_consho_entitlement', 'icon' => 'lock-locked.svg', 'primary' => false],
 
             // What the customer read when they ordered (C-7). Reachable from
             // the list, because the question it answers is asked about a
             // particular order, not browsed.
-            'legal' => ['href' => 'table=tl_consho_order_legal', 'icon' => 'articles.svg', 'primary' => true],
+            'legal' => ['href' => 'table=tl_consho_order_legal', 'icon' => 'articles.svg', 'primary' => false],
 
             // D-2. The declared withdrawals. Both buttons show whether there
             // is anything behind them (F13, OrderAftercareButtonListener).
@@ -148,18 +156,16 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
             // D-3 (U2): complaints as notes.
             'complaints' => ['href' => 'table=tl_consho_complaint', 'icon' => 'important.svg', 'primary' => true],
             'edit',
-            'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
+            'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => false],
 
             // C-9. POST like the core's own resend (tl_opt_in): the button is a
             // form with the request token, not a link any page could trigger.
-            // Primary like every operation here (see
-            // EveryDeleteButtonAsksBeforeDeletingTest).
-            'resendConfirmation' => ['href' => 'key=resendConfirmation', 'icon' => 'resend.svg', 'method' => 'POST', 'primary' => true],
+            'resendConfirmation' => ['href' => 'key=resendConfirmation', 'icon' => 'resend.svg', 'method' => 'POST', 'primary' => false],
 
             // E8: a later payment term agreed with the customer — a page with
             // a form, like "Pausieren" at a subscription.
-            'deferPayment' => ['href' => 'key=deferPayment', 'icon' => 'forward.svg', 'primary' => true],
-            '!versions',
+            'deferPayment' => ['href' => 'key=deferPayment', 'icon' => 'forward.svg', 'primary' => false],
+            'versions',
         ],
     ],
 

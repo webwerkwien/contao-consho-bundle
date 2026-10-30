@@ -8,3 +8,4 @@ $GLOBALS['TL_LANG']['tl_consho_subscription_pause']['source'] = ['Announced by',
 $GLOBALS['TL_LANG']['tl_consho_subscription_pause']['sources'] = ['account' => 'Customer ("My subscriptions")', 'operator' => 'Operator'];
 $GLOBALS['TL_LANG']['tl_consho_subscription_pause']['requestedAt'] = ['Announced on', ''];
 $GLOBALS['TL_LANG']['tl_consho_subscription_pause']['withdrawnAt'] = ['Withdrawn on', 'Empty: the pause stands.'];
+$GLOBALS['TL_LANG']['tl_consho_subscription_pause']['show'] = ['Details', 'Show the details of pause ID %s'];

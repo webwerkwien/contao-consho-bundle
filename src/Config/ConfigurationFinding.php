@@ -180,6 +180,10 @@ enum ConfigurationFinding: string
     // invalid at VIES and was taxed (SubscriptionVatIdIssueSource).
     case SubscriptionVatIdInvalid = 'subscriptionVatIdInvalid';
 
+    // Members a verified VAT ID put into net price groups, whose VAT ID is
+    // now invalid or gone (NetGroupVatIdIssueSource).
+    case NetGroupVatIdLost = 'netGroupVatIdLost';
+
     // Abo-4b (P99): subscriptions whose mandate charges through a payment
     // method the shop no longer offers — they are billed "on account".
     case MandateMethodUnavailable = 'mandateMethodUnavailable';
@@ -294,6 +298,7 @@ enum ConfigurationFinding: string
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
             self::SubscriptionsSuspended, self::CancellationsWaiting, self::DecisionNotSent, self::SubscriptionCountryChanged, self::SubscriptionVatIdInvalid => ['consho_subscription'],
             self::MandateMethodUnavailable => ['consho_subscription', 'consho_payment'],
+            self::NetGroupVatIdLost => ['member'],
             self::RootWithoutCurrency, self::RootCurrencyNotSold, self::CurrencyMissing => ['page', 'consho_shop'],
             self::PathTemplateInvalid, self::CatalogPageAlwaysCached, self::CheckoutPageMissing, self::CartPageMissing,
             self::OrderPageMissing, self::PrivacyPageMissing, self::WarrantyNoticeMissing,
@@ -766,6 +771,10 @@ enum ConfigurationFinding: string
 
             // Taxed where the purchase was not — the customer has to hear it.
             self::SubscriptionVatIdInvalid => true,
+
+            // Net prices for someone without a valid VAT ID — the operator
+            // decides whether that stays, but has to know.
+            self::NetGroupVatIdLost => true,
 
             // The customer chose to be charged and gets invoices (P99) — a
             // warning.

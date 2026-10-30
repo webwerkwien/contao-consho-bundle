@@ -172,11 +172,14 @@
                 <td class="tl_file_list col_orders">{{ c.orders }}</td>
                 <td class="tl_file_list col_last ordered_by">{{ c.last ?: '—' }}</td>
                 <td class="tl_file_list tl_right_nowrap">
+                    {# As in Contao's operations: the icon's alt is the tooltip.
+                       A title on the link as well gives a second one; the
+                       disabled icon has no link and is made a target itself. #}
                     <div class="operations">
                         <ul>
-                            <li><a class="show has-icon" href="{{ c.url }}" title="{{ l.opShow|default('Kunde und Bestellungen anzeigen') }}">{{ backend_icon('children.svg', l.opShow|default('Kunde und Bestellungen anzeigen')) }}</a></li>
-                            <li><a class="export has-icon" href="{{ c.exportUrl }}" title="{{ l.exportButton|default('Auskunft herunterladen') }}">{{ backend_icon('archive.svg', l.exportButton|default('Auskunft herunterladen')) }}</a></li>
-                            <li>{% if c.memberUrl %}<a class="member has-icon" href="{{ c.memberUrl }}" {{ m.popup(l.openMember|default('Mitgliedskonto öffnen')) }} title="{{ l.openMember|default('Mitgliedskonto öffnen') }}">{{ backend_icon('member.svg', l.openMember|default('Mitgliedskonto öffnen')) }}</a>{% else %}{{ backend_icon('member--disabled.svg', l.noMember|default('Gast — kein Mitgliedskonto')) }}{% endif %}</li>
+                            <li><a class="show has-icon" href="{{ c.url }}">{{ backend_icon('children.svg', l.opShow|default('Kunde und Bestellungen anzeigen')) }}</a></li>
+                            <li><a class="export has-icon" href="{{ c.exportUrl }}">{{ backend_icon('archive.svg', l.exportButton|default('Auskunft herunterladen')) }}</a></li>
+                            <li>{% if c.memberUrl %}<a class="member has-icon" href="{{ c.memberUrl }}" {{ m.popup(l.openMember|default('Mitgliedskonto öffnen')) }}>{{ backend_icon('member.svg', l.openMember|default('Mitgliedskonto öffnen')) }}</a>{% else %}{{ backend_icon('member--disabled.svg', l.noMember|default('Gastbestellung'), attrs({'data-contao--tooltips-target': 'tooltip'})) }}{% endif %}</li>
                         </ul>
                     </div>
                 </td>

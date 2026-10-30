@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use Webwerkwien\ContaoConshoBundle\Cron\AccountFromOrderCron;
 use Webwerkwien\ContaoConshoBundle\Customer\AccountFromOrderActivation;
 use Webwerkwien\ContaoConshoBundle\Customer\MemberOrders;
+use Webwerkwien\ContaoConshoBundle\Customer\NetGroupAssigner;
 use Webwerkwien\ContaoConshoBundle\Customer\RegistrationActivation;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
@@ -52,6 +53,30 @@ final class AccountFromOrderActivationTest extends TestCase
         self::assertSame(['7'], StringUtil::deserialize($member['grp'], true), 'Basisgruppe des Shops');
         self::assertSame('kundin@example.org', $member['consho_confirmedEmail'], 'der Klick belegt die Adresse');
         self::assertSame(self::NOW, (int) $member['consho_confirmedEmailAt']);
+    }
+
+    /**
+     * A VAT ID verified on the order opens the account into the net price
+     * groups as well — after the customer group, which is written whole.
+     */
+    public function testMitGepruefterUidKommenDieNettopreisGruppenDazu(): void
+    {
+        DcaSchema::createCore($this->connection, 'tl_member_group');
+        foreach ([7, 8] as $id) {
+            $this->connection->insert('tl_member_group', ['id' => $id, 'name' => 'Gruppe '.$id]);
+        }
+        $this->connection->update('tl_consho_shop', ['netPriceGroups' => serialize(['8']), 'vatIdNetGroups' => 1], ['id' => 1]);
+        $this->connection->update('tl_member', ['consho_vatId' => 'DE123456789', 'consho_vatIdStatus' => 'valid'], ['id' => 5]);
+
+        $activation = new AccountFromOrderActivation(
+            $this->connection,
+            new RegistrationActivation($this->connection, new RequestStack()),
+            new MemberOrders($this->connection),
+            new NetGroupAssigner($this->connection),
+        );
+        $activation->activate(5, 1, self::NOW);
+
+        self::assertSame(['7', '8'], StringUtil::deserialize($this->connection->fetchOne('SELECT "groups" FROM tl_member WHERE id = 5'), true));
     }
 
     public function testEinGewoehnlichesKontoBleibtUnberuehrt(): void

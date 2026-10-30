@@ -42,7 +42,7 @@ class MemberDcaTest extends TestCase
     {
         $fields = $GLOBALS['TL_DCA']['tl_member']['fields'];
 
-        foreach (['consho_vatIdStatus', 'consho_vatIdCheckedAt', 'consho_vatIdRequestIdentifier', 'consho_confirmedEmail', 'consho_confirmedEmailAt'] as $field) {
+        foreach (['consho_vatIdStatus', 'consho_vatIdCheckedAt', 'consho_vatIdRequestIdentifier', 'consho_vatIdRequester', 'consho_vatIdChecked', 'consho_netGroupsAuto', 'consho_netGroupsAutoAt', 'consho_confirmedEmail', 'consho_confirmedEmailAt'] as $field) {
             self::assertArrayNotHasKey('feEditable', $fields[$field]['eval'] ?? [], $field);
         }
     }

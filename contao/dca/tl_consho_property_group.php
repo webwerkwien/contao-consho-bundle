@@ -59,7 +59,7 @@ $GLOBALS['TL_DCA']['tl_consho_property_group'] = [
              * a form showing the property itself.
              */
             // `primary` keeps the jump in the row — see tl_consho_product.
-            'values' => ['href' => 'table=tl_consho_property_option', 'icon' => 'header.svg', 'primary' => true],
+            'values' => ['href' => 'table=tl_consho_property_option', 'icon' => 'modules.svg', 'primary' => true],
             'edit',
             '!copy',
             '!delete',

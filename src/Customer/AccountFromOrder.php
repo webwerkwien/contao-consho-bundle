@@ -205,7 +205,7 @@ class AccountFromOrder
             'password' => '',
             'disable' => 1,
             'consho_accountPending' => $now,
-        ];
+        ] + self::vatCheckOf($order);
 
         try {
             $this->connection->insert('tl_member', $row);
@@ -219,6 +219,33 @@ class AccountFromOrder
         }
 
         return (int) $this->connection->lastInsertId();
+    }
+
+    /**
+     * The order's VIES verdict goes along with its VAT ID — the account is
+     * opened without asking VIES again, and the net price groups follow on
+     * opening (AccountFromOrderActivation). "Unavailable" is no verdict and
+     * stays behind.
+     *
+     * The verdict only, not the evidence: the order keeps neither the moment
+     * of the check (a basket may wait for days between check and purchase)
+     * nor the VAT ID it asked with, and the shop's may have changed since.
+     * Without a time the result is never reused — the next check that needs
+     * one asks VIES again (MemberVatId).
+     *
+     * @param array<string, string> $order
+     *
+     * @return array<string, string>
+     */
+    private static function vatCheckOf(array $order): array
+    {
+        $status = $order['vatIdStatus'] ?? '';
+
+        if ('' === trim($order['vatId'] ?? '') || !\in_array($status, ['valid', 'invalid'], true)) {
+            return [];
+        }
+
+        return ['consho_vatIdStatus' => $status];
     }
 
     /**

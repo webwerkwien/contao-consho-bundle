@@ -36,7 +36,7 @@ PaletteManipulator::create()
     )
     ->addLegend('consho_tax_legend', 'consho_shipping_legend', PaletteManipulator::POSITION_AFTER)
     ->addField(
-        ['consho_vatId', 'consho_vatIdStatus', 'consho_vatIdCheckedAt', 'consho_vatIdRequestIdentifier'],
+        ['consho_vatId', 'consho_vatIdStatus', 'consho_vatIdCheckedAt', 'consho_vatIdRequestIdentifier', 'consho_vatIdRequester', 'consho_netGroupsAutoAt'],
         'consho_tax_legend',
         PaletteManipulator::POSITION_APPEND,
     )
@@ -130,8 +130,50 @@ $GLOBALS['TL_DCA']['tl_member']['fields']['consho_vatIdCheckedAt'] = [
 $GLOBALS['TL_DCA']['tl_member']['fields']['consho_vatIdRequestIdentifier'] = [
     'inputType' => 'text',
     'exclude' => true,
-    'eval' => ['readonly' => true, 'tl_class' => 'clr'],
+    'eval' => ['readonly' => true, 'tl_class' => 'w50 clr'],
     'sql' => ['type' => 'string', 'length' => 64, 'default' => ''],
+];
+
+/*
+ * The shop VAT ID the check named as requester. VIES issues the consultation
+ * number for THAT business: a result is only reused for a shop with the same
+ * VAT ID, or one company's invoice would carry another company's evidence
+ * (MemberVatId).
+ */
+$GLOBALS['TL_DCA']['tl_member']['fields']['consho_vatIdRequester'] = [
+    'inputType' => 'text',
+    'exclude' => true,
+    'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+    'sql' => ['type' => 'string', 'length' => 32, 'default' => ''],
+];
+
+/*
+ * The VAT ID the stored result was asked for, normalized. The member may
+ * change consho_vatId at any time — in "Persönliche Daten", in the back end,
+ * by import — and the result only holds for the ID it was given for.
+ */
+$GLOBALS['TL_DCA']['tl_member']['fields']['consho_vatIdChecked'] = [
+    'sql' => ['type' => 'string', 'length' => 32, 'default' => ''],
+];
+
+/*
+ * The net price groups a verified VAT ID added (NetGroupAssigner), and when.
+ * Only these count as automatic: a group the operator gave by hand is never
+ * listed, and saving the member in the back end confirms the listed ones as
+ * the operator's own — the list is emptied then (MemberVatIdBackendListener).
+ * While it holds a group, a VAT ID gone invalid or removed shows on the
+ * dashboard (NetGroupVatIdIssueSource); nothing takes the group away.
+ */
+$GLOBALS['TL_DCA']['tl_member']['fields']['consho_netGroupsAuto'] = [
+    'sql' => ['type' => 'blob', 'notnull' => false],
+];
+
+$GLOBALS['TL_DCA']['tl_member']['fields']['consho_netGroupsAutoAt'] = [
+    'inputType' => 'text',
+    'exclude' => true,
+    'eval' => ['rgxp' => 'datim', 'readonly' => true, 'tl_class' => 'w50 clr'],
+    // NULL-able for the reason given at consho_vatIdCheckedAt.
+    'sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false],
 ];
 
 /*

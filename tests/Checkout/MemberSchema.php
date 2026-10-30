@@ -23,7 +23,7 @@ use Doctrine\DBAL\Connection;
  * - `gender varchar(32)` is there although it is **not** taken over — so
  *   that a test can record that it is left alone.
  *
- * Only the columns `MemberCheckoutDefaults` queries: a replica of
+ * Only the columns `MemberCheckoutDefaults` and `MemberVatId` query: a replica of
  * `tl_member` with all sixty fields would be a second truth that drifts
  * apart.
  */
@@ -55,7 +55,12 @@ trait MemberSchema
                 consho_shippingCity TEXT NOT NULL DEFAULT "",
                 consho_shippingState TEXT NOT NULL DEFAULT "",
                 consho_shippingCountry TEXT NOT NULL DEFAULT "",
-                consho_vatId TEXT NOT NULL DEFAULT ""
+                consho_vatId TEXT NOT NULL DEFAULT "",
+                consho_vatIdStatus TEXT NOT NULL DEFAULT "",
+                consho_vatIdCheckedAt INTEGER NULL,
+                consho_vatIdRequestIdentifier TEXT NOT NULL DEFAULT "",
+                consho_vatIdRequester TEXT NOT NULL DEFAULT "",
+                consho_vatIdChecked TEXT NOT NULL DEFAULT ""
             )',
         );
     }

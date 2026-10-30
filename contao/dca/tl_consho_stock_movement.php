@@ -23,6 +23,9 @@ $GLOBALS['TL_DCA']['tl_consho_stock_movement'] = [
     'list' => [
         'sorting' => ['mode' => 4, 'fields' => ['createdAt DESC', 'id DESC'], 'headerFields' => ['article', 'quantity']],
         'label' => ['fields' => ['createdAt', 'delta', 'quantityAfter', 'reason']],
+        // Read only and ordered by time: without this list Contao adds its
+        // defaults, among them a "cut" that could never be used.
+        'operations' => ['!show'],
     ],
 
     'palettes' => ['default' => '{movement_legend},createdAt,delta,quantityAfter,reason,orderId,withdrawalId,purchaseList,user'],

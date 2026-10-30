@@ -281,8 +281,9 @@ class BackendSystemMessagesListenerTest extends TestCase
     {
         preg_match_all("/^\s*'(consho_[a-z_]+)' => \[/m", (string) file_get_contents(__DIR__.'/../../contao/config/config.php'), $matches);
         // Contao's own: site structure, articles, and the themes with their front end modules (Nachlese KA5),
-        // and the file manager (block GARAN: a label in a folder that is not public).
-        $modules = [...$matches[1], 'page', 'article', 'themes', 'files'];
+        // the file manager (block GARAN: a label in a folder that is not public),
+        // and the members (net price groups from a verified VAT ID).
+        $modules = [...$matches[1], 'page', 'article', 'themes', 'files', 'member'];
 
         foreach (ConfigurationFinding::cases() as $finding) {
             foreach ($finding->fixedIn() as $module) {

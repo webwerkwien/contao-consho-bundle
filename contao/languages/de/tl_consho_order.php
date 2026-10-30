@@ -56,7 +56,8 @@ $GLOBALS['TL_LANG']['tl_consho_order']['tax_legend'] = 'Umsatzsteuer';
 $GLOBALS['TL_LANG']['tl_consho_order']['total_legend'] = 'Summen';
 
 $GLOBALS['TL_LANG']['tl_consho_order']['items'] = ['Positionen', 'Positionen der Bestellung ID %s bearbeiten'];
-$GLOBALS['TL_LANG']['tl_consho_order']['legal'] = ['Rechtstexte', 'Rechtstexte der Bestellung ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_order']['documents'] = ['Dokumente', 'Dokumente der Bestellung ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_order']['legal'] =['Rechtstexte', 'Rechtstexte der Bestellung ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['withdrawals'] = ['Widerrufe', 'Widerrufe der Bestellung ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['complaints'] = ['Reklamationen', 'Reklamationen der Bestellung ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['complaintsNone'] = 'Noch keine Reklamation — hier eine erfassen';
@@ -117,7 +118,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
         // Keyed by PaymentState, not by colour: "erstattet" is grey like "offen".
         'open' => 'Zahlung: offen',
         'partial' => 'Zahlung: teilweise eingegangen',
-        'paid' => 'Zahlung: erledigt',
+        'paid' => 'Zahlung: erfolgt',
         'overpaid' => 'Zahlung: überzahlt — Betrag muss zurück',
         'refunded' => 'Zahlung: erstattet',
         'nothingDue' => 'Zahlung: nichts fällig',

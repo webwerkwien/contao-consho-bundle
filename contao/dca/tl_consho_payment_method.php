@@ -265,7 +265,8 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
             'exclude' => true,
             'options' => ['proportional', 'fixed'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_payment_method']['feeTaxModes'],
-            'eval' => ['tl_class' => 'w50'],
+            // consho-switch: as in tl_consho_price; with nothing chosen yet, no half is lit.
+            'eval' => ['tl_class' => 'w50 consho-switch'],
             'sql' => ['type' => 'string', 'length' => 16, 'default' => ''],
         ],
         // Used by `fixed` only; `proportional` takes the rates of the goods.

@@ -89,6 +89,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'registrationPathMissing' => 'Shop "%shop%" sells subscriptions, and a subscription needs a customer account — but no registration module gives new accounts the customer group, opens them and allows the login. Contao creates new members disabled and without login. On the registration module set "Allow login" and "Activate accounts at once", or "Account activation" with the shop\'s customer group among the default groups.',
     'registrationPathMissingNoGuests' => 'In shop "%shop%" "Ordering without an account" is off, so every purchase needs a customer account — but no registration module gives new accounts the customer group, opens them and allows the login. New customers then cannot order. On the registration module set "Allow login" and "Activate accounts at once", or "Account activation" with the shop\'s customer group among the default groups. If you create the customer accounts yourself, there is nothing to do.',
     'subscriptionVatIdInvalid' => 'Subscriptions in the shop "%shop%" were bought with reverse charge, but at the last billing VIES reported the VAT ID as invalid: %numbers%. That follow-up order was charged with VAT. Please clarify with the customer; the next billing checks the VAT ID again.',
+    'netGroupVatIdLost' => 'Members who joined net price groups automatically through a verified VAT ID no longer have a valid VAT ID (invalid or removed): %count% (%members%). The groups stay until you decide. Remove the groups under "Members" — or save the member, and they count as assigned by hand.',
     'customerPageLocksOut' => 'The page "%page%" (shop "%shop%") shows customers their orders or subscriptions, but it is protected without admitting these groups: %groups%. Their members get "access denied", with no entry in the log. Add the groups under "Protect page" in the site structure — on the parent page if the protection comes from there.',
     'orderPageProtected' => 'The order page "%page%" (shop "%shop%") is protected, but the shop allows orders without an account. A guest opens it from the link in the confirmation mail and gets "access denied" instead of their order. Remove "Protect page" from the page in the site structure — on the parent page if the protection comes from there.',
     'loginPageMissing' => 'Shop "%shop%": start points with protected customer pages but no published 401 page: %roots%. A visitor who is logged out sees Contao\'s generic error page instead of the login. Create a page of type "401 Not authenticated" with a login module directly below the start point and set "Redirect to last page visited" there — otherwise the customer lands on the module\'s redirect page after the login instead of their customer page.',
@@ -525,6 +526,8 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['bankName'] = 'Bank';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['bank']['reference'] = 'Payment reference';
 // The grey delete button of a shipping or payment method (C-9).
 $GLOBALS['TL_LANG']['CONSHO']['methodInUse'] = 'This item is linked to at least one order and can no longer be deleted.';
+$GLOBALS['TL_LANG']['CONSHO']['recordInUse'] = 'Items in use cannot be removed.';
+$GLOBALS['TL_LANG']['CONSHO']['defaultStatus'] = ['new' => 'New', 'paid' => 'Paid', 'shipped' => 'Shipped', 'completed' => 'Completed', 'cancelled' => 'Cancelled'];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['giroCode'] = 'Scan with your banking app to pay';
 
 // The confirmation mails (C-9). ⚠️ Placeholders are %s in order: Contao fills
@@ -874,7 +877,7 @@ $GLOBALS['TL_LANG']['CONSHO']['customers'] = [
     'filterLabel' => 'Search and filter options',
     'reset' => 'Reset',
     'opShow' => 'Show customer and orders',
-    'noMember' => 'Guest — no member account',
+    'noMember' => 'Guest order',
     // D-5: access and erasure.
     'colErasure' => 'Erasure requested',
     'privacyLegend' => 'Access and erasure',

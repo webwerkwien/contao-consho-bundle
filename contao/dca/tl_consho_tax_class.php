@@ -36,7 +36,7 @@ $GLOBALS['TL_DCA']['tl_consho_tax_class'] = [
             // `edit` edits the record, the child table gets its own operation.
             // See tl_consho_property_group for what the reverse arrangement cost.
             // `primary` keeps the jump in the row — see tl_consho_product.
-            'rates' => ['href' => 'table=tl_consho_tax_rate', 'icon' => 'header.svg', 'primary' => true],
+            'rates' => ['href' => 'table=tl_consho_tax_rate', 'icon' => 'modules.svg', 'primary' => true],
             'edit',
             '!copy',
             // The '!' sets `primary` and keeps it in the row, because

@@ -23,6 +23,15 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
          * longer add up to the lines below them.
          */
         'notDeletable' => true,
+        /*
+         * For the same reason no new line and no other place: a line added
+         * in the back end would not be in the totals of the head, and the
+         * order of the lines is the order of the invoice. Without these two
+         * the list also carried "Neu oben", "Neu danach" and "verschieben"
+         * in a ⋯ menu on every row. The lines come from the purchase only.
+         */
+        'notCreatable' => true,
+        'notSortable' => true,
         'enableVersioning' => true,
         // destinationCountry (block R): the OSS threshold asks for
         // orders that went abroad on every call of the start page.

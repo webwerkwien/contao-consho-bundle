@@ -5,6 +5,61 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.1.18] – 2026-10-30
+
+### Added
+
+- **Verified VAT ID → net price groups.** A new switch per shop in the customer group section, off by default. When it
+  is on, a member whose VAT ID VIES confirms is added to the net price groups of every shop with the switch on — on
+  registration, when saving "Personal data", when the member is saved in the back end, and when an account created
+  from a guest order is opened. Groups are only ever added, never taken away; the member shows when this happened.
+  Saving the member in the back end confirms these groups as assigned by hand. The checkout never assigns a group: a
+  VAT ID typed there belongs to the order. (Block C)
+- **The VIES result is kept on the member**: status, time, consultation number, and now also the shop VAT ID the query
+  was made with (`consho_vatIdRequester`) and the VAT ID it was made for (`consho_vatIdChecked`). Registration,
+  personal data and the back end check the VAT ID; a result for the same VAT ID and the same requesting VAT ID holds
+  twelve months, a changed VAT ID is checked again. The checkout reuses it for the member's own VAT ID, except for an
+  order with reverse charge, which needs a result from the same day; a fresh check there and in the subscription run
+  is written back to the member. An account created from a guest order takes over the order's verdict, without a
+  time, so the next check that needs one asks VIES again. (Block C)
+- **Dashboard notice** when members who received net price groups through a verified VAT ID no longer have a valid
+  VAT ID. (Block C)
+- **The checkout links its earlier steps**, so a customer can go back to the address or shipping step without the
+  browser's back button. Later steps stay plain text. (Block C)
+- **A VIES check that could not be completed is logged** with its reason (timeout, a `userError` such as
+  `MS_MAX_CONCURRENT_REQ`, or a member state that is down) and the country of the VAT ID. (Block C)
+
+### Changed
+
+- **Reverse charge needs a VIES result from the day of the purchase**, for guests as well. A basket that kept a valid
+  result from an earlier day is checked again on the next step of the checkout or on the buy click; where the answer
+  changes the amounts, the buy click returns to the review. (Block C)
+- **A new shop comes with five order statuses** — new, paid, shipped, completed, cancelled — with their flags set and
+  titles in the back end language. They can be renamed, reordered or extended like any other status. (Block A)
+- **Records in use explain why they cannot be deleted**: the greyed-out delete button carries a tooltip on every
+  table that blocks deleting a record in use, not only on shipping and payment methods. (Block A)
+- **Back end:** the tax mode of shipping methods and the fee tax mode of payment methods are drawn as switches; the
+  order statuses, number ranges, tax rates, shipping prices and property values get their own icons in the list, the
+  prices of a product a price tag, stock movements and voucher bookings a history icon, correcting a voucher's
+  balance a scale, the positions of a withdrawal the child-records icon in blue; the number range for orders is labelled "Order number". In the customer list each
+  icon shows one tooltip, and the greyed-out account icon of a guest reads "Guest order". "Purchase" and "Purchase
+  lists" stand in the header of the stock module instead of behind ⋯; stock movements and voucher bookings offer only
+  their details, without a "move" that could never be used. On the withdrawal page the right column of "Declaration
+  and deadlines" no longer sits one line lower than the left. (Block A)
+- **Subscriptions: one "History" page** per subscription lists its cancellations and pauses together, newest first,
+  each with a link to its record; a decision whose mail did not go out can be sent again from there. It replaces the
+  two separate row buttons for cancellations and pauses. "Pause" shows a pause icon and comes first, the purchase
+  order a shopping cart and stands before the details. The list opens with a "Status" column — an eye, green while
+  the subscription is active, grey otherwise, with the state as tooltip — instead of the "State" column, shows the
+  start next to the other dates, and shows dates without the time. (Abo)
+- **Order list: fewer buttons per row.** Items, payments, deliveries, withdrawals, complaints and edit stay in the
+  row; documents, entitlements, legal texts, details, resending the confirmation, the payment term and versions move
+  to the ⋯ menu. "Documents" carries its label, and the entitlements of an order and the keys of a product show their
+  lock icon again instead of an empty button. The items of an order carry the child-records icon in orange; their
+  list no longer offers adding or moving a line, which a back-end user could do before although it changed neither
+  the totals nor the invoice. The payment signal of a paid order reads "Zahlung: erfolgt" ("Payment: received").
+  (Block A)
+
 ## [0.1.17] – 2026-10-27
 
 ### Fixed

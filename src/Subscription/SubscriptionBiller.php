@@ -12,6 +12,7 @@ use Webwerkwien\ContaoConshoBundle\Address\VatIdStatus;
 use Webwerkwien\ContaoConshoBundle\Address\VatIdValidatorInterface;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Checkout\MemberCheckoutDefaults;
+use Webwerkwien\ContaoConshoBundle\Customer\MemberVatId;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryReported;
 use Webwerkwien\ContaoConshoBundle\Order\OrderDraft;
@@ -69,6 +70,10 @@ class SubscriptionBiller
         // VIES per period for reverse charge (replacing P26's "no check").
         // Optional like the above.
         private readonly VatIdValidatorInterface|null $vatIds = null,
+        // The verdict also goes onto the member, where the VAT ID is the
+        // member's own (MemberVatId). No group: the run happens without a
+        // visit, the groups come with the next save of the VAT ID.
+        private readonly MemberVatId|null $memberVatIds = null,
     ) {
     }
 
@@ -323,6 +328,10 @@ class SubscriptionBiller
         }
 
         $check = $this->vatIds->check($vatId, '' === trim($shopVatId) ? null : $shopVatId);
+
+        if ((int) $subscription['member'] > 0) {
+            $this->memberVatIds?->record((int) $subscription['member'], $vatId, $shopVatId, $check);
+        }
 
         if (VatIdStatus::Invalid === $check->status) {
             $this->logger->warning(\sprintf('Subscription %s was billed with VAT: VIES reports the VAT ID %s as invalid.', $subscription['subscriptionNumber'], $vatId));

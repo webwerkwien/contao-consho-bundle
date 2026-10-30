@@ -23,6 +23,8 @@ $GLOBALS['TL_LANG']['tl_member']['consho_vatId'] = ['VAT ID', 'VAT identificatio
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdStatus'] = ['Check result', 'Result of the last VIES query. Set by the system.'];
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdCheckedAt'] = ['Last checked', 'Empty means never checked.'];
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdRequestIdentifier'] = ['VIES consultation number', 'Evidence of the query for a tax audit.'];
+$GLOBALS['TL_LANG']['tl_member']['consho_vatIdRequester'] = ['Checked with VAT ID', 'The VAT ID of the shop that asked. The consultation number only holds for that one.'];
+$GLOBALS['TL_LANG']['tl_member']['consho_netGroupsAutoAt'] = ['Net price groups assigned automatically', 'When a verified VAT ID added the member to net price groups. Saving in the back end confirms these groups as assigned by hand; the field is then emptied.'];
 
 $GLOBALS['TL_LANG']['tl_member']['consho_vatIdStatuses'] = [
     'valid' => 'valid',

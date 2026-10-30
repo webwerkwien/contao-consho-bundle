@@ -22,6 +22,9 @@ $GLOBALS['TL_DCA']['tl_consho_voucher_booking'] = [
     'list' => [
         'sorting' => ['mode' => 4, 'fields' => ['createdAt DESC', 'id DESC'], 'headerFields' => ['code', 'currency', 'balance']],
         'label' => ['fields' => ['createdAt', 'type', 'amount', 'balanceAfter']],
+        // Read only and ordered by time: without this list Contao adds its
+        // defaults, among them a "cut" that could never be used.
+        'operations' => ['!show'],
     ],
 
     'palettes' => ['default' => '{booking_legend},createdAt,type,amount,balanceAfter,orderId,paymentId,user,note'],

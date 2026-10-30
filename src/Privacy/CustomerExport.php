@@ -2,6 +2,7 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Privacy;
 
+use Contao\StringUtil;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Customer\CustomerDirectory;
@@ -47,14 +48,14 @@ class CustomerExport
         'phone', 'mobile', 'fax', 'email', 'website', 'language', 'username', 'dateAdded',
         'consho_shippingCompany', 'consho_shippingSalutation', 'consho_shippingFirstname', 'consho_shippingLastname',
         'consho_shippingStreet', 'consho_shippingPostal', 'consho_shippingCity', 'consho_shippingState', 'consho_shippingCountry',
-        'consho_vatId', 'consho_vatIdStatus', 'consho_vatIdCheckedAt', 'consho_vatIdRequestIdentifier',
-        'consho_confirmedEmail', 'consho_confirmedEmailAt',
+        'consho_vatId', 'consho_vatIdStatus', 'consho_vatIdCheckedAt', 'consho_vatIdRequestIdentifier', 'consho_vatIdRequester', 'consho_vatIdChecked',
+        'consho_netGroupsAuto', 'consho_netGroupsAutoAt', 'consho_confirmedEmail', 'consho_confirmedEmailAt',
     ];
 
     /** Fields holding a timestamp — written as ISO 8601 for a human reader. */
     private const MOMENTS = [
         'createdAt', 'termsAcceptedAt', 'digitalConsentAt', 'emailConfirmedAt', 'erasureRequestedAt', 'anonymizedAt', 'receivedAt', 'shippedAt', 'reportedAt',
-        'issuedAt', 'decidedAt', 'returnReceivedAt', 'refundedAt', 'resolvedAt', 'confirmationSentAt', 'decisionSentAt', 'dateAdded', 'consho_vatIdCheckedAt', 'consho_confirmedEmailAt',
+        'issuedAt', 'decidedAt', 'returnReceivedAt', 'refundedAt', 'resolvedAt', 'confirmationSentAt', 'decisionSentAt', 'dateAdded', 'consho_vatIdCheckedAt', 'consho_netGroupsAutoAt', 'consho_confirmedEmailAt',
         'validFrom', 'validUntil', 'suspendedAt', 'assignedAt',
         'startedAt', 'minimumEndsAt', 'periodFrom', 'periodUntil', 'nextBillingAt', 'endsAt', 'reminderSentAt', 'requestedAt', 'effectiveAt', 'earliestAt',
         'pauseFrom', 'pauseUntil', 'withdrawnAt',
@@ -134,6 +135,11 @@ class CustomerExport
         if (null !== $customer->memberId) {
             $member = $this->connection->fetchAssociative('SELECT * FROM tl_member WHERE id = ?', [$customer->memberId]);
             $account = false === $member ? null : $this->pick($member, self::MEMBER_FIELDS);
+
+            // The groups a verified VAT ID added, by name rather than as a serialised list of ids.
+            if (isset($account['consho_netGroupsAuto'])) {
+                $account['consho_netGroupsAuto'] = $this->groupNames($account['consho_netGroupsAuto']);
+            }
         }
 
         $email = mb_strtolower($customer->email);
@@ -289,6 +295,24 @@ class CustomerExport
     private function rows(string $sql, int $orderId): array
     {
         return array_map(fn (array $row): array => $this->clean($row), $this->connection->fetchAllAssociative($sql, [$orderId]));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function groupNames(mixed $serialized): array
+    {
+        $ids = array_values(array_filter(array_map('intval', StringUtil::deserialize($serialized, true))));
+
+        if ([] === $ids) {
+            return [];
+        }
+
+        return array_map('strval', $this->connection->fetchFirstColumn(
+            'SELECT name FROM tl_member_group WHERE id IN (?) ORDER BY id',
+            [$ids],
+            [ArrayParameterType::INTEGER],
+        ));
     }
 
     /**

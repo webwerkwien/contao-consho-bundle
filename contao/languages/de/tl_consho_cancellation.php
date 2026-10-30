@@ -32,4 +32,3 @@ $GLOBALS['TL_LANG']['tl_consho_cancellation']['acceptNeedsDate'] = 'Zum Annehmen
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['rejectNeedsReason'] = 'Zum Ablehnen bitte eine Begründung angeben — sie geht an den Kunden.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['endBeforeReceipt'] = 'Das Vertragsende kann nicht vor dem Eingang der Kündigung liegen.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['notADecision'] = 'Eine außerordentliche Kündigung wird angenommen oder abgelehnt.';
-$GLOBALS['TL_LANG']['tl_consho_subscription']['cancellations'] = ['Kündigungen', 'Kündigungen des Abos ID %s anzeigen'];

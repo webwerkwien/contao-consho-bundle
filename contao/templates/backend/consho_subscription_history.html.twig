@@ -1,0 +1,56 @@
+{#
+  "Verlauf" at a subscription: cancellations and pauses, newest first.
+  Rendered inside the back end frame by SubscriptionHistoryBackendController.
+  Icons as in Contao's operations: the alt is the tooltip, no title on the link.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.historyBack|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+<div class="tl_listing_container list_view">
+    <h2 class="consho-history-head">{{ lang.historyLegend|default('Verlauf') }}: {{ number }}</h2>
+    {% if entries is empty %}
+        <p class="tl_empty">{{ lang.historyEmpty|default('Keine Kündigungen und keine Pausen.') }}</p>
+    {% else %}
+        <table class="tl_listing showColumns">
+            <thead>
+                <tr>
+                    <th class="tl_folder_tlist">{{ lang.historyWhen|default('Eingegangen') }}</th>
+                    <th class="tl_folder_tlist">{{ lang.historyType|default('Art') }}</th>
+                    <th class="tl_folder_tlist">{{ lang.historyEntry|default('Eintrag') }}</th>
+                    <th class="tl_folder_tlist">{{ lang.historyDetails|default('Einzelheiten') }}</th>
+                    <th class="tl_folder_tlist">{{ lang.historyState|default('Stand') }}</th>
+                    <th class="tl_folder_tlist tl_right_nowrap"></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for entry in entries %}
+                <tr class="{{ cycle(['even', 'odd'], loop.index0) }} click2edit toggle_select hover-row">
+                    <td class="tl_file_list consho-nowrap">{{ entry.when }}</td>
+                    <td class="tl_file_list consho-nowrap">{{ entry.type }}</td>
+                    <td class="tl_file_list">{{ entry.title }}</td>
+                    <td class="tl_file_list">{{ entry.details }}</td>
+                    <td class="tl_file_list">{{ entry.state }}</td>
+                    <td class="tl_file_list tl_right_nowrap">
+                        <div class="operations">
+                            <ul>
+                                {% if entry.editUrl %}<li><a class="edit has-icon" href="{{ entry.editUrl }}">{{ backend_icon('edit.svg', lang.historyEdit|default('Kündigung bearbeiten')) }}</a></li>{% endif %}
+                                {% if entry.resendUrl %}<li>
+                                    <form action="{{ entry.resendUrl }}" method="post">
+                                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                        <button type="submit" class="has-icon">{{ backend_icon('resend.svg', lang.historyResend|default('Entscheidung erneut senden')) }}</button>
+                                    </form>
+                                </li>{% endif %}
+                                <li><a class="show has-icon" href="{{ entry.showUrl }}">{{ backend_icon('show.svg', lang.historyShow|default('Details anzeigen')) }}</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
