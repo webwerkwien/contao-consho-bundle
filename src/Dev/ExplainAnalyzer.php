@@ -2,12 +2,15 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Dev;
 
+use Symfony\Component\DependencyInjection\Attribute\When;
+
 /**
  * Reads MariaDB/MySQL EXPLAIN rows for full table scans (plan B-9).
  *
  * A fast query for the wrong reason is no finding: at 5,000 products a scan is
  * cheap and invisible in the timing, at 100,000 it is the first thing to break.
  */
+#[When(env: 'dev')]
 final class ExplainAnalyzer
 {
     /**

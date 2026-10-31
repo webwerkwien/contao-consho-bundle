@@ -7,6 +7,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use Doctrine\DBAL\Logging\Middleware;
 use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Symfony\Component\DependencyInjection\Attribute\When;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductQuery;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductSort;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityProjector;
@@ -50,6 +51,7 @@ use Webwerkwien\ContaoConshoBundle\Cron\VisibilityBoundaryCron;
  * Built by the command with a connection of its own (recordingConnection()),
  * not taken from the container.
  */
+#[When(env: 'dev')]
 final class CatalogBenchmark
 {
     public function __construct(

@@ -219,10 +219,27 @@ class CheckoutCalculatorTest extends TestCase
         self::assertFalse($state->reverseCharge);
     }
 
+    /**
+     * A valid VAT ID copied from another company's imprint, with an Austrian
+     * billing address: VIES says the number exists, not whose it is.
+     */
+    public function testEineFremdeUidMitInlandsrechnungNimmtDieSteuerNichtWeg(): void
+    {
+        $state = $this->calculate(
+            $this->vollstaendig()
+                ->withShipping(new Address(lastname: 'M', street: 'W 1', postal: '10115', city: 'Berlin', country: 'DE', email: 'a@b.c'))
+                ->withVatId('DE123456789')
+                ->withVatCheck(new VatIdCheckResult(VatIdStatus::Valid, self::NOW, null, 'WAPI1')),
+        );
+
+        self::assertFalse($state->reverseCharge);
+    }
+
     public function testEineGeprueftUidInsAuslandNimmtDieSteuerWeg(): void
     {
         $state = $this->calculate(
             $this->vollstaendig()
+                ->withBilling(new Address(firstname: 'Eva', lastname: 'M', street: 'W 1', postal: '10115', city: 'Berlin', country: 'DE', email: 'a@b.c'))
                 ->withShipping(new Address(lastname: 'M', street: 'W 1', postal: '10115', city: 'Berlin', country: 'DE', email: 'a@b.c'))
                 ->withVatId('DE123456789')
                 ->withVatCheck(new VatIdCheckResult(VatIdStatus::Valid, self::NOW, null, 'WAPI1')),

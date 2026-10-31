@@ -29,10 +29,23 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
  * proves the buyer reached the provider, not that they read their mail.
  *
  * The attempt's token opens the order through this route all the same; that
- * is what a return address is for, and the provider has it either way.
+ * is what a return address is for, and the provider has it either way. But
+ * only for a day after the attempt started: the return address stays in the
+ * provider's records and the browser history for good, and without a limit
+ * it would hand out a new key to the order every time it is called. Later
+ * the buyer lands on the order page without a token, where "Neuen Link
+ * anfordern" sends one to the order's address. The state of the attempt does
+ * not decide it — the provider's notification often marks it paid before the
+ * browser is back, and a cancelled payment returns to the order page too.
  */
 class PaymentReturn
 {
+    /**
+     * Far beyond any hosted payment page (PaymentStarter::ATTEMPT_LIFETIME is
+     * 30 minutes), so a buyer who leaves the tab open still gets back in.
+     */
+    public const RETURN_WINDOW = 86400;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly PaymentAttemptRepositoryInterface $attempts,
@@ -94,6 +107,10 @@ class PaymentReturn
 
         if (null === $orderPage) {
             return null;
+        }
+
+        if ($now - $attempt->createdAt > self::RETURN_WINDOW) {
+            return $orderPage;
         }
 
         return \sprintf('%s?%s', $orderPage, http_build_query([OrderController::TOKEN_PARAM => $this->tokens->issue($attempt->orderId, TokenPurpose::ViewOrder)]));

@@ -125,6 +125,19 @@ final class WithdrawalRecorderTest extends TestCase
         self::assertSame(['scope' => 'part', 'part' => 'nur das Salz', 'source' => 'form'], $row);
     }
 
+    public function testAuchZugeordnetWerdenTeilUndNachrichtGekuerzt(): void
+    {
+        $long = str_repeat('ä', WithdrawalRecorder::UNASSIGNED_TEXT_LIMIT + 50);
+
+        $this->recorder()->record(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::OrderPage, 'E', [], $long, $long), self::NOW);
+
+        $row = $this->connection->fetchAssociative('SELECT part, message FROM tl_consho_withdrawal');
+
+        self::assertIsArray($row);
+        self::assertSame(WithdrawalRecorder::UNASSIGNED_TEXT_LIMIT, mb_strlen((string) $row['part']));
+        self::assertSame(WithdrawalRecorder::UNASSIGNED_TEXT_LIMIT, mb_strlen((string) $row['message']));
+    }
+
     public function testZweiterWiderrufBekommtDieNaechsteNummer(): void
     {
         $this->recorder()->record(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::OrderPage, 'E', [1 => '1']), self::NOW);

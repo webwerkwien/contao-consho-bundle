@@ -131,6 +131,38 @@ final class WithdrawalControllerTest extends TestCase
         self::assertSame([[self::SHOP, $email, 'de']], $this->unassigned);
     }
 
+    /**
+     * The field no person sees: filled in, the declaration is stored and the
+     * answer is the same, but no confirmation goes to the address typed.
+     */
+    public function testEinAusgefuelltesFallenfeldSpeichertOhneMailAnDieEingegebeneAdresse(): void
+    {
+        $redirect = $this->post([
+            'consho_withdrawal_orderNumber' => 'X',
+            'consho_withdrawal_email' => 'fremd@example.net',
+            'consho_withdrawal_name' => 'E',
+            'consho_withdrawal_message' => 'Werbung',
+            WithdrawalController::TRAP_FIELD => 'https://example.net',
+        ]);
+
+        self::assertInstanceOf(RedirectResponseException::class, $redirect);
+        self::assertSame(self::URL.'?consho_withdrawal=done', $redirect->getResponse()->headers->get('Location'));
+        self::assertSame('Werbung', $this->connection->fetchOne('SELECT message FROM tl_consho_withdrawal'));
+        self::assertSame([], $this->unassigned);
+        self::assertSame([], $this->confirmed);
+    }
+
+    /**
+     * The template writes the field's name out; renamed on one side only, the
+     * trap would never be posted and every declaration would be mailed.
+     */
+    public function testDasTemplateFuehrtDasFallenfeldUnterDemNamenDesControllers(): void
+    {
+        $template = (string) file_get_contents(\dirname(__DIR__, 3).'/contao/templates/content_element/consho_withdrawal.html.twig');
+
+        self::assertStringContainsString('name="'.WithdrawalController::TRAP_FIELD.'"', $template);
+    }
+
     /** E4: 5 attempts per IP in 15 minutes — every one counts, the stored ones too. */
     public function testDerSechsteVersuchWirdAbgewiesen(): void
     {

@@ -30,6 +30,14 @@ final class SetupButtonListenerTest extends TestCase
         self::assertSame('', $operation->getHtml());
     }
 
+    public function testOhneSicherheitsschichtAusgeblendet(): void
+    {
+        $operation = $this->operation();
+        (new SetupButtonListener($this->router()))($operation);
+
+        self::assertSame('', $operation->getHtml());
+    }
+
     private function operation(): DataContainerOperation
     {
         return new DataContainerOperation('setup', ['icon' => 'wrench.svg', 'label' => ['Einrichtung', '%s']], ['id' => 3], $this->createStub(DataContainer::class));

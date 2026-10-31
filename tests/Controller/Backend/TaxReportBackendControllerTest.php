@@ -113,6 +113,13 @@ class TaxReportBackendControllerTest extends TestCase
         $this->controller('/contao?do=consho_dashboard&view=taxReport&business=ATU12345678&year=2026&quarter=4&export=records', $security)();
     }
 
+    public function testOhneSicherheitsschichtKeineSeite(): void
+    {
+        $this->expectException(AccessDeniedHttpException::class);
+
+        $this->controller('/contao?do=consho_dashboard&view=taxReport', null)();
+    }
+
     public function testMitBestellrechtDieSeite(): void
     {
         $security = $this->createMock(Security::class);
@@ -121,8 +128,12 @@ class TaxReportBackendControllerTest extends TestCase
         self::assertStringContainsString('ATU12345678', $this->controller('/contao?do=consho_dashboard&view=taxReport', $security)());
     }
 
-    private function controller(string $uri, Security|null $security = null): TaxReportBackendController
+    private function controller(string $uri, Security|false|null $security = false): TaxReportBackendController
     {
+        // false: an administrator; null: no security service at all.
+        if (false === $security) {
+            $security = $this->administrator();
+        }
         $requests = new RequestStack();
         $requests->push(Request::create($uri));
 
@@ -140,5 +151,15 @@ class TaxReportBackendControllerTest extends TestCase
             $this->createMock(ContaoFramework::class),
             security: $security,
         );
+    }
+
+    // Without a security layer nothing is granted any more; these tests
+    // look at what an administrator sees.
+    private function administrator(): Security
+    {
+        $security = $this->createMock(Security::class);
+        $security->method('isGranted')->willReturn(true);
+
+        return $security;
     }
 }

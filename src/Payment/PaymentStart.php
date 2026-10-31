@@ -11,6 +11,12 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
  * entered by the operator — and is printed like any other Contao rich text.
  * The details are plain text strings for the template to escape; formatting
  * a bank connection is the template's business, not the handler's.
+ *
+ * A redirect names the provider's reference of what it set up (a session, an
+ * order, a payment). The core keeps it on the attempt and accepts only
+ * notifications about it (NotificationResult). It has to be this attempt's
+ * own — an order number shared by several attempts would let a notification
+ * about one settle another.
  */
 final class PaymentStart
 {
@@ -23,6 +29,7 @@ final class PaymentStart
         public readonly array $details = [],
         public readonly string $url = '',
         public readonly string $reason = '',
+        public readonly string $reference = '',
     ) {
     }
 
@@ -34,13 +41,17 @@ final class PaymentStart
         return new self(PaymentStartOutcome::Completed, notice: $notice, details: $details);
     }
 
-    public static function redirect(string $url): self
+    public static function redirect(string $url, string $reference): self
     {
         if ('' === $url) {
             throw new \InvalidArgumentException('A redirect needs a URL.');
         }
 
-        return new self(PaymentStartOutcome::Redirect, url: $url);
+        if ('' === trim($reference)) {
+            throw new \InvalidArgumentException('A redirect needs the provider reference of what it set up.');
+        }
+
+        return new self(PaymentStartOutcome::Redirect, url: $url, reference: trim($reference));
     }
 
     public static function failed(string $reason): self

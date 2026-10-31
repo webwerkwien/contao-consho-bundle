@@ -33,6 +33,7 @@ use Contao\Model\Collection;
  * @property string      $vatId
  * @property string      $vatIdStatus
  * @property string      $vatIdRequestIdentifier
+ * @property string      $vatIdName
  * @property string      $salutation
  * @property string      $firstname
  * @property string      $lastname

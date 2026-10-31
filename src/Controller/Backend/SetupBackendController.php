@@ -413,6 +413,6 @@ final class SetupBackendController
 
     private function isAdmin(): bool
     {
-        return null === $this->security || $this->security->isGranted('ROLE_ADMIN');
+        return null !== $this->security && $this->security->isGranted('ROLE_ADMIN');
     }
 }

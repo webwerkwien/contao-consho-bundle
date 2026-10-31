@@ -19,6 +19,8 @@ enum StockNoticeResult: string
     case Unsubscribed = 'unsubscribed';
     // The article could be bought by the time the button was pressed.
     case Available = 'available';
+    // Address not confirmed and StockNotices::UNCONFIRMED_LIMIT wishes held.
+    case Limit = 'limit';
     case Login = 'login';
     case Confirmed = 'confirmed';
     case Invalid = 'invalid';

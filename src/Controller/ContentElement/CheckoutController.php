@@ -70,6 +70,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRenewalRefused;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRuleGoneAtPurchase;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionWithoutAccount;
 use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
+use Webwerkwien\ContaoConshoBundle\Tax\TaxPlace;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherChangedAtPurchase;
 use Webwerkwien\ContaoConshoBundle\Tax\NotTaxableArticles;
@@ -356,7 +357,20 @@ class CheckoutController extends AbstractContentElementController
             // POST/redirect/GET, and the target is decided AFTER saving — the
             // freshly calculated state may well send the visitor back rather
             // than on (C2, C13).
-            throw new RedirectResponseException($this->nextAddress($request, $cart, $shop, $currency, $steps));
+            $redirect = new RedirectResponseException($this->nextAddress($request, $cart, $shop, $currency, $steps));
+
+            /*
+             * A guest's address goes in under a token nobody else can know
+             * (DbalCartRepository::rotateToken()): a basket found under a
+             * token someone planted in the browser would otherwise show them
+             * everything typed here.
+             */
+            if (0 === $cart->memberId && CheckoutBlock::Address->value === $request->request->getString('consho_checkout_block')) {
+                $token = $this->repository->rotateToken(CartToken::fromRequest($request));
+                $redirect->getResponse()->headers->setCookie(CartToken::cookie($token, $request->isSecure(), time()));
+            }
+
+            throw $redirect;
         }
 
         $state = $this->stateOf($cart, $shop, $currency, $language, $fallback);
@@ -675,9 +689,8 @@ class CheckoutController extends AbstractContentElementController
      */
     private static function crossBorder(CheckoutData $data, string $shopVatId, string $shopCountry): bool
     {
-        $home = strtoupper(trim($shopCountry));
-
-        return '' !== trim($shopVatId) && '' !== $home && $home !== $data->deliveryCountry();
+        return '' !== trim($shopVatId)
+            && TaxPlace::reverseChargeReach($data->vatId, $data->billing->country, $data->deliveryCountry(), $shopCountry);
     }
 
     /**

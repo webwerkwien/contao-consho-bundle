@@ -43,6 +43,9 @@ enum CartNotice: string
     // holds as many vouchers as it takes. Basket row only, like the one above.
     case VoucherUnknown = 'voucher_unknown';
     case TooManyVouchers = 'too_many_vouchers';
+    // Too many new guest baskets from one IP (AddToCartController). A refusal
+    // on the address like the ones above it; the visitor can try again later.
+    case TooManyBaskets = 'too_many_baskets';
 
     /**
      * The reason a refusal names, read back off the address (C-3c).

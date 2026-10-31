@@ -243,6 +243,15 @@ class BackendSystemMessagesListenerTest extends TestCase
         self::assertStringContainsString('Test-Zahlung ist an.', $admin->panel());
     }
 
+    public function testOhneSicherheitsschichtSiehtNiemandEinenBefund(): void
+    {
+        $issue = new ConfigurationIssue(ConfigurationFinding::TaxRateMissing, ['country' => 'IT', 'taxClass' => 'X']);
+        $listener = new BackendSystemMessagesListener([$this->sourceOf([$issue])], $this->store([]));
+
+        self::assertFalse($listener->maySee($issue));
+        self::assertSame('', $listener());
+    }
+
     /**
      * H4: the line on the start page counts only what the dashboard shows this
      * user.
@@ -383,7 +392,7 @@ class BackendSystemMessagesListenerTest extends TestCase
         $source = $this->createMock(ConfigurationIssueSource::class);
         $source->method('issues')->willReturn($issues);
 
-        return new BackendSystemMessagesListener([$source], $this->store());
+        return new BackendSystemMessagesListener([$source], $this->store(), security: $this->security(false, [], true));
     }
 
     public function testANoteCarriesAWayToTakeNoteOfIt(): void
@@ -429,6 +438,7 @@ class BackendSystemMessagesListenerTest extends TestCase
         $listener = new BackendSystemMessagesListener(
             [$this->sourceOf([$issue])],
             $this->store([$issue->fingerprint()]),
+            security: $this->security(false, [], true),
         );
 
         self::assertSame('', $listener());
@@ -444,6 +454,7 @@ class BackendSystemMessagesListenerTest extends TestCase
         $listener = new BackendSystemMessagesListener(
             [$this->sourceOf([$now])],
             $this->store([$judged->fingerprint()]),
+            security: $this->security(false, [], true),
         );
 
         self::assertStringContainsString('4006381333931', $listener());
@@ -522,6 +533,7 @@ class BackendSystemMessagesListenerTest extends TestCase
         $listener = new BackendSystemMessagesListener(
             [$broken, $this->sourceOf([new ConfigurationIssue(ConfigurationFinding::TaxRateMissing, ['country' => 'IT', 'taxClass' => 'X'])])],
             $this->store(),
+            security: $this->security(false, [], true),
             logger: $logger,
         );
 
@@ -545,7 +557,7 @@ class BackendSystemMessagesListenerTest extends TestCase
             new ConfigurationIssue(ConfigurationFinding::ProductManufacturerMissing, ['count' => '7']),
         ]);
 
-        $html = (new BackendSystemMessagesListener([$configuration, $safety], $this->store()))();
+        $html = (new BackendSystemMessagesListener([$configuration, $safety], $this->store(), security: $this->security(false, [], true)))();
 
         // The first is translated by the fixture, the second falls back to its
         // bare code — both have to reach the box.

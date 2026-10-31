@@ -38,6 +38,42 @@ final class TaxPlace
     }
 
     /**
+     * Whether a sale can be free of tax under reverse charge at all, before
+     * the VAT ID check itself: the shop, the billing address and the delivery
+     * address in the EU, billing and delivery outside the shop's country, and
+     * the VAT ID issued by the billing country (EL for Greece).
+     *
+     * Narrower than the law: an intra-community supply only needs a VAT ID of
+     * a member state other than the one the goods leave. Requiring the billing
+     * country's ID keeps a valid ID copied from someone else's imprint from
+     * buying without tax under any address — VIES confirms that a number
+     * exists, not that it belongs to the buyer. Where this says no, the order
+     * carries tax, which is never wrong for the shop.
+     */
+    public static function reverseChargeReach(string $vatId, string $billingCountry, string $deliveryCountry, string $shopCountry): bool
+    {
+        $shop = strtoupper(trim($shopCountry));
+        $billing = strtoupper(trim($billingCountry));
+        $delivery = strtoupper(trim($deliveryCountry));
+        $prefix = strtoupper(substr(trim($vatId), 0, 2));
+
+        if (!self::isEuMemberState($shop) || !self::isEuMemberState($billing) || !self::isEuMemberState($delivery)) {
+            return false;
+        }
+
+        if ($billing === $shop || $delivery === $shop) {
+            return false;
+        }
+
+        // Greek VAT IDs start with EL; one starting with GR does not exist.
+        return match ($prefix) {
+            'EL' => 'GR' === $billing,
+            'GR' => false,
+            default => $prefix === $billing,
+        };
+    }
+
+    /**
      * The customer's country, unless it is a distance sale within the EU
      * and the shop is not taxing at destination — then the shop's.
      */

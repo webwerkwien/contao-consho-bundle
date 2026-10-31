@@ -183,6 +183,12 @@ class CheckoutControllerTest extends TestCase
     /** @var list<Cookie> the cookies the last post() answered with */
     private array $responseCookies = [];
 
+    /**
+     * The basket cookie the next request carries — like a browser, it takes
+     * the new one a guest's address submission answers with.
+     */
+    private string $token = self::TOKEN;
+
     protected function setUp(): void
     {
         $this->confirmations = new ConfirmationSpy();
@@ -302,6 +308,29 @@ class CheckoutControllerTest extends TestCase
         self::assertSame('Muster', $data->billing->lastname);
         self::assertSame('AT', $data->billing->country, 'Das Land wird in Großbuchstaben normalisiert.');
         self::assertSame('eva@example.org', $data->billing->email, 'AddressNormalizer war beteiligt.');
+    }
+
+    /**
+     * A guest's address goes in under a token nobody else can know: the
+     * answer carries a new basket cookie, the basket and the one of another
+     * shop on the same cookie move to it, and the old token finds nothing.
+     */
+    public function testDieAdresseEinesGastesBekommtEinNeuesCookie(): void
+    {
+        $other = $this->repository->create(CartToken::hash(self::TOKEN), 0, self::SHOP + 1, 1_000);
+
+        $this->post([
+            'consho_checkout_block' => 'address',
+            'billing_lastname' => 'Muster',
+            'billing_country' => 'at',
+            'billing_email' => 'eva@example.org',
+        ]);
+
+        self::assertCount(1, $this->responseCookies);
+        self::assertNotSame(self::TOKEN, $this->token);
+        self::assertSame([], $this->repository->findAllByToken(self::TOKEN));
+        self::assertSame([$this->cartId, $other], array_map(static fn ($cart): int => $cart->id, $this->repository->findAllByToken($this->token)));
+        self::assertSame('Muster', $this->repository->checkoutDataOf($this->cartId)->billing->lastname);
     }
 
     /**
@@ -801,7 +830,7 @@ class CheckoutControllerTest extends TestCase
      */
     public function testNachDemKaufFuehrtEineOnlineZahlungZumAnbieter(): void
     {
-        $this->payments->expects(self::once())->method('start')->with(77)->willReturn(PaymentStart::redirect('https://anbieter.test/pay'));
+        $this->payments->expects(self::once())->method('start')->with(77)->willReturn(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
         $this->kaufbereit();
 
         $target = $this->post(['consho_checkout_block' => 'review', 'consho_fingerprint' => $this->fingerprint()], step: 3);
@@ -1604,7 +1633,7 @@ class CheckoutControllerTest extends TestCase
             \sprintf('https://example.org/kasse.html?consho_step=%d', $step),
             'POST',
             $fields,
-            [CartToken::NAME => self::TOKEN],
+            [CartToken::NAME => $this->token],
         );
         $request->attributes->set('pageModel', $this->page());
 
@@ -1614,6 +1643,12 @@ class CheckoutControllerTest extends TestCase
             $this->controller()->respond($this->template(), $this->model(3), $request);
         } catch (RedirectResponseException $exception) {
             $this->responseCookies = $exception->getResponse()->headers->getCookies();
+
+            foreach ($this->responseCookies as $cookie) {
+                if (CartToken::NAME === $cookie->getName() && !$cookie->isCleared()) {
+                    $this->token = (string) $cookie->getValue();
+                }
+            }
 
             return $exception->getResponse()->headers->get('Location') ?? '';
         }
@@ -1631,7 +1666,7 @@ class CheckoutControllerTest extends TestCase
             \sprintf('https://example.org/kasse.html?consho_step=%d', $step),
             'GET',
             [],
-            [CartToken::NAME => self::TOKEN],
+            [CartToken::NAME => $this->token],
         );
         $request->attributes->set('pageModel', $this->page());
 
@@ -1642,7 +1677,7 @@ class CheckoutControllerTest extends TestCase
 
     private function respond(): Response
     {
-        $request = Request::create('https://example.org/kasse.html', 'GET', [], [CartToken::NAME => self::TOKEN]);
+        $request = Request::create('https://example.org/kasse.html', 'GET', [], [CartToken::NAME => $this->token]);
         $request->attributes->set('pageModel', $this->page());
 
         return $this->controller()->respond($this->template(), $this->model(3), $request);

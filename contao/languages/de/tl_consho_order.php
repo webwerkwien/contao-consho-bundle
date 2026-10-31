@@ -33,6 +33,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['shippingCountry'] = ['Land', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['vatId'] = ['UID-Nummer', 'Wie sie bei dieser Bestellung angegeben wurde.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['vatIdStatus'] = ['Prüfergebnis', 'Der Stand zum Zeitpunkt der Bestellung — nicht der heutige.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['vatIdRequestIdentifier'] = ['VIES-Nachweiskennung', 'Beleg der Abfrage für eine Betriebsprüfung.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['vatIdName'] = ['Name bei VIES', 'Der Name, den VIES zur UID geliefert hat, wo der Mitgliedstaat ihn herausgibt. Mit der Rechnungsadresse vergleichen: VIES bestätigt, dass es die Nummer gibt, nicht, dass sie dem Käufer gehört.'];
 
 $GLOBALS['TL_LANG']['tl_consho_order']['currency'] = ['Währung', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['netTotal'] = ['Summe netto', ''];

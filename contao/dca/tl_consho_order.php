@@ -170,7 +170,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
     ],
 
     'palettes' => [
-        'default' => '{order_legend},orderNumber,orderStatus,createdAt,language,subscription,servicePeriodFrom,servicePeriodUntil;{customer_legend},member,salutation,firstname,lastname,email,phone,company;{billing_legend},billingStreet,billingPostal,billingCity,billingState,billingCountry;{shipping_legend},shippingCompany,shippingFirstname,shippingLastname,shippingStreet,shippingPostal,shippingCity,shippingState,shippingCountry,shippingPhone;{method_legend},shippingMethodTitle,paymentMethodTitle,remainderDeliveryDays;{consent_legend},termsAcceptedAt,digitalConsentAt,businessCustomer,minimumAge,dateOfBirth;{tax_legend},vatId,vatIdStatus,vatIdRequestIdentifier;{total_legend},currency,netTotal,taxTotal,grandTotal',
+        'default' => '{order_legend},orderNumber,orderStatus,createdAt,language,subscription,servicePeriodFrom,servicePeriodUntil;{customer_legend},member,salutation,firstname,lastname,email,phone,company;{billing_legend},billingStreet,billingPostal,billingCity,billingState,billingCountry;{shipping_legend},shippingCompany,shippingFirstname,shippingLastname,shippingStreet,shippingPostal,shippingCity,shippingState,shippingCountry,shippingPhone;{method_legend},shippingMethodTitle,paymentMethodTitle,remainderDeliveryDays;{consent_legend},termsAcceptedAt,digitalConsentAt,businessCustomer,minimumAge,dateOfBirth;{tax_legend},vatId,vatIdStatus,vatIdRequestIdentifier,vatIdName;{total_legend},currency,netTotal,taxTotal,grandTotal',
     ],
 
     'fields' => [
@@ -467,8 +467,20 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
         ],
         'vatIdRequestIdentifier' => [
             'inputType' => 'text',
-            'eval' => ['readonly' => true, 'tl_class' => 'clr'],
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 64, 'default' => ''],
+        ],
+        /*
+         * The name VIES returned for the VAT ID, where the member state gives
+         * one out. Shown next to the billing address, not compared with it:
+         * company names are written too many ways for a machine to decide,
+         * and a VAT ID that does not belong to the buyer is what the operator
+         * looks for here.
+         */
+        'vatIdName' => [
+            'inputType' => 'text',
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'string', 'length' => 255, 'default' => ''],
         ],
     ],
 ];

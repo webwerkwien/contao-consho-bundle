@@ -260,7 +260,7 @@ final class DashboardBackendController
 
     private function may(string $module): bool
     {
-        return null === $this->security || $this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, $module);
+        return null !== $this->security && $this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, $module);
     }
 
     /**

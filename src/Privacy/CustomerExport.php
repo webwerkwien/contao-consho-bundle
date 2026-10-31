@@ -38,7 +38,7 @@ class CustomerExport
         'salutation', 'firstname', 'lastname', 'company', 'email', 'phone',
         'billingStreet', 'billingPostal', 'billingCity', 'billingState', 'billingCountry',
         'shippingCompany', 'shippingFirstname', 'shippingLastname', 'shippingStreet', 'shippingPostal', 'shippingCity', 'shippingState', 'shippingCountry', 'shippingPhone',
-        'dateOfBirth', 'vatId', 'vatIdStatus', 'vatIdRequestIdentifier', 'shippingMethodTitle', 'paymentMethodTitle',
+        'dateOfBirth', 'vatId', 'vatIdStatus', 'vatIdRequestIdentifier', 'vatIdName', 'shippingMethodTitle', 'paymentMethodTitle',
         'termsAcceptedAt', 'digitalConsentAt', 'emailConfirmedAt', 'erasureRequestedAt', 'anonymizedAt',
     ];
 

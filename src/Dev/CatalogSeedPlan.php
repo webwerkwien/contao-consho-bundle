@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Dev;
 
 use Random\Engine\Mt19937;
 use Random\Randomizer;
+use Symfony\Component\DependencyInjection\Attribute\When;
 
 /**
  * A reproducible test catalogue for consho:dev:benchmark (plan B-9).
@@ -30,6 +31,7 @@ use Random\Randomizer;
  * removes only those ranges, so a seed on a maintained test installation never
  * touches what was entered by hand.
  */
+#[When(env: 'dev')]
 final class CatalogSeedPlan
 {
     /**

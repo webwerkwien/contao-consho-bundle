@@ -28,7 +28,7 @@ class SetupButtonListener
     #[AsCallback(table: 'tl_consho_shop', target: 'list.operations.setup.button')]
     public function __invoke(DataContainerOperation $operation): void
     {
-        if (null !== $this->security && !$this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, 'consho_dashboard')) {
+        if (null === $this->security || !$this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, 'consho_dashboard')) {
             $operation->hide();
 
             return;

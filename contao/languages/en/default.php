@@ -30,7 +30,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'rootWithoutCurrency' => 'The start page "%page%" belongs to the shop configuration "%shop%" but has no currency. Below it the shop shows no price at all and no product appears in a listing — a price without a currency is not a statement. Pick a currency under "Consho" on the start page; the shop\'s currencies are on offer there.',
     'rootCurrencyNotSold' => 'The start page "%page%" sells in %currency%, but the shop configuration "%shop%" does not accept that currency (any more). Visitors see prices there that cannot be collected: there are no shipping amounts in %currency%. Either allow %currency% in "%shop%" again or pick one of the accepted currencies on the start page.',
     'currencyMissing' => 'No start page of the shop configuration "%shop%" carries a currency. The shop therefore shows no price anywhere and no product appears in a listing. Pick a currency on a start page of this shop — or, if none points at it yet, create a start page and assign the shop to it.',
-    'multipleShopsShareMembers' => 'This installation has more than one shop configuration: %shops%. They all work with the same member administration — customers, addresses and VAT ids are shared. That presupposes one and the same controller within the meaning of the GDPR behind every shop; two unrelated companies need two separate installations. Once that is settled there is nothing to do: several shops are intended, and this note blocks nothing.',
+    'multipleShopsShareMembers' => 'This installation has more than one shop configuration: %shops%. They all work with the same member administration — customers, addresses and VAT ids are shared. Back end rights apply to every shop as well: whoever may open a Consho module sees and edits its records in every shop. That presupposes one and the same controller within the meaning of the GDPR behind every shop; two unrelated companies need two separate installations. Once that is settled there is nothing to do: several shops are intended, and this note blocks nothing.',
     'miniCartMissing' => 'The shop configuration "%shops%" sends visitors back to the page after adding, but there is no mini basket element anywhere. The visitor then has no way of seeing that something landed in the basket. Add a mini basket element to a layout section or an article, or set "After adding" to "to the basket".',
     'groupPriceAboveList' => 'Customer group prices that are higher than the price for everyone: %count% (%examples%). Members of those groups pay more there than a guest does — that is how it is set up, and the shop is following it: a customer group price takes precedence over a bulk discount whatever the amounts. If it is intended (single units for a group where the public price is a pallet rate), there is nothing to do. Otherwise the price for everyone was usually lowered later while the group price stayed where it was.',
     'checkoutPageMissing' => 'Start points with a shop but no checkout page: %count% (%pages%). The basket then leads nowhere, and the checkout of that shop is blocked. The page is set on the start point, in the "Consho" legend.',
@@ -303,6 +303,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cart'] = [
         'too_many_codes' => 'Too many invalid codes. Please try again in a quarter of an hour.',
         'voucher_unknown' => 'We do not know this voucher code. Please check what you typed.',
         'too_many_vouchers' => 'No more vouchers can be redeemed in one purchase.',
+        'too_many_baskets' => 'Too many baskets are being created right now. Please try again in a quarter of an hour.',
     ],
 ];
 
@@ -1022,6 +1023,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'orderNumber' => 'Order number',
     'orderEmail' => 'E-mail address (preferably the one of the order)',
     'partOptional' => 'Only part of the order? Then name it here (optional)',
+    'leaveEmpty' => 'Please leave empty',
     'tooMany' => 'Too many attempts. Please try again in a quarter of an hour.',
     'missing' => 'Please fill in order number, e-mail address and name.',
     'emailInvalid' => 'Please enter a valid e-mail address — the confirmation of receipt goes there.',
@@ -1295,6 +1297,7 @@ $GLOBALS['TL_LANG']['CONSHO']['stockNotice'] = [
         'subscribed' => 'You will be notified as soon as the article is available again.',
         'unsubscribed' => 'You will no longer be notified about this article.',
         'available' => 'The article is available again.',
+        'limit' => 'You already have three notifications open. More are possible once your e-mail address is confirmed.',
         'login' => 'Please sign in with your customer account first.',
         'confirmed' => 'Your e-mail address is confirmed.',
         'invalid' => 'The confirmation link is no longer valid.',

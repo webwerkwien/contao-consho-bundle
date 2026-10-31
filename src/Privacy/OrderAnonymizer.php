@@ -41,7 +41,7 @@ class OrderAnonymizer
         'billingStreet', 'billingPostal', 'billingCity', 'billingState',
         'shippingCompany', 'shippingFirstname', 'shippingLastname',
         'shippingStreet', 'shippingPostal', 'shippingCity', 'shippingState', 'shippingPhone',
-        'dateOfBirth', 'vatId', 'vatIdRequestIdentifier',
+        'dateOfBirth', 'vatId', 'vatIdRequestIdentifier', 'vatIdName',
     ];
 
     /** WA, A6: how long a withdrawal without an order is kept. */

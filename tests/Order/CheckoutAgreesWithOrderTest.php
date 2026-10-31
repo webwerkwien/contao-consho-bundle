@@ -513,7 +513,11 @@ class CheckoutAgreesWithOrderTest extends TestCase
     private function state(string $country, bool $verifiedVatId, string $shopVatId, array|null $items = null, string $code = '', CartDiscounts|null $discounts = null, bool $netAudience = false, bool $taxAtDestination = false, VoucherWallet|null $vouchers = null, array $voucherCodes = [], CoverablePots|null $pots = null): CheckoutState
     {
         $data = (new CheckoutData())
-            ->withBilling(new Address(lastname: 'Muster', street: 'Hauptstr. 1', postal: '1100', city: 'Wien', country: 'AT', email: 'eva@example.org'))
+            // A business customer is billed in the country that issued its
+            // VAT ID (TaxPlace::reverseChargeReach()).
+            ->withBilling($verifiedVatId
+                ? new Address(lastname: 'Muster', street: 'Hauptstr. 1', postal: '10115', city: 'Berlin', country: 'DE', email: 'eva@example.org')
+                : new Address(lastname: 'Muster', street: 'Hauptstr. 1', postal: '1100', city: 'Wien', country: 'AT', email: 'eva@example.org'))
             ->withShipping(new Address(lastname: 'Muster', street: 'Lagerweg 9', postal: '10115', city: 'Berlin', country: $country, email: 'eva@example.org'));
 
         if ($verifiedVatId) {

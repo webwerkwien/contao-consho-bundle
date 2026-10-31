@@ -454,7 +454,7 @@ class OrderController extends AbstractContentElementController
      * The entitlements for the template (F-5): the end date formatted in the
      * page's language, like the documents' dates.
      *
-     * @return list<array{id: int, name: string, quantity: string, until: string, active: bool, resting: bool, file: bool, keys: list<string>, items: list<array{id: string, label: string, text: string|null, download: bool, action: string|null, actionLabel: string|null}>, service: bool, subscription: bool, performed: string}>
+     * @return list<array{id: int, name: string, quantity: string, until: string, active: bool, resting: bool, file: bool, keys: list<string>, items: list<array{id: string, label: string, text: string|null, download: bool, action: string|null, actionLabel: string|null, actions: list<array{action: string, label: string}>}>, service: bool, subscription: bool, performed: string}>
      */
     private function entitlementsOf(int $orderId, string $language): array
     {

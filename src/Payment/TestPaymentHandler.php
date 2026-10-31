@@ -119,7 +119,16 @@ final class TestPaymentHandler implements RecurringPaymentHandlerInterface
             // rest, as a provider knows its merchant before it reads the order.
             [self::PARAM_METHOD => $attempt->methodId, self::PARAM_SESSION => $session, self::PARAM_SIGNATURE => self::sign($session, $secret)],
             UrlGeneratorInterface::ABSOLUTE_URL,
-        ));
+        ), self::referenceFor($attempt->id));
+    }
+
+    /**
+     * The test provider's "session" — what a real one would return when the
+     * payment is set up, and name again in its notifications.
+     */
+    public static function referenceFor(int $attemptId): string
+    {
+        return 'TEST-SESSION-'.$attemptId;
     }
 
     public function handleReturn(Request $request, PaymentAttempt $attempt, array $config): AttemptState
@@ -169,10 +178,16 @@ final class TestPaymentHandler implements RecurringPaymentHandlerInterface
         }
 
         $mandate = \is_string($data['mandate'] ?? null) ? $data['mandate'] : '';
+        $for = \is_string($data['for'] ?? null) ? trim($data['for']) : '';
+
+        // Same as the amount: a message without what it is about is a 400.
+        if ('' === $for && \in_array($data['event'] ?? null, ['paid', 'failed'], true)) {
+            throw NotificationRejected::because('Notification names no provider reference.');
+        }
 
         return match ($data['event'] ?? null) {
-            'paid' => NotificationResult::paid($amount, (string) ($data['reference'] ?? ''), $mandate),
-            'failed' => NotificationResult::failed(),
+            'paid' => NotificationResult::paid($amount, \is_string($data['currency'] ?? null) ? $data['currency'] : '', $for, (string) ($data['reference'] ?? ''), $mandate),
+            'failed' => NotificationResult::failed($for),
             default => NotificationResult::ignored(),
         };
     }

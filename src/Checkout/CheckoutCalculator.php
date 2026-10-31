@@ -824,9 +824,7 @@ final class CheckoutCalculator
             return false;
         }
 
-        $home = strtoupper(trim($shopCountry));
-
-        return '' !== $home && $home !== $deliveryCountry;
+        return TaxPlace::reverseChargeReach($data->vatId, $data->billing->country, $deliveryCountry, $shopCountry);
     }
 
     /**

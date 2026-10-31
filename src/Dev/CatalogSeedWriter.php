@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Dev;
 
 use Doctrine\DBAL\Connection;
+use Symfony\Component\DependencyInjection\Attribute\When;
 
 /**
  * Writes a CatalogSeedPlan and removes it again (plan B-9). Development only.
@@ -15,6 +16,7 @@ use Doctrine\DBAL\Connection;
  * batches: on a MariaDB shared with other websites the load comes in portions
  * instead of one long write.
  */
+#[When(env: 'dev')]
 final class CatalogSeedWriter
 {
     private const TABLES = [

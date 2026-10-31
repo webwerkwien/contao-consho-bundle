@@ -160,7 +160,7 @@ final class WithdrawalRecorder
      * per shop or per address are used up: then it stands unconfirmed and
      * the operator confirms it by hand, as after a failed mail.
      */
-    public function recordUnassigned(int $shopId, string $language, string $orderReference, string $email, string $name, string $part, string $message, int $now): WithdrawalResult
+    public function recordUnassigned(int $shopId, string $language, string $orderReference, string $email, string $name, string $part, string $message, int $now, bool $holdBackConfirmation = false): WithdrawalResult
     {
         $orderReference = mb_substr(trim($orderReference), 0, 80);
         $part = self::cut($part);
@@ -203,7 +203,11 @@ final class WithdrawalRecorder
 
         // The address first: a flood on one address must not use up the
         // shop's allowance as well (WA).
-        $limited = !$this->allowed($this->perAddress, 'address-'.mb_strtolower(trim($email))) || !$this->allowed($this->perShop, 'shop-'.$shopId);
+        // A form filled in by a script holds its confirmation back the same
+        // way (WithdrawalController::TRAP_FIELD), without using up the limits.
+        $limited = $holdBackConfirmation
+            || !$this->allowed($this->perAddress, 'address-'.mb_strtolower(trim($email)))
+            || !$this->allowed($this->perShop, 'shop-'.$shopId);
 
         if (!$limited) {
             $confirmed = $this->mail->withdrawalReceivedUnassigned($shopId, trim($email), $language, [
@@ -223,7 +227,7 @@ final class WithdrawalRecorder
         } elseif ($limited) {
             // Wanted, not a failure: in a wave of them twenty errors an hour
             // would bury the real ones (WA).
-            $this->logger->warning(\sprintf('Withdrawal %s (not assigned to an order) was recorded; its confirmation of receipt was held back by the mail limit per shop or per address. Confirm it by hand if it is genuine.', $number));
+            $this->logger->warning(\sprintf('Withdrawal %s (not assigned to an order) was recorded; its confirmation of receipt was held back by the mail limit per shop or per address, or because the form looked filled in by a script. Confirm it by hand if it is genuine.', $number));
         } else {
             $this->logger->error(\sprintf('Withdrawal %s (not assigned to an order) was recorded, but its confirmation of receipt did not go out. It has to be confirmed by hand.', $number));
         }
@@ -268,8 +272,10 @@ final class WithdrawalRecorder
                     'email' => (string) $order['email'],
                     'scope' => $declaration->scope(),
                     'orderReference' => (string) $order['orderNumber'],
-                    'part' => 'part' === $declaration->scope() ? trim($declaration->part) : null,
-                    'message' => '' !== trim($declaration->message) ? trim($declaration->message) : null,
+                    // Cut like an unassigned one: the order page and the form
+                    // reach this with whatever length was posted.
+                    'part' => 'part' === $declaration->scope() ? self::cut($declaration->part) : null,
+                    'message' => '' !== trim($declaration->message) ? self::cut($declaration->message) : null,
                     'state' => 'received',
                 ]);
 

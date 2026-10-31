@@ -34,7 +34,7 @@ use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 class PaymentStarterTest extends TestCase
 {
-    /** @var array<int, array{order: int, method: int, type: string, amount: string, hash: string, state: AttemptState}> */
+    /** @var array<int, array{order: int, method: int, type: string, amount: string, hash: string, state: AttemptState, providerReference?: string}> */
     private array $stored = [];
 
     /** @var list<string> */
@@ -64,10 +64,22 @@ class PaymentStarterTest extends TestCase
         $this->connection->insert('tl_consho_withdrawal', ['id' => 1, 'pid' => 1, 'number' => 'WEB-00001-W1', 'state' => 'accepted']);
         $this->connection->insert('tl_consho_withdrawal_item', ['pid' => 1, 'orderItem' => 1, 'acceptedQuantity' => '1']);
 
-        $this->starter(PaymentStart::redirect('https://anbieter.test/pay'))->start(1, 100);
+        $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'))->start(1, 100);
 
         // 13,90 − 7,80/2 = 10,00
         self::assertTrue(\Brick\Math\BigDecimal::of('10')->isEqualTo($this->stored[1]['amount']));
+    }
+
+    /**
+     * A-6: what the provider set up stays on the attempt — notifications
+     * are accepted only about it.
+     */
+    public function testDieWeiterleitungHinterlegtDieReferenzAmVersuch(): void
+    {
+        $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_42'))->start(1, 100);
+
+        self::assertSame(AttemptState::Open, $this->stored[1]['state']);
+        self::assertSame('cs_42', $this->stored[1]['providerReference'] ?? null);
     }
 
     protected function assertPostConditions(): void
@@ -82,7 +94,7 @@ class PaymentStarterTest extends TestCase
     public function testDerStartOeffnetEinenVersuchUndGibtDenTokenNurInDenAdressenWeiter(): void
     {
         $seen = null;
-        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'), $seen);
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'), $seen);
 
         $start = $starter->start(1, 100);
 
@@ -108,7 +120,7 @@ class PaymentStarterTest extends TestCase
      */
     public function testLaeuftSchonEinVersuchDerArtStartetKeinZweiter(): void
     {
-        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'));
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
 
         self::assertSame(PaymentStartOutcome::Redirect, $starter->start(1, 100)?->outcome);
         self::assertNull($starter->start(1, 101));
@@ -132,7 +144,7 @@ class PaymentStarterTest extends TestCase
      */
     public function testEinOffenerVersuchVerfaelltNachDreissigMinuten(): void
     {
-        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'));
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
         $starter->start(1, 1000);
         $lapse = 1000 + PaymentStarter::ATTEMPT_LIFETIME;
 
@@ -159,7 +171,7 @@ class PaymentStarterTest extends TestCase
     public function testEineStornierteBestellungStartetKeineZahlung(): void
     {
         $this->order['cancelledAt'] = '1790000000';
-        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'));
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
 
         self::assertNull($starter->start(1, 100));
         self::assertSame([], $this->stored);
@@ -187,12 +199,12 @@ class PaymentStarterTest extends TestCase
     public function testNurDerOffeneRestbetragUndNichtsWennAllesBezahltIst(): void
     {
         $this->payments = ['3.9000'];
-        $this->starter(PaymentStart::redirect('https://anbieter.test/pay'))->start(1, 100);
+        $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'))->start(1, 100);
         self::assertSame('10.0000', $this->stored[1]['amount']);
 
         $this->stored = [];
         $this->payments = ['13.9000'];
-        self::assertNull($this->starter(PaymentStart::redirect('https://anbieter.test/pay'))->start(1, 100));
+        self::assertNull($this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'))->start(1, 100));
         self::assertSame([], $this->stored);
     }
 
@@ -200,7 +212,7 @@ class PaymentStarterTest extends TestCase
     {
         $this->order['paymentMethod'] = '99';
 
-        $start = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'))->start(1, 100);
+        $start = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'))->start(1, 100);
 
         self::assertSame(PaymentStartOutcome::Failed, $start?->outcome);
         self::assertSame([], $this->stored);
@@ -208,7 +220,7 @@ class PaymentStarterTest extends TestCase
 
     public function testErneutVersuchenNurNachAbbruchOderFehlerDerAktuellenArt(): void
     {
-        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'));
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
         self::assertFalse($starter->canRetry(1, 100), 'ohne Versuch');
 
         foreach ([[AttemptState::Open, false], [AttemptState::Pending, false], [AttemptState::Succeeded, false], [AttemptState::Failed, true], [AttemptState::Cancelled, true]] as [$state, $expected]) {
@@ -243,7 +255,7 @@ class PaymentStarterTest extends TestCase
 
         $seen = null;
         $view = null;
-        $this->starter(PaymentStart::redirect('https://anbieter.test/pay'), $seen, null, $mandates, $view)->start(1, 100);
+        $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'), $seen, null, $mandates, $view)->start(1, 100);
 
         self::assertInstanceOf(OrderView::class, $view);
         self::assertTrue($view->recurring);
@@ -260,7 +272,7 @@ class PaymentStarterTest extends TestCase
 
         $seen = null;
         $view = null;
-        $this->starter(PaymentStart::redirect('https://anbieter.test/pay'), $seen, null, null, $view)->start(1, 100);
+        $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'), $seen, null, null, $view)->start(1, 100);
 
         self::assertInstanceOf(OrderView::class, $view);
         self::assertSame('13.9000', $view->grandTotal);
@@ -282,7 +294,7 @@ class PaymentStarterTest extends TestCase
 
         $seen = null;
         $view = null;
-        $start = $this->starter(PaymentStart::redirect('https://anbieter.test/pay'), $seen, $logger, $mandates, $view)->start(1, 100);
+        $start = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'), $seen, $logger, $mandates, $view)->start(1, 100);
 
         self::assertSame(PaymentStartOutcome::Redirect, $start?->outcome);
         self::assertInstanceOf(OrderView::class, $view);
@@ -407,7 +419,7 @@ class PaymentStarterTest extends TestCase
 
             public function setState(int $attemptId, AttemptState $state, int $now, string $providerReference = ''): void
             {
-                $this->test->state($attemptId, $state);
+                $this->test->state($attemptId, $state, $providerReference);
             }
 
             public function recordReturn(int $attemptId, AttemptState $returned, int $now): void
@@ -447,9 +459,13 @@ class PaymentStarterTest extends TestCase
     /**
      * @internal
      */
-    public function state(int $id, AttemptState $state): void
+    public function state(int $id, AttemptState $state, string $providerReference = ''): void
     {
         $this->stored[$id]['state'] = $state;
+
+        if ('' !== $providerReference) {
+            $this->stored[$id]['providerReference'] = $providerReference;
+        }
     }
 
     /**

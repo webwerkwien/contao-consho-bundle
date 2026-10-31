@@ -24,6 +24,7 @@ use Webwerkwien\ContaoConshoBundle\Seo\ProductPageRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Seo\ProductUrlGenerator;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 use Webwerkwien\ContaoConshoBundle\Stock\Availability;
+use Webwerkwien\ContaoConshoBundle\Stock\StockNoticeLimitReached;
 use Webwerkwien\ContaoConshoBundle\Stock\StockNotices;
 use Webwerkwien\ContaoConshoBundle\Stock\StockRows;
 use Webwerkwien\ContaoConshoBundle\Tests\Confirmation\FakeOptIn;
@@ -100,6 +101,42 @@ class StockNoticeTest extends TestCase
         self::assertFalse($this->notices()->subscribe(1, 5, 2, 9, 'de', 1000), 'anderer Shop');
         self::assertFalse($this->notices()->subscribe(1, 5, 1, 9, 'fr', 1000), 'andere Sprache');
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_stock_notice'));
+    }
+
+    /**
+     * Without a confirmed address an account could have the shop mail a
+     * stranger once per article: three wishes at a time, then the limit. A
+     * confirmed address lifts it; a changed one is unconfirmed again.
+     */
+    public function testOhneBestaetigteAdresseHoechstensDreiWuensche(): void
+    {
+        foreach ([2, 3, 4] as $id) {
+            $this->connection->insert('tl_consho_product_visibility', ['pid' => $id, 'main' => $id, 'shop' => 1, 'language' => 'de', 'currency' => 'EUR']);
+            $this->connection->insert('tl_consho_product', ['id' => $id, 'title' => 'Artikel '.$id, 'stockTracked' => 1]);
+            (new StockRows($this->connection))->sync($id, 100);
+        }
+
+        foreach ([1, 2, 3] as $id) {
+            self::assertTrue($this->notices()->subscribe($id, 5, 1, 9, 'de', 1000));
+        }
+
+        self::assertTrue($this->notices()->subscribe(3, 5, 1, 9, 'de', 1001), 'ein bestehender Wunsch zählt nicht neu');
+
+        try {
+            $this->notices()->subscribe(4, 5, 1, 9, 'de', 1002);
+            self::fail('der vierte Wunsch braucht eine bestätigte Adresse');
+        } catch (StockNoticeLimitReached) {
+        }
+
+        self::assertFalse($this->notices()->isSubscribed(4, 5));
+
+        $this->connection->update('tl_member', ['consho_confirmedEmail' => 'kundin@example.org'], ['id' => 5]);
+        self::assertTrue($this->notices()->subscribe(4, 5, 1, 9, 'de', 1003), 'bestätigt: keine Grenze');
+
+        $this->notices()->unsubscribe(4, 5);
+        $this->connection->update('tl_member', ['email' => 'neu@example.org'], ['id' => 5]);
+        $this->expectException(StockNoticeLimitReached::class);
+        $this->notices()->subscribe(4, 5, 1, 9, 'de', 1004);
     }
 
     public function testDerCronSchreibtErstWennWiederWasDaIst(): void

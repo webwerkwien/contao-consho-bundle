@@ -62,7 +62,7 @@ final class TaxReportBackendController
         // Contao checks `consho_dashboard` only. The report and its record
         // export are order data, bound like the dashboard's figures (DB8) —
         // the dashboard alone was not enough before DB6 either.
-        if (null !== $this->security && !$this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, 'consho_order')) {
+        if (null === $this->security || !$this->security->isGranted(ContaoCorePermissions::USER_CAN_ACCESS_MODULE, 'consho_order')) {
             throw new AccessDeniedHttpException();
         }
 

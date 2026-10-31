@@ -50,7 +50,7 @@ class OrderPageDownloads
      *
      * `items` (block licence, LZ-1): what a module delivered, while active.
      *
-     * @return list<array{id: int, name: string, quantity: string, validUntil: int|null, active: bool, resting: bool, file: bool, type: string, keys: list<string>, items: list<array{id: string, label: string, text: string|null, download: bool, action: string|null, actionLabel: string|null}>, service: bool, subscription: bool, performedAt: int|null}>
+     * @return list<array{id: int, name: string, quantity: string, validUntil: int|null, active: bool, resting: bool, file: bool, type: string, keys: list<string>, items: list<array{id: string, label: string, text: string|null, download: bool, action: string|null, actionLabel: string|null, actions: list<array{action: string, label: string}>}>, service: bool, subscription: bool, performedAt: int|null}>
      */
     public function view(int $orderId, int $now): array
     {
@@ -93,6 +93,7 @@ class OrderPageDownloads
                     'download' => $item->download,
                     'action' => $item->action,
                     'actionLabel' => $item->actionLabel,
+                    'actions' => array_map(static fn (string $name, string $caption): array => ['action' => $name, 'label' => $caption], array_keys($item->actions()), $item->actions()),
                 ], $this->itemsOf($entitlement)) : [],
                 'service' => ProductKind::Service === ProductKind::stored((string) ($row['kind'] ?? '')),
                 'subscription' => $entitlement->subscription > 0,

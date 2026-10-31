@@ -433,16 +433,16 @@
                                                 <button type="submit" aria-label="{{ 'CONSHO.orderPage.downloadOf'|trans([item.label], 'contao_default') }}">{{ 'CONSHO.orderPage.download'|trans({}, 'contao_default') }}</button>
                                             </form>
                                         {% endif %}
-                                        {% if item.action is not null %}
+                                        {% for button in item.actions|default([]) %}
                                             <form method="post" class="consho-order__item-action">
                                                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                                                 <input type="hidden" name="consho_order_action" value="delivery">
                                                 <input type="hidden" name="entitlement" value="{{ entitlement.id }}">
                                                 <input type="hidden" name="item" value="{{ item.id }}">
-                                                <input type="hidden" name="delivery_action" value="{{ item.action }}">
-                                                <button type="submit">{{ item.actionLabel }}</button>
+                                                <input type="hidden" name="delivery_action" value="{{ button.action }}">
+                                                <button type="submit">{{ button.label }}</button>
                                             </form>
-                                        {% endif %}
+                                        {% endfor %}
                                     </li>
                                 {% endfor %}
                             </ul>

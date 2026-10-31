@@ -189,8 +189,8 @@ class PaymentStarter
         match ($start->outcome) {
             // Done here: waiting for the money (prepayment's transfer).
             PaymentStartOutcome::Completed => $this->attempts->setState($attemptId, AttemptState::Pending, $now),
-            // Off to the provider: open until it answers.
-            PaymentStartOutcome::Redirect => null,
+            // Off to the provider: open until it answers, about this reference.
+            PaymentStartOutcome::Redirect => $this->attempts->setState($attemptId, AttemptState::Open, $now, $start->reference),
             PaymentStartOutcome::Failed => $this->attempts->setState($attemptId, AttemptState::Failed, $now),
         };
 

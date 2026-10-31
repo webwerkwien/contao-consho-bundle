@@ -528,7 +528,7 @@ class OrderControllerTest extends TestCase
     public function testNachDemWechselStartetDieNeueArtUndFuehrtZumAnbieter(): void
     {
         $this->change->method('change')->willReturn(new PaymentChanged(self::ORDER, 55, null));
-        $this->payments->expects(self::once())->method('start')->with(self::ORDER)->willReturn(PaymentStart::redirect('https://anbieter.test/pay'));
+        $this->payments->expects(self::once())->method('start')->with(self::ORDER)->willReturn(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
 
         $redirect = $this->post(['consho_order_action' => 'change', 'method' => '3', 'consho_confirm' => '1']);
 
@@ -550,7 +550,7 @@ class OrderControllerTest extends TestCase
     public function testErneutVersuchenStartetNurWennErlaubt(): void
     {
         $this->payments->method('canRetry')->willReturnOnConsecutiveCalls(false, true);
-        $this->payments->expects(self::once())->method('start')->willReturn(PaymentStart::redirect('https://anbieter.test/pay'));
+        $this->payments->expects(self::once())->method('start')->willReturn(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
 
         $refused = $this->post(['consho_order_action' => 'retry']);
         self::assertInstanceOf(RedirectResponseException::class, $refused);

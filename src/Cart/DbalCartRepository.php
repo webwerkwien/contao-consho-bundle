@@ -93,6 +93,31 @@ final class DbalCartRepository implements CartConversionInterface
         ));
     }
 
+    /**
+     * Gives the open baskets of one token a new one and returns it.
+     *
+     * A guest's cookie is never taken over as it came: whoever can set a
+     * cookie for the host — a sub domain, a network in the middle — could
+     * plant a token they know and read the basket that grows under it,
+     * address and VAT ID included. So the token is replaced where a basket is
+     * created and where an address goes in, and the baskets of the other
+     * shops on the same cookie (C-3b) move along instead of being lost.
+     */
+    public function rotateToken(string|null $old): string
+    {
+        $new = CartToken::generate();
+
+        if (null !== $old) {
+            $this->connection->update(
+                'tl_consho_cart',
+                ['tokenHash' => CartToken::hash($new)],
+                ['tokenHash' => CartToken::hash($old), 'state' => 'open'],
+            );
+        }
+
+        return $new;
+    }
+
     public function create(string|null $tokenHash, int $memberId, int $shopId, int $now): int
     {
         $this->connection->insert('tl_consho_cart', [

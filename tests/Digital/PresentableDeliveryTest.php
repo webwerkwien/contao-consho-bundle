@@ -55,8 +55,8 @@ class PresentableDeliveryTest extends TestCase
         $view = $this->downloads()->view(5, 2_000);
 
         self::assertSame([
-            ['id' => 'lic-1', 'label' => 'Lizenz 1', 'text' => 'KEY-1', 'download' => true, 'action' => 'release', 'actionLabel' => 'Installation freigeben'],
-            ['id' => 'note', 'label' => 'Hinweis', 'text' => 'nur Text', 'download' => false, 'action' => null, 'actionLabel' => null],
+            ['id' => 'lic-1', 'label' => 'Lizenz 1', 'text' => 'KEY-1', 'download' => true, 'action' => 'release', 'actionLabel' => 'Installation freigeben', 'actions' => [['action' => 'release', 'label' => 'Installation freigeben']]],
+            ['id' => 'note', 'label' => 'Hinweis', 'text' => 'nur Text', 'download' => false, 'action' => null, 'actionLabel' => null, 'actions' => []],
         ], $view[0]['items']);
         self::assertSame([], $view[1]['items'], 'ruht: nichts (E4)');
         self::assertSame([], $view[2]['items'], 'gesperrt: nichts');
@@ -112,6 +112,36 @@ class PresentableDeliveryTest extends TestCase
                 self::addToAssertionCount(1);
             }
         }
+    }
+
+    public function testWeitereKnoepfeStehenNachDemErstenUndGeltenAlsAngeboten(): void
+    {
+        $item = new DeliveredItem('a', 'X', null, false, 'release', 'Freigeben', ['rekey' => 'Neu ausstellen']);
+
+        self::assertSame(['release' => 'Freigeben', 'rekey' => 'Neu ausstellen'], $item->actions());
+        self::assertTrue($item->offers('rekey'));
+        self::assertFalse($item->offers('delete'));
+        self::assertSame(['rekey' => 'Nur dieser'], (new DeliveredItem('b', 'X', moreActions: ['rekey' => 'Nur dieser']))->actions(), 'auch ohne ersten');
+        self::assertSame([], (new DeliveredItem('c', 'X'))->actions());
+
+        foreach ([['re key' => 'X'], ['rekey' => ''], ['' => 'X']] as $more) {
+            try {
+                new DeliveredItem('a', 'X', moreActions: $more);
+                self::fail('abgelehnt erwartet');
+            } catch (\InvalidArgumentException) {
+                self::addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function testDieSeiteZeigtUndFuehrtAuchDieWeiterenKnoepfeAus(): void
+    {
+        $this->handler->more = ['rekey' => 'Neu ausstellen'];
+        $downloads = $this->downloads();
+
+        self::assertSame([['action' => 'release', 'label' => 'Installation freigeben'], ['action' => 'rekey', 'label' => 'Neu ausstellen']], $downloads->view(5, 2_000)[0]['items'][0]['actions']);
+        self::assertSame('testReleased', $downloads->act(5, 1, 'lic-1', 'rekey', 2_000));
+        self::assertSame(['act lic-1 rekey'], $this->handler->calls);
     }
 
     private function downloads(): OrderPageDownloads

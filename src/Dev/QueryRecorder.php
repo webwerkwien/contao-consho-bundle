@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Dev;
 
 use Psr\Log\AbstractLogger;
+use Symfony\Component\DependencyInjection\Attribute\When;
 
 /**
  * Keeps the SQL a connection executes, for EXPLAIN (plan B-9).
@@ -12,6 +13,7 @@ use Psr\Log\AbstractLogger;
  * exposing its SQL. DBAL 4 logs "Executing statement" with sql, params and
  * types in the context, and "Executing query" with sql only.
  */
+#[When(env: 'dev')]
 final class QueryRecorder extends AbstractLogger
 {
     /**

@@ -17,6 +17,9 @@ final class FakePresentableHandler implements PresentableDeliveryHandlerInterfac
     /** @var list<string> */
     public array $calls = [];
 
+    /** @var array<string, string> further buttons on the key item */
+    public array $more = [];
+
     public static function getType(): string
     {
         return 'testlicence';
@@ -30,7 +33,7 @@ final class FakePresentableHandler implements PresentableDeliveryHandlerInterfac
     public function deliveredItems(Entitlement $entitlement): array
     {
         return [
-            new DeliveredItem('lic-'.$entitlement->id, 'Lizenz '.$entitlement->id, 'KEY-'.$entitlement->id, true, 'release', 'Installation freigeben'),
+            new DeliveredItem('lic-'.$entitlement->id, 'Lizenz '.$entitlement->id, 'KEY-'.$entitlement->id, true, 'release', 'Installation freigeben', $this->more),
             new DeliveredItem('note', 'Hinweis', 'nur Text'),
         ];
     }

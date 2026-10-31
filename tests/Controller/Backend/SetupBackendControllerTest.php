@@ -203,6 +203,15 @@ final class SetupBackendControllerTest extends TestCase
         $this->controller($issues, $security, $this->post('ranges', 1))();
     }
 
+    public function testOhneSicherheitsschichtKeinAdministrator(): void
+    {
+        $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
+        $issues = [new ConfigurationIssue(ConfigurationFinding::NumberRangeMissing, ['typeKeys' => 'order'], 1)];
+
+        $this->expectException(AccessDeniedHttpException::class);
+        $this->controller($issues, null, $this->post('ranges', 1))();
+    }
+
     public function testShopseitenAufKnopfdruck(): void
     {
         $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop']);
@@ -343,8 +352,12 @@ final class SetupBackendControllerTest extends TestCase
      * @param list<ConfigurationIssue>      $issues      what issues() reports — the published start points
      * @param list<ConfigurationIssue>|null $setupIssues what issuesForSetup() reports, when it differs (N1)
      */
-    private function controller(array $issues = [], Security|null $security = null, Request|null $request = null, float $probeBudget = SetupBackendController::PROBE_BUDGET, array|null $setupIssues = null): SetupBackendController
+    private function controller(array $issues = [], Security|false|null $security = false, Request|null $request = null, float $probeBudget = SetupBackendController::PROBE_BUDGET, array|null $setupIssues = null): SetupBackendController
     {
+        // false: an administrator; null: no security service at all.
+        if (false === $security) {
+            $security = $this->administrator();
+        }
         $requests = new RequestStack();
         $requests->push($request ?? Request::create('/contao'));
 
@@ -428,5 +441,15 @@ final class SetupBackendControllerTest extends TestCase
         $tokens->method('getDefaultTokenValue')->willReturn('token-value');
 
         return $tokens;
+    }
+
+    // Without a security layer nothing is granted any more; these tests
+    // look at what an administrator sees.
+    private function administrator(): Security
+    {
+        $security = $this->createMock(Security::class);
+        $security->method('isGranted')->willReturn(true);
+
+        return $security;
     }
 }

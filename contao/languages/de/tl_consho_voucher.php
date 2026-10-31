@@ -49,5 +49,6 @@ $GLOBALS['TL_LANG']['tl_consho_voucher']['correctAmountHelp'] = 'Positiv erhöht
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctNote'] = 'Grund';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctSubmit'] = 'Buchen';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctInvalid'] = 'Bitte einen Betrag ungleich 0 und einen Grund angeben.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctUpAdminOnly'] = 'Einen Saldo erhöhen darf nur ein Administrator. Senken können Sie ihn mit einem negativen Betrag.';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctTooLow'] = 'So viel ist auf dem Gutschein nicht mehr übrig.';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['corrected'] = 'Gebucht. Neuer Saldo: %s';

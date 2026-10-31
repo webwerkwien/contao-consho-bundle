@@ -48,6 +48,8 @@ class StockNoticeControllerTest extends TestCase
         $this->createCatalogSchema($this->connection);
         $this->createRootPageTable($this->connection);
         DcaSchema::create($this->connection, 'tl_consho_stock_notice');
+        $this->connection->executeStatement("CREATE TABLE tl_member (id INTEGER PRIMARY KEY, email TEXT NOT NULL DEFAULT '', consho_confirmedEmail TEXT NOT NULL DEFAULT '')");
+        $this->connection->insert('tl_member', ['id' => 5, 'email' => 'kundin@example.org']);
         $this->insertShop(['id' => 1, 'title' => 'Shop', 'fallbackLanguage' => 'de', 'country' => 'AT']);
         $this->insertRootPage(7, 'de', 1);
 
@@ -91,6 +93,18 @@ class StockNoticeControllerTest extends TestCase
 
         self::assertStringEndsWith('consho_stock_notice=unsubscribed', (string) $response->headers->get('Location'));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_stock_notice'));
+    }
+
+    public function testOhneBestaetigteAdresseNachDreiWuenschenDerHinweis(): void
+    {
+        foreach ([11, 12, 13] as $article) {
+            $this->connection->insert('tl_consho_stock_notice', ['article' => $article, 'main' => $article, 'member' => 5, 'shop' => 1, 'root' => 7, 'language' => 'de', 'createdAt' => 1, 'tstamp' => 1]);
+        }
+
+        $response = $this->controller(5)($this->post(['article' => '3', 'main' => '1']));
+
+        self::assertStringEndsWith('consho_stock_notice=limit', (string) $response->headers->get('Location'));
+        self::assertSame(3, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_stock_notice'));
     }
 
     public function testLieferbarWirdNichtsEingetragen(): void

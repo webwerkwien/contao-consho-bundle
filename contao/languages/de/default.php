@@ -30,7 +30,7 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'rootWithoutCurrency' => 'Der Startpunkt „%page%" gehört zur Shop-Konfiguration „%shop%", hat aber keine Währung. Unter ihm zeigt der Shop keinen einzigen Preis, und kein Produkt erscheint in einer Liste — ein Preis ohne Währung ist keine Angabe. Im Startpunkt unter „Consho" eine Währung wählen; zur Wahl stehen die Währungen des Shops.',
     'rootCurrencyNotSold' => 'Der Startpunkt „%page%" verkauft in %currency%, die Shop-Konfiguration „%shop%" nimmt diese Währung aber nicht (mehr) an. Besucher sehen dort Preise, die sich nicht kassieren lassen: Versandbeträge gibt es in %currency% nicht. Entweder %currency% in „%shop%" wieder zulassen oder am Startpunkt eine der angenommenen Währungen wählen.',
     'currencyMissing' => 'Kein Startpunkt der Shop-Konfiguration „%shop%" hat eine Währung. Der Shop zeigt deshalb nirgends einen Preis und kein Produkt erscheint in einer Liste. An einem Startpunkt dieses Shops eine Währung wählen — oder, falls noch keiner auf ihn zeigt, einen Startpunkt anlegen und ihm den Shop zuweisen.',
-    'multipleShopsShareMembers' => 'Diese Installation hat mehr als eine Shop-Konfiguration: %shops%. Alle arbeiten mit derselben Mitgliederverwaltung — Kunden, Adressen und UID-Nummern sind geteilt. Das setzt voraus, dass hinter allen Shops derselbe Verantwortliche im Sinne der DSGVO steht; für zwei fremde Firmen gehören zwei getrennte Installationen aufgesetzt. Ist das geklärt, ist nichts zu tun: Mehrere Shops sind vorgesehen, und dieser Hinweis sperrt nichts.',
+    'multipleShopsShareMembers' => 'Diese Installation hat mehr als eine Shop-Konfiguration: %shops%. Alle arbeiten mit derselben Mitgliederverwaltung — Kunden, Adressen und UID-Nummern sind geteilt. Auch die Rechte im Backend gelten für alle Shops: Wer ein Consho-Modul öffnen darf, sieht und bearbeitet dessen Datensätze in jedem Shop. Das setzt voraus, dass hinter allen Shops derselbe Verantwortliche im Sinne der DSGVO steht; für zwei fremde Firmen gehören zwei getrennte Installationen aufgesetzt. Ist das geklärt, ist nichts zu tun: Mehrere Shops sind vorgesehen, und dieser Hinweis sperrt nichts.',
     'miniCartMissing' => 'Die Shop-Konfiguration „%shops%" schickt Besucher nach dem Hinzufügen zurück zur Seite, es gibt aber nirgends ein Mini-Warenkorb-Element. Der Besucher sieht dann nicht, dass etwas im Warenkorb gelandet ist. Fügen Sie ein Mini-Warenkorb-Element in einen Layout-Bereich oder einen Artikel ein, oder stellen Sie „Nach dem Hinzufügen" auf „zum Warenkorb".',
     'groupPriceAboveList' => 'Kundengruppen-Preise, die teurer sind als der Preis für alle: %count% (%examples%). Mitglieder dieser Gruppen zahlen dort mehr als ein Gast — so ist es eingestellt, und der Shop hält sich daran: Ein Kundengruppen-Preis geht einem Mengenrabatt vor, gleich welcher Betrag darin steht. Ist das gewollt (etwa Einzelabgabe an eine Gruppe, während der öffentliche Preis ein Palettenpreis ist), ist nichts zu tun. Sonst ist meist der Preis für alle nachträglich gesenkt worden, während der Gruppenpreis stehen blieb.',
     'checkoutPageMissing' => 'Startpunkte mit Shop, aber ohne Checkout-Seite: %count% (%pages%). Vom Warenkorb führt dann kein Weg weiter, und der Checkout dieses Shops ist gesperrt. Die Seite wird am Startpunkt eingestellt, in der Legende „Consho".',
@@ -308,6 +308,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cart'] = [
         'too_many_codes' => 'Zu viele ungültige Codes. Bitte versuchen Sie es in einer Viertelstunde erneut.',
         'voucher_unknown' => 'Diesen Gutscheincode kennen wir nicht. Bitte prüfen Sie die Eingabe.',
         'too_many_vouchers' => 'Mehr Gutscheine lassen sich in einem Einkauf nicht einlösen.',
+        'too_many_baskets' => 'Gerade werden zu viele Warenkörbe angelegt. Bitte versuchen Sie es in einer Viertelstunde erneut.',
     ],
 ];
 
@@ -1036,6 +1037,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'orderNumber' => 'Bestellnummer',
     'orderEmail' => 'E-Mail-Adresse (am besten die der Bestellung)',
     'partOptional' => 'Nur einen Teil der Bestellung? Dann nennen Sie ihn hier (optional)',
+    'leaveEmpty' => 'Bitte leer lassen',
     'tooMany' => 'Zu viele Versuche. Bitte versuchen Sie es in einer Viertelstunde erneut.',
     'missing' => 'Bitte füllen Sie Bestellnummer, E-Mail-Adresse und Name aus.',
     'emailInvalid' => 'Bitte geben Sie eine gültige E-Mail-Adresse an — an sie geht die Eingangsbestätigung.',
@@ -1312,6 +1314,7 @@ $GLOBALS['TL_LANG']['CONSHO']['stockNotice'] = [
         'subscribed' => 'Sie werden benachrichtigt, sobald der Artikel wieder lieferbar ist.',
         'unsubscribed' => 'Sie werden zu diesem Artikel nicht mehr benachrichtigt.',
         'available' => 'Der Artikel ist wieder lieferbar.',
+        'limit' => 'Sie haben schon drei Benachrichtigungen offen. Weitere sind möglich, sobald Ihre E-Mail-Adresse bestätigt ist.',
         'login' => 'Bitte melden Sie sich zuerst mit Ihrem Kundenkonto an.',
         'confirmed' => 'Ihre E-Mail-Adresse ist bestätigt.',
         'invalid' => 'Der Link zum Bestätigen ist nicht mehr gültig.',

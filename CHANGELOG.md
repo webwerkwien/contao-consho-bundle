@@ -5,6 +5,72 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.2.0] – 2026-10-31
+
+### Security
+
+- **Reverse charge only across a border inside the EU, with a VAT ID from the billing country.** Until now a valid VAT
+  ID and a delivery country other than the shop's were enough — a VAT ID copied from another company's imprint bought
+  without tax under any address, and a delivery outside the EU counted as a border. Now the shop, the billing address
+  and the delivery address have to be in the EU, billing and delivery outside the shop's country, and the VAT ID has to
+  be issued by the billing country (EL for Greece). This is narrower than the law requires; where it says no, the
+  order carries tax. Checkout, order and invoice apply the same rule. (Block C)
+- **"Withdraw from contract" form: the confirmation can no longer be used to mail strangers.** A declaration that
+  matches no order is confirmed to the address typed, with the declaration's text — which the confirmation has to
+  contain. The form now has a field no person sees; filled in, the declaration is stored as before, but its
+  confirmation is held back like one over the limit (back-end message, confirm by hand). The limit per address is now
+  three confirmations a day instead of an hour. Part and message of a declaration made on the order page are cut to
+  2,000 characters, as on the form. A customised `consho_withdrawal` template needs the new hidden field
+  `consho_withdrawal_check`. (Block D)
+- **Issuing a voucher and raising a balance are for administrators only.** Both create value nobody paid for, in any
+  amount and for any shop of the installation; until now the right to the voucher module was enough. Editors with the
+  module still see vouchers, block them and lower a balance with a negative correction. The button "Gutschein
+  ausstellen" is hidden for them. (Block Wertgutscheine)
+- **A guest's basket cookie is renewed when a basket is created and when the address is submitted.** A cookie the
+  browser brings along is no longer taken over for a new basket, so a value planted from outside never becomes the key
+  to someone's basket. The open baskets of other shops move to the new cookie, nothing is lost. (Block C)
+- **VAT ID checks from the front end are limited to ten per IP in 15 minutes**: in the checkout, and when a member
+  sets a VAT ID at registration or in "Persönliche Daten". Each one is a VIES query in the shop's name. Over the limit
+  the check counts as unavailable: the order carries tax and "check again" stays open, as when VIES does not answer.
+  Saving a member in the back end and subscription billing are not limited. (Block C)
+- **New guest baskets are limited to sixty per IP in 15 minutes.** Over the limit the buy button answers with the new
+  notice `too_many_baskets` and no basket is created; adding to a basket the visitor already has is not counted.
+  Behind a proxy or CDN, set `TRUSTED_PROXIES` so that this limit and the one on VAT ID checks count visitors, not the
+  proxy. (Block C)
+- **"Benachrichtigen, wenn wieder da": at most three open wishes while the account's address is not confirmed.**
+  Contao accepts any address at registration and in "Persönliche Daten", so an account could have the shop mail a
+  stranger once per article. A fourth wish answers with the new result `limit`; a confirmed address lifts the limit.
+  (Block G)
+- **A provider notification pays only the attempt it is about, in the attempt's currency.** Until now the core
+  relied on each payment module to check that a genuine notification belonged to the attempt; one that did not
+  would let a notice of one payment pay another. Now the core checks it for every module. **For payment module
+  authors:** `PaymentStart::redirect($url, $reference)` names the provider's reference of what it set up, and the
+  core keeps it on the attempt; `ChargeResult::pending($reference)` requires it as well;
+  `NotificationResult::paid($amount, $currency, $for, $reference, $mandate)` and `NotificationResult::failed($for)`
+  name that reference (`$for`) and the currency. A notification about another reference, or in another currency,
+  is answered with 400 and nothing is written. The reference has to be the attempt's own, not one shared by several
+  attempts such as the order number. A notification that arrives for a charge before `charge()` has returned its
+  reference is answered with 503, so that the provider sends it again. The attempt keeps the start reference after
+  the payment; the payment's own reference stays on the payment. (Block C)
+- **The return from a payment provider opens the order for one day only.** The return address stays in the provider's
+  records and the browser history; until now every call handed out a new link to the order page. After a day the
+  buyer lands on the order page without it and can request a new link to the order's address. (Block C)
+- Dashboard, setup, tax report, the configuration notes and the setup button deny access when no security service
+  is available, instead of granting it. In a normal installation nothing changes.
+- The note on several shop configurations now also says that back end rights apply to every shop: whoever may open a
+  Consho module sees and edits its records in all shops. (Block I)
+
+### Added
+
+- **Name at VIES on the order** (`tl_consho_order.vatIdName`): the name VIES returned for the VAT ID, where the member
+  state gives one out, shown in the tax section next to the consultation number. It is not compared with the address;
+  it is there for the operator to check. Included in the data export, removed on anonymisation. Run
+  `contao:migrate`. (Block C)
+- **Several buttons per delivered item on the order page**: a delivery module passes further actions as
+  `DeliveredItem::$moreActions` (name => caption), after the first one in `action`. Each runs through `act()` under the
+  same checks. The order page template gets the list `item.actions`; a customised `consho_order` template that still
+  reads `item.action` shows only the first button. (LZ-1)
+
 ## [0.1.18] – 2026-10-30
 
 ### Added

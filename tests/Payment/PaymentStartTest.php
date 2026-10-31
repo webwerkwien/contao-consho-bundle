@@ -20,11 +20,23 @@ class PaymentStartTest extends TestCase
 
     public function testWeiterleitungBrauchtEineAdresse(): void
     {
-        self::assertSame('https://pay.example/x', PaymentStart::redirect('https://pay.example/x')->url);
+        self::assertSame('https://pay.example/x', PaymentStart::redirect('https://pay.example/x', 'cs_1')->url);
 
         $this->expectException(\InvalidArgumentException::class);
 
-        PaymentStart::redirect('');
+        PaymentStart::redirect('', 'cs_1');
+    }
+
+    /**
+     * A-6: notifications are accepted only about what the redirect set up.
+     */
+    public function testWeiterleitungNenntWasSieAngelegtHat(): void
+    {
+        self::assertSame('cs_1', PaymentStart::redirect('https://pay.example/x', ' cs_1 ')->reference);
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        PaymentStart::redirect('https://pay.example/x', ' ');
     }
 
     public function testFehlschlagNenntDenGrund(): void

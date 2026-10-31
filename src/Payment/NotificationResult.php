@@ -9,6 +9,16 @@ use Brick\Math\RoundingMode;
  * What a verified provider notification says (spec 6.2). The handler checks
  * authenticity; the core writes the payment row from `paid`, once (spec 7.4).
  *
+ * `for` is the provider's reference of what the message is about — the one
+ * start() or a pending charge handed over (PaymentStart, ChargeResult). The
+ * core compares it, and the currency, with the attempt and refuses a message
+ * about anything else: a signature proves who wrote the message, not which
+ * attempt it was meant for, and a module that forgot to check would let a
+ * genuine notice of one payment pay another.
+ *
+ * `reference` is the payment's own, booked with it (it may differ from `for`,
+ * as a capture differs from its order at some providers).
+ *
  * `mandate` (Abo-4b, P93): what the provider kept for charging follow-up
  * orders, as the handler builds it. Stored on the order's subscriptions only
  * when the handler can charge (RecurringPaymentHandlerInterface); '' for none.
@@ -20,10 +30,12 @@ final class NotificationResult
         public readonly string $amount = '',
         public readonly string $reference = '',
         public readonly string $mandate = '',
+        public readonly string $for = '',
+        public readonly string $currency = '',
     ) {
     }
 
-    public static function paid(string $amount, string $reference, string $mandate = ''): self
+    public static function paid(string $amount, string $currency, string $for, string $reference, string $mandate = ''): self
     {
         $scaled = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
 
@@ -31,12 +43,21 @@ final class NotificationResult
             throw new \InvalidArgumentException(\sprintf('A payment received is positive, got "%s".', $amount));
         }
 
-        return new self(NotificationOutcome::Paid, (string) $scaled, $reference, trim($mandate));
+        return new self(NotificationOutcome::Paid, (string) $scaled, $reference, trim($mandate), self::forOf($for), strtoupper(trim($currency)));
     }
 
-    public static function failed(): self
+    public static function failed(string $for): self
     {
-        return new self(NotificationOutcome::Failed);
+        return new self(NotificationOutcome::Failed, for: self::forOf($for));
+    }
+
+    private static function forOf(string $for): string
+    {
+        if ('' === trim($for)) {
+            throw new \InvalidArgumentException('A notification names the provider reference it is about.');
+        }
+
+        return trim($for);
     }
 
     public static function ignored(): self

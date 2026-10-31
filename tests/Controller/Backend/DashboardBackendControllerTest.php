@@ -172,6 +172,13 @@ final class DashboardBackendControllerTest extends TestCase
         self::assertStringNotContainsString('Meldebestand', $this->controller($this->without('consho_stock'))(), 'DB8');
     }
 
+    public function testOhneSicherheitsschichtKeinModulrecht(): void
+    {
+        $this->keyStock(1);
+
+        self::assertStringNotContainsString('Meldebestand', $this->controller(null)());
+    }
+
     public function testUeberZehnArtikelVerweistDerRestAufDieListe(): void
     {
         $this->keyStock(DashboardBackendController::STOCK_ITEMS + 2);
@@ -361,8 +368,12 @@ final class DashboardBackendControllerTest extends TestCase
     /**
      * @param list<ConfigurationIssue> $issues
      */
-    private function controller(Security|null $security = null, array $issues = []): DashboardBackendController
+    private function controller(Security|false|null $security = false, array $issues = []): DashboardBackendController
     {
+        // false: an administrator; null: no security service at all.
+        if (false === $security) {
+            $security = $this->administrator();
+        }
         $loader = new FilesystemLoader();
         $loader->addPath(__DIR__.'/../../../contao/templates', 'Contao');
 
@@ -382,5 +393,15 @@ final class DashboardBackendControllerTest extends TestCase
             new SetupGuide($this->connection),
             $security,
         );
+    }
+
+    // Without a security layer nothing is granted any more; these tests
+    // look at what an administrator sees.
+    private function administrator(): Security
+    {
+        $security = $this->createMock(Security::class);
+        $security->method('isGranted')->willReturn(true);
+
+        return $security;
     }
 }

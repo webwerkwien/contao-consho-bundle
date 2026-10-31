@@ -87,13 +87,15 @@ class TestPaymentController
             };
 
             // Abo-4b, P100: an order with subscriptions gets a mandate with its payment.
-            $paid = ['attempt' => $attemptId, 'event' => 'paid', 'amount' => (string) ($session['amount'] ?? '0')]
+            // Naming the session start() set up, as a provider names its own.
+            $for = TestPaymentHandler::referenceFor($attemptId);
+            $paid = ['attempt' => $attemptId, 'for' => $for, 'event' => 'paid', 'amount' => (string) ($session['amount'] ?? '0'), 'currency' => (string) ($session['currency'] ?? '')]
                 + (1 === (int) ($session['recurring'] ?? 0) ? ['mandate' => TestPaymentHandler::mandateFor($attemptId)] : []);
 
             $statuses = match ($action) {
                 'pay' => $this->notify($notify, $secret, $paid + ['reference' => 'TEST-'.bin2hex(random_bytes(4))], 1),
                 'twice' => $this->notify($notify, $secret, $paid + ['reference' => 'TEST-'.bin2hex(random_bytes(4))], 2),
-                'fail' => $this->notify($notify, $secret, ['attempt' => $attemptId, 'event' => 'failed'], 1),
+                'fail' => $this->notify($notify, $secret, ['attempt' => $attemptId, 'for' => $for, 'event' => 'failed'], 1),
                 'cancel' => [],
             };
 

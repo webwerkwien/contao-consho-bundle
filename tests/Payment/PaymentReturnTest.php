@@ -77,6 +77,26 @@ class PaymentReturnTest extends TestCase
         self::assertSame(0, $this->attempts->locks);
     }
 
+    public function testNachEinemTagGibtDieRueckkehrKeinenSchluesselMehrHeraus(): void
+    {
+        $this->attempts->add(new PaymentAttempt(4, 1, 7, 'test', AttemptState::Succeeded, '13.9000', 'EUR', '', '', '', createdAt: 1_000), str_repeat('c', 64));
+
+        self::assertNotNull($this->returns()->handle(str_repeat('c', 64), $this->request('paid'), 1_000 + PaymentReturn::RETURN_WINDOW));
+        self::assertSame(1, $this->issuedCount(), 'am letzten Tag noch');
+
+        $url = $this->returns()->handle(str_repeat('c', 64), $this->request('paid'), 1_001 + PaymentReturn::RETURN_WINDOW);
+
+        self::assertSame('https://example.org/bestellung.html', $url);
+        self::assertSame(1, $this->issuedCount());
+    }
+
+    // Filled through a reference inside returns(), which static analysis
+    // cannot follow.
+    private function issuedCount(): int
+    {
+        return \count($this->issued);
+    }
+
     public function testUnbekannterVersuchIstNull(): void
     {
         self::assertNull($this->returns()->handle(str_repeat('b', 64), $this->request('paid'), 100));

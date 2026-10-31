@@ -2,12 +2,15 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Dev;
 
+use Symfony\Component\DependencyInjection\Attribute\When;
+
 /**
  * Median and worst run (plan B-9, decision 3).
  *
  * Not the mean: it hides the outlier, and the outlier is what a visitor
  * notices.
  */
+#[When(env: 'dev')]
 final class Timing
 {
     /**

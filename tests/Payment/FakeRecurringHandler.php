@@ -66,7 +66,7 @@ final class FakeRecurringHandler implements RecurringPaymentHandlerInterface
     {
         $this->starts[] = $order;
 
-        return PaymentStart::redirect('https://anbieter.test/kasse');
+        return PaymentStart::redirect('https://anbieter.test/kasse', 'cs_'.$attempt->id);
     }
 
     public function handleReturn(Request $request, PaymentAttempt $attempt, array $config): AttemptState

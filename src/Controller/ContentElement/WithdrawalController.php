@@ -63,6 +63,14 @@ class WithdrawalController extends AbstractContentElementController
 {
     public const NOTICE_PARAM = 'consho_withdrawal';
 
+    /**
+     * A field no person sees. Filled in, the declaration is still stored —
+     * a withdrawal must never be lost to a guess about who sent it — but its
+     * confirmation does not go to the address typed: the form would otherwise
+     * send the shop's mail, with the sender's text in it, to anyone.
+     */
+    public const TRAP_FIELD = 'consho_withdrawal_check';
+
     public function __construct(
         private readonly ShopResolver $shops,
         private readonly Connection $connection,
@@ -154,7 +162,17 @@ class WithdrawalController extends AbstractContentElementController
         // stranger that the order exists (WA).
         // The operator assigns it and rejects it with a reason.
         if (WithdrawalOutcome::Recorded !== $result?->outcome) {
-            $result = $this->recorder->recordUnassigned($shopId, $language, $input['orderNumber'], $input['email'], $input['name'], $input['part'], $input['message'], time());
+            $result = $this->recorder->recordUnassigned(
+                $shopId,
+                $language,
+                $input['orderNumber'],
+                $input['email'],
+                $input['name'],
+                $input['part'],
+                $input['message'],
+                time(),
+                '' !== trim($request->request->getString(self::TRAP_FIELD)),
+            );
         }
 
         // Without the number: its shape (SHOP-00001-W1 or W-00001) said whether

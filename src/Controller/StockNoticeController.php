@@ -18,6 +18,7 @@ use Webwerkwien\ContaoConshoBundle\Model\ShopModel;
 use Webwerkwien\ContaoConshoBundle\Seo\ProductPageMissing;
 use Webwerkwien\ContaoConshoBundle\Seo\ProductUrlGenerator;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
+use Webwerkwien\ContaoConshoBundle\Stock\StockNoticeLimitReached;
 use Webwerkwien\ContaoConshoBundle\Stock\StockNotices;
 
 /**
@@ -88,9 +89,7 @@ final class StockNoticeController
                 $this->confirmations->confirm($request->request->getString('token'), (int) $member->id, (string) $member->email, $now, ConfirmationPurpose::StockNotice),
             ),
             'unsubscribe' === $request->request->getString('consho_action') => $this->unsubscribe($article, (int) $member->id),
-            default => $this->notices->subscribe($article, (int) $member->id, (int) $shop->id, (int) $root->id, (string) $page->language, $now)
-                ? StockNoticeResult::Subscribed
-                : StockNoticeResult::Available,
+            default => $this->subscribe($article, (int) $member->id, (int) $shop->id, (int) $root->id, (string) $page->language, $now),
         };
 
         try {
@@ -100,6 +99,17 @@ final class StockNoticeController
         }
 
         return new RedirectResponse($url.(str_contains($url, '?') ? '&' : '?').http_build_query([StockNoticeResult::PARAM => $result->value]), Response::HTTP_SEE_OTHER);
+    }
+
+    private function subscribe(int $article, int $memberId, int $shopId, int $rootId, string $language, int $now): StockNoticeResult
+    {
+        try {
+            return $this->notices->subscribe($article, $memberId, $shopId, $rootId, $language, $now)
+                ? StockNoticeResult::Subscribed
+                : StockNoticeResult::Available;
+        } catch (StockNoticeLimitReached) {
+            return StockNoticeResult::Limit;
+        }
     }
 
     private function unsubscribe(int $article, int $memberId): StockNoticeResult

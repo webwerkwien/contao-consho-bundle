@@ -125,9 +125,11 @@ services:
     # WA (A3): the confirmation of a declaration that matched no
     # order goes to the address the consumer typed. Twenty per shop in an hour
     # is more than any real wave of withdrawals and caps what the form can be
-    # made to send; three per address in an hour, like the confirmation mail
-    # (K3), keeps one mailbox from being flooded through many IPs. Over the
-    # limit the declaration is still stored — only the mail waits.
+    # made to send; three per address in a day keeps one mailbox from being
+    # flooded through many IPs — the confirmation carries the sender's text,
+    # so the form must not become a way to mail strangers. A consumer
+    # withdraws from one order once. Over the limit the declaration is still
+    # stored — only the mail waits.
     consho.rate_limit.withdrawal_unassigned_shop:
         class: Symfony\Component\RateLimiter\RateLimiterFactory
         arguments:
@@ -138,7 +140,7 @@ services:
     consho.rate_limit.withdrawal_unassigned_address:
         class: Symfony\Component\RateLimiter\RateLimiterFactory
         arguments:
-            - { id: consho_withdrawal_unassigned_address, policy: fixed_window, limit: 3, interval: 1 hour }
+            - { id: consho_withdrawal_unassigned_address, policy: fixed_window, limit: 3, interval: 1 day }
             - '@consho.rate_limit.withdrawal_form_storage'
             - '@?lock_factory'
 
@@ -214,6 +216,56 @@ services:
             - { id: consho_code_entry, policy: fixed_window, limit: 10, interval: 15 minutes }
             - '@consho.rate_limit.withdrawal_form_storage'
             - '@?lock_factory'
+
+    # VAT ID checks typed into the checkout: each one is a VIES query in the
+    # shop's name. Ten per IP in 15 minutes leaves room for typos and "check
+    # again"; over it the check counts as unavailable (RateLimitedVatIdValidator).
+    consho.rate_limit.vat_check:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_vat_check, policy: fixed_window, limit: 10, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # Everything else asks VIES directly — the subscription biller.
+    # Explicit, because the limited wrapper is a second implementation and
+    # autowiring cannot guess.
+    Webwerkwien\ContaoConshoBundle\Address\VatIdValidatorInterface:
+        alias: Webwerkwien\ContaoConshoBundle\Address\ViesVatIdValidator
+
+    Webwerkwien\ContaoConshoBundle\Address\RateLimitedVatIdValidator:
+        arguments:
+            $inner: '@Webwerkwien\ContaoConshoBundle\Address\ViesVatIdValidator'
+            $limiter: '@consho.rate_limit.vat_check'
+
+    Webwerkwien\ContaoConshoBundle\Controller\ContentElement\CheckoutController:
+        arguments:
+            $vatIds: '@Webwerkwien\ContaoConshoBundle\Address\RateLimitedVatIdValidator'
+
+    # The member's VAT ID: set at registration and in "Persönliche Daten",
+    # reused in the checkout — front end, so limited like the checkout's own
+    # check. The wrapper counts nothing in the back end or without a request.
+    Webwerkwien\ContaoConshoBundle\Customer\MemberVatId:
+        arguments:
+            $validator: '@Webwerkwien\ContaoConshoBundle\Address\RateLimitedVatIdValidator'
+
+    # New guest baskets per IP. A visitor starts one per shop and perhaps a
+    # second after the cookie expired. The limit only keeps a script from
+    # filling the table, and many visitors may share one address (mobile
+    # networks behind carrier NAT, an office) — so it is generous: sixty in
+    # 15 minutes.
+    consho.rate_limit.new_basket:
+        class: Symfony\Component\RateLimiter\RateLimiterFactory
+        arguments:
+            - { id: consho_new_basket, policy: fixed_window, limit: 60, interval: 15 minutes }
+            - '@consho.rate_limit.withdrawal_form_storage'
+            - '@?lock_factory'
+
+    # The argument has a default for the tests; without this line the limit
+    # would be off without a word.
+    Webwerkwien\ContaoConshoBundle\Controller\AddToCartController:
+        arguments:
+            $newBaskets: '@consho.rate_limit.new_basket'
 
     consho.rate_limit.withdrawal_form_storage:
         class: Symfony\Component\RateLimiter\Storage\CacheStorage

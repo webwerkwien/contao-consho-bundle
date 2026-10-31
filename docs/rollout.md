@@ -312,7 +312,10 @@ COOKIE_ALLOW_LIST=PHPSESSID,csrf_https-contao_csrf_token,csrf_contao_csrf_token,
   Contao cron clears the rest — without a configured cron the rows stay behind (they no longer open anything).
 - 🔴 **The forms are limited per IP**: the withdrawal form (`consho.rate_limit.withdrawal_form`, 5 in
   15 minutes) and "Neuen Link anfordern" (Request a new link) (`consho.rate_limit.order_link_ip`, 5 in
-  15 minutes); in addition, per address, `order_link_address` and `email_confirmation` (3 per hour each).
+  15 minutes); in addition, per address, `order_link_address` and `email_confirmation` (3 per hour each). Also
+  per IP: VAT ID checks from the front end — checkout, registration, "Persönliche Daten"
+  (`consho.rate_limit.vat_check`, 10 in 15 minutes; over the limit a check
+  counts as unavailable) and new guest baskets (`consho.rate_limit.new_basket`, 60 in 15 minutes).
   **Behind a proxy or CDN without `TRUSTED_PROXIES`** the IP is that of the proxy — then all customers of the
   shop share five attempts per quarter of an hour. Before the rollout, set `TRUSTED_PROXIES` and check that
   `Request::getClientIp()` returns the visitor's address.

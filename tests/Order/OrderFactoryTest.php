@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Order;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Contao\CoreBundle\Intl\Countries;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Address\Address;
 use Webwerkwien\ContaoConshoBundle\Address\VatIdCheckResult;
@@ -370,6 +371,35 @@ class OrderFactoryTest extends TestCase
     }
 
     /**
+     * VIES confirms that a number exists, not whose it is: a valid VAT ID
+     * copied from another company's imprint, an address in a country that
+     * did not issue it, and the order carries tax as for anyone else. A
+     * delivery outside the EU is covered by TaxPlaceTest.
+     *
+     * @return iterable<string, array{string, string, string}>
+     */
+    public static function fremdeUid(): iterable
+    {
+        // vat ID, billing country, delivery country
+        yield 'DE-UID, Rechnung in Italien' => ['DE123456789', 'IT', 'IT'];
+        yield 'IT-UID, Rechnung in Deutschland' => ['IT12345678901', 'DE', 'DE'];
+        yield 'DE-UID, Rechnung im Shopland' => ['DE123456789', 'AT', 'DE'];
+    }
+
+    #[DataProvider('fremdeUid')]
+    public function testEineGueltigeUidAusDemFalschenLandBefreitNichtVonDerSteuer(string $vatId, string $billing, string $delivery): void
+    {
+        $this->factory()->create(
+            $this->draft($delivery, $this->vatCheck(VatIdStatus::Valid), customerVatId: $vatId, billingCountry: $billing),
+            [OrderLineDraft::product(1, '1')],
+            1_757_000_000,
+        );
+
+        self::assertNotSame(PriceSource::ReverseCharge->value, $this->writtenItems[0]['priceSource']);
+        self::assertNotSame('0.00', $this->writtenOrders[0]['taxTotal']);
+    }
+
+    /**
      * C-12: without the shop's VAT ID no tax-exempt supply — Art. 11 Abs. 2
      * UStG 1994 annex (internal market) requires it on the invoice.
      */
@@ -428,6 +458,7 @@ class OrderFactoryTest extends TestCase
 
         self::assertSame('valid', $this->writtenOrders[0]['vatIdStatus']);
         self::assertSame('WAPI-123', $this->writtenOrders[0]['vatIdRequestIdentifier']);
+        self::assertSame('Musterfirma GmbH', $this->writtenOrders[0]['vatIdName']);
     }
 
     public function testFreezesBothAddresses(): void
@@ -932,8 +963,10 @@ class OrderFactoryTest extends TestCase
     /**
      * @param list<int> $groups
      */
-    private function draft(string $deliveryCountry, VatIdCheckResult|null $vatCheck = null, string $shopCountry = 'AT', array $groups = [], string $erwartet = '', string $shopVatId = 'ATU12345678', bool $taxAtDestination = false): OrderDraft
+    private function draft(string $deliveryCountry, VatIdCheckResult|null $vatCheck = null, string $shopCountry = 'AT', array $groups = [], string $erwartet = '', string $shopVatId = 'ATU12345678', bool $taxAtDestination = false, string $customerVatId = 'DE123456789', string $billingCountry = ''): OrderDraft
     {
+        $billingCountry = '' !== $billingCountry ? $billingCountry : (null !== $vatCheck ? 'DE' : 'AT');
+
         return new OrderDraft(
             shopId: 1,
             currency: 'EUR',
@@ -941,16 +974,18 @@ class OrderFactoryTest extends TestCase
                 firstname: 'Eva',
                 lastname: 'Example',
                 street: 'Hauptstraße 5',
-                postal: '1100',
-                city: 'Wien',
-                country: 'AT',
+                // A business customer is billed in the country that issued
+                // its VAT ID (TaxPlace::reverseChargeReach()).
+                postal: 'AT' !== $billingCountry ? '10115' : '1100',
+                city: 'AT' !== $billingCountry ? 'Berlin' : 'Wien',
+                country: $billingCountry,
                 email: 'kunde@example.org',
             ),
             shipping: new Address(street: 'Lagerweg 9', postal: '1110', city: 'Wien', country: $deliveryCountry),
             shopCountry: $shopCountry,
             customerGroupIds: $groups,
             vatCheck: $vatCheck,
-            customerVatId: null !== $vatCheck ? 'DE123456789' : '',
+            customerVatId: null !== $vatCheck ? $customerVatId : '',
             expectedGrandTotal: $erwartet,
             shopVatId: $shopVatId,
             taxAtDestination: $taxAtDestination,

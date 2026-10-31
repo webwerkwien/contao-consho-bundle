@@ -64,6 +64,7 @@ class TestPaymentHandlerTest extends TestCase
         $start = (new TestPaymentHandler($router))->start($this->attempt(), $this->order(), self::CONFIG);
 
         self::assertSame(PaymentStartOutcome::Redirect, $start->outcome);
+        self::assertSame('TEST-SESSION-3', $start->reference);
         self::assertSame('consho_test_payment', $captured[0]);
         self::assertSame(7, $captured[1]['consho_method']);
 
@@ -104,10 +105,10 @@ class TestPaymentHandlerTest extends TestCase
 
     public function testDieBezahltMeldungTraegtDasMandat(): void
     {
-        $result = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'event' => 'paid', 'amount' => '13.90', 'reference' => 'T-1', 'mandate' => 'test-mandate-3']), $this->attempt(), self::CONFIG);
+        $result = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'paid', 'amount' => '13.90', 'reference' => 'T-1', 'mandate' => 'test-mandate-3']), $this->attempt(), self::CONFIG);
 
         self::assertSame('test-mandate-3', $result->mandate);
-        self::assertSame('', $this->handler()->handleNotification($this->notification(['attempt' => 3, 'event' => 'paid', 'amount' => '13.90']), $this->attempt(), self::CONFIG)->mandate);
+        self::assertSame('', $this->handler()->handleNotification($this->notification(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'paid', 'amount' => '13.90']), $this->attempt(), self::CONFIG)->mandate);
     }
 
     /**
@@ -150,14 +151,22 @@ class TestPaymentHandlerTest extends TestCase
 
     public function testEineUnterschriebeneBenachrichtigungMeldetDieZahlung(): void
     {
-        $result = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'event' => 'paid', 'amount' => '13.90', 'reference' => 'T-1']), $this->attempt(), self::CONFIG);
+        $result = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'paid', 'amount' => '13.90', 'currency' => 'EUR', 'reference' => 'T-1']), $this->attempt(), self::CONFIG);
 
         self::assertSame(NotificationOutcome::Paid, $result->outcome);
         self::assertSame('13.9000', $result->amount);
         self::assertSame('T-1', $result->reference);
+        self::assertSame(['TEST-SESSION-3', 'EUR'], [$result->for, $result->currency]);
 
-        $failed = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'event' => 'failed']), $this->attempt(), self::CONFIG);
+        $failed = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'failed']), $this->attempt(), self::CONFIG);
         self::assertSame(NotificationOutcome::Failed, $failed->outcome);
+
+        // Without what it is about: a 400, never an exception and a 500 (C-11).
+        try {
+            $this->handler()->handleNotification($this->notification(['attempt' => 3, 'event' => 'paid', 'amount' => '13.90']), $this->attempt(), self::CONFIG);
+            self::fail('ohne Bezug angenommen');
+        } catch (NotificationRejected) {
+        }
 
         $other = $this->handler()->handleNotification($this->notification(['attempt' => 3, 'event' => 'refund.created']), $this->attempt(), self::CONFIG);
         self::assertSame(NotificationOutcome::Ignored, $other->outcome);

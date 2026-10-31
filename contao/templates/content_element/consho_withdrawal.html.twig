@@ -39,6 +39,14 @@
             <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
             <input type="hidden" name="consho_withdrawal_action" value="confirm">
 
+            {# A field no person sees or fills. A form filled in by a script
+               still records the declaration, but sends no confirmation to the
+               address it typed (WithdrawalController::TRAP_FIELD). #}
+            <div hidden aria-hidden="true">
+                <label for="consho-withdrawal-{{ element_id }}-check">{{ 'CONSHO.withdrawal.leaveEmpty'|trans({}, 'contao_default') }}</label>
+                <input type="text" name="consho_withdrawal_check" id="consho-withdrawal-{{ element_id }}-check" value="" tabindex="-1" autocomplete="off">
+            </div>
+
             {% for field in [
                 {name: 'orderNumber', label: 'CONSHO.withdrawal.orderNumber', type: 'text', autocomplete: 'off'},
                 {name: 'email', label: 'CONSHO.withdrawal.orderEmail', type: 'email', autocomplete: 'email'},

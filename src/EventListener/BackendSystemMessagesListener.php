@@ -229,12 +229,17 @@ class BackendSystemMessagesListener implements ResetInterface
     /**
      * Whether the current user may open a module in which the finding is put
      * right (H1, H2). Administrators see everything,
-     * including what no module repairs. Without a security layer — the console,
-     * a test — nothing is held back.
+     * including what no module repairs. Without a security layer nothing is
+     * shown: a missing service must not open every finding to everyone. The
+     * console does not ask (CheckCommand lists the findings itself).
      */
     public function maySee(ConfigurationIssue $issue): bool
     {
-        if (null === $this->security || $this->security->isGranted('ROLE_ADMIN')) {
+        if (null === $this->security) {
+            return false;
+        }
+
+        if ($this->security->isGranted('ROLE_ADMIN')) {
             return true;
         }
 

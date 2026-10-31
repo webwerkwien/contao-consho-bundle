@@ -44,7 +44,7 @@ class NotificationProcessorTest extends TestCase
     protected function setUp(): void
     {
         $this->attempts = new InMemoryPaymentAttempts();
-        $this->attempts->add(new PaymentAttempt(3, 1, 7, 'test', AttemptState::Open, '13.9000', 'EUR', '', '', ''), self::TOKEN);
+        $this->attempts->add(new PaymentAttempt(3, 1, 7, 'test', AttemptState::Open, '13.9000', 'EUR', 'TEST-SESSION-3', '', ''), self::TOKEN);
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
     }
 
@@ -58,7 +58,7 @@ class NotificationProcessorTest extends TestCase
         self::assertCount(1, $this->attempts->payments);
         self::assertSame(['attempt' => 3, 'amount' => '13.9000', 'reference' => 'T-1', 'method' => 'Test'], $this->attempts->payments[0]);
         self::assertSame(AttemptState::Succeeded, $this->attempts->attempts[3]->state);
-        self::assertSame('T-1', $this->attempts->attempts[3]->providerReference);
+        self::assertSame('TEST-SESSION-3', $this->attempts->attempts[3]->providerReference, 'die Referenz für weitere Meldungen bleibt');
         self::assertSame(2, $this->attempts->locks, 'jede Meldung sperrt, bevor sie entscheidet');
         self::assertFalse($this->connection->isTransactionActive());
     }
@@ -107,6 +107,78 @@ class NotificationProcessorTest extends TestCase
         self::assertSame(AttemptState::Open, $this->attempts->attempts[3]->state);
     }
 
+    /**
+     * A-6: a genuine message — the module's checks all passed — about another
+     * payment of the same provider, or in another currency, pays nothing. The
+     * core checks it for every module, not each module for itself.
+     */
+    public function testEineEchteMeldungUeberEtwasAnderesSchreibtNichts(): void
+    {
+        $handler = $this->createStub(PaymentHandlerInterface::class);
+        $handler->method('handleNotification')->willReturnOnConsecutiveCalls(
+            NotificationResult::paid('13.90', 'EUR', 'cs_other', 'ch_1'),
+            NotificationResult::paid('13.90', 'CHF', 'cs_1', 'ch_1'),
+            NotificationResult::failed('cs_other'),
+        );
+        $processor = $this->moduleProcessor($handler, $this->createStub(SubscriptionMandates::class));
+
+        self::assertSame(400, $processor->process(self::TOKEN, new Request(), 100), 'andere Referenz');
+        self::assertSame(400, $processor->process(self::TOKEN, new Request(), 101), 'andere Währung');
+        self::assertSame(400, $processor->process(self::TOKEN, new Request(), 102), 'auch ein Fehlschlag nur für den eigenen Versuch');
+
+        self::assertSame([], $this->attempts->payments);
+        self::assertSame(3, $this->attempts->locks, 'geprüft an der gesperrten Zeile');
+        self::assertSame(AttemptState::Open, $this->attempts->attempts[3]->state);
+    }
+
+    /**
+     * Checked against the locked row: the reference written between reading
+     * and locking counts.
+     */
+    public function testEsZaehltDieReferenzDerGesperrtenZeile(): void
+    {
+        $handler = $this->createStub(PaymentHandlerInterface::class);
+        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'EUR', 'cs_late', 'ch_1'));
+        $processor = $this->moduleProcessor($handler, $this->createStub(SubscriptionMandates::class));
+        $this->attempts->attempts[3] = new PaymentAttempt(3, 1, 7, 'card', AttemptState::Open, '13.9000', 'EUR', '', '', '');
+        $this->attempts->onLock = function (): void {
+            $this->attempts->attempts[3] = new PaymentAttempt(3, 1, 7, 'card', AttemptState::Pending, '13.9000', 'EUR', 'cs_late', '', '');
+        };
+
+        self::assertSame(200, $processor->process(self::TOKEN, new Request(), 100));
+        self::assertCount(1, $this->attempts->payments);
+    }
+
+    /**
+     * An attempt that never set anything up at the provider (no reference)
+     * takes no notification — but while it is live, a charge may be answered
+     * before charge() has returned: the provider is asked to send again.
+     */
+    public function testEinVersuchOhneReferenzNimmtKeineMeldung(): void
+    {
+        $handler = $this->createStub(PaymentHandlerInterface::class);
+        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'EUR', 'cs_1', 'ch_1'));
+        $processor = $this->moduleProcessor($handler, $this->createStub(SubscriptionMandates::class));
+
+        foreach ([AttemptState::Open, AttemptState::Pending] as $state) {
+            $this->attempts->attempts[3] = new PaymentAttempt(3, 1, 7, 'card', $state, '13.9000', 'EUR', '', '', '');
+            self::assertSame(503, $processor->process(self::TOKEN, new Request(), 100), $state->value.': noch einmal senden');
+        }
+
+        foreach ([AttemptState::Failed, AttemptState::Cancelled] as $state) {
+            $this->attempts->attempts[3] = new PaymentAttempt(3, 1, 7, 'card', $state, '13.9000', 'EUR', '', '', '');
+            self::assertSame(400, $processor->process(self::TOKEN, new Request(), 100), $state->value);
+        }
+
+        self::assertSame([], $this->attempts->payments);
+    }
+
+    public function testDieWaehrungZaehltOhneUnterschiedDerSchreibweise(): void
+    {
+        self::assertSame(200, $this->processor()->process(self::TOKEN, $this->paid(currency: 'eur'), 100));
+        self::assertCount(1, $this->attempts->payments);
+    }
+
     public function testUnbekannterVersuchOderAbgeschalteterAnbieterSind404(): void
     {
         self::assertSame(404, $this->processor()->process(str_repeat('b', 64), $this->paid(), 100));
@@ -116,11 +188,11 @@ class NotificationProcessorTest extends TestCase
 
     public function testFehlgeschlagenNurFuerOffeneVersucheUndOhneZahlung(): void
     {
-        self::assertSame(200, $this->processor()->process(self::TOKEN, $this->signed(['attempt' => 3, 'event' => 'failed']), 100));
+        self::assertSame(200, $this->processor()->process(self::TOKEN, $this->signed(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'failed']), 100));
         self::assertSame(AttemptState::Failed, $this->attempts->attempts[3]->state);
 
         $this->attempts->setState(3, AttemptState::Succeeded, 101);
-        self::assertSame(200, $this->processor()->process(self::TOKEN, $this->signed(['attempt' => 3, 'event' => 'failed']), 102));
+        self::assertSame(200, $this->processor()->process(self::TOKEN, $this->signed(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'failed']), 102));
         self::assertSame(AttemptState::Succeeded, $this->attempts->attempts[3]->state, 'bezahlt bleibt bezahlt');
         self::assertSame([], $this->attempts->payments);
     }
@@ -147,7 +219,7 @@ class NotificationProcessorTest extends TestCase
 
     public function testOhneBuchungGibtEsKeineFolgen(): void
     {
-        $this->processor()->process(self::TOKEN, $this->signed(['attempt' => 3, 'event' => 'failed']), 100);
+        $this->processor()->process(self::TOKEN, $this->signed(['attempt' => 3, 'for' => 'TEST-SESSION-3', 'event' => 'failed']), 100);
 
         self::assertSame([], $this->handled);
     }
@@ -173,7 +245,7 @@ class NotificationProcessorTest extends TestCase
     public function testDasMandatEinesFolgezahlungsModulsKommtAnsAbo(): void
     {
         $handler = new FakeRecurringHandler();
-        $handler->notification = NotificationResult::paid('13.90', 'ch_1', ' cus_1|pm_2 ');
+        $handler->notification = NotificationResult::paid('13.90', 'EUR', 'cs_1', 'ch_1', ' cus_1|pm_2 ');
 
         $mandates = $this->createMock(SubscriptionMandates::class);
         $mandates->expects(self::once())->method('record')
@@ -191,7 +263,7 @@ class NotificationProcessorTest extends TestCase
     public function testEinModulOhneFolgezahlungenHinterlegtKeinMandat(): void
     {
         $handler = $this->createStub(PaymentHandlerInterface::class);
-        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'ch_1', 'cus_1'));
+        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'EUR', 'cs_1', 'ch_1', 'cus_1'));
 
         $mandates = $this->createMock(SubscriptionMandates::class);
         $mandates->expects(self::never())->method('record');
@@ -203,7 +275,7 @@ class NotificationProcessorTest extends TestCase
     public function testFehlgeschlagenHinterlegtKeinMandat(): void
     {
         $handler = new FakeRecurringHandler();
-        $handler->notification = NotificationResult::failed();
+        $handler->notification = NotificationResult::failed('cs_1');
 
         $mandates = $this->createMock(SubscriptionMandates::class);
         $mandates->expects(self::never())->method('record');
@@ -214,7 +286,7 @@ class NotificationProcessorTest extends TestCase
     private function moduleProcessor(PaymentHandlerInterface $handler, SubscriptionMandates $mandates): NotificationProcessor
     {
         $this->attempts = new InMemoryPaymentAttempts();
-        $this->attempts->add(new PaymentAttempt(3, 1, 7, 'card', AttemptState::Open, '13.9000', 'EUR', '', '', ''), self::TOKEN);
+        $this->attempts->add(new PaymentAttempt(3, 1, 7, 'card', AttemptState::Open, '13.9000', 'EUR', 'cs_1', '', ''), self::TOKEN);
 
         $methods = $this->createMock(PaymentMethodLookupInterface::class);
         $methods->method('byId')->willReturn(new PaymentMethod(7, 'card', 'Karte', []));
@@ -230,9 +302,9 @@ class NotificationProcessorTest extends TestCase
         );
     }
 
-    private function paid(string $amount = '13.90'): Request
+    private function paid(string $amount = '13.90', string $for = 'TEST-SESSION-3', string $currency = 'EUR'): Request
     {
-        return $this->signed(['attempt' => 3, 'event' => 'paid', 'amount' => $amount, 'reference' => 'T-1']);
+        return $this->signed(['attempt' => 3, 'for' => $for, 'event' => 'paid', 'amount' => $amount, 'currency' => $currency, 'reference' => 'T-1']);
     }
 
     /**

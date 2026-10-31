@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\AsController;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Exception\ExceptionInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -124,6 +125,7 @@ class AddToCartController
         private readonly ShopPageUrls $cartPage,
         private readonly PriceAudienceResolver $audiences,
         private readonly Availability $availability,
+        private readonly RateLimiterFactoryInterface|null $newBaskets = null,
     ) {
     }
 
@@ -287,15 +289,22 @@ class AddToCartController
                 // (CartTakeoverListener).
                 $cartId = $this->repository->create(null, $memberId, $shopId, $now);
             } else {
+                // Every new guest basket is a row nobody may ever come back
+                // to; a script without cookies would create one per request.
+                // Counted per IP, and only here — adding to a basket that
+                // exists costs nothing.
+                if (null !== $this->newBaskets && !$this->newBaskets->create('cart_'.$request->getClientIp())->consume()->isAccepted()) {
+                    return $this->refuse($request, $page, $root, $shop, null, CartNotice::TooManyBaskets);
+                }
+
                 // Generated only here, where a token is actually needed —
                 // random_bytes() has no reason to run for a logged-in member,
-                // who never gets a token issued at all.
-                $token = $existing ?? CartToken::generate();
+                // who never gets a token issued at all. Never the one the
+                // request brought (rotateToken()): the baskets of other shops
+                // on it move to the new one.
+                $token = $this->repository->rotateToken($existing);
                 $cartId = $this->repository->create(CartToken::hash($token), $memberId, $shopId, $now);
-
-                // The cookie goes out only where the request brought none: a
-                // guest who already has one keeps it.
-                $issue = self::needsCookie($existing) ? $token : null;
+                $issue = $token;
             }
         } else {
             $cartId = $cart->id;
@@ -368,22 +377,6 @@ class AddToCartController
         }
 
         return $url;
-    }
-
-    /**
-     * Whether the ANSWER has to carry a Set-Cookie — a question about what the
-     * request brought, not about what happened to the basket. A guest whose
-     * basket the cleanup cron has taken gets a new one under the hash of the
-     * token they still hold; re-issuing it would send them the value their
-     * browser already has.
-     *
-     * Private: the tests that used to call it asserted null === null. What it
-     * promises is visible in the response headers, and that is where the three
-     * cases are measured now.
-     */
-    private static function needsCookie(string|null $token): bool
-    {
-        return null === $token;
     }
 
     /**

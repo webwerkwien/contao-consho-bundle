@@ -33,6 +33,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['shippingCountry'] = ['Country', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['vatId'] = ['VAT ID', 'As given for this order.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['vatIdStatus'] = ['Check result', 'The state at the time of the order — not today\'s.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['vatIdRequestIdentifier'] = ['VIES consultation number', 'Evidence of the query for a tax audit.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['vatIdName'] = ['Name at VIES', 'The name VIES returned for the VAT ID, where the member state gives one out. Compare it with the billing address: VIES confirms that a number exists, not that it belongs to the buyer.'];
 
 $GLOBALS['TL_LANG']['tl_consho_order']['currency'] = ['Currency', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['netTotal'] = ['Net total', ''];

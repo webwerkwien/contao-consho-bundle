@@ -273,6 +273,7 @@ final class OrderFactory implements OrderFactoryInterface
             'vatId' => $draft->customerVatId,
             'vatIdStatus' => null !== $draft->vatCheck ? $draft->vatCheck->status->value : '',
             'vatIdRequestIdentifier' => null !== $draft->vatCheck ? ($draft->vatCheck->requestIdentifier ?? '') : '',
+            'vatIdName' => mb_substr((string) $draft->vatCheck?->name, 0, 255),
             'shippingMethod' => $draft->shippingMethod,
             'shippingMethodTitle' => $draft->shippingMethodTitle,
             'paymentMethod' => $draft->paymentMethod,
@@ -461,9 +462,7 @@ final class OrderFactory implements OrderFactoryInterface
             return false;
         }
 
-        $shopCountry = strtoupper(trim($draft->shopCountry));
-
-        return '' !== $shopCountry && $shopCountry !== strtoupper($deliveryCountry);
+        return TaxPlace::reverseChargeReach($draft->customerVatId, $draft->billing->country, $deliveryCountry, $draft->shopCountry);
     }
 
     /**

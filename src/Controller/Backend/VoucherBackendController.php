@@ -45,6 +45,13 @@ final class VoucherBackendController
 {
     public const MODULE = 'consho_voucher';
 
+    /**
+     * Issuing a voucher and raising a balance create value nobody paid for,
+     * for any shop of the installation — administrators only. The module
+     * right covers the rest: looking, blocking, lowering a balance.
+     */
+    public const ISSUE_ROLE = 'ROLE_ADMIN';
+
     public function __construct(
         private readonly VoucherLedger $ledger,
         private readonly ShopCurrencies $currencies,
@@ -61,6 +68,11 @@ final class VoucherBackendController
     public function issue(DataContainer $dc): string
     {
         $this->denyUnlessAllowed();
+
+        if (!$this->security->isGranted(self::ISSUE_ROLE)) {
+            throw new AccessDeniedHttpException();
+        }
+
         $this->loadLanguage();
 
         $request = $this->requests->getCurrentRequest();
@@ -120,6 +132,8 @@ final class VoucherBackendController
 
             if (null === $amount || BigDecimal::of($amount)->isZero() || '' === $note) {
                 $this->message()->addError((string) ($lang['correctInvalid'] ?? 'Please enter an amount and a reason.'));
+            } elseif (BigDecimal::of($amount)->isPositive() && !$this->security->isGranted(self::ISSUE_ROLE)) {
+                $this->message()->addError((string) ($lang['correctUpAdminOnly'] ?? 'Only an administrator may raise a balance.'));
             } else {
                 try {
                     $after = $this->ledger->book($id, $amount, VoucherBookingType::Manual, time(), user: $this->userId(), note: $note);

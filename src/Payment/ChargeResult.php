@@ -30,11 +30,18 @@ final class ChargeResult
     }
 
     /**
-     * The provider answers later, through the attempt's notify URL.
+     * The provider answers later, through the attempt's notify URL — about
+     * this reference, which the core keeps on the attempt (NotificationResult).
+     * It has to name this one charge — an order number shared by several
+     * attempts would let a notification about one settle another.
      */
-    public static function pending(string $reference = ''): self
+    public static function pending(string $reference): self
     {
-        return new self(ChargeOutcome::Pending, '', $reference);
+        if ('' === trim($reference)) {
+            throw new \InvalidArgumentException('A pending charge needs the provider reference the answer will name.');
+        }
+
+        return new self(ChargeOutcome::Pending, '', trim($reference));
     }
 
     /**

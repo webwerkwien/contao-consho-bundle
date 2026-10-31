@@ -12,6 +12,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\AsController;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
@@ -334,33 +337,68 @@ class AddToCartControllerTest extends TestCase
         self::assertSame(1, $this->countItems());
     }
 
-    public function testEinMitgebrachtesCookieWirdNichtErneuertAuchWennDerWarenkorbNeuEntsteht(): void
+    public function testEinMitgebrachtesCookieWirdNieUebernommenWennDerWarenkorbNeuEntsteht(): void
     {
-        // The case in which the question "does the response need a cookie?"
-        // actually decides something: the cookie is there, the cart behind it
-        // no longer — the clean-up cron has taken it. A new one is created,
-        // under the hash of the token brought along, and without Set-Cookie.
-        // If the question hung on the newly created cart instead of on the
-        // request, every such response would carry a cookie with exactly the
-        // value the browser already has.
-        //
-        // Together with the two tests above — no cookie brought along, exactly
-        // one back; cookie brought along and cart present, none back — all
-        // three situations are thus checked via the headers, and none any more
-        // via the return value of a helper method.
+        // A token the request brought, with no basket behind it — the clean-up
+        // cron took it, or someone who can set cookies for the host planted
+        // one they know. The new basket gets a token of its own, and the
+        // answer carries it; a basket under the planted token would be read
+        // by whoever planted it, address and VAT ID included.
+        $this->publishArticle();
+
+        $planted = CartToken::generate();
+
+        $response = $this->controller()($this->post([], $planted));
+
+        self::assertSame(Response::HTTP_SEE_OTHER, $response->getStatusCode());
+        self::assertCount(1, $response->headers->getCookies());
+
+        $issued = (string) $response->headers->getCookies()[0]->getValue();
+
+        self::assertNotSame($planted, $issued);
+        self::assertSame(CartToken::hash($issued), $this->cartConnection->fetchOne('SELECT tokenHash FROM tl_consho_cart'));
+    }
+
+    public function testUeberDerGrenzeEntstehtKeinNeuerGastwarenkorbAberDerBestehendeNimmtWeiterAuf(): void
+    {
+        $this->publishArticle();
+
+        $limiter = new RateLimiterFactory(
+            ['id' => 'test', 'policy' => 'fixed_window', 'limit' => 1, 'interval' => '15 minutes'],
+            new InMemoryStorage(),
+        );
+
+        $first = $this->controller(newBaskets: $limiter)($this->post());
+        $issued = (string) $first->headers->getCookies()[0]->getValue();
+
+        $refused = $this->controller(newBaskets: $limiter)($this->post());
+
+        self::assertSame(Response::HTTP_SEE_OTHER, $refused->getStatusCode());
+        self::assertSame([], $refused->headers->getCookies());
+        self::assertStringContainsString(CartNotice::PARAM.'=too_many_baskets', (string) $refused->headers->get('Location'));
+        self::assertSame(1, $this->countCarts());
+
+        // Adding to the basket the visitor already has is not counted.
+        $this->controller(newBaskets: $limiter)($this->post([], $issued));
+
+        self::assertSame(1, $this->countCarts());
+        self::assertSame(6.0, (float) $this->cartConnection->fetchOne('SELECT quantity FROM tl_consho_cart_item'));
+    }
+
+    public function testDerWarenkorbEinesAnderenShopsZiehtZumNeuenCookieMit(): void
+    {
+        // One cookie holds a basket per shop (C-3b): replacing the token for
+        // the new basket must not lose the one in the other shop.
         $this->publishArticle();
 
         $token = CartToken::generate();
+        $other = (new DbalCartRepository($this->cartConnection))->create(CartToken::hash($token), 0, self::SHOP + 1, 1_000);
 
         $response = $this->controller()($this->post([], $token));
+        $issued = (string) $response->headers->getCookies()[0]->getValue();
 
-        self::assertSame(Response::HTTP_SEE_OTHER, $response->getStatusCode());
-        self::assertSame([], $response->headers->getCookies());
-        self::assertSame(1, $this->countCarts());
-        self::assertSame(
-            CartToken::hash($token),
-            $this->cartConnection->fetchOne('SELECT tokenHash FROM tl_consho_cart'),
-        );
+        self::assertSame(CartToken::hash($issued), $this->cartConnection->fetchOne('SELECT tokenHash FROM tl_consho_cart WHERE id = ?', [$other]));
+        self::assertSame(2, $this->countCarts());
     }
 
     public function testEineUngueltigeMengeWirdNichtAlsHinzugefuegtGemeldet(): void
@@ -859,7 +897,7 @@ class AddToCartControllerTest extends TestCase
         return $offers;
     }
 
-    private function controller(int $memberId = 0, SubscriptionOffers|null $offers = null): AddToCartController
+    private function controller(int $memberId = 0, SubscriptionOffers|null $offers = null, RateLimiterFactoryInterface|null $newBaskets = null): AddToCartController
     {
         $catalogue = $this->pageModel(self::CATALOGUE_PAGE, []);
         $cartPage = $this->pageModel(self::CART_PAGE, []);
@@ -890,6 +928,7 @@ class AddToCartControllerTest extends TestCase
             new ShopPageUrls($framework, $shops, $urls),
             new PriceAudienceResolver($this->tokenStorage($memberId), $this->cartConnection),
             new Availability($this->cartConnection),
+            $newBaskets,
         );
     }
 

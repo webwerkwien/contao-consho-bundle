@@ -49,5 +49,6 @@ $GLOBALS['TL_LANG']['tl_consho_voucher']['correctAmountHelp'] = 'Positive raises
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctNote'] = 'Reason';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctSubmit'] = 'Book';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctInvalid'] = 'Please enter an amount other than 0 and a reason.';
+$GLOBALS['TL_LANG']['tl_consho_voucher']['correctUpAdminOnly'] = 'Only an administrator may raise a balance. You can lower it with a negative amount.';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['correctTooLow'] = 'There is not that much left on the voucher.';
 $GLOBALS['TL_LANG']['tl_consho_voucher']['corrected'] = 'Booked. New balance: %s';

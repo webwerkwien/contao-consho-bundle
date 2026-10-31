@@ -26,6 +26,9 @@ final class InMemoryPaymentAttempts implements PaymentAttemptRepositoryInterface
 
     public int $locks = 0;
 
+    /** @var (\Closure(): void)|null what another request writes while this one waits for the lock */
+    public \Closure|null $onLock = null;
+
     public function add(PaymentAttempt $attempt, string $token): void
     {
         $this->attempts[$attempt->id] = $attempt;
@@ -51,6 +54,10 @@ final class InMemoryPaymentAttempts implements PaymentAttemptRepositoryInterface
     public function lock(int $attemptId): PaymentAttempt|null
     {
         ++$this->locks;
+
+        if (null !== $this->onLock) {
+            ($this->onLock)();
+        }
 
         return $this->attempts[$attemptId] ?? null;
     }

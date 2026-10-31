@@ -254,7 +254,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertCount(1, $this->card->charges);
 
         // Three days later the provider reports: paid.
-        $this->card->notification = NotificationResult::paid('8.33', 'sepa_1');
+        $this->card->notification = NotificationResult::paid('8.33', 'EUR', 'sepa_1', 'sepa_1');
         $paidAt = $now + 3 * 86_400;
         self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $paidAt));
 
@@ -273,7 +273,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         $now = $this->at('2026-02-28 11:00');
         $orderId = $this->billingRun()->run($now)[0]->orderId;
 
-        $this->card->notification = NotificationResult::failed();
+        $this->card->notification = NotificationResult::failed('sepa_1');
         self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $now + 86_400));
 
         self::assertSame(6, (int) $this->order($orderId)['paymentMethod']);
@@ -383,7 +383,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         $lapsedAt = (int) $this->order($orderId)['createdAt'] + 7 * 86_400;
         self::assertSame([$orderId], $this->fallback()->lapse($lapsedAt));
 
-        $this->card->notification = NotificationResult::paid('8.33', 'sepa_1');
+        $this->card->notification = NotificationResult::paid('8.33', 'EUR', 'sepa_1', 'sepa_1');
         self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $lapsedAt + 86_400));
 
         self::assertSame(
