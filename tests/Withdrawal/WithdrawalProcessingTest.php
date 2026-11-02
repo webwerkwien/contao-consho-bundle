@@ -6,6 +6,7 @@ use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
@@ -20,6 +21,12 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderEvent;
 use Webwerkwien\ContaoConshoBundle\Order\OrderStatusAdvancer;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlerInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Stock\StockReturn;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
@@ -27,6 +34,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquency;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPurchaseCancellation;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
+use Webwerkwien\ContaoConshoBundle\Tests\Payment\FakeRefundingHandler;
+use Webwerkwien\ContaoConshoBundle\Withdrawal\ProcessingResult;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\ValueCompensation;
 use Webwerkwien\ContaoConshoBundle\Digital\EntitlementRevocations;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalProcessing;
@@ -513,6 +522,113 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
+     * Block Zahlung Mollie (R1, R2): the payment method's part through the
+     * provider — booked like before, paid out after the commit.
+     */
+    public function testUeberDieZahlungsartZurueckgezahlt(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $card->connection = $this->connection;
+        $payouts = $this->payouts($card);
+
+        self::assertSame(['100.0000', ['Visa']], [$this->processing(payouts: $payouts)->proposal(self::WITHDRAWAL)['provider'], $this->processing(payouts: $payouts)->proposal(self::WITHDRAWAL)['providerMethods']]);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        self::assertTrue($this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true, confirmed: '30.00')->done);
+
+        $row = $this->connection->fetchAssociative('SELECT id, amount, reference, refundOf, payoutState, payoutReference FROM tl_consho_payment WHERE amount < 0');
+        self::assertIsArray($row);
+        self::assertTrue(BigDecimal::of('-30')->isEqualTo((string) $row['amount']));
+        self::assertSame(['WEB-00077-W1', 'done', 're_1'], [$row['reference'], $row['payoutState'], $row['payoutReference']]);
+        self::assertSame((int) $row['id'], (int) $this->withdrawalRow()['refundPayment']);
+        self::assertCount(1, $card->refunds);
+        self::assertSame(['30.0000', 'tr_1', 'WEB-00077'], [$card->refunds[0]->amount, $card->refunds[0]->paymentReference, $card->refunds[0]->orderNumber]);
+        self::assertFalse($card->inTransaction, 'der Anbieter wird erst nach dem Commit gefragt');
+
+        // The rest as before: document, status, mail.
+        self::assertSame('correct', $this->documentCalls[0][0]);
+        self::assertSame('refundBooked', $this->mails[0][0]);
+    }
+
+    /**
+     * R5: through a provider, the first answer is the amount to confirm —
+     * and nothing is booked, paid out, written or mailed yet.
+     */
+    public function testUeberDieZahlungsartErstBestaetigen(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $payouts = $this->payouts($card);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true);
+
+        self::assertFalse($result->done);
+        self::assertSame(['confirmPayout', ['30.00', '0.00'], [ProcessingResult::MONEY, ProcessingResult::MONEY]], [$result->key, $result->params, $result->kinds]);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        self::assertNull($this->withdrawalRow()['refundedAt']);
+        self::assertSame([], $card->refunds);
+        self::assertSame([], $this->documentCalls);
+        self::assertSame([], $this->mails);
+    }
+
+    /**
+     * R5: a confirmed amount that no longer holds under the lock — a payment
+     * refunded in between — books nothing.
+     */
+    public function testBestaetigterBetragStimmtNichtMehr(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $payouts = $this->payouts($card);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+
+        foreach (['25.00', '30.01', 'abc', ''] as $confirmed) {
+            $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true, confirmed: $confirmed);
+
+            self::assertSame([false, 'payoutChanged'], [$result->done, $result->key], $confirmed);
+        }
+
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        self::assertSame([], $card->refunds);
+    }
+
+    /**
+     * R5: what goes beyond the provider's payments stays by hand, and the
+     * confirmation names it.
+     */
+    public function testBestaetigungNenntDenRestVonHand(): void
+    {
+        $card = new FakeRefundingHandler();
+        $payouts = $this->payouts($card);
+
+        // 20 through the provider, 80 by bank transfer: still 100 paid.
+        $this->connection->update('tl_consho_payment', ['amount' => '20.0000'], ['reference' => 'tr_1']);
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '80.0000', 'method' => 'Vorkasse']);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true);
+
+        self::assertSame(['confirmPayout', ['20.00', '10.00']], [$result->key, $result->params]);
+    }
+
+    public function testOhneHakenWirdNurGebucht(): void
+    {
+        $card = new FakeRefundingHandler();
+        $payouts = $this->payouts($card);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        self::assertTrue($this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
+
+        $row = $this->connection->fetchAssociative('SELECT payoutState, refundOf FROM tl_consho_payment WHERE amount < 0');
+        self::assertIsArray($row);
+        self::assertSame(['', 0], [$row['payoutState'], (int) $row['refundOf']]);
+        self::assertSame([], $card->refunds);
+    }
+
+    /**
      * Abo-8, P79: The backpack here is a service subscription (€ 35.00, period
      * 35 days), released with consent, 7 days begun and used — proposed
      * € 7.00 compensation for value. Until the refund they stay open, then
@@ -954,7 +1070,7 @@ final class WithdrawalProcessingTest extends TestCase
         return new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator());
     }
 
-    private function processing(bool $realSubscriptions = false, StockReturn|null $stock = null, VoucherReturn|null $vouchers = null, EntitlementRevocations|null $revocations = null): WithdrawalProcessing
+    private function processing(bool $realSubscriptions = false, StockReturn|null $stock = null, VoucherReturn|null $vouchers = null, EntitlementRevocations|null $revocations = null, RefundPayout|null $payouts = null): WithdrawalProcessing
     {
         $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
         $row = function (int $id): array|null {
@@ -1048,6 +1164,30 @@ final class WithdrawalProcessingTest extends TestCase
             $stock,
             $vouchers,
             $revocations,
+            $payouts,
         );
+    }
+
+    /**
+     * Block Zahlung Mollie: the order paid through a provider that can pay
+     * back (method 1, payment reference tr_1).
+     */
+    private function payouts(FakeRefundingHandler $card): RefundPayout
+    {
+        DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
+        $this->connection->insert('tl_consho_payment_attempt', ['id' => 30, 'pid' => self::ORDER, 'tokenHash' => 'h30', 'method' => 1, 'methodType' => 'card']);
+        $this->connection->update('tl_consho_payment', ['attempt' => 30, 'reference' => 'tr_1', 'receivedAt' => self::NOW - 86400], ['pid' => self::ORDER]);
+
+        $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
+        $orders->method('lockOrder')->willReturn(['id' => (string) self::ORDER]);
+
+        $methods = new class implements PaymentMethodLookupInterface {
+            public function byId(int $methodId): PaymentMethod|null
+            {
+                return 1 === $methodId ? new PaymentMethod(1, 'card', 'Visa', []) : null;
+            }
+        };
+
+        return new RefundPayout($this->connection, $orders, $methods, new PaymentHandlers(new ServiceLocator(['card' => static fn (): PaymentHandlerInterface => $card])));
     }
 }

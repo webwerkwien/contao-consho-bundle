@@ -35,6 +35,19 @@
     {% set element_id = data.id|default('') %}
 
     {#
+        Licence keys, repository tokens and other delivered texts are single
+        words of several hundred characters. Without a break they widen the page
+        far beyond the screen, whatever the theme. The only rule the page brings:
+        :where() keeps its specificity at zero, so any rule of the theme wins.
+        A style element with a nonce, so a strict Content Security Policy lets
+        it through; added to the head once per page. The class is the one
+        Contao's _base gives the element (content- plus the type).
+    #}
+    {% add "consho_order_wrap" to head %}
+        <style{{ attrs().setIfExists('nonce', csp_nonce('style-src')) }}>:where(.content-consho-order code) { overflow-wrap: anywhere; }</style>
+    {% endadd %}
+
+    {#
         No valid link — unknown, expired, missing (D-6, T4): a form for a new
         one. The same page for every case; link_outcome is an OrderLinkOutcome
         value after the POST, null before it. See OrderLinkRequest.

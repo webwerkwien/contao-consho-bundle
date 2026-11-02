@@ -25,6 +25,7 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderEvent;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 use Webwerkwien\ContaoConshoBundle\Order\OrderStatusAdvancer;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Stock\StockReturn;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPurchaseCancellation;
@@ -88,6 +89,9 @@ class WithdrawalProcessing
         private readonly VoucherReturn|null $vouchers = null,
         // Nachlese E6: delivery modules told of revoked entitlements.
         private readonly EntitlementRevocations|null $revocations = null,
+        // Block Zahlung Mollie (R2): the payment method's part paid back
+        // through its provider. Optional like the ones above.
+        private readonly RefundPayout|null $payouts = null,
     ) {
     }
 
@@ -318,12 +322,21 @@ class WithdrawalProcessing
      *                                  service (P79), gross; '' is 0, null keeps the proposal
      * @param string|null $toVouchers   the part of the payout booked back onto the order's
      *                                  vouchers (WG11); null: all they paid, up to the payout
+     * @param bool $throughProvider the payment method's part through its provider
+     *                              (block Zahlung Mollie, R2): booked here, paid out
+     *                              after the commit (R1); what no provider takes, by hand
+     * @param string|null $confirmed the amount through the provider the operator
+     *                               confirmed (R5). Without it, a refund that would pay
+     *                               out through a provider books nothing and answers
+     *                               `confirmPayout` with that amount and the rest by
+     *                               hand; with it, a different amount under the lock
+     *                               books nothing either (`payoutChanged`)
      */
-    public function refund(int $withdrawalId, string $shipping, int $now, string|null $compensation = null, string|null $toVouchers = null): ProcessingResult
+    public function refund(int $withdrawalId, string $shipping, int $now, string|null $compensation = null, string|null $toVouchers = null, bool $throughProvider = false, string|null $confirmed = null): ProcessingResult
     {
         $booked = null;
 
-        $result = $this->locked($withdrawalId, function (array $withdrawal, array $order) use ($shipping, $now, $compensation, $toVouchers, &$booked): ProcessingResult {
+        $result = $this->locked($withdrawalId, function (array $withdrawal, array $order) use ($shipping, $now, $compensation, $toVouchers, $throughProvider, $confirmed, &$booked): ProcessingResult {
             if ('accepted' !== $withdrawal['state']) {
                 return ProcessingResult::refused('notAccepted');
             }
@@ -430,6 +443,29 @@ class WithdrawalProcessing
                 $toVouchers = $this->vouchers->onVouchers($orderId, (string) $toVouchers, $creditLines)->toScale($digits, RoundingMode::Down);
             }
 
+            $toMethod = $payout->minus($toVouchers);
+
+            /*
+             * R5: money that leaves through a provider cannot be taken back, so
+             * the operator confirms the amount first — computed here, before
+             * anything is written, and nothing booked (the lock rolls back on a
+             * refusal). The confirmed amount must still hold under the lock: a
+             * payment refunded in between changes it.
+             */
+            if ($throughProvider && null !== $this->payouts) {
+                $viaProvider = $toMethod->isPositive()
+                    ? BigDecimal::min($toMethod, array_reduce($this->payouts->refundable($orderId), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero()))->toScale($digits, RoundingMode::Down)
+                    : BigDecimal::zero()->toScale($digits);
+
+                if (null === $confirmed && $viaProvider->isPositive()) {
+                    return ProcessingResult::refused('confirmPayout', [(string) $viaProvider, (string) $toMethod->minus($viaProvider)->toScale($digits)], [ProcessingResult::MONEY, ProcessingResult::MONEY]);
+                }
+
+                if (null !== $confirmed && !self::sameAmount($confirmed, $viaProvider)) {
+                    return ProcessingResult::refused('payoutChanged');
+                }
+            }
+
             $documentId = 0;
             $issuedInvoice = null;
 
@@ -468,9 +504,12 @@ class WithdrawalProcessing
             $voucherPayments = $toVouchers->isPositive() && null !== $this->vouchers
                 ? $this->vouchers->refund($orderId, (string) $toVouchers, $now, (string) $withdrawal['number'], (string) ($order['language'] ?? ''), $creditLines)
                 : [];
-            $toMethod = $payout->minus($toVouchers);
+            $payoutRows = [];
 
-            if ($toMethod->isPositive()) {
+            if ($toMethod->isPositive() && $throughProvider && null !== $this->payouts) {
+                $payoutRows = $this->payouts->book($orderId, (string) $toMethod, (string) $withdrawal['number'], $now);
+                $paymentId = $payoutRows[0];
+            } elseif ($toMethod->isPositive()) {
                 $this->connection->insert('tl_consho_payment', [
                     'pid' => $orderId,
                     'tstamp' => $now,
@@ -505,7 +544,7 @@ class WithdrawalProcessing
                 [(int) $withdrawal['id'], $orderId, (int) $withdrawal['decidedAt']],
             ));
 
-            $booked = ['order' => $order, 'number' => (string) $withdrawal['number'], 'invoice' => $issuedInvoice, 'document' => $documentId, 'amount' => (string) $amount, 'payout' => (string) $payout, 'remaining' => (string) $remaining, 'currency' => $currency, 'kept' => (string) $kept, 'ended' => $ended, 'vouchers' => (string) $toVouchers];
+            $booked = ['order' => $order, 'number' => (string) $withdrawal['number'], 'invoice' => $issuedInvoice, 'document' => $documentId, 'amount' => (string) $amount, 'payout' => (string) $payout, 'remaining' => (string) $remaining, 'currency' => $currency, 'kept' => (string) $kept, 'ended' => $ended, 'vouchers' => (string) $toVouchers, 'payoutRows' => $payoutRows];
 
             return ProcessingResult::done('refunded', [(string) $withdrawal['number']]);
         });
@@ -516,6 +555,10 @@ class WithdrawalProcessing
 
         $order = $booked['order'];
         $orderId = (int) $order['id'];
+
+        // After the commit (R1); never throws — a refusal stays on the row
+        // and becomes a finding.
+        $this->payouts?->payOut($booked['payoutRows'], $now);
 
         // The invoice issued with it (F3a) first, then the correction — the
         // order a reader of the mail needs them in.
@@ -549,7 +592,7 @@ class WithdrawalProcessing
      * What the page proposes (F1): the goods lines of the acceptance, and the
      * delivery costs still refundable.
      *
-     * @return array{goods: string, shippingLeft: string, vouchers: string}
+     * @return array{goods: string, shippingLeft: string, vouchers: string, provider: string, providerMethods: list<string>}
      */
     public function proposal(int $withdrawalId): array
     {
@@ -557,7 +600,7 @@ class WithdrawalProcessing
         $orderId = (int) ($withdrawal['pid'] ?? 0);
 
         if ($orderId < 1) {
-            return ['goods' => '0', 'shippingLeft' => '0', 'vouchers' => '0'];
+            return ['goods' => '0', 'shippingLeft' => '0', 'vouchers' => '0', 'provider' => '0', 'providerMethods' => []];
         }
 
         $order = $this->orders->order($orderId);
@@ -569,12 +612,30 @@ class WithdrawalProcessing
             // WG11: what the order's vouchers paid and can take back — a
             // single-purpose one only from its pot's lines (EZ-4).
             'vouchers' => null === $this->vouchers ? '0' : (string) $this->vouchers->onVouchers($orderId, (string) $this->vouchers->paidTotal($orderId), $this->lines($orderId, $withdrawalId, BigDecimal::zero())),
+            // Block Zahlung Mollie (R2): what the providers could pay back,
+            // and through which methods — the option is offered, and
+            // preselected, only where this is positive.
+            'provider' => null === $this->payouts ? '0' : (string) array_reduce($this->payouts->refundable($orderId), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero()),
+            'providerMethods' => null === $this->payouts ? [] : $this->payouts->methodTitles($orderId),
         ];
     }
 
     /**
      * @param \Closure(array<string, mixed>, array<string, mixed>): ProcessingResult $action
      */
+    /**
+     * The confirmed amount comes back from a form field; anything that is not
+     * a number confirms nothing.
+     */
+    private static function sameAmount(string $confirmed, BigDecimal $amount): bool
+    {
+        try {
+            return BigDecimal::of($confirmed)->isEqualTo($amount);
+        } catch (MathException) {
+            return false;
+        }
+    }
+
     private function locked(int $withdrawalId, \Closure $action): ProcessingResult
     {
         $orderId = (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_withdrawal WHERE id = ?', [$withdrawalId]);

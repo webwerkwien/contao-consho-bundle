@@ -56,7 +56,7 @@
             </table>
             <table class="tl_show">
                 <tbody>
-                    <tr><td class="tl_label">{{ l.windowClosesAt|default('Fensterende') }}</td><td>{{ dates.windowClosesAt ?: (l.windowOpen|default('noch keines, solange Ware aussteht')) }}</td></tr>
+                    <tr><td class="tl_label">{{ l.windowClosesAt|default('Fensterende') }}</td><td>{{ dates.windowClosesAt ?: (l.windowOpen|default('offene Lieferung')) }}</td></tr>
                     {% if dates.refundDueAt %}<tr><td class="tl_label">{{ l.refundDueAt|default('Erstattung fällig bis') }}</td><td>{% if dates.overdue %}<strong class="consho-overdue">{{ dates.refundDueAt }}</strong>{% else %}{{ dates.refundDueAt }}{% endif %}</td></tr>{% endif %}
                     {% if withdrawal.returnReceivedAtText %}<tr><td class="tl_label">{{ l.returnReceivedAt.0|default('Rücksendung erhalten am') }}</td><td>{{ withdrawal.returnReceivedAtText }}</td></tr>{% endif %}
                     {% if withdrawal.refunded %}<tr><td class="tl_label">{{ l.refundAmount.0|default('Erstattet') }}</td><td>{{ withdrawal.refundAmount }} — {{ withdrawal.refundedAt }}</td></tr>{% endif %}
@@ -120,13 +120,35 @@
         </fieldset>
     {% endif %}
 
-    {% if withdrawal.state == 'accepted' and not withdrawal.refunded %}
+    {# R5: through a provider, the amount is confirmed before anything is booked. #}
+    {% if confirm is defined %}
+        <fieldset class="tl_tbox consho-withdrawal-box">
+            <legend>{{ l.refundLegend|default('Erstattung') }}</legend>
+            <form action="{{ action }}" method="post">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                {% for name, value in confirm.inputs %}
+                    <input type="hidden" name="{{ name }}" value="{{ value }}">
+                {% endfor %}
+                <input type="hidden" name="throughProvider" value="1">
+                <input type="hidden" name="consho_confirmed" value="{{ confirm.amount }}">
+                <p class="tl_info">{{ (l.refundConfirm|default('%s / %s'))|format(confirm.amountLabel, refund.providerMethods) }}{% if confirm.manualLabel %} {{ (l.refundConfirmManual|default('%s'))|format(confirm.manualLabel) }}{% endif %}</p>
+                <div class="tl_submit_container consho-withdrawal-actions">
+                    <button type="submit" name="consho_action" value="refund" class="tl_submit">{{ l.refundConfirmSubmit|default('Jetzt zurückzahlen') }}</button>
+                    <a href="{{ action }}" class="tl_submit">{{ l.refundConfirmCancel|default('Abbrechen') }}</a>
+                </div>
+            </form>
+        </fieldset>
+    {% elseif withdrawal.state == 'accepted' and not withdrawal.refunded %}
         <fieldset class="tl_tbox consho-withdrawal-box">
             <legend>{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.returnLegend|default('Rücksendung') }} / {{ l.refundLegend|default('Erstattung') }}</legend>
             {# One form, two buttons: the return and the refund share the table
                of accepted items, and whoever books the refund usually has just
-               recorded the return. #}
-            <form action="{{ action }}" method="post">
+               recorded the return.
+
+               data-turbo="false": "Erstattung buchen" through a provider answers
+               with the confirmation (R5), not a redirect, and Turbo drops such
+               an answer. #}
+            <form action="{{ action }}" method="post" data-turbo="false">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 <table class="tl_listing consho-withdrawal-items">
                     <thead><tr>
@@ -175,6 +197,14 @@
                 <p class="tl_help">{{ (l.shippingHelp|default('%s'))|format(refund.shippingLeft) }}</p>
                 {% if refund.vouchers|default(null) is not null %}
                     <p class="tl_help">{{ (l.refundVouchers.1|default('%s'))|format(refund.vouchersMax) }}</p>
+                {% endif %}
+                {# Block Zahlung Mollie (R2): through the provider, preselected where one can. #}
+                {% if refund.provider|default(null) is not null %}
+                    <div class="widget">
+                        <input type="checkbox" name="throughProvider" id="ctrl_throughProvider" class="tl_checkbox" value="1" checked>
+                        <label for="ctrl_throughProvider">{{ (l.throughProvider.0|default('%s'))|format(refund.providerMethods) }}</label>
+                        <p class="tl_help">{{ (l.throughProvider.1|default('%s'))|format(refund.provider) }}</p>
+                    </div>
                 {% endif %}
                 {# Abo-8, P80: the calculation, so the operator can judge it. #}
                 {% if refund.compensation is not null %}

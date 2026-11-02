@@ -16,6 +16,9 @@ use Webwerkwien\ContaoConshoBundle\Payment\OrderView;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentAttempt;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentContext;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentStartOutcome;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\PaymentRefund;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundOutcome;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
 use Webwerkwien\ContaoConshoBundle\Payment\TestPaymentHandler;
 
 class TestPaymentHandlerTest extends TestCase
@@ -225,6 +228,31 @@ class TestPaymentHandlerTest extends TestCase
         $request->headers->set(TestPaymentHandler::SIGNATURE_HEADER, TestPaymentHandler::sign($body, 'geheim-geheim-geheim'));
 
         return $request;
+    }
+
+    /**
+     * Block Zahlung Mollie, 4.6: the refund answers what the option says,
+     * and a pending one is done when the cron asks.
+     */
+    public function testErstattungAntwortetWasDieEinstellungSagt(): void
+    {
+        $refund = new PaymentRefund(7, 'WEB-00001', 'EUR', '5.0000', 'TEST-CHARGE-1', '', 'de');
+
+        self::assertSame([RefundOutcome::Done, 'TEST-REFUND-7'], $this->outcome($this->handler()->refund($refund, self::CONFIG)));
+        self::assertSame(RefundOutcome::Pending, $this->handler()->refund($refund, self::CONFIG + ['testRefundResult' => 'pending'])->outcome);
+        self::assertSame(RefundOutcome::Failed, $this->handler()->refund($refund, self::CONFIG + ['testRefundResult' => 'failed'])->outcome);
+        self::assertSame(RefundOutcome::Failed, $this->handler()->refund($refund, ['testSecret' => ''])->outcome);
+
+        $asked = new PaymentRefund(7, 'WEB-00001', 'EUR', '5.0000', 'TEST-CHARGE-1', 'TEST-REFUND-7', 'de');
+        self::assertSame([RefundOutcome::Done, 'TEST-REFUND-7'], $this->outcome($this->handler()->refundState($asked, self::CONFIG)));
+    }
+
+    /**
+     * @return array{RefundOutcome, string}
+     */
+    private function outcome(RefundResult $result): array
+    {
+        return [$result->outcome, $result->reference];
     }
 
     private function handler(): TestPaymentHandler

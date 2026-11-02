@@ -69,7 +69,7 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
         // Auf Rechnung (E-2, Z1): no fee section on purpose (Z4).
         'invoice' => '{title_legend},title,type,description,instructions;{invoice_legend},dueDays,graceDays,allowedGroups,maxNet,maxNetCurrency,sameCountry,notHandedOutAtOnce;{bank_legend},accountHolder,iban,bic,bankName,giroCode;{publish_legend},published',
         // The test provider (C-11), offered only with CONSHO_TEST_PAYMENT=1.
-        'test' => '{title_legend},title,type,description,instructions;{test_legend},testSecret,testFollowUpResult;{publish_legend},published',
+        'test' => '{title_legend},title,type,description,instructions;{test_legend},testSecret,testFollowUpResult,testRefundResult;{publish_legend},published',
     ],
 
     'fields' => [
@@ -249,6 +249,15 @@ $GLOBALS['TL_DCA']['tl_consho_payment_method'] = [
             'exclude' => true,
             'options' => ['paid', 'pending', 'failed'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResults'],
+            'eval' => ['tl_class' => 'w50'],
+        ],
+        // What a refund through the provider answers (block Zahlung Mollie,
+        // 4.6). Virtual, like the secret.
+        'testRefundResult' => [
+            'inputType' => 'select',
+            'exclude' => true,
+            'options' => ['done', 'pending', 'failed'],
+            'reference' => &$GLOBALS['TL_LANG']['tl_consho_payment_method']['testRefundResults'],
             'eval' => ['tl_class' => 'w50'],
         ],
 

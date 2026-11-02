@@ -2,6 +2,8 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Tests\Templates;
 
+use Contao\CoreBundle\Twig\Extension\ContaoExtension;
+use Contao\CoreBundle\Twig\ResponseContext\AddTokenParser;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Twig\Environment;
@@ -58,6 +60,9 @@ class TemplatesCompileTest extends TestCase
         // Same place, "Backend functions" (ContaoExtension.php:271, Contao
         // 5.7): BackendHelperRuntime::icon(), with the dark variant.
         'backend_icon',
+        // Same place (ContaoExtension.php:248, Contao 5.7): CspRuntime::getNonce(),
+        // overwriting the one of nelmio/security-bundle.
+        'csp_nonce',
         // Symfony\Bridge\Twig\Extension\RoutingExtension
         'path',
         /*
@@ -146,6 +151,11 @@ class TemplatesCompileTest extends TestCase
     private function environment(): Environment
     {
         $twig = new Environment(new ArrayLoader());
+
+        // The `add` tag: ContaoExtension::getTokenParsers() (ContaoExtension.php:163,
+        // Contao 5.7). Parsing needs only the parser; the extension it names is
+        // looked up when the template renders.
+        $twig->addTokenParser(new AddTokenParser(ContaoExtension::class));
 
         foreach (self::FUNCTIONS as $name) {
             $twig->addFunction(new TwigFunction($name, static fn (): string => ''));

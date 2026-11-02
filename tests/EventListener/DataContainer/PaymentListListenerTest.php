@@ -49,6 +49,20 @@ final class PaymentListListenerTest extends TestCase
         self::assertMatchesRegularExpression('/-\s?1,20|−\s?1,20/u', $label);
     }
 
+    public function testEineErstattungHeisstErstattungNichtRefund(): void
+    {
+        $GLOBALS['TL_LANG']['tl_consho_payment']['methodRefund'] = 'Erstattung';
+
+        try {
+            $label = (new PaymentListListener($this->connection))->label(['pid' => 44, 'receivedAt' => 0, 'amount' => '-1.2000', 'method' => 'refund']);
+        } finally {
+            unset($GLOBALS['TL_LANG']);
+        }
+
+        self::assertStringContainsString('(Erstattung)', $label);
+        self::assertStringNotContainsString('refund', $label);
+    }
+
     public function testDerKopfZeigtDieGesamtsummeAlsGeld(): void
     {
         $GLOBALS['TL_DCA']['tl_consho_order']['fields']['grandTotal']['label'] = ['Gesamtsumme', ''];

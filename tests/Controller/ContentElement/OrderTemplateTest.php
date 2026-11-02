@@ -2,7 +2,9 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Tests\Controller\ContentElement;
 
+use Contao\CoreBundle\DependencyInjection\Attribute\AsContentElement;
 use PHPUnit\Framework\TestCase;
+use Webwerkwien\ContaoConshoBundle\Controller\ContentElement\OrderController;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryState;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentState;
 
@@ -58,6 +60,27 @@ class OrderTemplateTest extends TestCase
 
         $twig = new \Twig\Environment(new \Twig\Loader\ArrayLoader(['t' => '{{ text|nl2br }}']));
         self::assertSame("a &lt;b&gt;<br />\nc", $twig->render('t', ['text' => "a <b>\nc"]));
+    }
+
+    /**
+     * A licence key is one word of over 300 characters; unbroken it made the
+     * page some 1,500 px wider than the screen. The rule wraps every `<code>`
+     * of the page, keeps specificity zero for the theme, and carries a nonce,
+     * or a strict CSP would drop it.
+     *
+     * The selector names the class Contao's _base puts on the element:
+     * "content-" plus the element type. The template's own classes start with
+     * "consho-order__" and are no wrapper, so ".consho-order" matched nothing.
+     */
+    public function testLangeSchluesselBrechenUmOhneDemThemeVorzugreifen(): void
+    {
+        $template = (string) file_get_contents(self::TEMPLATE);
+
+        self::assertMatchesRegularExpression('#\{% add "consho_order_wrap" to head %\}\s*<style\{\{ attrs\(\)\.setIfExists\(\'nonce\', csp_nonce\(\'style-src\'\)\) \}\}>:where\(\.content-consho-order code\) \{ overflow-wrap: anywhere; \}</style>\s*\{% endadd %\}#', $template);
+        self::assertStringStartsWith('{% extends "@Contao/content_element/_base.html.twig" %}', $template);
+        $type = (new \ReflectionClass(OrderController::class))->getAttributes(AsContentElement::class)[0]->getArguments()['type'];
+        self::assertSame('content-consho-order', 'content-'.str_replace('_', '-', $type));
+        self::assertStringNotContainsString(' style="', $template);
     }
 
     /**

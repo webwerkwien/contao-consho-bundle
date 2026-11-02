@@ -1,0 +1,62 @@
+{#
+  The refund operations at a payment (block Zahlung Mollie, 4.4). Rendered
+  inside the back end frame by PaymentRefundBackendController; every form
+  posts back to the same address with Contao's request token.
+
+  step: refund (the form), confirm (R5), retry, manual.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.refundBack|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+{% set legend %}{{ lang.refundLegend|default('Erstattung') }}: {{ number }} — {{ method }}, {{ paymentLabel }}{% if paymentReference %} ({{ paymentReference }}){% endif %}{% endset %}
+
+{% if step == 'refund' and refundable is null %}
+    <div class="tl_formbody_edit">
+        <fieldset class="tl_box">
+            <legend>{{ legend }}</legend>
+            <p class="tl_info">{{ lang.refundNotPossible|default('') }}</p>
+        </fieldset>
+    </div>
+{% else %}
+    {# data-turbo="false": the first POST answers with the confirmation (or an
+       error) instead of a redirect, and Turbo drops such an answer. #}
+    <form action="{{ action }}" method="post" class="tl_form" data-turbo="false">
+        <div class="tl_formbody_edit">
+            <input type="hidden" name="FORM_SUBMIT" value="consho_payment_refund">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <fieldset class="tl_box">
+                <legend>{{ legend }}</legend>
+                {% if step == 'refund' %}
+                    <div class="widget w50">
+                        <h3><label for="ctrl_consho_amount">{{ lang.refundAmount|default('Betrag') }}</label></h3>
+                        <input type="text" name="consho_amount" id="ctrl_consho_amount" class="tl_text" inputmode="decimal" value="{{ amount }}" required>
+                        <p class="tl_help tl_tip">{{ lang.refundAmountHelp|default('%s')|format(refundableLabel) }}</p>
+                    </div>
+                    <div class="widget w50">
+                        <h3><label for="ctrl_consho_reference">{{ lang.refundReference|default('Referenz') }}</label></h3>
+                        <input type="text" name="consho_reference" id="ctrl_consho_reference" class="tl_text" maxlength="255" value="{{ reference }}">
+                        <p class="tl_help tl_tip">{{ lang.refundReferenceHelp|default('') }}</p>
+                    </div>
+                {% elseif step == 'confirm' %}
+                    <input type="hidden" name="consho_amount" value="{{ amount }}">
+                    <input type="hidden" name="consho_reference" value="{{ reference }}">
+                    <input type="hidden" name="consho_confirmed" value="1">
+                    <p class="tl_info">{{ lang.refundConfirm|default('%s / %s')|format(amountLabel, method) }}</p>
+                {% elseif step == 'retry' %}
+                    <p class="tl_info">{{ lang.refundRetryConfirm|default('%s / %s')|format(amountLabel, method) }}</p>
+                {% else %}
+                    <p class="tl_info">{{ lang.refundManualConfirm|default('%s / %s')|format(amountLabel, method) }}{% if payoutReference %} {{ lang.refundPayoutReference|default('%s')|format(payoutReference) }}{% endif %}</p>
+                {% endif %}
+            </fieldset>
+        </div>
+        <div class="tl_formbody_submit">
+            <div class="tl_submit_container">
+                <button type="submit" class="tl_submit">{{ attribute(lang, 'refundSubmit_' ~ step)|default('OK') }}</button>
+            </div>
+        </div>
+    </form>
+{% endif %}

@@ -248,6 +248,17 @@ enum ConfigurationFinding: string
     case InvoiceProviderMissing = 'invoiceProviderMissing';
     case ExternalInvoiceFailed = 'externalInvoiceFailed';
 
+    // Block Zahlung Mollie, 4.5: refunds the provider refused, and refunds
+    // that hang — sent without an answer, or pending for a week
+    // (RefundPayoutIssueSource).
+    case RefundPayoutFailed = 'refundPayoutFailed';
+    case RefundPayoutStuck = 'refundPayoutStuck';
+
+    // Block Zahlung Mollie: a published payment method of a module that will
+    // not work as expected — one finding for every module, as for delivery
+    // types (PaymentReadinessIssueSource).
+    case PaymentMethodNotReady = 'paymentMethodNotReady';
+
     /**
      * The back end modules in which the finding is put right (H1): a user sees it if they may open ONE of them. An empty
      * list is for what no module repairs — a console command, an environment
@@ -276,7 +287,7 @@ enum ConfigurationFinding: string
             self::ShippingPriceMissing, self::ShippingMethodMissing, self::AgeGateMissing,
             self::DeliveryCountryWithoutShipping => ['consho_shop', 'consho_shipping'],
             self::PaymentMethodMissing, self::SubscriptionBillingMethodMissing => ['consho_shop', 'consho_payment'],
-            self::PaymentFeeTaxMissing => ['consho_payment'],
+            self::PaymentFeeTaxMissing, self::PaymentMethodNotReady => ['consho_payment'],
             self::ProductManufacturerMissing, self::DuplicateGtin, self::TranslationMissing,
             self::TranslationSafetyMissing, self::ProductShopMissing, self::ProductPriceMissing, self::PriceTie, self::PriceCutAsPromotion,
             self::GroupPriceAboveList, self::DigitalFileMissing, self::SaleModePriceMissing,
@@ -292,7 +303,8 @@ enum ConfigurationFinding: string
             self::StockLow => ['consho_stock'],
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
             self::InvoiceArchiveFailed, self::ExternalInvoiceFailed, self::ConfirmationNotSent, self::AnonymizationDue,
-            self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid => ['consho_order'],
+            self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid,
+            self::RefundPayoutFailed, self::RefundPayoutStuck => ['consho_order'],
             // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
@@ -574,6 +586,8 @@ enum ConfigurationFinding: string
              */
             self::InvoiceArchiveFailed,
             self::ExternalInvoiceFailed,
+            self::RefundPayoutFailed,
+            self::RefundPayoutStuck,
             self::InvoiceArchiveFolderUnsafe,
             self::ReverseChargeNoteMissing,
 
@@ -709,6 +723,10 @@ enum ConfigurationFinding: string
             // The method is silently missing from the checkout until the
             // operator decides (E-1, Z3). A warning.
             self::PaymentFeeTaxMissing => true,
+
+            // A test key takes no money, an invalid licence hides the method:
+            // neither is a judgement to acknowledge. A warning.
+            self::PaymentMethodNotReady => true,
 
             // The checkout no longer offers a country the operator ticked
             // (E-5, V3). Said loudly, so it is not mistaken for a decision.

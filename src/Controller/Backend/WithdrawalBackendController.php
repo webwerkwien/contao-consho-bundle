@@ -103,9 +103,19 @@ final class WithdrawalBackendController
                 'accept' => $this->processing->accept($id, self::strings($post->all('accepted')), $now),
                 'reject' => $this->processing->reject($id, $post->getString('reason'), $now),
                 'return' => $this->processing->recordReturn($id, self::date($post->getString('returnReceivedAt')), self::strings($post->all('returned')), $now, self::restock($post->all('restockShown'), $post->all('restock')), $this->userId()),
-                'refund' => $this->processing->refund($id, $post->getString('shipping'), $now, $post->has('compensation') ? $post->getString('compensation') : null, $post->has('vouchers') ? $post->getString('vouchers') : null),
+                'refund' => $this->processing->refund($id, $post->getString('shipping'), $now, $post->has('compensation') ? $post->getString('compensation') : null, $post->has('vouchers') ? $post->getString('vouchers') : null, $post->has('throughProvider'), $post->has('consho_confirmed') ? $post->getString('consho_confirmed') : null),
                 default => ProcessingResult::refused('unknown'),
             };
+
+            // R5: through a provider, the amount is confirmed before anything
+            // is booked — the same inputs again, with the amount shown.
+            if ('confirmPayout' === $result->key) {
+                return $this->confirmation($withdrawal, $order, $result, $request->getUri(), [
+                    'shipping' => $post->getString('shipping'),
+                    'compensation' => $post->has('compensation') ? $post->getString('compensation') : null,
+                    'vouchers' => $post->has('vouchers') ? $post->getString('vouchers') : null,
+                ]);
+            }
 
             $params = $result->params;
 
@@ -143,6 +153,35 @@ final class WithdrawalBackendController
             'back' => $this->framework->getAdapter(System::class)->getReferer(),
             'lang' => $lang,
             ...$this->view($withdrawal, $order),
+        ]);
+    }
+
+    /**
+     * "Jetzt zurückzahlen" (R5): what goes back through the provider, what
+     * stays to pay back by hand, and the inputs to book it with.
+     *
+     * @param array<string, mixed>       $withdrawal
+     * @param array<string, mixed>       $order
+     * @param array<string, string|null> $inputs
+     */
+    private function confirmation(array $withdrawal, array $order, ProcessingResult $result, string $action, array $inputs): string
+    {
+        $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
+        $currency = (string) $order['currency'];
+        [$provider, $manual] = $result->params;
+
+        return $this->twig->render(self::TEMPLATE, [
+            'messages' => '',
+            'action' => $action,
+            'back' => $this->framework->getAdapter(System::class)->getReferer(),
+            'lang' => $GLOBALS['TL_LANG']['tl_consho_withdrawal'] ?? [],
+            ...$this->view($withdrawal, $order),
+            'confirm' => [
+                'amount' => $provider,
+                'amountLabel' => $this->money->format($provider, $currency, $language),
+                'manualLabel' => BigDecimal::of($manual)->isPositive() ? $this->money->format($manual, $currency, $language) : '',
+                'inputs' => array_filter($inputs, static fn (string|null $value): bool => null !== $value),
+            ],
         ]);
     }
 
@@ -384,6 +423,10 @@ final class WithdrawalBackendController
                 // WG11: shown where vouchers paid; at most that goes back onto them.
                 'vouchers' => BigDecimal::of($proposal['vouchers'])->isPositive() ? (string) BigDecimal::of($proposal['vouchers'])->toScale(2, RoundingMode::Down) : null,
                 'vouchersMax' => $this->money->format($proposal['vouchers'], $currency, $language),
+                // Block Zahlung Mollie (R2): the option, preselected, where a
+                // provider can pay back — with the most and the methods.
+                'provider' => BigDecimal::of($proposal['provider'])->isPositive() ? $this->money->format($proposal['provider'], $currency, $language) : null,
+                'providerMethods' => implode(', ', $proposal['providerMethods']),
             ],
         ];
     }

@@ -6,6 +6,8 @@ use Brick\Math\BigDecimal;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\PaymentRefund;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
 
 /**
  * The test provider (spec 6.2, C1): proves the online flow without a real
@@ -43,13 +45,23 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
  * `testFollowUpResult` says — paid, pending or failed. A pending charge is
  * answered by nobody: it goes "on account" after 7 days (P96), or the
  * operator records the payment.
+ *
+ * ── Refunds (block Zahlung Mollie, 4.6) ──────────────────────────────────
+ *
+ * It can pay back, so the refund through a provider is testable without
+ * one: refund() answers what the option `testRefundResult` says — done,
+ * pending or failed —, and refundState() reports a pending one done.
  */
-final class TestPaymentHandler implements RecurringPaymentHandlerInterface
+final class TestPaymentHandler implements RecurringPaymentHandlerInterface, RefundingPaymentHandlerInterface
 {
     /** The mandate the test page hands out; charge() takes no other. */
     public const MANDATE_PREFIX = 'test-mandate-';
 
     public const CHARGE_RESULTS = ['paid', 'pending', 'failed'];
+
+    public const REFUND_RESULTS = ['done', 'pending', 'failed'];
+
+    public const REFUND_PREFIX = 'TEST-REFUND-';
     public const SIGNATURE_HEADER = 'X-Consho-Test-Signature';
 
     public const RESULTS = ['paid' => AttemptState::Succeeded, 'cancelled' => AttemptState::Cancelled, 'failed' => AttemptState::Failed];
@@ -215,6 +227,40 @@ final class TestPaymentHandler implements RecurringPaymentHandlerInterface
             'failed' => ChargeResult::failed('The test provider was set to fail.'),
             default => ChargeResult::paid($attempt->amount, 'TEST-CHARGE-'.$attempt->id),
         };
+    }
+
+    /**
+     * Answers what the method's option `testRefundResult` says. A pending
+     * refund is done the next time the cron asks.
+     */
+    public function refund(PaymentRefund $refund, array $config): RefundResult
+    {
+        if ('' === self::secretOf($config)) {
+            return RefundResult::failed('The test provider has no secret.');
+        }
+
+        return match (self::refundResultOf($config)) {
+            'pending' => RefundResult::pending(self::REFUND_PREFIX.$refund->id),
+            'failed' => RefundResult::failed('The test provider was set to fail.'),
+            default => RefundResult::done(self::REFUND_PREFIX.$refund->id),
+        };
+    }
+
+    public function refundState(PaymentRefund $refund, array $config): RefundResult
+    {
+        return str_starts_with($refund->payoutReference, self::REFUND_PREFIX)
+            ? RefundResult::done($refund->payoutReference)
+            : RefundResult::failed('Not a refund of the test provider.');
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    public static function refundResultOf(array $config): string
+    {
+        $result = \is_string($config['testRefundResult'] ?? null) ? $config['testRefundResult'] : '';
+
+        return \in_array($result, self::REFUND_RESULTS, true) ? $result : 'done';
     }
 
     /**

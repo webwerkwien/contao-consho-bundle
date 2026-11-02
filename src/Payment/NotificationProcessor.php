@@ -137,7 +137,18 @@ class NotificationProcessor
              * before charge() has returned and the reference is written. That
              * one is asked to send again (503) instead of being told to stop.
              */
-            if ('' === $locked->providerReference && (AttemptState::Open === $locked->state || AttemptState::Pending === $locked->state)) {
+            $reference = $locked->providerReference;
+
+            if ('' === $reference && $attempt->charge && AttemptState::Open !== $locked->state) {
+                /*
+                 * A charge whose outcome was unknown: charge() threw, so the
+                 * reference never came back (SubscriptionCharger), and none
+                 * will. The handler vouches that the message is about this
+                 * attempt (RecurringPaymentHandlerInterface); its reference is
+                 * taken now and checked against from here on.
+                 */
+                $reference = $result->for;
+            } elseif ('' === $reference && (AttemptState::Open === $locked->state || AttemptState::Pending === $locked->state)) {
                 $this->connection->commit();
                 $this->logger->info(\sprintf('Payment notification for attempt %d arrived before its provider reference; asked to resend.', $attempt->id));
 
@@ -145,7 +156,7 @@ class NotificationProcessor
             }
 
             $rejected = match (true) {
-                !hash_equals($locked->providerReference, $result->for) => 'it is about another provider reference',
+                !hash_equals($reference, $result->for) => 'it is about another provider reference',
                 NotificationOutcome::Paid === $result->outcome && strtoupper($locked->currency) !== $result->currency => \sprintf('%s received, %s expected', $result->currency, $locked->currency),
                 default => null,
             };
@@ -176,7 +187,7 @@ class NotificationProcessor
                 $this->attempts->recordPayment($locked, $result->amount, $result->reference, $method->title ?? $locked->methodType, $now);
                 // The reference of the attempt stays the one notifications are
                 // checked against; the payment's own is on the payment row.
-                $this->attempts->setState($locked->id, AttemptState::Succeeded, $now);
+                $this->attempts->setState($locked->id, AttemptState::Succeeded, $now, $reference);
                 $booked = true;
 
                 if ('' !== $result->mandate && $handler instanceof RecurringPaymentHandlerInterface) {
@@ -187,7 +198,7 @@ class NotificationProcessor
                     $this->logger->warning(\sprintf('Payment for attempt %d: %s received, %s expected.', $locked->id, $result->amount, $locked->amount));
                 }
             } elseif (AttemptState::Open === $locked->state || AttemptState::Pending === $locked->state) {
-                $this->attempts->setState($locked->id, AttemptState::Failed, $now);
+                $this->attempts->setState($locked->id, AttemptState::Failed, $now, $reference);
                 $failed = true;
             }
 

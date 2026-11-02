@@ -221,14 +221,58 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertCount(2, $this->card->charges);
     }
 
-    public function testEinWerfendesModulIstEinFehlschlag(): void
+    /**
+     * A module that throws has not said the charge failed: a timeout may
+     * come after the provider took the money. The order stays with its
+     * method, the attempt waits for the notification without a mail, and
+     * only P96 puts it "on account" after 7 days. Before, the order went
+     * "on account" at once and the customer could pay twice.
+     */
+    public function testEinWerfendesModulLaesstDenAusgangOffen(): void
     {
         $this->card->charge = new \RuntimeException('Anbieter nicht erreichbar');
+        $now = $this->at('2026-02-28 11:00');
 
+        $orderId = $this->billingRun()->run($now)[0]->orderId;
+
+        self::assertSame(8, (int) $this->order($orderId)['paymentMethod'], 'nicht auf Rechnung');
+        self::assertSame('pending', $this->connection->fetchOne('SELECT state FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
+        self::assertFalse($this->connection->fetchOne("SELECT 1 FROM tl_consho_document WHERE pid = ? AND type = 'invoice'", [$orderId]));
+        self::assertSame([], $this->mails->getArrayCopy(), 'keine Mail: ob abgebucht wird, weiß niemand');
+        self::assertNull($this->charger()->charge($orderId, $now + 60), 'kein zweiter Versuch');
+        self::assertCount(1, $this->card->charges);
+
+        // The provider took the money after all: its notification books it.
+        $this->card->notification = NotificationResult::paid('8.33', 'EUR', 'ch_1', 'ch_1');
+        self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $now + 600));
+
+        self::assertSame($now + 600, (int) $this->order($orderId)['paymentSettledAt']);
+        self::assertSame(8, (int) $this->order($orderId)['paymentMethod']);
+    }
+
+    /**
+     * Without a notification, the thrown charge goes "on account" like a
+     * pending one: after 7 days (P96).
+     */
+    public function testEinWerfendesModulOhneMeldungNachSiebenTagenAufRechnung(): void
+    {
+        $this->card->charge = new \RuntimeException('Anbieter nicht erreichbar');
         $orderId = $this->billingRun()->run($this->at('2026-02-28 11:00'))[0]->orderId;
+        $createdAt = (int) $this->order($orderId)['createdAt'];
 
+        self::assertSame([$orderId], $this->fallback()->lapse($createdAt + 7 * 86_400));
         self::assertSame(6, (int) $this->order($orderId)['paymentMethod']);
-        self::assertSame('failed', $this->connection->fetchOne('SELECT state FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
+
+        // Money that arrives after all is booked (Z3), though the attempt
+        // never learned its reference; the order then reads overpaid.
+        $this->card->notification = NotificationResult::paid('8.33', 'EUR', 'ch_1', 'ch_1');
+        self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $createdAt + 8 * 86_400));
+        self::assertSame('ch_1', $this->connection->fetchOne('SELECT providerReference FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE pid = ?', [$orderId]));
+
+        // From now on, the reference holds: another payment is refused.
+        $this->card->notification = NotificationResult::paid('8.33', 'EUR', 'ch_9', 'ch_9');
+        self::assertSame(400, $this->processor()->process($this->tokenOf($orderId), new Request(), $createdAt + 8 * 86_400 + 60));
     }
 
     /**

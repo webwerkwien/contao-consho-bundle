@@ -29,6 +29,8 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
             'keys' => [
                 'id' => 'primary',
                 'pid' => 'index',
+                // The hourly cron looks up the refunds still `requested`.
+                'payoutState' => 'index',
 
                 /*
                  * One payment per attempt, refused by the database (C-11, Z4).
@@ -59,6 +61,12 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
             '!delete',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
             '!versions',
+
+            // Block Zahlung Mollie, 4.4: each shown only where it applies
+            // (PaymentRefundButtonListener); the page checks again.
+            'refundPayment' => ['href' => 'key=refundPayment', 'icon' => 'undo.svg', 'primary' => true],
+            'refundRetry' => ['href' => 'key=refundRetry', 'icon' => 'sync.svg', 'primary' => true],
+            'refundManual' => ['href' => 'key=refundManual', 'icon' => 'ok.svg', 'primary' => true],
         ],
     ],
 
@@ -135,5 +143,22 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
         'prepaidTaxRate' => ['sql' => ['type' => 'decimal', 'precision' => 6, 'scale' => 4, 'default' => '0.0000']],
         'prepaidTaxCountry' => ['sql' => ['type' => 'string', 'length' => 2, 'default' => '']],
         'prepaidTax' => ['sql' => ['type' => 'decimal', 'precision' => 12, 'scale' => 4, 'default' => '0.0000']],
+
+        /*
+         * A refund paid out through the provider (block Zahlung Mollie, 4.2).
+         * Written by RefundPayout, never typed.
+         *
+         * refundOf: the payment this negative row pays back; 0 for none.
+         * payoutState: '' for any row that is no such refund — and for refunds
+         * booked before this existed, whose state nobody knows; a migration
+         * claiming "paid out" would invent it. `manual` the operator pays,
+         * `requested` the provider is about to be asked (no reference) or
+         * answered "later" (with one), `sending` it is being asked right now —
+         * or a process died while asking, `done` it paid, `failed` it refused.
+         */
+        'refundOf' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
+        'payoutState' => ['sql' => ['type' => 'string', 'length' => 16, 'default' => '']],
+        'payoutReference' => ['sql' => ['type' => 'string', 'length' => 255, 'default' => '']],
+        'payoutCheckedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
     ],
 ];

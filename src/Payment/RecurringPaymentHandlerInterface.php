@@ -33,7 +33,12 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
  *  - failed: the order goes "on account" at once (P95); the mandate stays,
  *    the next period is charged again
  *
- * A charge that throws counts as failed. Consent to charges without the
+ * Answer `failed` only when the provider refused. A charge that throws
+ * leaves the outcome unknown — no answer, a server error, a timeout after
+ * the provider may have taken the money: the attempt waits for the notify
+ * URL like a pending charge, and after 7 days without one the order goes
+ * "on account" (P96). The notification may then name a payment the attempt
+ * never learned the reference of. Consent to charges without the
  * customer is the module's and the operator's matter, not the core's —
  * Consho sets no legal texts.
  *

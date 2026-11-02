@@ -5,6 +5,55 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.2.1] – 2026-11-02
+
+### Added
+
+- **Refunds through the payment provider.** A payment module can now pay money back through its provider by
+  implementing `RefundingPaymentHandlerInterface` (`refund()`, `refundState()`). A refund is booked first — one
+  negative payment per payment paid back, newest first, the rest by hand — and the provider is asked after the
+  booking is committed. A handler answers `failed` only when the provider refused; an exception means the outcome
+  is unknown, and the refund stays `sending` until someone checks the provider and settles it by hand — it is never
+  sent twice by itself. Payments carry the new fields `refundOf`, `payoutState` (`manual`, `requested`, `sending`,
+  `done`, `failed`), `payoutReference` and `payoutCheckedAt`; refunds booked before keep an empty state. The test
+  provider can refund too (option „Erstattung“). Run `contao:migrate`. (Block Zahlung Mollie)
+- **Refund operations at a payment.** „Erstatten“ pays a received payment back through its provider, after a
+  confirmation that names the amount and the payment method; „Erneut auszahlen“ requests a refused refund again;
+  „Von Hand erledigt“ settles a refund that failed or is still waiting. The payment list shows the state of each
+  refund. Who may create payments of an order may refund; who may edit them may use the other two. If the payment
+  was refunded meanwhile by someone else, „Erstatten“ books nothing and says so. (Block Zahlung Mollie)
+- **Withdrawals paid back through the payment method.** „Erstattung buchen“ offers the option „Über die Zahlungsart
+  zurückzahlen“, preselected wherever a provider can pay back. Before anything is booked, a confirmation names the
+  amount that goes back through the provider and what stays to be paid back by hand; „Jetzt zurückzahlen“ books it.
+  If that amount changed in the meantime, nothing is booked. Vouchers keep their share; what no provider can take
+  stays to be paid back by hand. (Block Zahlung Mollie)
+- **Hourly refund check.** A cron job asks the providers about pending refunds and sends refunds that were booked
+  but never sent. Two start page findings name refunds the provider refused and refunds that hang — sent without
+  an answer, pending for a week, or unsent after a day because the Contao cron does not run. (Block Zahlung Mollie)
+- **Payment modules can report problems with a method.** A payment handler that also implements
+  `PaymentReadinessInterface` is asked about every published method of its type and answers with reason codes; the
+  start page shows each as the warning „Die Zahlungsart … arbeitet nicht wie erwartet“, with the module's sentence
+  from `$GLOBALS['TL_LANG']['CONSHO']['paymentReason'][<type>][<code>]`. (Block Zahlung Mollie)
+
+### Changed
+
+- **Withdrawal page wording.** Before everything has shipped, the end of the window reads „offene Lieferung“; the
+  note under the dates starts with „Hinweis“ and says the refund is usually due within 14 days, citing the statutes as
+  examples. (Block D)
+
+### Fixed
+
+- **A follow-up charge without an answer no longer goes „on account“ at once.** When a payment module throws while
+  charging a subscription's follow-up order — no answer, a server error, a timeout — the provider may still have
+  taken the money. The order now keeps its method and waits for the provider's notification like a pending charge,
+  without the „Abbuchung gestartet“ mail; after 7 days without one it goes „on account“ as before. The notification
+  is accepted even though the attempt never learned the provider's reference. Modules should answer `failed` only
+  for a refusal and throw when the outcome is unknown (`RecurringPaymentHandlerInterface`). (Block Zahlung Mollie)
+- **Long keys on the order page wrap.** Licence keys, repository tokens and other delivered texts are single words of
+  several hundred characters and widened the page far beyond the screen. The order page now adds one rule to the
+  document head, `:where(.content-consho-order code) { overflow-wrap: anywhere; }`, with a CSP nonce and zero
+  specificity: any rule of the theme still wins.
+
 ## [0.2.0] – 2026-10-31
 
 ### Security

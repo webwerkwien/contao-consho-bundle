@@ -138,6 +138,12 @@ $conshoBackendModules = [
             // "Zahlungsziel verschieben" at an order (E8).
             'deferPayment' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentDeferralBackendController::class, '__invoke'],
 
+            // "Erstatten", "Erneut auszahlen", "Von Hand erledigt" at a
+            // payment (block Zahlung Mollie, 4.4).
+            'refundPayment' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'refund'],
+            'refundRetry' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'retry'],
+            'refundManual' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'manual'],
+
             // "Als versandt melden" at a delivery (D-1).
             'reportDelivery' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DeliveryReportBackendController::class, 'report'],
 

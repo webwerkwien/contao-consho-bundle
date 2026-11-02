@@ -32,6 +32,8 @@ $GLOBALS['TL_LANG']['tl_consho_payment_method']['bank_legend'] = 'Bank connectio
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['test_legend'] = 'Test provider';
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResult'] = ['Follow-up payment', 'What charging a follow-up order of a subscription comes to. “Pending” gets no answer and goes “on account” after 7 days.'];
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResults'] = ['paid' => 'paid', 'pending' => 'pending', 'failed' => 'failed'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testRefundResult'] = ['Refund', 'What a refund through the provider comes to. The hourly cron reports “Processing” as paid out afterwards.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testRefundResults'] = ['done' => 'paid out', 'pending' => 'processing', 'failed' => 'failed'];
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['testSecret'] = ['Secret', 'Signs the messages of the test provider. At least 16 characters. The test provider only exists with CONSHO_TEST_PAYMENT=1 and never takes money.'];
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['publish_legend'] = 'Publishing';
 

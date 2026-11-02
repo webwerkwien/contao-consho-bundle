@@ -32,6 +32,8 @@ $GLOBALS['TL_LANG']['tl_consho_payment_method']['bank_legend'] = 'Bankverbindung
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['test_legend'] = 'Test-Anbieter';
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResult'] = ['Folgezahlung', 'Was eine Abbuchung einer Abo-Folgebestellung ergibt. „Ausstehend“ bekommt keine Antwort und geht nach 7 Tagen „Auf Rechnung“.'];
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['testFollowUpResults'] = ['paid' => 'bezahlt', 'pending' => 'ausstehend', 'failed' => 'fehlgeschlagen'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testRefundResult'] = ['Erstattung', 'Was eine Erstattung über den Anbieter ergibt. „In Bearbeitung“ meldet der stündliche Cron danach als ausgezahlt.'];
+$GLOBALS['TL_LANG']['tl_consho_payment_method']['testRefundResults'] = ['done' => 'ausgezahlt', 'pending' => 'in Bearbeitung', 'failed' => 'fehlgeschlagen'];
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['testSecret'] = ['Geheimnis', 'Unterschreibt die Nachrichten des Test-Anbieters. Mindestens 16 Zeichen. Den Test-Anbieter gibt es nur mit CONSHO_TEST_PAYMENT=1, und er nimmt nie Geld an.'];
 $GLOBALS['TL_LANG']['tl_consho_payment_method']['publish_legend'] = 'Veröffentlichung';
 

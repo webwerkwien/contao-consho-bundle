@@ -38,6 +38,14 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
+use Symfony\Component\DependencyInjection\ServiceLocator;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlerInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
+use Webwerkwien\ContaoConshoBundle\Tests\Payment\FakeRefundingHandler;
 
 /**
  * The page "Widerruf bearbeiten" (edit withdrawal, D-3) — with the real
@@ -322,6 +330,73 @@ final class WithdrawalBackendControllerTest extends TestCase
         $this->controller(Request::create('/contao?key=processWithdrawal&id=1'), false)($this->dc());
     }
 
+    /**
+     * R5: "Erstattung buchen" through the provider books nothing yet and
+     * shows the amount, with the same inputs ready to send again.
+     */
+    public function testUeberDenZahlungsanbieterErstBestaetigen(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $payouts = $this->payouts($card);
+
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'accept', 'accepted' => [1 => '1']]), payouts: $payouts)($this->dc()));
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'refund', 'shipping' => '0', 'throughProvider' => '1']), payouts: $payouts)($this->dc());
+
+        self::assertMatchesRegularExpression('#8,90\s€ werden über „Visa&quot; an den Kunden zurückgezahlt\.#u', $html);
+        self::assertStringContainsString('Jetzt zurückzahlen', $html);
+        self::assertMatchesRegularExpression('#name="consho_confirmed" value="8\.90"#', $html);
+        self::assertMatchesRegularExpression('#name="shipping" value="0"#', $html);
+        self::assertStringNotContainsString('name="compensation"', $html, 'nur was das Formular geschickt hat');
+        self::assertStringNotContainsString('Erstattung buchen', $html, 'die Bestätigung ersetzt das Formular');
+        self::assertCount(1, $this->messages, 'nur die Meldung vom Annehmen');
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        self::assertSame([], $card->refunds);
+    }
+
+    /**
+     * R5: "Jetzt zurückzahlen" sends the inputs again with the confirmed
+     * amount; only then the refund is booked and paid out.
+     */
+    public function testBestaetigteErstattungWirdGebucht(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $payouts = $this->payouts($card);
+
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'accept', 'accepted' => [1 => '1']]), payouts: $payouts)($this->dc()));
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'refund', 'shipping' => '0', 'throughProvider' => '1', 'consho_confirmed' => '8.90']), payouts: $payouts)($this->dc()));
+
+        self::assertSame('addConfirmation', $this->messages[1][0] ?? null);
+        self::assertCount(1, $card->refunds);
+        self::assertSame('8.9000', $card->refunds[0]->amount);
+    }
+
+    /**
+     * Block Zahlung Mollie: the order paid 22.80 through a provider that can
+     * pay back (method 1, payment reference tr_1).
+     */
+    private function payouts(FakeRefundingHandler $card): RefundPayout
+    {
+        DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
+        $this->connection->insert('tl_consho_payment_attempt', ['id' => 30, 'pid' => 7, 'tokenHash' => 'h30', 'method' => 1, 'methodType' => 'card']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 7, 'amount' => '22.8000', 'attempt' => 30, 'reference' => 'tr_1', 'receivedAt' => self::RECEIVED - 86400]);
+        $card->connection = $this->connection;
+
+        $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
+        $orders->method('lockOrder')->willReturn(['id' => '7']);
+
+        $methods = new class implements PaymentMethodLookupInterface {
+            public function byId(int $methodId): PaymentMethod|null
+            {
+                return 1 === $methodId ? new PaymentMethod(1, 'card', 'Visa', []) : null;
+            }
+        };
+
+        return new RefundPayout($this->connection, $orders, $methods, new PaymentHandlers(new ServiceLocator(['card' => static fn (): PaymentHandlerInterface => $card])));
+    }
+
     private function redirectOf(\Closure $action): string
     {
         try {
@@ -343,7 +418,7 @@ final class WithdrawalBackendControllerTest extends TestCase
         $this->connection->update('tl_consho_withdrawal', ['pid' => 0, 'shop' => 1, 'number' => 'W-00001', 'source' => 'form', 'scope' => 'all', 'orderReference' => $typed, 'email' => 'fremd@example.net'], ['id' => 1]);
     }
 
-    private function controller(Request $request, bool $granted = true, Security|null $security = null): WithdrawalBackendController
+    private function controller(Request $request, bool $granted = true, Security|null $security = null, RefundPayout|null $payouts = null): WithdrawalBackendController
     {
         $requests = new RequestStack();
         $requests->push($request);
@@ -394,6 +469,7 @@ final class WithdrawalBackendControllerTest extends TestCase
             $this->createStub(OrderPageLink::class),
             $this->createStub(OrderEventMail::class),
             new MoneyFormatter(),
+            payouts: $payouts,
         );
 
         $loader = new FilesystemLoader();

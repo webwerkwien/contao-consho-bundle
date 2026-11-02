@@ -34,9 +34,20 @@ class PaymentListListener
         $receivedAt = (int) ($row['receivedAt'] ?? 0);
         $method = trim((string) ($row['method'] ?? ''));
 
+        // A refund stores the marker `refund`, not a payment method; the
+        // list names it in the back end language.
+        if ('refund' === $method) {
+            $method = (string) ($GLOBALS['TL_LANG']['tl_consho_payment']['methodRefund'] ?? $method);
+        }
+        // A refund through a provider says where its money is (block
+        // Zahlung Mollie, 4.4).
+        $state = (string) ($row['payoutState'] ?? '');
+        $stateLabel = '' !== $state ? (string) ($GLOBALS['TL_LANG']['tl_consho_payment']['payoutStates'][$state] ?? $state) : '';
+
         return implode(' — ', array_filter([
             $receivedAt > 0 ? Date::parse(Date::getNumericDatimFormat(), $receivedAt) : '',
             $this->amount((string) ($row['amount'] ?? '0'), $currency).('' !== $method ? ' ('.StringUtil::specialchars($method).')' : ''),
+            StringUtil::specialchars($stateLabel),
         ], static fn (string $part): bool => '' !== $part));
     }
 

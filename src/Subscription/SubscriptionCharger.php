@@ -40,7 +40,8 @@ use Webwerkwien\ContaoConshoBundle\Payment\RecurringPaymentHandlerInterface;
  *     trigger and "Rechnung zum Abo" in its charged version (P97)
  *     pending: the attempt waits for the notification (P96 after 7 days),
  *     and the customer is told a charge has started (E7)
- *     failed or thrown: the order goes "on account" (P95)
+ *     failed: the order goes "on account" (P95)
+ *     thrown: the outcome is unknown — waits like pending, without the mail
  *
  * Never throws: the order stands, and what fails here is logged — the cron
  * puts an order that never got its charge "on account" after 7 days (P96).
@@ -197,8 +198,15 @@ class SubscriptionCharger
         try {
             $result = $handler->charge($attempt, $view, $mandate, $method->config);
         } catch (\Throwable $e) {
-            $this->logger->error(\sprintf('Charging follow-up order %s failed: %s', $view->orderNumber, $e->getMessage()), ['exception' => $e]);
-            $result = ChargeResult::failed($e->getMessage());
+            // Not a refusal: a timeout may come after the provider took the
+            // money. Going "on account" now would let the customer pay twice.
+            // The attempt waits for the notification like a pending charge,
+            // without the E7 mail — nobody knows whether a debit is coming —
+            // and P96 puts the order "on account" after 7 days without one.
+            $this->logger->error(\sprintf('Charging follow-up order %s gave no answer, the outcome is unknown: %s', $view->orderNumber, $e->getMessage()), ['exception' => $e]);
+            $this->attempts->setState($attemptId, AttemptState::Pending, $now);
+
+            return ChargeOutcome::Pending;
         }
 
         match ($result->outcome) {

@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Payment;
 
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -171,6 +172,34 @@ class NotificationProcessorTest extends TestCase
         }
 
         self::assertSame([], $this->attempts->payments);
+    }
+
+    /**
+     * A charge without a reference: while open, charge() may still be
+     * running — send again. Once it is no longer open, its outcome was
+     * unknown (charge() threw) and no reference will come: the one the
+     * handler vouches for is taken.
+     */
+    #[DataProvider('abbuchungOhneReferenz')]
+    public function testEineAbbuchungOhneReferenzUebernimmtSie(AttemptState $state, int $status, int $payments): void
+    {
+        $handler = $this->createStub(PaymentHandlerInterface::class);
+        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'EUR', 'ch_1', 'ch_1'));
+        $processor = $this->moduleProcessor($handler, $this->createStub(SubscriptionMandates::class));
+        $this->attempts->attempts[3] = new PaymentAttempt(3, 1, 7, 'card', $state, '13.9000', 'EUR', '', '', '', charge: true);
+
+        self::assertSame($status, $processor->process(self::TOKEN, new Request(), 100));
+        self::assertCount($payments, $this->attempts->payments);
+    }
+
+    /**
+     * @return iterable<string, array{AttemptState, int, int}>
+     */
+    public static function abbuchungOhneReferenz(): iterable
+    {
+        yield 'offen: charge() läuft noch, noch einmal senden' => [AttemptState::Open, 503, 0];
+        yield 'ausstehend nach einer Ausnahme' => [AttemptState::Pending, 200, 1];
+        yield 'nach dem Rückfall auf Rechnung' => [AttemptState::Cancelled, 200, 1];
     }
 
     public function testDieWaehrungZaehltOhneUnterschiedDerSchreibweise(): void
