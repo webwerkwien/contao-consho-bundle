@@ -201,7 +201,7 @@
     <tr class="grand"><th scope="row">{{ 'CONSHO.invoice.grandTotal'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.grandTotal }}</td></tr>
     {# What was paid before the invoice and what remains (formatVersion 9, WG12). #}
     {% for payment in invoice.payments|default([]) %}
-    <tr><th scope="row">{% if payment.refund %}{{ 'CONSHO.invoice.refunded'|trans({}, 'contao_default') }}{% else %}{{ 'CONSHO.invoice.paid'|trans({}, 'contao_default') }}{% if payment.label %} ({{ payment.label }}){% endif %}{% endif %}</th><td class="num">{{ payment.amount }}</td></tr>
+    <tr><th scope="row">{{ ('CONSHO.invoice.' ~ payment.kind|default(payment.refund ? 'refunded' : 'paid'))|trans({}, 'contao_default') }}{% if payment.label %} ({{ payment.label }}){% endif %}</th><td class="num">{{ payment.amount }}</td></tr>
     {% endfor %}
     {% if invoice.outstanding|default('') %}
     <tr class="grand"><th scope="row">{{ 'CONSHO.invoice.outstanding'|trans({}, 'contao_default') }}</th><td class="num">{{ invoice.outstanding }}</td></tr>

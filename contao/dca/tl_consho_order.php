@@ -139,6 +139,13 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
              * is left to get right.
              */
             'payments' => ['href' => 'table=tl_consho_payment', 'icon' => 'sync.svg', 'primary' => true],
+
+            // Block Zahlung Mollie, 9: what the provider reported after the
+            // payment — beside the payments it is about. Always drawn, greyed
+            // where nothing was reported, so the icons after it keep their
+            // place; red while something is open (FollowUpsButtonListener).
+            // Not important.svg: that is the complaints' warning sign.
+            'followUps' => ['href' => 'key=followUps', 'icon' => 'bundles/contaoconsho/icons/follow-ups.svg', 'primary' => true],
             'deliveries' => ['href' => 'table=tl_consho_delivery', 'icon' => 'copy.svg', 'primary' => true],
 
             // F-4. What the customer may use from the digital lines.

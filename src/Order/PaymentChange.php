@@ -326,6 +326,7 @@ class PaymentChange
         $state = $this->paymentStates->calculate(
             OrderBalance::claimOfRow($order),
             $this->orders->paymentAmounts((int) $order['id']),
+            $this->orders->chargebackAmounts((int) $order['id']),
         );
 
         if (PaymentState::Open !== $state) {

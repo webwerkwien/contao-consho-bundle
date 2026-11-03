@@ -233,6 +233,18 @@ class OrderControllerTest extends TestCase
         self::assertSame('6,90 €', str_replace("\u{a0}", ' ', $data['outstanding']));
     }
 
+    public function testEineRueckbuchungHeisstNichtErstattet(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '13.90', 'method' => 'Karte', 'reference' => 'tr_1']);
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-13.90', 'method' => 'chargeback']);
+
+        [$data] = $this->render();
+
+        self::assertSame(['paid', 'chargedBack'], array_column($data['payments'], 'kind'));
+        self::assertSame(['Karte', ''], array_column($data['payments'], 'label'));
+        self::assertSame([false, false], array_column($data['payments'], 'refund'));
+    }
+
     /**
      * EZ-4: the page states the tax single-purpose vouchers already carried
      * and the remaining tax as the invoice does — without an invoice yet from
@@ -599,6 +611,24 @@ class OrderControllerTest extends TestCase
 
         self::assertSame('paid', $data['payment_state']);
         self::assertSame(['state' => 'confirmed', 'retry' => false], $data['online']);
+    }
+
+    /**
+     * Spec 9: the bank took the payment back — not "confirmed", but the
+     * chargeback and the button to pay again.
+     */
+    public function testNachEinerRueckbuchungKannErneutBezahltWerden(): void
+    {
+        $this->attempts->attempts[1] = new PaymentAttempt(1, self::ORDER, 3, 'test', AttemptState::Succeeded, '13.9000', 'EUR', 'T-1', '', '');
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '13.90']);
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-13.90', 'method' => 'chargeback']);
+        $this->payments->method('chargedBack')->willReturn(true);
+        $this->payments->method('canRetry')->willReturn(true);
+
+        [$data] = $this->render();
+
+        self::assertSame('open', $data['payment_state']);
+        self::assertSame(['state' => 'chargedBack', 'retry' => true], $data['online']);
     }
 
     /**

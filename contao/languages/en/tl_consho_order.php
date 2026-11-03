@@ -72,6 +72,48 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendFailed'] = 'The confirmation of or
 
 // E8: move the payment term
 $GLOBALS['TL_LANG']['tl_consho_order']['deferPayment'] = ['Move payment term', 'Move the payment term of order ID %s to a later day'];
+$GLOBALS['TL_LANG']['tl_consho_order']['followUps'] = ['Follow-ups', 'Chargebacks and refunds the payment provider reported later for order ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_order']['followUpsNone'] = 'No follow-ups — the payment provider reported no chargeback or refund for this order';
+$GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
+    'back' => 'Back',
+    'legend' => 'Follow-ups',
+    'none' => 'The payment provider reported nothing further for this order.',
+    'kinds' => ['chargeback' => 'Chargeback', 'refund' => 'Refund at the payment provider'],
+    'states' => [
+        'standing' => 'charged back',
+        'reversed' => 'chargeback reversed',
+        'settled' => 'paid again',
+        'open' => 'not recorded yet',
+        'recorded' => 'recorded in Consho',
+        'assigned' => 'assigned to a refund line',
+    ],
+    'reason' => 'Reason',
+    'record' => 'Record in Consho',
+    'assign' => 'Assign to a line',
+    'row' => 'Refund line',
+    'noDocuments' => 'Recording books the money only. No credit note or tax correction is created — use the withdrawal or the cancellation of the order for those.',
+    'noRows' => 'No open refund line of this amount to assign it to.',
+    'claim' => [
+        'legend' => 'Claim payment',
+        'help' => 'The customer receives a request to pay the open amount by this day, with the link to pay. The day becomes the order\'s payment term: only after it do the note on overdue payments and the resting of subscriptions and digital content apply.',
+        'day' => 'Payable by',
+        'submit' => 'Claim payment',
+    ],
+    'done' => [
+        'record' => 'The refund is recorded in Consho.',
+        'assign' => 'The refund is assigned to the line.',
+        'claim' => 'The payment request has been sent.',
+    ],
+    'refused' => [
+        'notClaimable' => 'There is nothing to claim for this order: the chargeback was reversed or paid again.',
+        'invalidDate' => 'Please enter a valid date.',
+        'notFuture' => 'Please choose a day in the future.',
+        'mailNotSent' => 'The payment term is set, but the payment request could not be sent. The reason is in the system log.',
+        'stateChanged' => 'The refund has been recorded or assigned meanwhile.',
+        'exceeds' => 'The refund is higher than what is left of the payment. Please check the payment provider\'s account.',
+        'rowNotAssignable' => 'This line cannot be assigned to the refund: another amount, or it is settled already.',
+    ],
+];
 $GLOBALS['TL_LANG']['tl_consho_order']['deferBack'] = 'Back';
 $GLOBALS['TL_LANG']['tl_consho_order']['deferLegend'] = 'Payment term';
 $GLOBALS['TL_LANG']['tl_consho_order']['deferDate'] = 'New payment term';
@@ -121,6 +163,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
         'paid' => 'Payment: received',
         'overpaid' => 'Payment: overpaid — money has to go back',
         'refunded' => 'Payment: refunded',
+        'partlyRefunded' => 'Payment: received, partly refunded',
         'nothingDue' => 'Payment: nothing due',
     ],
     'delivery' => [

@@ -58,9 +58,16 @@ final class OrderBalance
 
     /**
      * What is still to be paid; negative where money has to go back.
+     *
+     * Nothing after a partial refund of a paid order: the shop gave that
+     * money back by choice, and the customer does not owe it again.
      */
     public function outstanding(): string
     {
+        if (PaymentState::PartlyRefunded === $this->paymentState) {
+            return '0';
+        }
+
         return (string) BigDecimal::of($this->claim)->minus($this->paid);
     }
 

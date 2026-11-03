@@ -27,9 +27,15 @@ interface PaymentChangeRepositoryInterface
     public function items(int $orderId): array;
 
     /**
-     * @return list<string> the amounts received, negative for refunds
+     * @return list<string> the amounts received, negative for refunds —
+     *                      chargebacks not included (chargebackAmounts())
      */
     public function paymentAmounts(int $orderId): array;
+
+    /**
+     * @return list<string> the chargeback rows and their reversals (ChargebackRow)
+     */
+    public function chargebackAmounts(int $orderId): array;
 
     /**
      * Whether this status holds the order still: it locks changes, or counts

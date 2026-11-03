@@ -77,6 +77,9 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'externalInvoiceFailed' => 'Documents that did not reach the invoicing module: %count%. The invoice data is stored; the error log names the reason. Once it is fixed, "consho:document:verify --retry" submits them again.',
     'refundPayoutFailed' => 'Refunds the payment provider refused: %count% (order %numbers%). They are booked, not paid out; the error log names the reason. Under "Payments" in the order, pay them out again, or pay back by hand and mark them as done.',
     'refundPayoutStuck' => 'Refunds without an outcome: %count% (order %numbers%). The request got no answer, the payment provider has reported "pending" for a week, or the request never went out because the Contao cron does not run. Check in the provider\'s account whether the money went back and mark the payment in the order as done — otherwise pay back by hand.',
+    'paymentChargedBack' => 'The payment of order %number% was charged back (reason: %reason%). The order counts as open again; reminders, the subscription pause and digital goods follow only once a payment term is set. Under "Follow-ups" in the order, claim the payment — the customer gets a request to pay and can pay again — or take note if the claim is settled otherwise.',
+    'chargebackReversedAfterPayment' => 'The chargeback of order %number% (%reference%) was reversed, and the customer paid again as well: the order is overpaid. Pay back the amount paid twice, for example with "Erstatten" at one of the payments.',
+    'refundOutsideConsho' => 'A refund at the payment provider Consho does not know: order %number% (%reference%). Until it is recorded under "Follow-ups" in the order or assigned to a refund line, the payment balance is wrong. No documents such as a credit note or a tax correction are created — use the withdrawal or the cancellation of the order for those.',
     'eInvoiceIncomplete' => 'The shop configuration "%shop%" issues e-invoices, but this is missing: %fields%. Until it is filled in, invoices go out without the e-invoice data.',
     'ossThresholdReached' =>'Distance sales to consumers in other EU countries (%business%) reached the 10,000 € threshold in %year%. Sales outside Consho count as well. Above the threshold the VAT of the customer\'s country applies — switch on "Tax at destination" in the shop configuration. Details under "Tax report".',
     'saleModePriceMissing' => 'Product "%product%" is offered as %modes%, but has no price for it — it cannot be bought that way. Add a row with "Sold as" under "Prices" at the product, or untick the sale mode there.',
@@ -513,6 +516,9 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['grandTotal'] = 'Total amount';
 // Wertgutscheine (WG12): payments before the invoice and what remains.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['paid'] = 'Already paid';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['refunded'] = 'Refunded';
+// Chargebacks (ZM-6): money the bank took back, and a chargeback undone.
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['chargedBack'] = 'Charged back';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['chargebackReversed'] = 'Chargeback reversed';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['outstanding'] = 'Amount outstanding';
 // Wertgutscheine (WG3): the line of a voucher sold with a "nicht steuerbar" class.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['notTaxable'] = 'not taxable';
@@ -569,6 +575,15 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['subject'] = 'Your 
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['intro'] = 'a new period of your subscription %s begins: from %s to %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['invoiceAttached'] = 'Please find invoice %s attached.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['charged'] = 'The amount was charged on %s via %s.';
+// P95/P96: the charge did not go through, the order went "on account".
+$GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['chargeFailed'] = 'This time the amount could not be collected with your stored payment method.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['payBy'] = 'Please transfer the amount by %s.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['subject'] = 'Payment open for your order %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['intro'] = 'your bank charged back the payment for your order %s. %s is open.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['payBy'] = 'Please pay the amount by %s online through the link below.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['payByOrTransfer'] = 'Please pay the amount by %s – online through the link below or by bank transfer.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['payNow'] = 'Pay now';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['chargeFailed'] = 'The charge did not go through; the follow-up order was switched to "on account".';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['introCharged'] = 'Follow-up order %s for subscription %s charged via %s on %s, period %s to %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['subject'] = 'Follow-up order %s for subscription %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['intro'] = 'Follow-up order %s for subscription %s created, "on account", period %s to %s.';
@@ -945,7 +960,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['gate'] = [
 ];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['paymentState'] = 'Payment';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['deliveryState'] = 'Delivery';
-$GLOBALS['TL_LANG']['CONSHO']['orderPage']['paymentStates'] = ['open' => 'open', 'partial' => 'partly paid', 'paid' => 'paid', 'overpaid' => 'overpaid', 'refunded' => 'refunded', 'nothingDue' => 'nothing due'];
+$GLOBALS['TL_LANG']['CONSHO']['orderPage']['paymentStates'] = ['open' => 'open', 'partial' => 'partly paid', 'paid' => 'paid', 'overpaid' => 'overpaid', 'refunded' => 'refunded', 'partlyRefunded' => 'paid, partly refunded', 'nothingDue' => 'nothing due'];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['deliveryStates'] = ['open' => 'not yet shipped', 'partial' => 'partly shipped', 'complete' => 'shipped'];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['documents'] = 'Documents';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['cancelled'] = 'cancelled';
@@ -1114,6 +1129,8 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['online'] = [
     'failed' => 'The payment failed.',
     'cancelled' => 'The payment was cancelled.',
     'retry' => 'Try again',
+    'chargedBack' => 'Your bank charged the payment back. The open amount can be paid again.',
+    'payAgain' => 'Pay now',
 ];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['regenerated'] = 'Regenerated from the stored invoice data. The file archived at issue was unavailable or did not match its checksum.';
 $GLOBALS['TL_LANG']['CONSHO']['invoiceArchiveFolder']['missing'] = 'is not selected or no longer exists';

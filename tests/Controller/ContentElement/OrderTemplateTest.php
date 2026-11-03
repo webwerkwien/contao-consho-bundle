@@ -178,7 +178,7 @@ class OrderTemplateTest extends TestCase
         }
 
         // C-11: the sentences on online payment.
-        foreach (['confirmed', 'reported', 'none', 'failed', 'cancelled'] as $online) {
+        foreach (['confirmed', 'reported', 'none', 'failed', 'cancelled', 'chargedBack', 'retry', 'payAgain'] as $online) {
             $keys[] = 'CONSHO.orderPage.online.'.$online;
         }
 

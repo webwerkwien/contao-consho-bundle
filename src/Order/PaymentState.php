@@ -18,6 +18,14 @@ enum PaymentState: string
     case Refunded = 'refunded';
 
     /**
+     * Paid in full, and the shop gave part of it back — goodwill, a price
+     * reduction, a refund made at the provider. Not Partial: that reads as
+     * money the customer still owes, and the list, the dashboard and every
+     * check on the open amount would chase a refund the shop chose to make.
+     */
+    case PartlyRefunded = 'partlyRefunded';
+
+    /**
      * Nothing was owed and nothing came: a cancelled order nobody paid for
      * (D-1). Not Open — that would read as a bill still waiting — and not
      * Paid, which would claim money that never moved.

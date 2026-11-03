@@ -180,6 +180,31 @@ final class OrderBalanceReaderTest extends TestCase
         self::assertTrue(BigDecimal::of($expected)->isEqualTo($actual), \sprintf('%s erwartet, %s erhalten.', $expected, $actual));
     }
 
+    public function testEineRueckbuchungMachtDieBestellungWiederOffen(): void
+    {
+        $this->pay('100.0000');
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-100.0000', 'method' => 'chargeback']);
+
+        $balance = $this->balance();
+
+        // Not "refunded" (P2): the customer owes the money again.
+        self::assertSame(PaymentState::Open, $balance->paymentState);
+        self::assertAmount('100', $balance->outstanding());
+    }
+
+    public function testTeilerstattungNachVollerZahlungLaesstNichtsOffen(): void
+    {
+        // A goodwill refund: the shop gave part back, the customer owes nothing.
+        $this->pay('100.0000');
+        $this->pay('-40.0000');
+
+        $balance = $this->balance();
+
+        self::assertSame(PaymentState::PartlyRefunded, $balance->paymentState);
+        self::assertSame('0', $balance->outstanding());
+        self::assertTrue($balance->paymentSettled());
+    }
+
     private function balance(): OrderBalance
     {
         $reader = new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator());

@@ -1,0 +1,65 @@
+{#
+  "Zahlung einfordern" (spec 9, P3), to the customer, in the language of the
+  order: the bank charged the payment back, and what is open is asked for by
+  a date. Factual, no threat and no reminder level — dunning is not the
+  core's (A6).
+
+  Loaded as @Contao/mail/consho_payment_claim.html.twig. Parameters are a
+  LIST (vsprintf, see consho_payment_received.html.twig).
+
+  Variables:
+    order        the order in InvoiceView's shape, in the order's language
+    customer     {name, email}
+    invoice      the invoice's number, attached; '' where none stands
+    outstanding  what is open, formatted
+    dueDate      the date to pay by, formatted
+    reference    the transfer reference, shown beside bank details
+    viewUrl      the order page, with a token — it offers the online payment
+#}
+{% block subject %}{{ 'CONSHO.mail.paymentClaim.subject'|trans([order.orderNumber], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.paymentClaim.intro'|trans([order.orderNumber, outstanding], 'contao_default') }}</p>
+{# A transfer only where the mail says where to: a provider's method has no bank details. #}
+<p style="margin: 0 0 8px 0;">{{ ('CONSHO.mail.paymentClaim.' ~ (order.bankDetails|filter(v => v is not empty) is not empty ? 'payByOrTransfer' : 'payBy'))|trans([dueDate], 'contao_default') }}</p>
+
+{% include '@Contao/mail/_order_context.html.twig' with {order: order, font: font} only %}
+
+{% if order.paymentInstructions or order.bankDetails is not empty %}
+<div style="margin: 12px 0; padding: 12px 16px; background: #f7f7f7; border-left: 3px solid #222222;">
+    {{ order.paymentInstructions|raw }}
+    {% if order.bankDetails is not empty %}
+    <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+        {% for key, value in order.bankDetails|filter(v => v is not empty) %}
+        <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ ('CONSHO.invoice.bank.' ~ key)|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ value }}</td></tr>
+        {% endfor %}
+        {% if reference %}
+        <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ 'CONSHO.invoice.bank.reference'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0; font-weight: bold;">{{ reference }}</td></tr>
+        {% endif %}
+    </table>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if invoice %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionInvoice.invoiceAttached'|trans([invoice], 'contao_default') }}</p>
+{% endif %}
+
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.paymentClaim.payNow'|trans({}, 'contao_default') }}</a>
+</p>
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

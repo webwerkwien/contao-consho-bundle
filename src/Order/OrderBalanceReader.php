@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
 
 use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Connection;
+use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
 
 /**
  * Reads the two balances of an order (spec D 5.1).
@@ -64,14 +65,20 @@ final class OrderBalanceReader implements OrderBalanceReaderInterface
          */
         $claim = $cancelled ? '0' : (string) BigDecimal::max(BigDecimal::zero(), BigDecimal::of((string) $order['grandTotal'])->minus($credited));
 
-        $amounts = array_map(
-            strval(...),
-            $this->connection->fetchFirstColumn('SELECT amount FROM tl_consho_payment WHERE pid = ?', [$orderId]),
-        );
-
+        // Chargebacks apart: they lower what is paid, but are not refunds (P2).
+        $amounts = [];
+        $chargedBack = [];
         $paid = BigDecimal::zero();
 
-        foreach ($amounts as $amount) {
+        foreach ($this->connection->fetchAllAssociative('SELECT amount, method FROM tl_consho_payment WHERE pid = ?', [$orderId]) as $row) {
+            $amount = (string) $row['amount'];
+
+            if (ChargebackRow::is((string) $row['method'])) {
+                $chargedBack[] = $amount;
+            } else {
+                $amounts[] = $amount;
+            }
+
             $paid = $paid->plus($amount);
         }
 
@@ -141,7 +148,7 @@ final class OrderBalanceReader implements OrderBalanceReaderInterface
         return new OrderBalance(
             $claim,
             (string) $paid,
-            $this->payments->calculate($claim, $amounts),
+            $this->payments->calculate($claim, $amounts, $chargedBack),
             $this->deliveries->calculate($owed, $delivered),
             $open,
             $anyShipped,

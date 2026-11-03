@@ -14,6 +14,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
+use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
@@ -79,6 +80,7 @@ class PaymentRecorded
     public function handle(int $orderId, bool $online, int $now, bool $charged = false): void
     {
         $settled = false;
+        $resettled = false;
         $invoiceId = null;
 
         $this->connection->beginTransaction();
@@ -105,6 +107,39 @@ class PaymentRecorded
                     'UPDATE tl_consho_payment SET lockedAt = ? WHERE pid = ? AND lockedAt IS NULL',
                     [$now, $orderId],
                 );
+            } elseif (null !== $order && null !== $balance
+                && '' !== (string) ($order['paymentSettledAt'] ?? '')
+                && $balance->paymentSettled()
+                && ChargebackRow::stands($this->orders->chargebackAmounts($orderId))
+                // Once per chargeback: the open ones are marked paid again —
+                // only with money booked after the chargeback. An order paid
+                // twice before comes out settled after a chargeback too, and
+                // any edit of a row would then announce money that never came.
+                && $this->connection->executeStatement(
+                    "UPDATE tl_consho_provider_event SET state = 'settled', resolvedAt = ?
+                      WHERE pid = ? AND kind = 'chargeback' AND state = 'open' AND reversedAt = 0
+                        AND EXISTS (
+                            SELECT 1 FROM tl_consho_payment p
+                             WHERE p.pid = tl_consho_provider_event.pid AND p.amount > 0 AND p.method NOT IN (?, ?)
+                               AND p.id > (
+                                   SELECT MAX(c.id) FROM tl_consho_payment c
+                                    WHERE c.pid = tl_consho_provider_event.pid AND c.method = ? AND c.payoutReference = tl_consho_provider_event.reference
+                               )
+                        )",
+                    [$now, $orderId, ChargebackRow::METHOD, ChargebackRow::REVERSAL, ChargebackRow::METHOD],
+                ) > 0
+            ) {
+                /*
+                 * Paid again after a chargeback (spec 9): the customer hears
+                 * that the money arrived. `paymentSettledAt`, the invoice and
+                 * the status stay — the sale is dated by the first payment.
+                 */
+                $resettled = true;
+
+                $this->connection->executeStatement(
+                    'UPDATE tl_consho_payment SET lockedAt = ? WHERE pid = ? AND lockedAt IS NULL',
+                    [$now, $orderId],
+                );
             }
 
             $this->connection->commit();
@@ -116,7 +151,7 @@ class PaymentRecorded
             throw $e;
         }
 
-        if (!$settled) {
+        if (!$settled && !$resettled) {
             return;
         }
 
@@ -143,7 +178,7 @@ class PaymentRecorded
             // Without an order page the mail would link nowhere — the same
             // reason the checkout refuses to sell without one.
             $this->logger->warning(\sprintf('The "payment received" mail of order %s was not sent: the shop has no order page.', $order['orderNumber'] ?? $orderId));
-        } elseif ($charged && (int) ($order['subscription'] ?? 0) > 0) {
+        } elseif ($settled && $charged && (int) ($order['subscription'] ?? 0) > 0) {
             // P97. The subscription's number is all the mail needs besides the order.
             $number = (string) $this->connection->fetchOne('SELECT subscriptionNumber FROM tl_consho_subscription WHERE id = ?', [(int) $order['subscription']]);
             $this->mail->subscriptionInvoice($orderId, $number, (int) ($order['servicePeriodFrom'] ?? 0), (int) ($order['servicePeriodUntil'] ?? 0), $viewUrl, $now);

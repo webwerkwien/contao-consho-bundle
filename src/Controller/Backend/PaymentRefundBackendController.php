@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Controller\Backend;
 use Brick\Math\BigDecimal;
 use Brick\Math\Exception\MathException;
 use Brick\Math\RoundingMode;
+use Contao\BackendUser;
 use Contao\CoreBundle\Exception\RedirectResponseException;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Security\ContaoCorePermissions;
@@ -23,6 +24,7 @@ use Symfony\Component\Intl\Currencies;
 use Twig\Environment;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
@@ -133,15 +135,42 @@ final class PaymentRefundBackendController
         return $this->act($dc, 'retry', fn (int $id): bool => $this->payout->retry($id, time()));
     }
 
+    /**
+     * With the provider's refunds to choose from where its module can list
+     * them (spec 9, N3): the operator points at the refund made in the
+     * dashboard, and its ID is stored. Without a choice — or without an
+     * answer from the provider — the plain mark, as before.
+     */
     public function manual(DataContainer $dc): string
     {
-        return $this->act($dc, 'manual', fn (int $id): bool => $this->payout->markManual($id, time()));
+        return $this->act($dc, 'manual', function (int $id): bool {
+            $chosen = trim($this->requests->getCurrentRequest()?->request->getString('consho_provider_refund') ?? '');
+
+            if ('' === $chosen) {
+                return $this->payout->markManual($id, time());
+            }
+
+            // Only one of those offered — asked again, the list may have changed.
+            $references = array_map(static fn (ProviderEvent $event): string => $event->reference, $this->payout->providerRefunds($id) ?? []);
+
+            return \in_array($chosen, $references, true) && $this->payout->assign($id, $chosen, time(), $this->userName());
+        }, function (array $row): array {
+            // A request the provider answered with its own ID needs no choice.
+            $offered = '' === (string) ($row['payoutReference'] ?? '') ? $this->payout->providerRefunds((int) $row['id']) : null;
+
+            return ['providerRefunds' => null === $offered ? null : array_map(fn (ProviderEvent $event): array => [
+                'reference' => $event->reference,
+                'state' => $event->refundState,
+                'date' => $event->occurredAt > 0 ? date((string) ($GLOBALS['TL_CONFIG']['dateFormat'] ?? 'd.m.Y'), $event->occurredAt) : '',
+            ], $offered)];
+        });
     }
 
     /**
-     * @param \Closure(int): bool $action
+     * @param \Closure(int): bool                                   $action
+     * @param (\Closure(array<string, mixed>): array<string, mixed>)|null $extra more for the page
      */
-    private function act(DataContainer $dc, string $step, \Closure $action): string
+    private function act(DataContainer $dc, string $step, \Closure $action, \Closure|null $extra = null): string
     {
         [$row, $order] = $this->load($dc);
 
@@ -155,7 +184,7 @@ final class PaymentRefundBackendController
         $vars = $this->vars($step, $row, $order) + ['amountLabel' => $this->money((string) BigDecimal::of((string) $row['amount'])->negated(), $order)];
 
         if (null === $request || !$request->isMethod('POST')) {
-            return $this->render($vars);
+            return $this->render($vars + (null === $extra ? [] : $extra($row)));
         }
 
         $id = (int) $row['id'];
@@ -288,6 +317,13 @@ final class PaymentRefundBackendController
     private function render(array $vars): string
     {
         return $this->twig->render(self::TEMPLATE, $vars);
+    }
+
+    private function userName(): string
+    {
+        $user = $this->security->getUser();
+
+        return $user instanceof BackendUser ? (string) $user->username : '';
     }
 
     /**

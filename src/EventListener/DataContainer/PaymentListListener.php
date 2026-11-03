@@ -7,6 +7,7 @@ use Contao\DataContainer;
 use Contao\Date;
 use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
+use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
@@ -36,8 +37,16 @@ class PaymentListListener
 
         // A refund stores the marker `refund`, not a payment method; the
         // list names it in the back end language.
-        if ('refund' === $method) {
-            $method = (string) ($GLOBALS['TL_LANG']['tl_consho_payment']['methodRefund'] ?? $method);
+        // So do chargebacks and their reversals (ChargebackRow).
+        $marker = match ($method) {
+            'refund' => 'methodRefund',
+            ChargebackRow::METHOD => 'methodChargeback',
+            ChargebackRow::REVERSAL => 'methodChargebackReversal',
+            default => null,
+        };
+
+        if (null !== $marker) {
+            $method = (string) ($GLOBALS['TL_LANG']['tl_consho_payment'][$marker] ?? $method);
         }
         // A refund through a provider says where its money is (block
         // Zahlung Mollie, 4.4).

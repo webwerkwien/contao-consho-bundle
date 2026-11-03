@@ -17,6 +17,8 @@ class StatusColourTest extends TestCase
     public function testPartialPaymentIsOrange(): void
     {
         $this->assertSame(StatusColour::Progress, StatusColour::forPayment(PaymentState::Partial));
+        // Paid, and part of it went back on purpose: nothing left to do.
+        $this->assertSame(StatusColour::Done, StatusColour::forPayment(PaymentState::PartlyRefunded));
     }
 
     public function testPaidIsGreen(): void

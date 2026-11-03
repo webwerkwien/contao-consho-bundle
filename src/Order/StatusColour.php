@@ -52,6 +52,9 @@ enum StatusColour: string
             // cry for attention on every cancelled order forever.
             PaymentState::Refunded => self::Open,
 
+            // Paid; part of it went back on purpose. Nothing left to do.
+            PaymentState::PartlyRefunded => self::Done,
+
             // Cancelled, never paid: nothing is outstanding either way.
             PaymentState::NothingDue => self::Done,
         };

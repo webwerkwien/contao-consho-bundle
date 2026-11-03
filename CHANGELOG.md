@@ -5,6 +5,59 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.3.0] – 2026-11-03
+
+### Added
+
+- **Chargebacks are booked.** When a payment module reports a chargeback with the payment's notification, Consho
+  books it as a negative payment of the kind „Rückbuchung“, tied to the payment it took back, once per chargeback.
+  A chargeback the bank reverses gets a positive row „Rückbuchung aufgehoben“. Nothing reaches the customer by
+  itself: the order owes the money again, and the start page names the chargeback with the bank's reason where
+  the provider gives one. The note can be acknowledged and goes away once the order is paid again or the chargeback
+  is reversed. Invoice, settlement date and order status stay as they were. If the bank reverses a chargeback and
+  the customer has paid again as well, in either order, a warning names the overpaid order until the money is paid back. Run
+  `contao:migrate` (new table `tl_consho_provider_event`). (Block Zahlung Mollie)
+- **Refunds made at the provider.** A refund made in the provider's dashboard and reported with the notification
+  is named on the start page until it is dealt with. The new order operation „Nachträge“ lists chargebacks and
+  such refunds. A refund can be recorded in Consho as a refund row („In Consho erfassen“) or assigned to an open
+  refund row of the same amount („Einer Zeile zuordnen“). Recording books the money only; for a credit note use
+  the withdrawal or the cancellation. „Von Hand erledigt“ at a refund offers the provider's refunds of that amount
+  where the payment module can list them, and stores the chosen one's ID. (Block Zahlung Mollie)
+- **Claiming a charged-back payment.** „Zahlung einfordern“ on the „Nachträge“ page sets the order's payment term
+  to a chosen day (two weeks ahead by default) and sends the customer a payment request with the open amount, a
+  link to pay online and, where the payment method has them, bank details and transfer reference. The overdue
+  note and the resting of subscriptions and digital content then go by that term. (Block Zahlung Mollie)
+- **Paying again after a chargeback.** The order page says that the bank charged the payment back and offers
+  „Jetzt bezahlen“ for the open amount. Once the order is paid again, the customer receives „Zahlung erhalten“
+  once more. (Block Zahlung Mollie)
+- **For payment modules:** `NotificationResult::withEvents()` attaches chargebacks and refunds (`ProviderEvent`) to
+  a notification; the core books them even when the payment was recorded before, and skips refunds it knows by
+  their ID. The optional `RefundListingPaymentHandlerInterface::refunds()` lists a payment's refunds for „Von Hand
+  erledigt“; an exception there leaves the plain mark. (Block Zahlung Mollie)
+
+### Changed
+
+- **A chargeback is not a refund.** After a full chargeback the payment state of the order is „offen“, after a
+  partial one „teilweise bezahlt“ — not „erstattet“. Documents and the order page name such rows „Zurückgebucht“
+  and „Rückbuchung aufgehoben“. (Block Zahlung Mollie)
+
+### Fixed
+
+- **„Rechnung zum Abo“ on account now asks for payment.** The mail for a follow-up order billed on account names
+  the due date („Bitte überweisen Sie den Betrag bis …“) and shows the payment method's instructions, the bank
+  details and the transfer reference, as the order confirmation does. When the order went on account because the
+  charge through the stored payment method did not go through, the mail says so, and so does the operator's copy.
+  Before, the on-account version only attached the invoice and read like a charged one. (Abo-4b, P97)
+- **A follow-up order that goes on account is no longer logged as an error.** The system log lists it as
+  information; it is what the fallback is for. Real failures around it stay errors. (Abo-4b)
+- **A partial refund of a paid order no longer leaves money owing.** The new payment state „teilweise erstattet“
+  (green in the order list, „bezahlt, teilweise erstattet“ on the order page) replaces „teilweise bezahlt“ there.
+  The refunded amount no longer counts as open: the order can be set to a paid or completed status, the dashboard
+  no longer lists it as unpaid, and overdue, prepayment and resting checks for subscriptions and digital content
+  leave it alone. A partial payment that is partly refunded stays „teilweise bezahlt“, and so does an order with
+  a chargeback that stands. Extensions with an exhaustive `match` over `PaymentState` need the new case
+  `PartlyRefunded`.
+
 ## [0.2.1] – 2026-11-02
 
 ### Added

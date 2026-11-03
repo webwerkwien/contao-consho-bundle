@@ -63,6 +63,7 @@ class OrderEventMail
     public const CANCELLATION_OPERATOR_TEMPLATE = '@Contao/mail/consho_cancellation_received_operator.html.twig';
     public const CANCELLATION_DECIDED_TEMPLATE = '@Contao/mail/consho_cancellation_decided.html.twig';
     public const DOCUMENT_ISSUED_TEMPLATE = '@Contao/mail/consho_document_issued.html.twig';
+    public const PAYMENT_CLAIM_TEMPLATE = '@Contao/mail/consho_payment_claim.html.twig';
 
     public function __construct(
         private readonly OrderConfirmationSourceInterface $source,
@@ -204,15 +205,19 @@ class OrderEventMail
      * opens no withdrawal period (A12). The dates in each recipient's
      * language, without the time — a period is read in days.
      *
-     * Two versions (Abo-4b, P97): "on account", and charged with the
-     * subscription's mandate — then it says on which day and through which
-     * method the amount was charged.
+     * Two versions (Abo-4b, P97): "on account" — pay by the due date, with the
+     * method's instructions and bank details as in the confirmation — and
+     * charged with the subscription's mandate — then it says on which day and
+     * through which method the amount was charged.
      *
-     * @param int $chargedAt when the amount was charged; 0: "on account"
+     * @param int  $chargedAt    when the amount was charged; 0: "on account"
+     * @param bool $chargeFailed "on account" because the charge did not go
+     *                           through (P95, P96) — the customer expected it
+     *                           to be collected and must hear that it was not
      *
      * @return bool whether the customer's mail left
      */
-    public function subscriptionInvoice(int $orderId, string $subscriptionNumber, int $periodFrom, int $periodUntil, string $viewUrl, int $chargedAt = 0): bool
+    public function subscriptionInvoice(int $orderId, string $subscriptionNumber, int $periodFrom, int $periodUntil, string $viewUrl, int $chargedAt = 0, bool $chargeFailed = false): bool
     {
         try {
             $invoiceId = $this->source->invoice($orderId)['id'] ?? null;
@@ -223,23 +228,62 @@ class OrderEventMail
             return false;
         }
 
+        $onAccount = $chargedAt < 1;
+        $dueAt = (int) ($order['paymentDueAt'] ?? 0);
+
         $for = static fn (string $language): array => [
             'subscription' => $subscriptionNumber,
             'periodFrom' => self::day($periodFrom, $language),
             'periodUntil' => self::day($periodUntil, $language),
             'invoice' => (string) ($invoice['documentNumber'] ?? ''),
-            'charged' => $chargedAt > 0 ? self::day($chargedAt, $language) : '',
+            'charged' => $onAccount ? '' : self::day($chargedAt, $language),
             'paymentMethod' => (string) ($order['paymentMethodTitle'] ?? ''),
+            'chargeFailed' => $onAccount && $chargeFailed,
         ];
 
         $sent = $this->toCustomer('subscriptionInvoice', $order, self::SUBSCRIPTION_INVOICE_TEMPLATE, $payload, [
             ...$for((string) ($order['language'] ?? '')),
+            'dueDate' => $onAccount && $dueAt > 0 ? self::day($dueAt, (string) ($order['language'] ?? '')) : '',
+            // The template shows it only beside bank details.
+            'reference' => $onAccount ? self::referenceOf($invoice, $order) : '',
             'viewUrl' => $viewUrl,
         ], $attachments, $transport, $from);
 
         $this->toOperator('subscriptionInvoice', $order, $shop, self::SUBSCRIPTION_INVOICE_OPERATOR_TEMPLATE, $payload, $for($shop['fallbackLanguage']), $attachments, $transport, $from);
 
         return $sent;
+    }
+
+    /**
+     * "Zahlung einfordern" (spec 9, P3): the bank charged the payment back,
+     * and the customer is asked to pay what is open by the date the operator
+     * set — online from the order page or by transfer. To the customer only;
+     * factual, no reminder level — dunning is not the core's (A6).
+     *
+     * @param string $outstanding what is open, unformatted
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function paymentClaim(int $orderId, string $outstanding, int $dueAt, string $viewUrl): bool
+    {
+        try {
+            $invoiceId = $this->source->invoice($orderId)['id'] ?? null;
+            [$order, , $transport, $from, $payload, $invoice, $attachments] = $this->prepare($orderId, null === $invoiceId ? null : (int) $invoiceId);
+        } catch (\Throwable $e) {
+            $this->fail('paymentClaim', '', $orderId, $e);
+
+            return false;
+        }
+
+        $language = (string) ($order['language'] ?? '');
+
+        return $this->toCustomer('paymentClaim', $order, self::PAYMENT_CLAIM_TEMPLATE, $payload, [
+            'invoice' => (string) ($invoice['documentNumber'] ?? ''),
+            'outstanding' => $this->money->format($outstanding, (string) ($order['currency'] ?? ''), $language),
+            'dueDate' => self::day($dueAt, $language),
+            'reference' => self::referenceOf($invoice, $order),
+            'viewUrl' => $viewUrl,
+        ], $attachments, $transport, $from);
     }
 
     /**
@@ -786,6 +830,20 @@ class OrderEventMail
     /**
      * A day, long form — "29. Oktober 2026" — in the installation's zone.
      */
+    /**
+     * The transfer reference: the invoice number, the order number where none
+     * was drawn — as OrderConfirmation::referenceOf().
+     *
+     * @param array<string, mixed>|null $invoice
+     * @param array<string, mixed>      $order
+     */
+    private static function referenceOf(array|null $invoice, array $order): string
+    {
+        $number = (string) ($invoice['documentNumber'] ?? '');
+
+        return '' !== $number ? $number : (string) ($order['orderNumber'] ?? '');
+    }
+
     private static function day(int $timestamp, string $language): string
     {
         $locale = '' !== $language ? str_replace('-', '_', $language) : 'de';

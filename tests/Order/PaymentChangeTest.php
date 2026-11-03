@@ -630,6 +630,11 @@ final class InMemoryPaymentChangeRepository implements PaymentChangeRepositoryIn
         return $this->payments;
     }
 
+    public function chargebackAmounts(int $orderId): array
+    {
+        return [];
+    }
+
     public function statusHolds(int $statusId): bool
     {
         return \in_array($statusId, $this->holdingStatuses, true);

@@ -11,6 +11,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
+use Webwerkwien\ContaoConshoBundle\Payment\Aftermath\ProviderEventBooker;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionChargeFallback;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
 
@@ -24,7 +25,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
  *      the pattern of the number range, no Symfony Lock
  *   4. about another provider reference or in another currency → 400; a live
  *      attempt whose reference is not written yet → 503, send again;
- *      already succeeded → 200, nothing
+ *      already succeeded → 200, nothing but the provider's events (spec 9:
+ *      chargebacks, refunds made at the provider — ProviderEventBooker)
  *   5. paid → a row in tl_consho_payment, attempt succeeded
  *   6. after the commit: the consequences — invoice, status, mail (D-1,
  *      PaymentRecorded)
@@ -81,6 +83,7 @@ class NotificationProcessor
         // Optional for the tests built by hand; the container wires them.
         private readonly SubscriptionMandates|null $mandates = null,
         private readonly SubscriptionChargeFallback|null $fallback = null,
+        private readonly ProviderEventBooker|null $events = null,
     ) {
     }
 
@@ -169,6 +172,9 @@ class NotificationProcessor
             }
 
             if (AttemptState::Succeeded === $locked->state) {
+                // The money is recorded; what the provider adds about it
+                // later is not (spec 9): a chargeback, a refund made there.
+                $this->events?->book($locked->orderId, $locked->id, $result->events, $now);
                 $this->connection->commit();
 
                 return Response::HTTP_OK;
@@ -189,6 +195,9 @@ class NotificationProcessor
                 // checked against; the payment's own is on the payment row.
                 $this->attempts->setState($locked->id, AttemptState::Succeeded, $now, $reference);
                 $booked = true;
+
+                // A first message may already carry a chargeback.
+                $this->events?->book($locked->orderId, $locked->id, $result->events, $now);
 
                 if ('' !== $result->mandate && $handler instanceof RecurringPaymentHandlerInterface) {
                     $this->mandates?->record($locked->orderId, $locked->methodId, $result->mandate, $now);

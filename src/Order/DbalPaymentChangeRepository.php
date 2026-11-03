@@ -5,7 +5,9 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
 use Contao\StringUtil;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Webwerkwien\ContaoConshoBundle\Payment\AttemptState;
+use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentAttempt;
 
 final class DbalPaymentChangeRepository implements PaymentChangeRepositoryInterface
@@ -49,7 +51,23 @@ final class DbalPaymentChangeRepository implements PaymentChangeRepositoryInterf
     {
         return array_map(
             static fn ($amount): string => (string) $amount,
-            $this->connection->fetchFirstColumn('SELECT amount FROM tl_consho_payment WHERE pid = ?', [$orderId]),
+            $this->connection->fetchFirstColumn(
+                'SELECT amount FROM tl_consho_payment WHERE pid = ? AND method NOT IN (?)',
+                [$orderId, ChargebackRow::METHODS],
+                [ParameterType::INTEGER, ArrayParameterType::STRING],
+            ),
+        );
+    }
+
+    public function chargebackAmounts(int $orderId): array
+    {
+        return array_map(
+            static fn ($amount): string => (string) $amount,
+            $this->connection->fetchFirstColumn(
+                'SELECT amount FROM tl_consho_payment WHERE pid = ? AND method IN (?)',
+                [$orderId, ChargebackRow::METHODS],
+                [ParameterType::INTEGER, ArrayParameterType::STRING],
+            ),
         );
     }
 

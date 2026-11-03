@@ -18,6 +18,9 @@
     charged       the day the amount was charged with the subscription's
                   mandate (Abo-4b, P97); '' for "on account"
     paymentMethod the payment method of the order
+    chargeFailed  "on account" because the charge did not go through (P95, P96)
+    dueDate       "on account": the due date, formatted; '' without one
+    reference     "on account": the transfer reference, shown beside bank details
     viewUrl       the order page, with a token
 #}
 {% block subject %}{{ 'CONSHO.mail.subscriptionInvoice.subject'|trans([subscription], 'contao_default') }}{% endblock %}
@@ -39,6 +42,29 @@
 
 {% if charged %}
 <p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionInvoice.charged'|trans([charged, paymentMethod], 'contao_default') }}</p>
+{% else %}
+{% if chargeFailed %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionInvoice.chargeFailed'|trans({}, 'contao_default') }}</p>
+{% endif %}
+{% if dueDate %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionInvoice.payBy'|trans([dueDate], 'contao_default') }}</p>
+{% endif %}
+{# The payment block of the order confirmation (P97: "bitte bis … überweisen"). #}
+{% if order.paymentInstructions or order.bankDetails is not empty %}
+<div style="margin: 12px 0; padding: 12px 16px; background: #f7f7f7; border-left: 3px solid #222222;">
+    {{ order.paymentInstructions|raw }}
+    {% if order.bankDetails is not empty %}
+    <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; {{ font }}">
+        {% for key, value in order.bankDetails|filter(v => v is not empty) %}
+        <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ ('CONSHO.invoice.bank.' ~ key)|trans({}, 'contao_default') }}</th><td style="padding: 2px 0;">{{ value }}</td></tr>
+        {% endfor %}
+        {% if reference %}
+        <tr><th scope="row" style="padding: 2px 16px 2px 0; text-align: left; font-weight: normal; color: #555555;">{{ 'CONSHO.invoice.bank.reference'|trans({}, 'contao_default') }}</th><td style="padding: 2px 0; font-weight: bold;">{{ reference }}</td></tr>
+        {% endif %}
+    </table>
+    {% endif %}
+</div>
+{% endif %}
 {% endif %}
 
 {% if invoice %}

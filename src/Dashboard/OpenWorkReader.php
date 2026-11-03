@@ -246,7 +246,7 @@ final class OpenWorkReader implements ResetInterface
 
             $dueAt = (int) $row['paymentDueAt'];
             $unpaid = \in_array($balance->paymentState, [PaymentState::Open, PaymentState::Partial], true);
-            $settled = \in_array($balance->paymentState, [PaymentState::Paid, PaymentState::Overpaid, PaymentState::NothingDue], true);
+            $settled = \in_array($balance->paymentState, [PaymentState::Paid, PaymentState::Overpaid, PaymentState::PartlyRefunded, PaymentState::NothingDue], true);
 
             // "Zu liefern" (spec Dashboard, 4): paid, or on account — there
             // the goods go before the money. Prepayment without payment is

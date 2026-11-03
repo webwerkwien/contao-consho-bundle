@@ -40,6 +40,9 @@ class PaymentStarterTest extends TestCase
     /** @var list<string> */
     private array $payments = [];
 
+    /** @var list<string> chargeback rows, negative; reversals positive */
+    private array $chargebacks = [];
+
     private int $locks = 0;
 
     /** @var array<int, int> createdAt per stored attempt */
@@ -218,6 +221,79 @@ class PaymentStarterTest extends TestCase
         self::assertSame([], $this->stored);
     }
 
+    /**
+     * Spec 9: after a chargeback the customer pays again — online, from the
+     * order page, although the last attempt succeeded. For what is open:
+     * all of it after a full chargeback, the rest after a partial one.
+     */
+    public function testNachEinerRueckbuchungKannErneutBezahltWerden(): void
+    {
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_2'));
+        $this->stored = [1 => ['order' => 1, 'method' => 7, 'type' => 'test', 'amount' => '13.9000', 'hash' => 'x', 'state' => AttemptState::Succeeded]];
+        $this->payments = ['13.9000'];
+
+        self::assertFalse($starter->canRetry(1, 100), 'bezahlt, nichts zurückgebucht');
+
+        $this->chargebacks = ['-13.9000'];
+        self::assertTrue($starter->canRetry(1, 100), 'voll zurückgebucht');
+
+        $this->chargebacks = ['-3.9000'];
+        self::assertTrue($starter->canRetry(1, 100), 'teilweise zurückgebucht');
+
+        self::assertSame(PaymentStartOutcome::Redirect, $starter->start(1, 100)?->outcome);
+        $new = $this->latestStored();
+        self::assertTrue(\Brick\Math\BigDecimal::of('3.9')->isEqualTo($this->stored[$new]['amount']), 'der zurückgebuchte Betrag, nicht die Summe');
+
+        // The new attempt failed: try again, still.
+        $this->stored[$new]['state'] = AttemptState::Failed;
+        self::assertTrue($starter->canRetry(1, 100));
+
+        // Reversed: nothing open.
+        $this->chargebacks = ['-3.9000', '3.9000'];
+        self::assertFalse($starter->canRetry(1, 100), 'Rückbuchung aufgehoben');
+
+        // A "paid" or "completed" status holds changes, not the claim: the
+        // order went through as paid, so after a chargeback it nearly always
+        // carries one.
+        $this->chargebacks = ['-3.9000'];
+        DcaSchema::create($this->connection, 'tl_consho_order_status');
+        $this->connection->insert('tl_consho_order_status', ['id' => 5, 'title' => 'Abgeschlossen', 'isPaid' => 1, 'locksChanges' => 1, 'isCompleted' => 1]);
+        $this->connection->insert('tl_consho_order_status', ['id' => 6, 'title' => 'Storniert', 'isCancelled' => 1]);
+        $this->order['orderStatus'] = '5';
+        self::assertTrue($starter->canRetry(1, 100), 'Status hält Änderungen, nicht die Forderung');
+
+        // Cancelled: no — by the status, or sticky by cancelledAt.
+        $this->order['orderStatus'] = '6';
+        self::assertFalse($starter->canRetry(1, 100), 'storniert');
+        $this->order['orderStatus'] = '5';
+        $this->order['cancelledAt'] = '1800000000';
+        self::assertFalse($starter->canRetry(1, 100), 'storniert, cancelledAt');
+        unset($this->order['cancelledAt']);
+
+        // Without a chargeback the status holds as before.
+        $this->chargebacks = [];
+        $this->payments = [];
+        $this->stored[$new]['state'] = AttemptState::Failed;
+        self::assertFalse($starter->canRetry(1, 100), 'ohne Rückbuchung hält der Status');
+    }
+
+    private function latestStored(): int
+    {
+        $key = array_key_last($this->stored);
+        self::assertSame(2, $key, 'ein zweiter Versuch');
+
+        return $key;
+    }
+
+    public function testEineUnterzahlungOhneRueckbuchungBleibtOhneErneutVersuchen(): void
+    {
+        $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_2'));
+        $this->stored = [1 => ['order' => 1, 'method' => 7, 'type' => 'test', 'amount' => '13.9000', 'hash' => 'x', 'state' => AttemptState::Succeeded]];
+        $this->payments = ['10.0000'];
+
+        self::assertFalse($starter->canRetry(1, 100));
+    }
+
     public function testErneutVersuchenNurNachAbbruchOderFehlerDerAktuellenArt(): void
     {
         $starter = $this->starter(PaymentStart::redirect('https://anbieter.test/pay', 'cs_1'));
@@ -314,6 +390,7 @@ class PaymentStarterTest extends TestCase
             return 1 === $id ? $this->order : null;
         });
         $orders->method('paymentAmounts')->willReturnCallback(fn (): array => $this->payments);
+        $orders->method('chargebackAmounts')->willReturnCallback(fn (): array => $this->chargebacks);
         $orders->method('statusHolds')->willReturnCallback(static fn (int $status): bool => 5 === $status);
 
         $methods = $this->createMock(PaymentMethodLookupInterface::class);

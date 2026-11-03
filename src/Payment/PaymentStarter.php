@@ -213,15 +213,49 @@ class PaymentStarter
             return false;
         }
 
-        if (AttemptState::Failed !== $latest->state && AttemptState::Cancelled !== $latest->state && !self::lapsed($latest, $now)) {
+        $chargebacks = $this->orders->chargebackAmounts($orderId);
+        $chargedBack = ChargebackRow::stands($chargebacks);
+
+        // After a chargeback (spec 9) the customer pays again, although the
+        // payment that was charged back succeeded.
+        if (AttemptState::Failed !== $latest->state && AttemptState::Cancelled !== $latest->state && !self::lapsed($latest, $now)
+            && !($chargedBack && AttemptState::Succeeded === $latest->state)
+        ) {
             return false;
         }
 
-        if ((int) ($order['orderStatus'] ?? 0) > 0 && $this->orders->statusHolds((int) $order['orderStatus'])) {
+        $status = (int) ($order['orderStatus'] ?? 0);
+
+        if ($chargedBack) {
+            // The order went through as paid, so its status is "paid" or
+            // "completed" and holds every change — but paying what the bank
+            // took back changes nothing in the order. Only a cancellation
+            // ends the claim, as for "Zahlung einfordern".
+            if ((int) ($order['cancelledAt'] ?? 0) > 0 || ($status > 0 && $this->statusCancels($status))) {
+                return false;
+            }
+        } elseif ($status > 0 && $this->orders->statusHolds($status)) {
             return false;
         }
 
-        return PaymentState::Open === $this->paymentStates->calculate($this->credits->claimOf($order), $this->orders->paymentAmounts($orderId));
+        $state = $this->paymentStates->calculate($this->credits->claimOf($order), $this->orders->paymentAmounts($orderId), $chargebacks);
+
+        // A partial chargeback leaves the order partly paid; what it charged
+        // back is open all the same. An underpayment without one is not.
+        return PaymentState::Open === $state || ($chargedBack && PaymentState::Partial === $state);
+    }
+
+    private function statusCancels(int $statusId): bool
+    {
+        return false !== $this->connection->fetchOne('SELECT 1 FROM tl_consho_order_status WHERE id = ? AND isCancelled = 1', [$statusId]);
+    }
+
+    /**
+     * Whether a chargeback of the order stands (spec 9).
+     */
+    public function chargedBack(int $orderId): bool
+    {
+        return ChargebackRow::stands($this->orders->chargebackAmounts($orderId));
     }
 
     /**
@@ -239,7 +273,8 @@ class PaymentStarter
          * unpaid order whose goods were partly withdrawn owes the rest, not
          * the grand total — 70 €, not 100 €.
          */
-        $outstanding = $this->outstanding($this->credits->claimOf($order), $this->orders->paymentAmounts($orderId));
+        // A chargeback is owed again (spec 9, P2): it raises what is open.
+        $outstanding = $this->outstanding($this->credits->claimOf($order), [...$this->orders->paymentAmounts($orderId), ...$this->orders->chargebackAmounts($orderId)]);
 
         if (!$outstanding->isPositive()) {
             return null;

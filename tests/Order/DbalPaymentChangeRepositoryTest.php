@@ -2,6 +2,7 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Tests\Order;
 
+use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
@@ -138,5 +139,18 @@ class DbalPaymentChangeRepositoryTest extends TestCase
         self::assertSame([], $repository->memberGroups(0));
         self::assertCount(1, $repository->paymentAmounts(1));
         self::assertSame([], $repository->paymentAmounts(2));
+    }
+
+    public function testChargebacksAreKeptApartFromPayments(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '50.0000', 'method' => 'Karte']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '-10.0000', 'method' => 'refund']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '-40.0000', 'method' => 'chargeback']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '40.0000', 'method' => 'chargebackReversal']);
+
+        $repository = new DbalPaymentChangeRepository($this->connection);
+
+        self::assertSame(['50.0000', '-10.0000'], array_map(static fn (string $a): string => (string) BigDecimal::of($a)->toScale(4), $repository->paymentAmounts(1)));
+        self::assertSame(['-40.0000', '40.0000'], array_map(static fn (string $a): string => (string) BigDecimal::of($a)->toScale(4), $repository->chargebackAmounts(1)));
     }
 }

@@ -1,0 +1,76 @@
+{#
+  "Nachträge" at an order (spec 9): what the payment provider reported after
+  the payment. Rendered inside the back end frame by
+  ProviderEventBackendController; every form posts back to the same address
+  with Contao's request token.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.back|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+<div class="tl_formbody_edit">
+    {# After a chargeback, while the order owes money (P3). #}
+    {% if claim %}
+        <fieldset class="tl_box">
+            <legend>{{ lang.claim.legend|default('Zahlung einfordern') }}: {{ claim.outstanding }}</legend>
+            <p class="tl_help tl_tip">{{ lang.claim.help|default('') }}</p>
+            <form action="{{ action }}" method="post" class="tl_form">
+                <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <input type="hidden" name="consho_action" value="claim">
+                <label for="consho_day">{{ lang.claim.day|default('Zahlbar bis') }}</label>
+                <input type="date" id="consho_day" name="consho_day" value="{{ claim.day }}" class="tl_text" style="width:auto" required>
+                <button type="submit" class="tl_submit">{{ lang.claim.submit|default('Zahlung einfordern') }}</button>
+            </form>
+        </fieldset>
+    {% endif %}
+
+    {% if events is empty %}
+        <fieldset class="tl_box">
+            <legend>{{ lang.legend|default('Nachträge') }}: {{ number }}</legend>
+            <p class="tl_info">{{ lang.none|default('') }}</p>
+        </fieldset>
+    {% endif %}
+
+    {% for event in events %}
+        <fieldset class="tl_box">
+            <legend>{{ attribute(lang.kinds|default({}), event.kind)|default(event.kind) }}: {{ event.amount }}{% if event.date %} — {{ event.date }}{% endif %}</legend>
+            <p>
+                {{ event.reference }}
+                — {{ attribute(lang.states|default({}), event.state)|default(event.state) }}{% if event.resolvedBy %} ({{ event.resolvedBy }}){% endif %}
+                {% if event.reason %}<br>{{ lang.reason|default('Grund') }}: {{ event.reason }}{% endif %}
+            </p>
+
+            {% if event.canRecord %}
+                <p class="tl_help tl_tip">{{ lang.noDocuments|default('') }}</p>
+                <form action="{{ action }}" method="post" class="tl_form" style="display:inline-block; margin-right:1em">
+                    <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <input type="hidden" name="consho_action" value="record">
+                    <input type="hidden" name="consho_event" value="{{ event.id }}">
+                    <button type="submit" class="tl_submit">{{ lang.record|default('In Consho erfassen') }}</button>
+                </form>
+
+                {% if event.rows is empty %}
+                    <p class="tl_help tl_tip">{{ lang.noRows|default('') }}</p>
+                {% else %}
+                    <form action="{{ action }}" method="post" class="tl_form" style="display:inline-block">
+                        <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                        <input type="hidden" name="consho_action" value="assign">
+                        <input type="hidden" name="consho_event" value="{{ event.id }}">
+                        <select name="consho_row" class="tl_select" aria-label="{{ lang.row|default('Erstattungszeile') }}">
+                            {% for row in event.rows %}
+                                <option value="{{ row.id }}">{{ row.label ?: ('ID ' ~ row.id) }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="tl_submit">{{ lang.assign|default('Einer Zeile zuordnen') }}</button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </fieldset>
+    {% endfor %}
+</div>

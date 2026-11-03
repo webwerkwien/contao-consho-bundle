@@ -11,6 +11,8 @@ use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
+use Webwerkwien\ContaoConshoBundle\Payment\Aftermath\ProviderEventBooker;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
 use Webwerkwien\ContaoConshoBundle\Payment\AttemptState;
 use Webwerkwien\ContaoConshoBundle\Payment\NotificationProcessor;
 use Webwerkwien\ContaoConshoBundle\Payment\NotificationResult;
@@ -312,7 +314,45 @@ class NotificationProcessorTest extends TestCase
         self::assertSame(200, $this->moduleProcessor($handler, $mandates)->process(self::TOKEN, new Request(), 100));
     }
 
-    private function moduleProcessor(PaymentHandlerInterface $handler, SubscriptionMandates $mandates): NotificationProcessor
+    /**
+     * Spec 9, N1: a chargeback arrives on an attempt long succeeded — booked,
+     * inside the transaction, and answered 200 like before.
+     */
+    public function testEreignisseZuEinemErfolgreichenVersuchWerdenGebucht(): void
+    {
+        $event = ProviderEvent::chargeback('chb_1', '13.90', 'EUR', '', 100);
+        $handler = $this->createStub(PaymentHandlerInterface::class);
+        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'EUR', 'cs_1', 'ch_1')->withEvents($event));
+
+        $booker = $this->createMock(ProviderEventBooker::class);
+        $booker->expects(self::exactly(2))->method('book')
+            ->willReturnCallback(function (int $orderId, int $attemptId, array $events, int $now) use ($event): int {
+                self::assertSame([1, 3, [$event]], [$orderId, $attemptId, $events]);
+                self::assertTrue($this->connection->isTransactionActive(), 'unter der Sperre des Versuchs');
+
+                return 1;
+            });
+
+        $processor = $this->moduleProcessor($handler, $this->createStub(SubscriptionMandates::class), $booker);
+
+        // The first message books the money and the event, the second only the event.
+        self::assertSame(200, $processor->process(self::TOKEN, new Request(), 100));
+        self::assertSame(200, $processor->process(self::TOKEN, new Request(), 200));
+        self::assertCount(1, $this->attempts->payments);
+    }
+
+    public function testEineMeldungUeberEtwasAnderesBuchtKeineEreignisse(): void
+    {
+        $handler = $this->createStub(PaymentHandlerInterface::class);
+        $handler->method('handleNotification')->willReturn(NotificationResult::paid('13.90', 'EUR', 'cs_OTHER', 'ch_1')->withEvents(ProviderEvent::chargeback('chb_1', '13.90', 'EUR', '', 100)));
+
+        $booker = $this->createMock(ProviderEventBooker::class);
+        $booker->expects(self::never())->method('book');
+
+        self::assertSame(400, $this->moduleProcessor($handler, $this->createStub(SubscriptionMandates::class), $booker)->process(self::TOKEN, new Request(), 100));
+    }
+
+    private function moduleProcessor(PaymentHandlerInterface $handler, SubscriptionMandates $mandates, ProviderEventBooker|null $booker = null): NotificationProcessor
     {
         $this->attempts = new InMemoryPaymentAttempts();
         $this->attempts->add(new PaymentAttempt(3, 1, 7, 'card', AttemptState::Open, '13.9000', 'EUR', 'cs_1', '', ''), self::TOKEN);
@@ -328,6 +368,8 @@ class NotificationProcessorTest extends TestCase
             $this->createStub(PaymentRecorded::class),
             $this->createStub(LoggerInterface::class),
             $mandates,
+            null,
+            $booker,
         );
     }
 

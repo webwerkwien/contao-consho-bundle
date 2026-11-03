@@ -50,6 +50,27 @@
                     <p class="tl_info">{{ lang.refundRetryConfirm|default('%s / %s')|format(amountLabel, method) }}</p>
                 {% else %}
                     <p class="tl_info">{{ lang.refundManualConfirm|default('%s / %s')|format(amountLabel, method) }}{% if payoutReference %} {{ lang.refundPayoutReference|default('%s')|format(payoutReference) }}{% endif %}</p>
+                    {# Spec 9 (N3): the provider's refunds of this amount Consho
+                       does not know yet; choosing one stores its ID. #}
+                    {% if providerRefunds is defined and providerRefunds is not null %}
+                        <div class="widget clr">
+                            <h3>{{ lang.refundProviderChoice|default('') }}</h3>
+                            {% if providerRefunds is empty %}
+                                <p class="tl_help tl_tip">{{ lang.refundProviderNone|default('') }}</p>
+                            {% else %}
+                                <div class="tl_radio_container">
+                                    {% for refund in providerRefunds %}
+                                        <input type="radio" name="consho_provider_refund" id="ctrl_consho_provider_refund_{{ loop.index }}" class="tl_radio" value="{{ refund.reference }}">
+                                        <label for="ctrl_consho_provider_refund_{{ loop.index }}">{{ refund.reference }}{% if refund.date %} — {{ refund.date }}{% endif %} ({{ attribute(lang.refundProviderStates|default({}), refund.state)|default(refund.state) }})</label><br>
+                                    {% endfor %}
+                                    <input type="radio" name="consho_provider_refund" id="ctrl_consho_provider_refund_0" class="tl_radio" value="" checked>
+                                    <label for="ctrl_consho_provider_refund_0">{{ lang.refundProviderWithout|default('') }}</label>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% elseif step == 'manual' and not payoutReference %}
+                        <p class="tl_help tl_tip">{{ lang.refundProviderUnavailable|default('') }}</p>
+                    {% endif %}
                 {% endif %}
             </fieldset>
         </div>

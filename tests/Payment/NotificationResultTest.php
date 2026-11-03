@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Tests\Payment;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Payment\NotificationOutcome;
 use Webwerkwien\ContaoConshoBundle\Payment\NotificationResult;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
 
 class NotificationResultTest extends TestCase
 {
@@ -61,6 +62,22 @@ class NotificationResultTest extends TestCase
         self::assertSame('', NotificationResult::failed('cs_1')->amount);
         self::assertSame('', NotificationResult::failed('cs_1')->reference);
         self::assertSame('cs_1', NotificationResult::failed('cs_1')->for);
+    }
+
+    public function testEventsAreAddedToACopy(): void
+    {
+        $paid = NotificationResult::paid('10', 'EUR', 'tr_1', 'tr_1', 'mdt_1');
+        $event = ProviderEvent::chargeback('chb_1', '10', 'EUR', '', 1700000000);
+
+        $with = $paid->withEvents($event);
+
+        self::assertSame([], $paid->events);
+        self::assertSame([$event], $with->events);
+        self::assertSame('10.0000', $with->amount);
+        self::assertSame('EUR', $with->currency);
+        self::assertSame('tr_1', $with->for);
+        self::assertSame('mdt_1', $with->mandate);
+        self::assertSame(NotificationOutcome::Paid, $with->outcome);
     }
 
     public function testEinBetragDerAufNullGerundetWirdIstKeinZahlungseingang(): void

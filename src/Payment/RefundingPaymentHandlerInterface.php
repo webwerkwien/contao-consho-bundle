@@ -33,8 +33,11 @@ use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
  * twice pays once.
  *
  * Notifications the provider sends about a refund reach the attempt's notify
- * URL like any other; handleNotification() answers them `ignored` — the cron
- * is the one way a refund's state comes in.
+ * URL like any other. The state of one of Consho's own refunds comes in only
+ * through the cron; a handler may report the payment's refunds with the
+ * notification all the same (NotificationResult::withEvents()) — the core
+ * skips those it knows by their ID and records the others as made outside
+ * Consho (spec 9).
  *
  * Never locked by a licence: paying money back to a customer must not depend
  * on one.

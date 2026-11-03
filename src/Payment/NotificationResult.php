@@ -19,6 +19,10 @@ use Brick\Math\RoundingMode;
  * `reference` is the payment's own, booked with it (it may differ from `for`,
  * as a capture differs from its order at some providers).
  *
+ * `events` (spec 9): what the provider reports about the payment after it
+ * succeeded — chargebacks, refunds made at the provider. Optional, added with
+ * withEvents(); the core books them even when the attempt is long settled.
+ *
  * `mandate` (Abo-4b, P93): what the provider kept for charging follow-up
  * orders, as the handler builds it. Stored on the order's subscriptions only
  * when the handler can charge (RecurringPaymentHandlerInterface); '' for none.
@@ -32,7 +36,14 @@ final class NotificationResult
         public readonly string $mandate = '',
         public readonly string $for = '',
         public readonly string $currency = '',
+        /** @var list<ProviderEvent> */
+        public readonly array $events = [],
     ) {
+    }
+
+    public function withEvents(ProviderEvent ...$events): self
+    {
+        return new self($this->outcome, $this->amount, $this->reference, $this->mandate, $this->for, $this->currency, array_values($events));
     }
 
     public static function paid(string $amount, string $currency, string $for, string $reference, string $mandate = ''): self

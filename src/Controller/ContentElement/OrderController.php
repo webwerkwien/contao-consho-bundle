@@ -397,11 +397,24 @@ class OrderController extends AbstractContentElementController
     {
         $payments = $this->orders->payments($orderId);
 
-        $template->set('payments', array_map(fn (array $payment): array => [
-            'label' => 'refund' === $payment['method'] ? '' : $payment['method'],
-            'refund' => 'refund' === $payment['method'] || \Brick\Math\BigDecimal::of($payment['amount'])->isNegative(),
-            'amount' => $this->money->format($payment['amount'], $currency, $language),
-        ], $payments));
+        $template->set('payments', array_map(function (array $payment) use ($currency, $language): array {
+            $kind = InvoiceView::paymentKind($payment['method']);
+            // A name Consho writes itself is no label; a payment method's is.
+            $label = 'paid' === $kind ? $payment['method'] : '';
+
+            // WG-6: a negative row under a payment method's name (back onto a
+            // voucher) is money given back all the same.
+            if ('paid' === $kind && \Brick\Math\BigDecimal::of($payment['amount'])->isNegative()) {
+                $kind = 'refunded';
+            }
+
+            return [
+                'label' => $label,
+                'refund' => 'refunded' === $kind,
+                'kind' => $kind,
+                'amount' => $this->money->format($payment['amount'], $currency, $language),
+            ];
+        }, $payments));
         $template->set('outstanding', [] !== $payments && \Brick\Math\BigDecimal::of($outstanding)->isPositive() ? $this->money->format($outstanding, $currency, $language) : '');
     }
 
@@ -426,6 +439,17 @@ class OrderController extends AbstractContentElementController
         // "the payment was cancelled" would be about the old one.
         if (null === $latest || null === $order || $latest->methodId !== (int) ($order['paymentMethod'] ?? 0)) {
             return null;
+        }
+
+        /*
+         * The bank took the payment back (spec 9): saying "confirmed" would
+         * be about money that is gone. Paying again goes the way of "try
+         * again"; a new attempt that failed reads as failed below.
+         */
+        if (AttemptState::Succeeded === $latest->state && \in_array($paymentState, [PaymentState::Open, PaymentState::Partial], true)
+            && $this->payments->chargedBack($orderId)
+        ) {
+            return ['state' => 'chargedBack', 'retry' => $this->payments->canRetry($orderId, time())];
         }
 
         if (PaymentState::Open !== $paymentState) {

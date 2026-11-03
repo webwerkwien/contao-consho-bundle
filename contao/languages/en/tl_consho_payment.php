@@ -20,6 +20,8 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['refundRetry'] = ['Pay out again', 'Req
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundManual'] = ['Settled by hand', 'Mark refund ID %s as settled by hand'];
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundBack'] = 'Back';
 $GLOBALS['TL_LANG']['tl_consho_payment']['methodRefund'] = 'Refund';
+$GLOBALS['TL_LANG']['tl_consho_payment']['methodChargeback'] = 'Chargeback';
+$GLOBALS['TL_LANG']['tl_consho_payment']['methodChargebackReversal'] = 'Chargeback reversed';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundLegend'] = 'Refund for order';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundAmount'] = 'Amount';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundAmountHelp'] = 'At most %s — what of this payment is not paid back yet.';
@@ -45,6 +47,11 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['refundResult'] = [
 ];
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundStateChanged'] = 'The refund has changed meanwhile. Please look at the list again.';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundManualDone'] = 'The refund is marked as settled.';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderChoice'] = 'Refund at the payment provider';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderNone'] = 'The payment provider holds no refund of this amount that Consho does not know yet. The mark is made without an assignment.';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderWithout'] = 'None of these — paid back otherwise';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderStates'] = ['processing' => 'processing', 'refunded' => 'refunded'];
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderUnavailable'] = 'The refunds at the payment provider cannot be chosen here: the module offers no list, or the provider did not answer. The mark is made without an assignment.';
 $GLOBALS['TL_LANG']['tl_consho_payment']['payoutStates'] = [
     'requested' => 'processing',
     'sending' => 'no answer',

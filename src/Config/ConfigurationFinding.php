@@ -254,6 +254,13 @@ enum ConfigurationFinding: string
     case RefundPayoutFailed = 'refundPayoutFailed';
     case RefundPayoutStuck = 'refundPayoutStuck';
 
+    // Spec Zahlung Mollie, 9: what the provider reported after the payment —
+    // money the bank took back, a refund made at the provider
+    // (ProviderEventIssueSource).
+    case PaymentChargedBack = 'paymentChargedBack';
+    case RefundOutsideConsho = 'refundOutsideConsho';
+    case ChargebackReversedAfterPayment = 'chargebackReversedAfterPayment';
+
     // Block Zahlung Mollie: a published payment method of a module that will
     // not work as expected — one finding for every module, as for delivery
     // types (PaymentReadinessIssueSource).
@@ -304,7 +311,7 @@ enum ConfigurationFinding: string
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
             self::InvoiceArchiveFailed, self::ExternalInvoiceFailed, self::ConfirmationNotSent, self::AnonymizationDue,
             self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid,
-            self::RefundPayoutFailed, self::RefundPayoutStuck => ['consho_order'],
+            self::RefundPayoutFailed, self::RefundPayoutStuck, self::PaymentChargedBack, self::RefundOutsideConsho, self::ChargebackReversedAfterPayment => ['consho_order'],
             // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
@@ -850,6 +857,17 @@ enum ConfigurationFinding: string
             // invoice waiting — a warning.
             self::InvoicingOff => false,
             self::InvoiceProviderMissing => true,
+
+            // Spec 9 (P5). A chargeback is the operator's to chase or to
+            // write off, like an overdue invoice — a note, gone once nothing
+            // is outstanding or somebody took note. A refund made at the
+            // provider leaves the books wrong until it is recorded or
+            // assigned — a warning, which only that resolves.
+            self::PaymentChargedBack => false,
+            self::RefundOutsideConsho => true,
+            // The customer paid twice: money that is owed back — a warning,
+            // which only paying it back resolves.
+            self::ChargebackReversedAfterPayment => true,
         };
     }
 }

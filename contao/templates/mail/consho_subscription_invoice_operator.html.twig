@@ -13,6 +13,7 @@
     invoice       the invoice number, attached; '' where none was issued
     charged       the day the amount was charged (Abo-4b, P97); '' for "on account"
     paymentMethod the payment method of the order
+    chargeFailed  "on account" because the charge did not go through (P95, P96)
 #}
 {% block subject %}{{ 'CONSHO.mail.subscriptionInvoice.operator.subject'|trans([order.orderNumber, subscription], 'contao_default') }}{% endblock %}
 
@@ -27,6 +28,9 @@
 <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.subscriptionInvoice.operator.introCharged'|trans([order.orderNumber, subscription, paymentMethod, charged, periodFrom, periodUntil], 'contao_default') }}</p>
 {% else %}
 <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ 'CONSHO.mail.subscriptionInvoice.operator.intro'|trans([order.orderNumber, subscription, periodFrom, periodUntil], 'contao_default') }}</p>
+{% if chargeFailed %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.subscriptionInvoice.operator.chargeFailed'|trans({}, 'contao_default') }}</p>
+{% endif %}
 {% endif %}
 
 <p style="margin: 0 0 16px 0;">

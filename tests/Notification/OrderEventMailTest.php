@@ -572,6 +572,123 @@ final class OrderEventMailTest extends TestCase
         self::assertStringContainsString('Auf Rechnung', (string) $this->transport->sent[1]->getHtmlBody());
     }
 
+    /**
+     * P97, first version: "on account" asks to pay by the due date, with the
+     * method's instructions, bank details and the invoice number as
+     * reference — the block of the order confirmation.
+     */
+    public function testRechnungZumAboAufRechnungNenntZahlungszielUndBankdaten(): void
+    {
+        $zone = date_default_timezone_get();
+        date_default_timezone_set('Europe/Vienna');
+        $this->source->order['paymentDueAt'] = (new \DateTimeImmutable('2026-11-17 23:59:59'))->getTimestamp();
+        $this->source->documents[14] = $this->source->invoiceRow ?? [];
+
+        try {
+            $this->mail()->subscriptionInvoice(7, 'WEB-00084-1', 1_793_288_184, 1_795_966_584, 'https://shop.test/x');
+        } finally {
+            date_default_timezone_set($zone);
+        }
+
+        $html = (string) $this->transport->sent[0]->getHtmlBody();
+        self::assertStringContainsString('Bitte überweisen Sie den Betrag bis 17. November 2026.', $html);
+        self::assertStringContainsString('Bitte überweisen Sie den Betrag.', $html, 'Zahlungshinweis der Zahlungsart');
+        self::assertStringContainsString('AT61 1904 3002 3457 3201', $html);
+        self::assertStringContainsString('Verwendungszweck', $html);
+        self::assertStringContainsString('RE-00014', $html);
+        self::assertStringNotContainsString('nicht zustande', $html, 'ein gewöhnliches Abo auf Rechnung, keine gescheiterte Abbuchung');
+        self::assertStringNotContainsString('CONSHO.', $html);
+        self::assertStringNotContainsString('nicht zustande', (string) $this->transport->sent[1]->getHtmlBody());
+    }
+
+    /**
+     * Spec 9, P3: "Zahlung einfordern" after a chargeback — what is open, by
+     * when, the link to pay online, bank details and reference. To the
+     * customer only, no reminder tone.
+     */
+    public function testZahlungEinfordernNachRueckbuchung(): void
+    {
+        $zone = date_default_timezone_get();
+        date_default_timezone_set('Europe/Vienna');
+        $this->source->documents[14] = $this->source->invoiceRow ?? [];
+
+        try {
+            self::assertTrue($this->mail()->paymentClaim(7, '30.0000', (new \DateTimeImmutable('2026-11-17 23:59:59'))->getTimestamp(), 'https://shop.test/bestellung?consho_order=abc'));
+        } finally {
+            date_default_timezone_set($zone);
+        }
+
+        self::assertCount(1, $this->transport->sent, 'nur an den Kunden');
+
+        $mail = $this->transport->sent[0];
+        $html = (string) $mail->getHtmlBody();
+
+        self::assertStringContainsString('von Ihrer Bank zurückgebucht', $html);
+        self::assertStringContainsString('30,00', $html);
+        self::assertStringContainsString('bis 17. November 2026', $html);
+        self::assertStringContainsString('Jetzt bezahlen', $html);
+        self::assertStringContainsString('https://shop.test/bestellung?consho_order=abc', $html);
+        self::assertStringContainsString('AT61 1904 3002 3457 3201', $html);
+        self::assertStringContainsString('oder per Überweisung', $html, 'mit Bankdaten');
+        self::assertStringContainsString('Verwendungszweck', $html);
+        self::assertStringContainsString('RE-00014', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+        self::assertStringNotContainsString('Mahnung', $html);
+        self::assertStringNotContainsString('CONSHO.', (string) $mail->getSubject());
+    }
+
+    public function testZahlungEinfordernOhneRechnungGehtTrotzdemHinaus(): void
+    {
+        $this->source->invoiceRow = null;
+
+        self::assertTrue($this->mail()->paymentClaim(7, '30.0000', 1_795_000_000, 'https://shop.test/x'));
+
+        $html = (string) $this->transport->sent[0]->getHtmlBody();
+        self::assertSame([], $this->transport->sent[0]->getAttachments());
+        self::assertStringContainsString('Bestellung WEB-00054', $html);
+        self::assertStringNotContainsString('Anhang', $html);
+        // No bank details to transfer to: online only.
+        self::assertStringNotContainsString('Überweisung', $html);
+        self::assertStringContainsString('online über den folgenden Link.', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
+    /**
+     * P95/P96: after a failed charge the customer hears that it did not go
+     * through — the mail would otherwise read like a successful one without
+     * the word "charged". The operator's copy says so too.
+     */
+    public function testRechnungZumAboNachGescheiterterAbbuchung(): void
+    {
+        $this->source->order['paymentDueAt'] = 1_795_000_000;
+
+        $this->mail()->subscriptionInvoice(7, 'WEB-00084-1', 1_793_288_184, 1_795_966_584, 'https://shop.test/x', chargeFailed: true);
+
+        $html = (string) $this->transport->sent[0]->getHtmlBody();
+        self::assertStringContainsString('Die Abbuchung über Ihre hinterlegte Zahlungsart ist diesmal nicht zustande gekommen.', $html);
+        self::assertStringContainsString('Bitte überweisen Sie den Betrag bis', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+
+        $copy = (string) $this->transport->sent[1]->getHtmlBody();
+        self::assertStringContainsString('Die Abbuchung ist nicht zustande gekommen', $copy);
+        self::assertStringNotContainsString('CONSHO.', $copy);
+    }
+
+    /**
+     * Charged: no due date, no bank details — nothing to transfer.
+     */
+    public function testRechnungZumAboAbgebuchtOhneZahlungsaufforderung(): void
+    {
+        $this->source->order['paymentDueAt'] = 1_795_000_000;
+
+        $this->mail()->subscriptionInvoice(7, 'WEB-00084-1', 1_793_288_184, 1_795_966_584, 'https://shop.test/x', 1_793_288_184, true);
+
+        $html = (string) $this->transport->sent[0]->getHtmlBody();
+        self::assertStringNotContainsString('überweisen', $html);
+        self::assertStringNotContainsString('AT61', $html);
+        self::assertStringNotContainsString('nicht zustande', $html, 'abgebucht schlägt den Schalter');
+    }
+
     public function testRechnungZumAboOhneAusgestellteRechnungGehtTrotzdemHinaus(): void
     {
         $this->source->invoiceRow = null;

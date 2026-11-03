@@ -77,6 +77,9 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'externalInvoiceFailed' => 'Belege, die nicht beim Rechnungsmodul angekommen sind: %count%. Die Rechnungsdaten sind gespeichert; den Grund nennt das Fehlerprotokoll. Nach der Behebung reicht „consho:document:verify --retry" sie erneut ein.',
     'refundPayoutFailed' => 'Erstattungen, die der Zahlungsanbieter abgelehnt hat: %count% (Bestellung %numbers%). Gebucht sind sie, ausgezahlt nicht; den Grund nennt das Fehlerprotokoll. In der Bestellung unter „Zahlungen" erneut auszahlen oder von Hand zurückzahlen und als erledigt vermerken.',
     'refundPayoutStuck' => 'Erstattungen ohne Abschluss: %count% (Bestellung %numbers%). Auf die Anfrage kam keine Antwort, der Zahlungsanbieter meldet seit einer Woche „in Bearbeitung", oder die Anfrage ging nie hinaus, weil der Contao-Cron nicht läuft. Im Konto beim Anbieter nachsehen, ob das Geld zurückging, und die Zahlung in der Bestellung als erledigt vermerken — sonst von Hand zurückzahlen.',
+    'paymentChargedBack' => 'Die Zahlung zu Bestellung %number% wurde zurückgebucht (Grund: %reason%). Die Bestellung gilt wieder als offen; Mahnung, Abo-Pause und digitale Güter folgen erst, wenn ein Zahlungsziel gesetzt ist. In der Bestellung unter „Nachträge" die Zahlung einfordern — der Kunde erhält eine Zahlungsaufforderung und kann erneut bezahlen — oder zur Kenntnis nehmen, wenn die Forderung anders geklärt wird.',
+    'chargebackReversedAfterPayment' => 'Die Rückbuchung zu Bestellung %number% (%reference%) wurde aufgehoben, und der Kunde hat nachgezahlt: Die Bestellung ist überzahlt. Den doppelt bezahlten Betrag zurückzahlen, etwa mit „Erstatten" an einer der Zahlungen.',
+    'refundOutsideConsho' => 'Erstattung beim Zahlungsanbieter, die Consho nicht kennt: Bestellung %number% (%reference%). Bis sie in der Bestellung unter „Nachträge" erfasst oder einer Erstattungszeile zugeordnet ist, stimmt der Zahlungsstand nicht. Belege wie Gutschrift oder Steuerkorrektur entstehen dabei nicht — dafür den Widerruf oder die Stornierung der Bestellung verwenden.',
     'eInvoiceIncomplete' => 'Die Shop-Konfiguration „%shop%" stellt E-Rechnungen aus, aber es fehlt: %fields%. Bis das ausgefüllt ist, gehen Rechnungen ohne die E-Rechnungsdaten hinaus.',
     'ossThresholdReached' =>'Die Fernverkäufe an Privatkunden in anderen EU-Ländern (%business%) haben %year% die Lieferschwelle von 10.000 € erreicht. Umsätze außerhalb von Consho zählen mit. Über der Schwelle ist die Umsatzsteuer des Kundenlandes zu berechnen — dafür „Steuer im Bestimmungsland" in der Shop-Konfiguration einschalten. Einzelheiten unter „Steuermeldung".',
     'saleModePriceMissing' => 'Produkt „%product%" wird als %modes% angeboten, hat dafür aber keinen Preis — so ist es nicht kaufbar. Am Produkt unter „Preise" eine Zeile mit „Verkauft als" anlegen, oder die Verkaufsart am Produkt abwählen.',
@@ -521,6 +524,9 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['grandTotal'] = 'Gesamtbetrag';
 // Wertgutscheine (WG12): payments before the invoice and what remains.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['paid'] = 'Bereits bezahlt';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['refunded'] = 'Erstattet';
+// Chargebacks (ZM-6): money the bank took back, and a chargeback undone.
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['chargedBack'] = 'Zurückgebucht';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['chargebackReversed'] = 'Rückbuchung aufgehoben';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['outstanding'] = 'Offener Betrag';
 // Wertgutscheine (WG3): the line of a voucher sold with a "nicht steuerbar" class.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['notTaxable'] = 'nicht steuerbar';
@@ -577,6 +583,15 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['subject'] = 'Ihre 
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['intro'] = 'für Ihr Abo %s beginnt ein neuer Zeitraum: vom %s bis %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['invoiceAttached'] = 'Die Rechnung %s finden Sie im Anhang.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['charged'] = 'Der Betrag wurde am %s über %s abgebucht.';
+// P95/P96: the charge did not go through, the order went "on account".
+$GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['chargeFailed'] = 'Die Abbuchung über Ihre hinterlegte Zahlungsart ist diesmal nicht zustande gekommen.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['payBy'] = 'Bitte überweisen Sie den Betrag bis %s.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['subject'] = 'Offene Zahlung zu Ihrer Bestellung %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['intro'] = 'die Zahlung zu Ihrer Bestellung %s wurde von Ihrer Bank zurückgebucht. Offen sind %s.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['payBy'] = 'Bitte bezahlen Sie den Betrag bis %s online über den folgenden Link.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['payByOrTransfer'] = 'Bitte bezahlen Sie den Betrag bis %s – online über den folgenden Link oder per Überweisung.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['paymentClaim']['payNow'] = 'Jetzt bezahlen';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['chargeFailed'] = 'Die Abbuchung ist nicht zustande gekommen; die Folgebestellung wurde auf „Auf Rechnung" umgestellt.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['introCharged'] = 'Folgebestellung %s zum Abo %s über %s am %s abgebucht, Zeitraum %s bis %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['subject'] = 'Folgebestellung %s zum Abo %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['operator']['intro'] = 'Folgebestellung %s zum Abo %s angelegt, „Auf Rechnung", Zeitraum %s bis %s.';
@@ -959,7 +974,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['gate'] = [
 ];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['paymentState'] = 'Zahlung';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['deliveryState'] = 'Lieferung';
-$GLOBALS['TL_LANG']['CONSHO']['orderPage']['paymentStates'] = ['open' => 'offen', 'partial' => 'teilweise bezahlt', 'paid' => 'bezahlt', 'overpaid' => 'überzahlt', 'refunded' => 'erstattet', 'nothingDue' => 'nichts zu zahlen'];
+$GLOBALS['TL_LANG']['CONSHO']['orderPage']['paymentStates'] = ['open' => 'offen', 'partial' => 'teilweise bezahlt', 'paid' => 'bezahlt', 'overpaid' => 'überzahlt', 'refunded' => 'erstattet', 'partlyRefunded' => 'bezahlt, teilweise erstattet', 'nothingDue' => 'nichts zu zahlen'];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['deliveryStates'] = ['open' => 'noch nicht versandt', 'partial' => 'teilweise versandt', 'complete' => 'versandt'];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['documents'] = 'Belege';
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['cancelled'] = 'storniert';
@@ -1128,6 +1143,8 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['online'] = [
     'failed' => 'Die Zahlung ist fehlgeschlagen.',
     'cancelled' => 'Die Zahlung wurde abgebrochen.',
     'retry' => 'Erneut versuchen',
+    'chargedBack' => 'Die Zahlung wurde von Ihrer Bank zurückgebucht. Der offene Betrag kann erneut bezahlt werden.',
+    'payAgain' => 'Jetzt bezahlen',
 ];
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['regenerated'] = 'Neu erzeugt aus den gespeicherten Rechnungsdaten. Die beim Ausstellen abgelegte Datei war nicht verfügbar oder stimmte nicht mit ihrer Prüfsumme überein.';
 $GLOBALS['TL_LANG']['CONSHO']['invoiceArchiveFolder']['missing'] = 'ist nicht gewählt oder existiert nicht mehr';

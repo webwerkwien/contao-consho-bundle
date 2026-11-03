@@ -20,6 +20,8 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['refundRetry'] = ['Erneut auszahlen', '
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundManual'] = ['Von Hand erledigt', 'Erstattung ID %s als von Hand erledigt vermerken'];
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundBack'] = 'Zurück';
 $GLOBALS['TL_LANG']['tl_consho_payment']['methodRefund'] = 'Erstattung';
+$GLOBALS['TL_LANG']['tl_consho_payment']['methodChargeback'] = 'Rückbuchung';
+$GLOBALS['TL_LANG']['tl_consho_payment']['methodChargebackReversal'] = 'Rückbuchung aufgehoben';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundLegend'] = 'Erstattung zu Bestellung';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundAmount'] = 'Betrag';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundAmountHelp'] = 'Höchstens %s — was von dieser Zahlung noch nicht zurückgezahlt ist.';
@@ -45,6 +47,11 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['refundResult'] = [
 ];
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundStateChanged'] = 'Die Erstattung hat sich inzwischen geändert. Bitte die Liste neu ansehen.';
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundManualDone'] = 'Die Erstattung ist als erledigt vermerkt.';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderChoice'] = 'Erstattung beim Zahlungsanbieter';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderNone'] = 'Beim Zahlungsanbieter liegt keine Erstattung über diesen Betrag, die Consho noch nicht kennt. Der Vermerk geht ohne Zuordnung.';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderWithout'] = 'Keine davon — anders zurückgezahlt';
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderStates'] = ['processing' => 'in Bearbeitung', 'refunded' => 'erstattet'];
+$GLOBALS['TL_LANG']['tl_consho_payment']['refundProviderUnavailable'] = 'Die Erstattungen beim Zahlungsanbieter stehen hier nicht zur Auswahl: Das Modul bietet keine Liste an, oder der Anbieter hat nicht geantwortet. Der Vermerk geht ohne Zuordnung.';
 $GLOBALS['TL_LANG']['tl_consho_payment']['payoutStates'] = [
     'requested' => 'in Bearbeitung',
     'sending' => 'ohne Antwort',

@@ -257,6 +257,7 @@
         booked; "reported" = a verified return, the notification still to
         come; "none" = nothing to go by. "Try again" only after a failure or
         cancel — while an attempt may be on its way, a second would pay twice.
+        "chargedBack" = the bank took the payment back (spec 9): pay again.
     #}
     {% if online|default(null) %}
         <div class="consho-order__online consho-order__online--{{ online.state }}" role="status">
@@ -265,7 +266,7 @@
                 <form method="post" class="consho-order__retry">
                     <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                     <input type="hidden" name="consho_order_action" value="retry">
-                    <button type="submit">{{ 'CONSHO.orderPage.online.retry'|trans({}, 'contao_default') }}</button>
+                    <button type="submit">{{ ('CONSHO.orderPage.online.' ~ (online.state == 'chargedBack' ? 'payAgain' : 'retry'))|trans({}, 'contao_default') }}</button>
                 </form>
             {% endif %}
         </div>
@@ -330,7 +331,7 @@
         {#- WG-7: the payments, as the invoice states them — a
             customer paying part with a voucher sees what is left. #}
         {% for payment in payments|default([]) %}
-            {% set label = (payment.refund ? 'CONSHO.invoice.refunded' : 'CONSHO.invoice.paid')|trans({}, 'contao_default') ~ (payment.label ? ' (' ~ payment.label ~ ')' : '') %}
+            {% set label = ('CONSHO.invoice.' ~ payment.kind|default(payment.refund ? 'refunded' : 'paid'))|trans({}, 'contao_default') ~ (payment.label ? ' (' ~ payment.label ~ ')' : '') %}
             <tr class="consho-order__payment-line"><th scope="row">{{ label }}</th><td data-cellheadline="{{ label }}">{{ payment.amount }}</td></tr>
         {% endfor %}
         {% if outstanding|default('') %}

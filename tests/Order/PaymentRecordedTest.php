@@ -115,6 +115,71 @@ final class PaymentRecordedTest extends TestCase
         self::assertCount(1, $this->issued);
     }
 
+    /**
+     * Spec 9: paid again after a chargeback — "Zahlung erhalten" once more,
+     * once per chargeback; the sale keeps its date, no second invoice.
+     */
+    public function testNachgezahltNachRueckbuchungKommtZahlungErhaltenNochEinmal(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_provider_event');
+        $this->pay('40');
+        $this->recorded()->handle(self::ORDER, true, 100);
+
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-40', 'method' => 'chargeback', 'payoutReference' => 'chb_1']);
+        $this->connection->insert('tl_consho_provider_event', ['pid' => self::ORDER, 'kind' => 'chargeback', 'reference' => 'chb_1', 'amount' => '40', 'state' => 'open']);
+
+        // Something else changes the balance before the money is back: nothing.
+        $this->recorded()->handle(self::ORDER, false, 150);
+        self::assertCount(1, $this->mails);
+
+        $this->pay('40');
+        $this->recorded()->handle(self::ORDER, true, 200);
+        $this->recorded()->handle(self::ORDER, false, 300);
+
+        self::assertCount(2, $this->mails, 'einmal je Rückbuchung');
+        self::assertSame([self::ORDER, null, (string) $this->orderPage, true], $this->mails[1]);
+        self::assertCount(1, $this->issued, 'keine zweite Rechnung');
+        self::assertSame([OrderEvent::PaymentSettled], $this->advanced);
+        self::assertSame(100, (int) $this->connection->fetchOne('SELECT paymentSettledAt FROM tl_consho_order'));
+        self::assertSame('settled', $this->connection->fetchOne('SELECT state FROM tl_consho_provider_event'));
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE lockedAt IS NULL'));
+    }
+
+    /**
+     * Paid twice, then one payment charged back: settled again, but no money
+     * came — an edit of any row must not announce it.
+     */
+    public function testOhneNeuesGeldNachDerRueckbuchungKeinZahlungErhalten(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_provider_event');
+        $this->pay('40');
+        $this->recorded()->handle(self::ORDER, true, 100);
+        $this->pay('40');
+
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-40', 'method' => 'chargeback', 'payoutReference' => 'chb_1']);
+        $this->connection->insert('tl_consho_provider_event', ['pid' => self::ORDER, 'kind' => 'chargeback', 'reference' => 'chb_1', 'amount' => '40', 'state' => 'open']);
+
+        $this->recorded()->handle(self::ORDER, false, 200);
+
+        self::assertCount(1, $this->mails);
+        self::assertSame('open', $this->connection->fetchOne('SELECT state FROM tl_consho_provider_event'));
+    }
+
+    public function testEineAufgehobeneRueckbuchungSchicktKeinZahlungErhalten(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_provider_event');
+        $this->pay('40');
+        $this->recorded()->handle(self::ORDER, true, 100);
+
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-40', 'method' => 'chargeback', 'payoutReference' => 'chb_1']);
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '40', 'method' => 'chargebackReversal', 'payoutReference' => 'chb_1']);
+        $this->connection->insert('tl_consho_provider_event', ['pid' => self::ORDER, 'kind' => 'chargeback', 'reference' => 'chb_1', 'amount' => '40', 'state' => 'open', 'reversedAt' => 150]);
+
+        $this->recorded()->handle(self::ORDER, false, 200);
+
+        self::assertCount(1, $this->mails);
+    }
+
     public function testBeiVorkasseGibtEsDieRechnungSchonUndDieMailKommtOhneAnhang(): void
     {
         $this->connection->update('tl_consho_order', ['paymentMethod' => self::PREPAYMENT], ['id' => self::ORDER]);
@@ -229,6 +294,11 @@ final class PaymentRecordedTest extends TestCase
 
             return false === $row ? null : array_map(static fn ($v): string => (string) $v, $row);
         });
+
+        $orders->method('chargebackAmounts')->willReturnCallback(fn (int $id): array => array_map('strval', $this->connection->fetchFirstColumn(
+            "SELECT amount FROM tl_consho_payment WHERE pid = ? AND method IN ('chargeback', 'chargebackReversal')",
+            [$id],
+        )));
 
         $methods = $this->createStub(PaymentMethodLookupInterface::class);
         $methods->method('byId')->willReturnCallback(static fn (int $id): PaymentMethod => match ($id) {

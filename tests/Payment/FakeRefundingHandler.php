@@ -13,13 +13,14 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentContext;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentStart;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\PaymentRefund;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
-use Webwerkwien\ContaoConshoBundle\Payment\RefundingPaymentHandlerInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
+use Webwerkwien\ContaoConshoBundle\Payment\RefundListingPaymentHandlerInterface;
 
 /**
  * A payment module that can pay back (block Zahlung Mollie) — remembers what
  * it was asked and answers what the test tells it to.
  */
-final class FakeRefundingHandler implements RefundingPaymentHandlerInterface
+final class FakeRefundingHandler implements RefundListingPaymentHandlerInterface
 {
     public const TYPE = 'card';
 
@@ -112,5 +113,17 @@ final class FakeRefundingHandler implements RefundingPaymentHandlerInterface
         $this->asked[] = $refund;
 
         return $this->state;
+    }
+
+    /** @var list<ProviderEvent>|\Throwable what refunds() lists (spec 9) */
+    public array|\Throwable $listed = [];
+
+    public function refunds(PaymentRefund $refund, array $config): array
+    {
+        if ($this->listed instanceof \Throwable) {
+            throw $this->listed;
+        }
+
+        return $this->listed;
     }
 }

@@ -62,6 +62,10 @@ class SubscriptionChargeFallback
         private readonly OrderEventMail $mail,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
+        // What the fallback is there for, not an error: Contao lists the
+        // error channel as ERROR whatever the level.
+        #[Autowire(service: 'monolog.logger.contao.general')]
+        private readonly LoggerInterface $general = new NullLogger(),
     ) {
     }
 
@@ -133,7 +137,7 @@ class SubscriptionChargeFallback
             throw $e;
         }
 
-        $this->logger->warning(\sprintf('Follow-up order %s could not be charged and went "on account".', $order['orderNumber'] ?? $orderId));
+        $this->general->info(\sprintf('Follow-up order %s could not be charged and went "on account".', $order['orderNumber'] ?? $orderId));
 
         foreach ([$cancellationId, $invoiceId] as $documentId) {
             if (null !== $documentId) {
@@ -270,8 +274,9 @@ class SubscriptionChargeFallback
     }
 
     /**
-     * "Rechnung zum Abo" as for any follow-up "on account" (P95). Never
-     * throws — the order has changed, whatever its mail does.
+     * "Rechnung zum Abo" as for any follow-up "on account" (P95), saying that
+     * the charge did not go through — the customer expected it to be
+     * collected. Never throws — the order has changed, whatever its mail does.
      */
     private function notify(int $orderId): void
     {
@@ -293,6 +298,6 @@ class SubscriptionChargeFallback
             return;
         }
 
-        $this->mail->subscriptionInvoice($orderId, (string) $order['subscriptionNumber'], (int) $order['servicePeriodFrom'], (int) $order['servicePeriodUntil'], $viewUrl);
+        $this->mail->subscriptionInvoice($orderId, (string) $order['subscriptionNumber'], (int) $order['servicePeriodFrom'], (int) $order['servicePeriodUntil'], $viewUrl, chargeFailed: true);
     }
 }

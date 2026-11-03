@@ -10,6 +10,7 @@ use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Intl\Countries;
 use Symfony\Component\Intl\Currencies;
+use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Pricing\PriceSource;
 
@@ -229,9 +230,11 @@ final class InvoiceView
 
     /**
      * The payments frozen into the invoice (formatVersion 9), as the payment
-     * row named them; `refund` is the one name Consho writes itself.
+     * row named them; `refund` and the chargeback markers (ChargebackRow)
+     * are the names Consho writes itself. `kind` picks the line's caption:
+     * CONSHO.invoice.<kind>.
      *
-     * @return list<array{label: string, refund: bool, amount: string}>
+     * @return list<array{label: string, refund: bool, kind: string, amount: string}>
      */
     private function payments(mixed $payments, string $currency, string $language): array
     {
@@ -247,14 +250,30 @@ final class InvoiceView
             }
 
             $method = (string) ($payment['method'] ?? '');
+            $kind = self::paymentKind($method);
             $shown[] = [
-                'label' => 'refund' === $method ? '' : $method,
-                'refund' => 'refund' === $method,
+                'label' => 'paid' === $kind ? $method : '',
+                'refund' => 'refunded' === $kind,
+                'kind' => $kind,
                 'amount' => $this->money->format($payment['amount'], $currency, $language),
             ];
         }
 
         return $shown;
+    }
+
+    /**
+     * paid, refunded, chargedBack or chargebackReversed — the caption of a
+     * payment line, on the invoice and the order page alike.
+     */
+    public static function paymentKind(string $method): string
+    {
+        return match ($method) {
+            'refund' => 'refunded',
+            ChargebackRow::METHOD => 'chargedBack',
+            ChargebackRow::REVERSAL => 'chargebackReversed',
+            default => 'paid',
+        };
     }
 
     /**

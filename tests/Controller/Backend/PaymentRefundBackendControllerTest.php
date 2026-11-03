@@ -27,6 +27,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlerInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
@@ -58,7 +59,7 @@ final class PaymentRefundBackendControllerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt', 'tl_consho_provider_event'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -238,6 +239,43 @@ final class PaymentRefundBackendControllerTest extends TestCase
         $this->redirected(fn () => $this->controller($this->post('refundRetry', []))->retry($this->dc(7)));
         self::assertSame(['addError', 'Die Erstattung hat sich inzwischen geändert. Bitte die Liste neu ansehen.'], $this->messages[2]);
         self::assertCount(1, $this->card->refunds);
+    }
+
+    /**
+     * Spec 9, N3: "Von Hand erledigt" offers the provider's refunds of that
+     * amount; the chosen one's ID is stored.
+     */
+    public function testVonHandErledigtBietetDieErstattungenDesAnbietersAn(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 7, 'pid' => 1, 'amount' => '-10.0000', 'method' => 'refund', 'refundOf' => 5, 'payoutState' => 'failed']);
+        $this->card->listed = [
+            ProviderEvent::refund('re_a', '10', 'EUR', 'refunded', 1_800_000_000),
+            ProviderEvent::refund('re_b', '7', 'EUR', 'refunded', 1_800_000_000),
+        ];
+
+        $html = $this->controller($this->get('refundManual'))->manual($this->dc(7));
+        self::assertStringContainsString('value="re_a"', $html);
+        self::assertStringNotContainsString('value="re_b"', $html);
+        self::assertStringContainsString('Keine davon', $html);
+
+        $this->redirected(fn () => $this->controller($this->post('refundManual', ['consho_provider_refund' => 're_b']))->manual($this->dc(7)));
+        self::assertSame('failed', $this->connection->fetchOne('SELECT payoutState FROM tl_consho_payment WHERE id = 7'), 'only one of those offered');
+        self::assertSame('addError', $this->messages[0][0]);
+
+        $this->redirected(fn () => $this->controller($this->post('refundManual', ['consho_provider_refund' => 're_a']))->manual($this->dc(7)));
+        self::assertSame(['done', 're_a'], array_values($this->connection->fetchAssociative('SELECT payoutState, payoutReference FROM tl_consho_payment WHERE id = 7') ?: []));
+    }
+
+    public function testOhneAntwortDesAnbietersGehtDerVermerkWieBisher(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 7, 'pid' => 1, 'amount' => '-10.0000', 'method' => 'refund', 'refundOf' => 5, 'payoutState' => 'failed']);
+        $this->card->listed = new \RuntimeException('timeout');
+
+        $html = $this->controller($this->get('refundManual'))->manual($this->dc(7));
+        self::assertStringContainsString('stehen hier nicht zur Auswahl', $html);
+
+        $this->redirected(fn () => $this->controller($this->post('refundManual', []))->manual($this->dc(7)));
+        self::assertSame('manual', $this->connection->fetchOne('SELECT payoutState FROM tl_consho_payment WHERE id = 7'));
     }
 
     private function get(string $key): Request

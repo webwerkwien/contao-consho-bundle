@@ -72,6 +72,48 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendFailed'] = 'Die Bestätigung der B
 
 // E8: postpone the payment due date
 $GLOBALS['TL_LANG']['tl_consho_order']['deferPayment'] = ['Zahlungsziel verschieben', 'Das Zahlungsziel der Bestellung ID %s auf einen späteren Tag legen'];
+$GLOBALS['TL_LANG']['tl_consho_order']['followUps'] = ['Nachträge', 'Rückbuchungen und Erstattungen, die der Zahlungsanbieter zur Bestellung ID %s nachträglich gemeldet hat'];
+$GLOBALS['TL_LANG']['tl_consho_order']['followUpsNone'] = 'Keine Nachträge — der Zahlungsanbieter hat zu dieser Bestellung keine Rückbuchung oder Erstattung gemeldet';
+$GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
+    'back' => 'Zurück',
+    'legend' => 'Nachträge',
+    'none' => 'Der Zahlungsanbieter hat zu dieser Bestellung nichts nachgemeldet.',
+    'kinds' => ['chargeback' => 'Rückbuchung', 'refund' => 'Erstattung beim Zahlungsanbieter'],
+    'states' => [
+        'standing' => 'zurückgebucht',
+        'reversed' => 'Rückbuchung aufgehoben',
+        'settled' => 'nachgezahlt',
+        'open' => 'noch nicht erfasst',
+        'recorded' => 'in Consho erfasst',
+        'assigned' => 'einer Erstattungszeile zugeordnet',
+    ],
+    'reason' => 'Grund',
+    'record' => 'In Consho erfassen',
+    'assign' => 'Einer Zeile zuordnen',
+    'row' => 'Erstattungszeile',
+    'noDocuments' => 'Erfassen bucht nur das Geld. Eine Gutschrift oder Steuerkorrektur entsteht dabei nicht — dafür den Widerruf oder die Stornierung der Bestellung verwenden.',
+    'noRows' => 'Keine offene Erstattungszeile über diesen Betrag, der sie zugeordnet werden könnte.',
+    'claim' => [
+        'legend' => 'Zahlung einfordern',
+        'help' => 'Der Kunde bekommt eine Zahlungsaufforderung über den offenen Betrag mit diesem Tag und dem Link zum Bezahlen. Der Tag wird zum Zahlungsziel der Bestellung: Erst danach greifen der Hinweis auf überfällige Zahlungen, das Ruhen von Abos und digitalen Inhalten.',
+        'day' => 'Zahlbar bis',
+        'submit' => 'Zahlung einfordern',
+    ],
+    'done' => [
+        'record' => 'Die Erstattung ist in Consho erfasst.',
+        'assign' => 'Die Erstattung ist der Zeile zugeordnet.',
+        'claim' => 'Die Zahlungsaufforderung ist versendet.',
+    ],
+    'refused' => [
+        'notClaimable' => 'Zu dieser Bestellung ist nichts einzufordern: Die Rückbuchung ist aufgehoben oder nachgezahlt.',
+        'invalidDate' => 'Bitte ein gültiges Datum angeben.',
+        'notFuture' => 'Bitte einen Tag in der Zukunft wählen.',
+        'mailNotSent' => 'Das Zahlungsziel ist gesetzt, die Zahlungsaufforderung konnte aber nicht versendet werden. Den Grund nennt das Systemlog.',
+        'stateChanged' => 'Die Erstattung wurde inzwischen erfasst oder zugeordnet.',
+        'exceeds' => 'Die Erstattung ist höher als das, was von der Zahlung noch nicht zurückgezahlt ist. Bitte im Konto beim Zahlungsanbieter nachsehen.',
+        'rowNotAssignable' => 'Diese Zeile kann der Erstattung nicht zugeordnet werden: anderer Betrag, oder sie ist schon erledigt.',
+    ],
+];
 $GLOBALS['TL_LANG']['tl_consho_order']['deferBack'] = 'Zurück';
 $GLOBALS['TL_LANG']['tl_consho_order']['deferLegend'] = 'Zahlungsziel';
 $GLOBALS['TL_LANG']['tl_consho_order']['deferDate'] = 'Neues Zahlungsziel';
@@ -122,6 +164,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
         'paid' => 'Zahlung: erfolgt',
         'overpaid' => 'Zahlung: überzahlt — Betrag muss zurück',
         'refunded' => 'Zahlung: erstattet',
+        'partlyRefunded' => 'Zahlung: erfolgt, teilweise erstattet',
         'nothingDue' => 'Zahlung: nichts fällig',
     ],
     'delivery' => [

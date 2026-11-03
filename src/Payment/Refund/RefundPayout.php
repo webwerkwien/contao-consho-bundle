@@ -11,7 +11,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
+use Webwerkwien\ContaoConshoBundle\Payment\ProviderEventKind;
 use Webwerkwien\ContaoConshoBundle\Payment\RefundingPaymentHandlerInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\RefundListingPaymentHandlerInterface;
 
 /**
  * Books a refund and pays it out through the providers that can (block
@@ -285,6 +288,281 @@ class RefundPayout
         );
     }
 
+    /**
+     * The refunds the provider holds for the payment a refund row pays back,
+     * less those already tied to a refund row of the order — for "Von Hand
+     * erledigt" (spec 9, N3). Only those with money on its way and the row's
+     * amount: matching is by ID, but the operator chooses among refunds that
+     * can be this one.
+     *
+     * @return list<ProviderEvent>|null null where the provider cannot list
+     *                                  them or could not be asked
+     */
+    public function providerRefunds(int $rowId): array|null
+    {
+        $context = $this->context($rowId);
+
+        if (null === $context || !$context[0] instanceof RefundListingPaymentHandlerInterface) {
+            return null;
+        }
+
+        [$handler, $refund, $config] = $context;
+
+        try {
+            $listed = $handler->refunds($refund, $config);
+        } catch (\Throwable $e) {
+            $this->logger->warning(\sprintf('The refunds of order %s could not be listed: %s', $refund->orderNumber, $e->getMessage()));
+
+            return null;
+        }
+
+        $known = array_map('strval', $this->connection->fetchFirstColumn(
+            "SELECT r.payoutReference FROM tl_consho_payment r JOIN tl_consho_payment o ON o.pid = r.pid WHERE o.id = ? AND r.method = 'refund' AND r.payoutReference <> ''",
+            [$rowId],
+        ));
+
+        return array_values(array_filter($listed, static fn (ProviderEvent $event): bool => ProviderEventKind::Refund === $event->kind
+            && \in_array($event->refundState, ['processing', 'refunded'], true)
+            && BigDecimal::of($event->amount)->isEqualTo($refund->amount)
+            && strtoupper($refund->currency) === $event->currency
+            && !\in_array($event->reference, $known, true)));
+    }
+
+    /**
+     * "Von Hand erledigt" with the provider's refund chosen: the row is done,
+     * with the provider's ID — the key a later notification about it is
+     * matched by. Like markManual() only for a row not handed to the provider
+     * yet, or whose request failed or hangs; never for one the provider
+     * already answered with a reference of its own.
+     */
+    public function assign(int $rowId, string $providerReference, int $now, string $by = ''): bool
+    {
+        $providerReference = trim($providerReference);
+
+        if ('' === $providerReference) {
+            return false;
+        }
+
+        $this->connection->beginTransaction();
+
+        try {
+            $orderId = (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_payment WHERE id = ?', [$rowId]);
+
+            if ($orderId < 1 || null === $this->orders->lockOrder($orderId)) {
+                $this->connection->commit();
+
+                return false;
+            }
+
+            $assigned = $this->assignUnderLock($orderId, $rowId, $providerReference, $now, $by);
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
+
+            throw $e;
+        }
+
+        return $assigned;
+    }
+
+    /**
+     * The refund rows a foreign refund can be assigned to (P4): the order's,
+     * not tied to a provider's refund yet, and of the same amount — matching
+     * stays by ID, the amount only narrows what is offered.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function assignableRows(int $eventId): array
+    {
+        $event = $this->connection->fetchAssociative("SELECT pid, amount FROM tl_consho_provider_event WHERE id = ? AND kind = 'refund' AND state = 'open'", [$eventId]);
+
+        if (false === $event) {
+            return [];
+        }
+
+        $rows = $this->connection->fetchAllAssociative(
+            "SELECT * FROM tl_consho_payment
+              WHERE pid = ? AND method = 'refund' AND payoutReference = ''
+                AND payoutState IN ('manual', 'failed', 'sending', 'requested')
+              ORDER BY receivedAt, id",
+            [(int) $event['pid']],
+        );
+
+        return array_values(array_filter($rows, static fn (array $row): bool => BigDecimal::of((string) $row['amount'])->negated()->isEqualTo((string) $event['amount'])));
+    }
+
+    /**
+     * "In Consho erfassen" (N3): a refund made at the provider becomes a
+     * refund row — done, against the payment it paid back, with the
+     * provider's ID. Money only: no credit note, no tax correction, the same
+     * as "Erstatten"; those come with a withdrawal or a cancellation.
+     *
+     * @return string|null null when recorded, otherwise why not:
+     *                     `stateChanged` (resolved meanwhile) or `exceeds`
+     *                     (more than is left of the payment)
+     */
+    public function recordForeign(int $eventId, int $now, string $by = ''): string|null
+    {
+        $this->connection->beginTransaction();
+
+        try {
+            $event = $this->openRefund($eventId);
+
+            if (null === $event) {
+                $this->connection->commit();
+
+                return 'stateChanged';
+            }
+
+            // An own refund the provider reported before its answer reached
+            // the row: the money is booked there already.
+            $own = $this->connection->fetchOne(
+                "SELECT id FROM tl_consho_payment WHERE pid = ? AND method = 'refund' AND payoutReference = ?",
+                [(int) $event['pid'], (string) $event['reference']],
+            );
+
+            if (false !== $own) {
+                $this->resolve($eventId, 'assigned', (int) $own, $now, $by);
+                $this->connection->commit();
+
+                return 'stateChanged';
+            }
+
+            $left = $this->connection->fetchOne(
+                'SELECT p.amount + (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id)
+                   FROM tl_consho_payment p WHERE p.id = ? AND p.pid = ?',
+                [(int) $event['payment'], (int) $event['pid']],
+            );
+
+            if (false === $left || BigDecimal::of((string) $left)->isLessThan((string) $event['amount'])) {
+                $this->connection->commit();
+
+                return 'exceeds';
+            }
+
+            $rowId = $this->insert((int) $event['pid'], BigDecimal::of((string) $event['amount']), (string) $event['reference'], $now, (int) $event['payment'], 'done');
+            $this->connection->update('tl_consho_payment', ['payoutReference' => (string) $event['reference'], 'payoutCheckedAt' => $now], ['id' => $rowId]);
+            $this->resolve($eventId, 'recorded', $rowId, $now, $by);
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
+
+            throw $e;
+        }
+
+        return null;
+    }
+
+    /**
+     * "Einer Zeile zuordnen" (N3, P4): a refund made at the provider is the
+     * one an existing refund row stands for — paid back by hand in the
+     * dashboard. The row is done, with the provider's ID.
+     *
+     * @return string|null null when assigned, otherwise why not:
+     *                     `stateChanged` or `rowNotAssignable`
+     */
+    public function assignForeign(int $eventId, int $rowId, int $now, string $by = ''): string|null
+    {
+        $this->connection->beginTransaction();
+
+        try {
+            $event = $this->openRefund($eventId);
+
+            if (null === $event) {
+                $this->connection->commit();
+
+                return 'stateChanged';
+            }
+
+            $eligible = array_map(static fn (array $row): int => (int) $row['id'], $this->assignableRows($eventId));
+
+            if (!\in_array($rowId, $eligible, true) || !$this->assignUnderLock((int) $event['pid'], $rowId, (string) $event['reference'], $now, $by)) {
+                $this->connection->commit();
+
+                return 'rowNotAssignable';
+            }
+
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
+
+            throw $e;
+        }
+
+        return null;
+    }
+
+    /**
+     * An open foreign refund, with its order locked; call in a transaction.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function openRefund(int $eventId): array|null
+    {
+        $orderId = (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_provider_event WHERE id = ?', [$eventId]);
+
+        if ($orderId < 1 || null === $this->orders->lockOrder($orderId)) {
+            return null;
+        }
+
+        // Read after the lock: two operators resolving the same refund.
+        $event = $this->connection->fetchAssociative("SELECT * FROM tl_consho_provider_event WHERE id = ? AND kind = 'refund' AND state = 'open'", [$eventId]);
+
+        return false === $event ? null : $event;
+    }
+
+    /**
+     * Ties a refund row to the provider's refund; call under the order lock.
+     * An open event with that ID is resolved with it.
+     */
+    private function assignUnderLock(int $orderId, int $rowId, string $providerReference, int $now, string $by): bool
+    {
+        $taken = $this->connection->fetchOne(
+            "SELECT id FROM tl_consho_payment WHERE pid = ? AND method = 'refund' AND payoutReference = ?",
+            [$orderId, $providerReference],
+        );
+
+        if (false !== $taken) {
+            return false;
+        }
+
+        $changed = $this->connection->executeStatement(
+            "UPDATE tl_consho_payment SET payoutState = 'done', payoutReference = ?, payoutCheckedAt = ?, tstamp = ?
+              WHERE id = ? AND pid = ? AND method = 'refund' AND payoutReference = ''
+                AND payoutState IN ('manual', 'failed', 'sending', 'requested')",
+            [mb_substr($providerReference, 0, 255), $now, $now, $rowId, $orderId],
+        );
+
+        if (0 === $changed) {
+            return false;
+        }
+
+        $eventId = $this->connection->fetchOne("SELECT id FROM tl_consho_provider_event WHERE reference = ? AND kind = 'refund' AND state = 'open'", [$providerReference]);
+
+        if (false !== $eventId) {
+            $this->resolve((int) $eventId, 'assigned', $rowId, $now, $by);
+        }
+
+        return true;
+    }
+
+    private function resolve(int $eventId, string $state, int $rowId, int $now, string $by): void
+    {
+        $this->connection->update('tl_consho_provider_event', [
+            'state' => $state,
+            'resolvedRow' => $rowId,
+            'resolvedAt' => $now,
+            'resolvedBy' => mb_substr($by, 0, 64),
+            'tstamp' => $now,
+        ], ['id' => $eventId]);
+    }
+
     private function send(int $rowId, int $now): void
     {
         // The claim (see the class comment): only the process that turns the
@@ -352,9 +630,34 @@ class RefundPayout
 
         // Still `requested`: a second cron run at the same time must not
         // overwrite what the first stored.
-        $this->connection->executeStatement(
+        $reference = '' !== $result->reference ? $result->reference : $refund->payoutReference;
+        $stored = $this->connection->executeStatement(
             "UPDATE tl_consho_payment SET payoutState = ?, payoutReference = ?, payoutCheckedAt = ?, tstamp = ? WHERE id = ? AND payoutState = 'requested'",
-            [$result->outcome->value, '' !== $result->reference ? $result->reference : $refund->payoutReference, $now, $now, $rowId],
+            [$result->outcome->value, $reference, $now, $now, $rowId],
+        );
+
+        if (0 < $stored && RefundOutcome::Failed !== $result->outcome) {
+            $this->claimEvent($rowId, $reference, $now);
+        }
+    }
+
+    /**
+     * The provider may report an own refund before its answer reaches the
+     * row — by a notification of a module that does not mark its own
+     * refunds. That event is this row's: resolved, or it would ask to be
+     * recorded a second time.
+     */
+    private function claimEvent(int $rowId, string $reference, int $now): void
+    {
+        if ('' === $reference) {
+            return;
+        }
+
+        $this->connection->executeStatement(
+            "UPDATE tl_consho_provider_event SET state = 'assigned', resolvedRow = ?, resolvedAt = ?, tstamp = ?
+              WHERE reference = ? AND kind = 'refund' AND state = 'open'
+                AND pid = (SELECT pid FROM tl_consho_payment WHERE id = ?)",
+            [$rowId, $now, $now, mb_substr($reference, 0, 255), $rowId],
         );
     }
 
@@ -383,15 +686,34 @@ class RefundPayout
             $values,
         );
 
+        if (0 < $stored && RefundOutcome::Failed !== $result->outcome) {
+            $this->claimEvent($rowId, $result->reference, $now);
+        }
+
         if (0 < $stored || RefundOutcome::Failed === $result->outcome) {
             return;
         }
 
+        // Assigned meanwhile to a refund made in the provider's dashboard
+        // (assign()): that one stays — but if the provider paid this request
+        // too, the customer got the money twice.
+        $assigned = $this->connection->fetchOne("SELECT payoutReference FROM tl_consho_payment WHERE id = ? AND payoutState = 'done'", [$rowId]);
+
+        if (false !== $assigned && (string) $assigned !== $result->reference) {
+            $this->logger->warning(\sprintf('Refund %d was assigned to %s while the provider paid it back as %s — check for a double payment.', $rowId, (string) $assigned, $result->reference));
+
+            return;
+        }
+
         $this->logger->warning(\sprintf('Refund %d was settled by hand while the provider paid it back — check for a double payment.', $rowId));
-        $this->connection->executeStatement(
+        $marked = $this->connection->executeStatement(
             "UPDATE tl_consho_payment SET payoutState = ?, payoutReference = ?, payoutCheckedAt = ?, tstamp = ? WHERE id = ? AND payoutState = 'manual'",
             $values,
         );
+
+        if (0 < $marked) {
+            $this->claimEvent($rowId, $result->reference, $now);
+        }
     }
 
     /**

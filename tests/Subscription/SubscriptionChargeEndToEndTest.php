@@ -93,6 +93,9 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     /** @var \ArrayObject<int, string> */
     private \ArrayObject $log;
 
+    /** @var \ArrayObject<int, string> */
+    private \ArrayObject $general;
+
     public static function withoutRowLock(string $sql): string
     {
         return (string) preg_replace('/\s+FOR\s+UPDATE\s*$/i', '', $sql, 1);
@@ -105,6 +108,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         $this->card = new FakeRecurringHandler();
         $this->mails = new \ArrayObject();
         $this->log = new \ArrayObject();
+        $this->general = new \ArrayObject();
 
         $configuration = (new Configuration())->setMiddlewares([new class implements Middleware {
             public function wrap(Driver $driver): Driver
@@ -210,9 +214,12 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertEqualsWithDelta(8.33, (float) $order['grandTotal'], 0.001, 'ohne Gebühr');
         self::assertSame('failed', $this->connection->fetchOne('SELECT state FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
         self::assertSame('RE-00001', $this->connection->fetchOne("SELECT documentNumber FROM tl_consho_document WHERE pid = ? AND type = 'invoice'", [$orderId]));
-        self::assertSame([['subscriptionInvoice', $orderId, 'WEB-00090-1', 0]], $this->mails->getArrayCopy());
+        self::assertSame([['subscriptionInvoice', $orderId, 'WEB-00090-1', 0, 'failed']], $this->mails->getArrayCopy());
         self::assertSame(['cus_1|pm_2', 8], [$this->subscription()['mandate'], (int) $this->subscription()['mandateMethod']], 'das Mandat bleibt');
         self::assertContains('Charging follow-up order WEB-00091 failed: Karte abgelaufen.', $this->log->getArrayCopy());
+        // Planned, not an error: info in the general channel.
+        self::assertSame(['[info] Follow-up order WEB-00091 could not be charged and went "on account".'], $this->general->getArrayCopy());
+        self::assertNotContains('Follow-up order WEB-00091 could not be charged and went "on account".', $this->log->getArrayCopy());
 
         // The next period is charged again.
         $this->card->charge = ChargeResult::paid('8.33', 'ch_2');
@@ -321,7 +328,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $now + 86_400));
 
         self::assertSame(6, (int) $this->order($orderId)['paymentMethod']);
-        self::assertSame([['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0]], $this->mails->getArrayCopy());
+        self::assertSame([['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0, 'failed']], $this->mails->getArrayCopy());
     }
 
     /**
@@ -342,7 +349,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame(6, (int) $this->order($orderId)['paymentMethod']);
         self::assertSame('cancelled', $this->connection->fetchOne('SELECT state FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
         self::assertCount(1, $this->card->cancelled);
-        self::assertSame([['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0]], $this->mails->getArrayCopy());
+        self::assertSame([['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0, 'failed']], $this->mails->getArrayCopy());
 
         // A second run finds nothing more.
         self::assertSame([], $this->fallback()->lapse($createdAt + 8 * 86_400));
@@ -431,7 +438,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         self::assertSame(200, $this->processor()->process($this->tokenOf($orderId), new Request(), $lapsedAt + 86_400));
 
         self::assertSame(
-            [['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0], ['paymentReceived', $orderId]],
+            [['subscriptionChargePending', $orderId, 'WEB-00090-1', true], ['subscriptionInvoice', $orderId, 'WEB-00090-1', 0, 'failed'], ['paymentReceived', $orderId]],
             $this->mails->getArrayCopy(),
         );
     }
@@ -530,7 +537,28 @@ final class SubscriptionChargeEndToEndTest extends TestCase
             $this->links(),
             $this->mail(),
             $this->logger(),
+            $this->generalLogger(),
         );
+    }
+
+    /**
+     * The general channel, with the level: "[info] …".
+     */
+    private function generalLogger(): AbstractLogger
+    {
+        return new class($this->general) extends AbstractLogger {
+            /**
+             * @param \ArrayObject<int, string> $log
+             */
+            public function __construct(private readonly \ArrayObject $log)
+            {
+            }
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                $this->log->append('['.$level.'] '.$message);
+            }
+        };
     }
 
     private function processor(): NotificationProcessor
@@ -621,8 +649,9 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     {
         $mails = $this->mails;
         $mail = $this->createMock(OrderEventMail::class);
-        $mail->method('subscriptionInvoice')->willReturnCallback(static function (int $orderId, string $number, int $from, int $until, string $url, int $chargedAt = 0) use ($mails): bool {
-            $mails->append(['subscriptionInvoice', $orderId, $number, $chargedAt]);
+        $mail->method('subscriptionInvoice')->willReturnCallback(static function (int $orderId, string $number, int $from, int $until, string $url, int $chargedAt = 0, bool $chargeFailed = false) use ($mails): bool {
+            // "failed" only where it is set: the fallback (P95/P96) says so.
+            $mails->append([...['subscriptionInvoice', $orderId, $number, $chargedAt], ...($chargeFailed ? ['failed'] : [])]);
 
             return true;
         });
