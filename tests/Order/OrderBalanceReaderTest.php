@@ -205,6 +205,18 @@ final class OrderBalanceReaderTest extends TestCase
         self::assertTrue($balance->paymentSettled());
     }
 
+    public function testEineKorrekturZaehltAlsTeilDerZahlungNichtAlsErstattung(): void
+    {
+        // 100 booked by mistake, 10 received: the correction takes back 90.
+        $this->connection->insert('tl_consho_payment', ['id' => 7, 'pid' => self::ORDER, 'amount' => '100.0000']);
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '-90.0000', 'method' => 'correction', 'refundOf' => 7]);
+
+        $balance = $this->balance();
+
+        self::assertSame(PaymentState::Partial, $balance->paymentState);
+        self::assertAmount('90', $balance->outstanding());
+    }
+
     private function balance(): OrderBalance
     {
         $reader = new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator());

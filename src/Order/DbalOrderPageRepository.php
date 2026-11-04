@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
 
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Document\Invoicing\Invoicing;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 
 /**
  * What the order page (7.7, C-10) reads — and the one thing it writes.
@@ -76,10 +77,13 @@ class DbalOrderPageRepository
      */
     public function payments(int $orderId): array
     {
-        return array_map(
-            static fn (array $row): array => ['method' => (string) $row['method'], 'amount' => (string) $row['amount']],
-            $this->connection->fetchAllAssociative('SELECT method, amount FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', [$orderId]),
-        );
+        // A correction is shown as part of the payment it corrects.
+        $rows = CorrectionRow::fold(array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'amount' => (string) $row['amount'], 'method' => (string) $row['method'], 'refundOf' => (int) $row['refundOf']],
+            $this->connection->fetchAllAssociative('SELECT id, method, amount, refundOf FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', [$orderId]),
+        ));
+
+        return array_map(static fn (array $row): array => ['method' => $row['method'], 'amount' => $row['amount']], $rows);
     }
 
     /**

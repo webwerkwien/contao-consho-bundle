@@ -86,6 +86,9 @@ final class WithdrawalBackendControllerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_delivery');
         DcaSchema::create($this->connection, 'tl_consho_delivery_item');
         DcaSchema::create($this->connection, 'tl_consho_document');
+        // Read by the refund's payout on every proposal and refund.
+        DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
+        DcaSchema::create($this->connection, 'tl_consho_provider_event');
 
         $this->connection->insert('tl_consho_shop', ['id' => 1]);
         // Currency and language as OrderFactory writes them; the DCA defaults
@@ -374,12 +377,46 @@ final class WithdrawalBackendControllerTest extends TestCase
     }
 
     /**
+     * Geldflüsse T5: an open refund made at the provider is offered to tick,
+     * the provider is then not preselected, and the ticked one goes through
+     * the confirmation and is booked first.
+     */
+    public function testEineFremdeErstattungWirdAngebotenUndMitGebucht(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $payouts = $this->payouts($card);
+        $paymentId = (int) $this->connection->fetchOne("SELECT id FROM tl_consho_payment WHERE reference = 'tr_1'");
+        $this->connection->insert('tl_consho_provider_event', ['id' => 9, 'pid' => 7, 'payment' => $paymentId, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '2.0000', 'currency' => 'EUR', 'state' => 'open']);
+
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'accept', 'accepted' => [1 => '1']]), payouts: $payouts)($this->dc()));
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'), payouts: $payouts)($this->dc());
+        self::assertMatchesRegularExpression('#name="foreign\[\]" id="ctrl_foreign_9" class="tl_checkbox" value="9">\s*<label for="ctrl_foreign_9">2,00\s€ \(re_x\)</label>#u', $html);
+        self::assertStringContainsString('name="throughProvider" id="ctrl_throughProvider" class="tl_checkbox" value="1">', $html, 'nicht vorgewählt');
+
+        // Geldflüsse H1: coming from "Nachträge", that refund is ticked.
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1&consho_foreign=9'), payouts: $payouts)($this->dc());
+        self::assertStringContainsString('id="ctrl_foreign_9" class="tl_checkbox" value="9" checked>', $html);
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'refund', 'shipping' => '0', 'throughProvider' => '1', 'foreign' => ['9']]), payouts: $payouts)($this->dc());
+        self::assertMatchesRegularExpression('#2,00\s€ sind beim Zahlungsanbieter schon zurückgezahlt#u', $html);
+        self::assertMatchesRegularExpression('#6,90\s€ werden über „Visa&quot;#u', $html);
+        self::assertStringContainsString('<input type="hidden" name="foreign[]" value="9">', $html);
+
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'refund', 'shipping' => '0', 'throughProvider' => '1', 'foreign' => ['9'], 'consho_confirmed' => '6.90']), payouts: $payouts)($this->dc()));
+
+        self::assertSame('assigned', $this->connection->fetchOne('SELECT state FROM tl_consho_provider_event WHERE id = 9'));
+        self::assertCount(1, $card->refunds);
+        self::assertSame('6.9000', $card->refunds[0]->amount);
+    }
+
+    /**
      * Block Zahlung Mollie: the order paid 22.80 through a provider that can
      * pay back (method 1, payment reference tr_1).
      */
     private function payouts(FakeRefundingHandler $card): RefundPayout
     {
-        DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
         $this->connection->insert('tl_consho_payment_attempt', ['id' => 30, 'pid' => 7, 'tokenHash' => 'h30', 'method' => 1, 'methodType' => 'card']);
         $this->connection->insert('tl_consho_payment', ['pid' => 7, 'amount' => '22.8000', 'attempt' => 30, 'reference' => 'tr_1', 'receivedAt' => self::RECEIVED - 86400]);
         $card->connection = $this->connection;
@@ -469,7 +506,12 @@ final class WithdrawalBackendControllerTest extends TestCase
             $this->createStub(OrderPageLink::class),
             $this->createStub(OrderEventMail::class),
             new MoneyFormatter(),
-            payouts: $payouts,
+            $payouts ?? new RefundPayout($this->connection, $orders, new class implements PaymentMethodLookupInterface {
+                public function byId(int $methodId): PaymentMethod|null
+                {
+                    return null;
+                }
+            }, new PaymentHandlers(new ServiceLocator([]))),
         );
 
         $loader = new FilesystemLoader();

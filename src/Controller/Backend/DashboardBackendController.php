@@ -233,6 +233,11 @@ final class DashboardBackendController
             $tiles[] = $this->tile($lang['complaints'] ?? 'Reklamationen', $work->complaints, $this->url('consho_order', OpenWorkReader::COMPLAINT, $shop));
         }
 
+        // Geldflüsse G4: rare like complaints, so only when there is one.
+        if ($this->may('consho_order') && $work->overpaid > 0) {
+            $tiles[] = $this->tile($lang['overpaid'] ?? 'Zu viel bezahlt', $work->overpaid, $this->url('consho_order', OpenWorkReader::OVERPAID, $shop));
+        }
+
         return $tiles;
     }
 

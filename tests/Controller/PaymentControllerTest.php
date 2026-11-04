@@ -23,6 +23,17 @@ class PaymentControllerTest extends TestCase
         self::assertSame('[0-9a-f]{64}', $route->requirements['token']);
     }
 
+    public function testDerWebhookEingangNurPerPostOhneAnfrageTokenMitZahlungsartImPfad(): void
+    {
+        $route = $this->route('webhook');
+
+        self::assertSame('consho_payment_webhook', $route->name);
+        self::assertSame('/_consho/payment/webhook/{method}', $route->path);
+        self::assertSame(['POST'], $route->methods);
+        self::assertFalse($route->defaults['_token_check']);
+        self::assertSame('\d+', $route->requirements['method']);
+    }
+
     public function testRueckkehrNurPerGetUndMitNormalerPruefung(): void
     {
         $route = $this->route('return');

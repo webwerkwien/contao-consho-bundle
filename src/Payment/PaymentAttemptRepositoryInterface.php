@@ -23,6 +23,29 @@ interface PaymentAttemptRepositoryInterface
     public function findByHash(string $tokenHash): PaymentAttempt|null;
 
     /**
+     * The newest attempt of the method carrying the provider's reference —
+     * how a fixed webhook address finds its attempt (spec Zahlung PayPal,
+     * PP1). An empty reference finds nothing.
+     */
+    public function findByReference(int $methodId, string $reference): PaymentAttempt|null;
+
+    public function byId(int $attemptId): PaymentAttempt|null;
+
+    /**
+     * Notes that the attempt's payment was found by asking the provider, not
+     * by its notification (PP2 d).
+     */
+    public function markPolled(int $attemptId, int $now): void;
+
+    /**
+     * How many payments of each method were found only by asking, since
+     * $since — the finding paymentWithoutWebhook.
+     *
+     * @return array<int, int> method ID => count
+     */
+    public function polledSince(int $since): array;
+
+    /**
      * The attempt, locked FOR UPDATE until the caller's transaction ends —
      * the lock between return and notification (spec 7.4, step 3).
      */

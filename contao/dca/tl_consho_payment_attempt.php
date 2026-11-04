@@ -40,6 +40,10 @@ $GLOBALS['TL_DCA']['tl_consho_payment_attempt'] = [
                  */
                 'tokenHash' => 'unique',
                 'pid,state' => 'index',
+
+                // The fixed webhook address of a method finds its attempt by
+                // the provider's reference (spec Zahlung PayPal, PP1).
+                'method,providerReference' => 'index',
             ],
         ],
     ],
@@ -92,5 +96,10 @@ $GLOBALS['TL_DCA']['tl_consho_payment_attempt'] = [
         // "Rechnung zum Abo" in its charged version (P97), and its failure
         // puts the order "on account" (P95).
         'charge' => ['sql' => ['type' => 'boolean', 'default' => false]],
+
+        // When the payment was found by asking the provider before the
+        // attempt lapsed, not by its notification (spec Zahlung PayPal,
+        // PP2 d); 0 otherwise. The finding paymentWithoutWebhook counts these.
+        'polled' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
     ],
 ];

@@ -42,7 +42,10 @@ final class PaymentReadinessIssueSource implements ConfigurationIssueSource
                 continue;
             }
 
-            foreach (array_unique($handler->methodProblems(MethodSettings::decode($row['jsonData'] ?? null))) as $code) {
+            $config = MethodSettings::decode($row['jsonData'] ?? null);
+            $config[PaymentReadinessInterface::METHOD_ID] = (int) $row['id'];
+
+            foreach (array_unique($handler->methodProblems($config)) as $code) {
                 $issues[] = new ConfigurationIssue(ConfigurationFinding::PaymentMethodNotReady, [
                     'method' => (string) $row['title'],
                     'reason' => $this->reason($type, $code),

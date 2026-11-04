@@ -17,9 +17,15 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
-use Webwerkwien\ContaoConshoBundle\Controller\Backend\ProviderEventBackendController;
+use Webwerkwien\ContaoConshoBundle\Controller\Backend\MoneyFlowBackendController;
+use Webwerkwien\ContaoConshoBundle\Order\DeliveryStateCalculator;
+use Webwerkwien\ContaoConshoBundle\Order\MoneyFlows;
+use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReader;
+use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
 use Webwerkwien\ContaoConshoBundle\Payment\Aftermath\PaymentClaim;
@@ -30,11 +36,14 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Payment\FakeRefundingHandler;
+use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 
 /**
- * Spec 9: "Nachträge" at an order — real template, real RefundPayout.
+ * "Geldflüsse" at an order (block Geldflüsse, 3.6), with the actions of the
+ * former "Nachträge" (spec 9) — real template, real RefundPayout and
+ * MoneyFlows.
  */
-final class ProviderEventBackendControllerTest extends TestCase
+final class MoneyFlowBackendControllerTest extends TestCase
 {
     private Connection $connection;
 
@@ -55,17 +64,20 @@ final class ProviderEventBackendControllerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt', 'tl_consho_provider_event'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_order_status', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_payment', 'tl_consho_payment_attempt', 'tl_consho_provider_event'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
-        $this->connection->insert('tl_consho_order', ['id' => 1, 'orderNumber' => 'WEB-1', 'currency' => 'EUR', 'language' => 'de']);
+        WithdrawalSchema::create($this->connection);
+
+        $this->connection->insert('tl_consho_order', ['id' => 1, 'orderNumber' => 'WEB-1', 'currency' => 'EUR', 'language' => 'de', 'grandTotal' => '30.0000']);
         $this->connection->insert('tl_consho_payment_attempt', ['id' => 10, 'pid' => 1, 'tokenHash' => 'h10', 'method' => 1, 'methodType' => 'card']);
         $this->connection->insert('tl_consho_payment', ['id' => 5, 'pid' => 1, 'amount' => '30.0000', 'receivedAt' => 100, 'attempt' => 10, 'reference' => 'tr_1', 'method' => 'Karte']);
         $this->connection->insert('tl_consho_provider_event', ['id' => 1, 'pid' => 1, 'payment' => 5, 'kind' => 'chargeback', 'reference' => 'chb_1', 'amount' => '30.0000', 'currency' => 'EUR', 'reason' => 'MD06', 'occurredAt' => 1_800_000_000, 'state' => 'open']);
         $this->connection->insert('tl_consho_provider_event', ['id' => 2, 'pid' => 1, 'payment' => 5, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '10.0000', 'currency' => 'EUR', 'occurredAt' => 1_800_000_100, 'state' => 'open']);
 
         require __DIR__.'/../../../contao/languages/de/tl_consho_order.php';
+        require __DIR__.'/../../../contao/languages/de/tl_consho_payment.php';
     }
 
     protected function tearDown(): void
@@ -76,6 +88,8 @@ final class ProviderEventBackendControllerTest extends TestCase
     public function testThePageListsTheEventsWithWhatCanBeDone(): void
     {
         $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-10.0000', 'method' => 'refund', 'payoutState' => 'manual', 'reference' => 'W-1']);
+        // The chargeback's row, as ProviderEventBooker writes it.
+        $this->connection->insert('tl_consho_payment', ['id' => 6, 'pid' => 1, 'amount' => '-30.0000', 'method' => 'chargeback', 'refundOf' => 5, 'payoutReference' => 'chb_1', 'receivedAt' => 1_800_000_000]);
 
         $html = $this->controller(Request::create('/contao?do=consho_order&key=followUps&id=1'))($this->dc());
 
@@ -87,6 +101,56 @@ final class ProviderEventBackendControllerTest extends TestCase
         self::assertStringContainsString('<option value="8">', $html);
         self::assertStringContainsString('Gutschrift oder Steuerkorrektur entsteht dabei nicht', $html);
         self::assertStringContainsString('name="REQUEST_TOKEN" value="tok"', $html);
+    }
+
+    /**
+     * Geldflüsse 3.6: the balance on top, every movement in time below —
+     * a refund with its way and its withdrawal, a correction with its
+     * reason, a refund made at the provider not booked yet.
+     */
+    public function testTheBalanceAndTheMovementsInTime(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 4, 'pid' => 1, 'number' => 'WEB-1-W1', 'state' => 'accepted', 'refundedAt' => 300, 'refundDocument' => 12]);
+        $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-5.0000', 'method' => 'refund', 'refundOf' => 5, 'payoutState' => 'manual', 'reference' => 'WEB-1-W1', 'receivedAt' => 300]);
+        $this->connection->insert('tl_consho_payment', ['id' => 9, 'pid' => 1, 'amount' => '-2.0000', 'method' => 'correction', 'refundOf' => 5, 'reference' => 'Tippfehler', 'receivedAt' => 200]);
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+
+        // Received 30 less the correction, 5 paid back, 10 back at the provider.
+        self::assertMatchesRegularExpression('#Bezahlt</td>\s*<td[^>]*>28,00\s€#u', $html);
+        self::assertMatchesRegularExpression('#Zurückgezahlt</td>\s*<td[^>]*>5,00\s€#u', $html);
+        self::assertMatchesRegularExpression('#Beim Zahlungsanbieter erstattet, noch nicht erfasst</td>\s*<td[^>]*>10,00\s€#u', $html);
+        self::assertMatchesRegularExpression('#<strong>Offen</strong></td>\s*<td[^>]*><strong>7,00\s€#u', $html);
+
+        $payment = strpos($html, '<strong>Zahlung</strong>');
+        self::assertMatchesRegularExpression('#<strong>Korrektur</strong>\s*— Grund: Tippfehler#u', $html);
+        $correction = strpos($html, '<strong>Korrektur</strong>');
+        $refund = strpos($html, '<strong>Rückzahlung</strong>');
+        $foreign = strpos($html, '<strong>Erstattung beim Zahlungsanbieter</strong>');
+        self::assertNotFalse($payment);
+        self::assertTrue($payment < $correction && $correction < $refund && $refund < $foreign, 'zeitlich: '.json_encode([$payment, $correction, $refund, $foreign]));
+
+        self::assertStringContainsString('von Hand', $html, 'der Weg der Rückzahlung');
+        self::assertStringContainsString('href="/contao?do=consho_withdrawal&amp;key=processWithdrawal&amp;id=4">Widerruf WEB-1-W1</a>', $html);
+        self::assertStringContainsString('key=invoicePdf&amp;id=12">Rechnungskorrektur</a>', $html);
+        self::assertMatchesRegularExpression('#zur Zahlung über 30,00\s€ vom#u', $html);
+
+        // The operations of the payment list, where they apply (PaymentActions).
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;key=refundPayment&amp;id=5"', $html, '13 € left at the payment');
+        self::assertStringNotContainsString('key=refundPayment&amp;id=8"', $html, 'a refund is not refunded');
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=edit&amp;id=9"', $html, 'not locked');
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;id=1" class="header_edit">Zahlungsliste</a>', $html);
+    }
+
+    public function testACancelledPaidOrderShowsWhatIsTooMuch(): void
+    {
+        $this->connection->update('tl_consho_order', ['cancelledAt' => 100], ['id' => 1]);
+        $this->connection->delete('tl_consho_provider_event', ['id' => 2]);
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+
+        self::assertStringContainsString('Forderung (storniert)', $html);
+        self::assertMatchesRegularExpression('#<strong>Zu viel bezahlt</strong></td>\s*<td[^>]*><strong>30,00\s€#u', $html);
     }
 
     public function testAStandingChargebackOffersTheClaim(): void
@@ -140,6 +204,68 @@ final class ProviderEventBackendControllerTest extends TestCase
         self::assertSame('re_x', $this->connection->fetchOne('SELECT payoutReference FROM tl_consho_payment WHERE id = 8'));
     }
 
+    /**
+     * Geldflüsse J3: a refund that names no payment is offered the payments
+     * whose rest covers it, and tied to the one chosen.
+     */
+    public function testARefundWithoutPaymentIsAssignedToOne(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-4.0000', 'method' => 'refund', 'payoutState' => 'manual', 'receivedAt' => 300]);
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+
+        self::assertStringContainsString('<input type="hidden" name="consho_action" value="assignPayment">', $html);
+        self::assertStringContainsString('<input type="hidden" name="consho_row" value="8">', $html);
+        // 30 received, 10 already back at the provider: 20 left.
+        self::assertMatchesRegularExpression('#<option value="5">30,00\s€ vom [0-9.]+, offen 20,00\s€</option>#u', $html);
+
+        $this->redirected(fn () => $this->controller($this->post(['consho_action' => 'assignPayment', 'consho_row' => '8', 'consho_payment' => '5']))($this->dc()));
+
+        self::assertSame(5, (int) $this->connection->fetchOne('SELECT refundOf FROM tl_consho_payment WHERE id = 8'));
+        self::assertSame(['addConfirmation', 'Die Rückzahlung ist der Zahlung zugeordnet.'], $this->messages[0]);
+        self::assertSame([], $this->recorded, 'no sum changed');
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+        self::assertStringNotContainsString('value="assignPayment"', $html);
+    }
+
+    /**
+     * Geldflüsse H1, H2: while a withdrawal waits for its refund, the
+     * foreign refund leads there, ticked, and is not recorded here.
+     */
+    public function testAWaitingWithdrawalTakesTheRefund(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 7, 'pid' => 1, 'number' => 'WEB-1-W1', 'state' => 'accepted']);
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 8, 'pid' => 1, 'number' => 'WEB-1-W2', 'state' => 'accepted', 'refundedAt' => 100]);
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 9, 'pid' => 1, 'number' => 'WEB-1-W3', 'state' => 'rejected']);
+        $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-10.0000', 'method' => 'refund', 'payoutState' => 'manual']);
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=followUps&id=1'))($this->dc());
+
+        self::assertStringContainsString('href="/contao?do=consho_withdrawal&amp;key=processWithdrawal&amp;id=7&amp;consho_foreign=2"', $html);
+        self::assertStringContainsString('Zum Widerruf WEB-1-W1', $html);
+        self::assertStringNotContainsString('WEB-1-W2', $html, 'erstattet');
+        self::assertStringNotContainsString('WEB-1-W3', $html, 'abgelehnt');
+        self::assertStringNotContainsString('In Consho erfassen', $html);
+        self::assertStringContainsString('<option value="8">', $html, 'Zuordnen bleibt');
+
+        $this->redirected(fn () => $this->controller($this->post(['consho_action' => 'record', 'consho_event' => '2']))($this->dc()));
+
+        self::assertSame('open', $this->connection->fetchOne('SELECT state FROM tl_consho_provider_event WHERE id = 2'));
+        self::assertSame('addError', $this->messages[0][0]);
+        self::assertStringContainsString('wartet ein Widerruf', $this->messages[0][1]);
+    }
+
+    public function testAtACancelledOrderRecordingIsTheCancellationsRefund(): void
+    {
+        $this->connection->update('tl_consho_order', ['cancelledAt' => 100], ['id' => 1]);
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=followUps&id=1'))($this->dc());
+
+        self::assertStringContainsString('In Consho erfassen', $html);
+        self::assertStringContainsString('Rückzahlung dieser Stornierung', $html);
+    }
+
     public function testAnEventOfAnotherOrderIsNotFound(): void
     {
         $this->connection->insert('tl_consho_provider_event', ['id' => 3, 'pid' => 2, 'kind' => 'refund', 'reference' => 're_other', 'amount' => '1.0000', 'state' => 'open']);
@@ -154,6 +280,19 @@ final class ProviderEventBackendControllerTest extends TestCase
         $this->expectException(AccessDeniedHttpException::class);
 
         $this->controller($this->post(['consho_action' => 'record', 'consho_event' => '2']), payments: false)($this->dc());
+    }
+
+    public function testAssigningAPaymentNeedsThePermissionToEditPayments(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-4.0000', 'method' => 'refund', 'payoutState' => 'manual', 'receivedAt' => 300]);
+
+        try {
+            $this->controller($this->post(['consho_action' => 'assignPayment', 'consho_row' => '8', 'consho_payment' => '5']), payments: false)($this->dc());
+            self::fail('expected AccessDeniedHttpException');
+        } catch (AccessDeniedHttpException) {
+        }
+
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT refundOf FROM tl_consho_payment WHERE id = 8'));
     }
 
     public function testThePageNeedsThePermissionOnTheOrder(): void
@@ -180,7 +319,7 @@ final class ProviderEventBackendControllerTest extends TestCase
         }
     }
 
-    private function controller(Request $request, bool $order = true, bool $payments = true): ProviderEventBackendController
+    private function controller(Request $request, bool $order = true, bool $payments = true): MoneyFlowBackendController
     {
         $requests = new RequestStack();
         $requests->push($request);
@@ -242,7 +381,12 @@ final class ProviderEventBackendControllerTest extends TestCase
             return $this->claimAnswer;
         });
 
-        return new ProviderEventBackendController($this->connection, $security, $framework, $requests, $twig, $payout, $recorded, $claims);
+        $router = $this->createStub(UrlGeneratorInterface::class);
+        $router->method('generate')->willReturnCallback(static fn (string $route, array $params): string => '/contao?'.http_build_query($params));
+
+        $flows = new MoneyFlows($this->connection, new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator()));
+
+        return new MoneyFlowBackendController($this->connection, $security, $framework, $requests, $twig, $payout, $recorded, $claims, new MoneyFormatter(), $router, $flows);
     }
 
     private function dc(): DataContainer

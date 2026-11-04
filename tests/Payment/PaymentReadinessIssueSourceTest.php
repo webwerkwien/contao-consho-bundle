@@ -50,7 +50,10 @@ class PaymentReadinessIssueSourceTest extends TestCase
     {
         $issues = $this->source()->issues();
 
-        self::assertSame([['key' => 'test_1'], ['key' => 'live_2']], $this->asked, 'published methods only, each with its own settings');
+        self::assertSame([
+            ['key' => 'test_1', PaymentReadinessInterface::METHOD_ID => 1],
+            ['key' => 'live_2', PaymentReadinessInterface::METHOD_ID => 2],
+        ], $this->asked, 'published methods only, each with its own settings and its ID');
         self::assertEquals([
             new ConfigurationIssue(ConfigurationFinding::PaymentMethodNotReady, ['method' => 'Karte', 'reason' => 'Ein Test-Schlüssel nimmt kein Geld an.']),
             new ConfigurationIssue(ConfigurationFinding::PaymentMethodNotReady, ['method' => 'Karte', 'reason' => 'ready: licenceInvalid']),

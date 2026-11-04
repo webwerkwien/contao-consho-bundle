@@ -13,6 +13,7 @@ use Symfony\Component\Uid\Uuid;
 use Webwerkwien\ContaoConshoBundle\Checkout\MethodSettings;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\CashOnDeliveryHandler;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 use Webwerkwien\ContaoConshoBundle\Payment\InvoicePaymentHandler;
 use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
@@ -108,7 +109,11 @@ final class DbalDocumentSource implements DocumentSourceInterface
             return [];
         }
 
-        $rows = $this->connection->fetchAllAssociative('SELECT method, amount FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', [$orderId]);
+        // A correction is shown as part of the payment it corrects.
+        $rows = CorrectionRow::fold(array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'amount' => (string) $row['amount'], 'method' => (string) $row['method'], 'refundOf' => (int) $row['refundOf']],
+            $this->connection->fetchAllAssociative('SELECT id, method, amount, refundOf FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', [$orderId]),
+        ));
 
         // Four places whatever the database returns: MySQL hands back
         // "-1.0000", SQLite "-1" — the snapshot

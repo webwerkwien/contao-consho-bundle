@@ -88,6 +88,9 @@ final class WithdrawalProcessingTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
         DcaSchema::create($this->connection, 'tl_consho_delivery_item');
+        // Read by the refund's payout on every refund.
+        DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
+        DcaSchema::create($this->connection, 'tl_consho_provider_event');
 
         $this->connection->insert('tl_consho_order', ['id' => self::ORDER, 'shop' => 1, 'orderNumber' => 'WEB-00077', 'currency' => 'EUR', 'language' => 'de', 'grandTotal' => '100.0000']);
         $this->connection->insert('tl_consho_order_item', ['id' => 1, 'pid' => self::ORDER, 'productName' => 'Wanderstock', 'quantity' => '2.0000', 'unitPrice' => '25.0000', 'taxRate' => '20.0000', 'taxAmount' => '10.0000', 'lineTotal' => '60.0000']);
@@ -351,11 +354,10 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * EZ-4: the page proposes onto the vouchers only what they can take back,
-     * and a share typed above it is refused naming that most — not cut down
-     * without a word.
+     * EZ-4: onto the vouchers goes only what they can take back; the rest
+     * goes to the method (WG11: the share is fixed, not typed).
      */
-    public function testMehrAlsDerTopfHergibtWirdAbgelehnt(): void
+    public function testAufDenGutscheinNurWasDerTopfHergibt(): void
     {
         $return = $this->einzweckGutscheinBezahlt();
         $this->connection->update('tl_consho_order_item', ['taxClass' => 4], ['id' => 2]);
@@ -364,10 +366,9 @@ final class WithdrawalProcessingTest extends TestCase
         // The hiking pole (30) is in the voucher's pot, the rucksack is not.
         self::assertSame('30.0000', $this->processing(vouchers: $return)->proposal(self::WITHDRAWAL)['vouchers']);
 
-        $result = $this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW, null, '40');
-        self::assertFalse($result->done);
-        self::assertSame(['invalidVoucherShare', ['30.00']], [$result->key, $result->params]);
-        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        // Booked as proposed: 30 onto the voucher, the rucksack to the method.
+        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
+        self::assertTrue(BigDecimal::of('-30')->isEqualTo((string) $this->connection->fetchOne("SELECT SUM(amount) FROM tl_consho_payment WHERE amount < 0 AND reference = 'voucher:1'")));
     }
 
     /**
@@ -385,35 +386,18 @@ final class WithdrawalProcessingTest extends TestCase
     }
 
     /**
-     * WG11: the operator changes the split — 10 to the voucher, 20 to the
-     * payment method.
+     * WG11: the split is fixed — the voucher paid 40, so all 30 of this
+     * refund go back onto it, nothing to the payment method.
      */
-    public function testDieAufteilungLaesstSichAendern(): void
+    public function testDieAufteilungIstFest(): void
     {
         $return = $this->gutscheinBezahlt();
         $this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
 
-        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW, null, '10')->done);
+        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
 
-        self::assertEquals([-10, -20], $this->connection->fetchFirstColumn('SELECT amount FROM tl_consho_payment WHERE amount < 0 ORDER BY id'));
-        self::assertSame(['voucher:1', 'WEB-00077-W1'], $this->connection->fetchFirstColumn('SELECT reference FROM tl_consho_payment WHERE amount < 0 ORDER BY id'));
-    }
-
-    /**
-     * More than the voucher paid cannot go to it — and rejected means:
-     * nothing booked.
-     */
-    public function testMehrAlsBezahltGehtNichtAufDenGutschein(): void
-    {
-        $return = $this->gutscheinBezahlt();
-        $this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
-
-        $result = $this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW, null, '41');
-
-        self::assertFalse($result->done);
-        self::assertSame('invalidVoucherShare', $result->key);
-        self::assertSame(['40.00'], $result->params);
-        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        self::assertEquals([-30], $this->connection->fetchFirstColumn('SELECT amount FROM tl_consho_payment WHERE amount < 0 ORDER BY id'));
+        self::assertSame(['voucher:1'], $this->connection->fetchFirstColumn('SELECT reference FROM tl_consho_payment WHERE amount < 0 ORDER BY id'));
     }
 
     /**
@@ -448,7 +432,7 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame(['0', '1'], array_map('strval', $this->connection->fetchFirstColumn('SELECT blocked FROM tl_consho_voucher WHERE id IN (2, 3) ORDER BY id')));
         self::assertTrue(BigDecimal::zero()->isEqualTo((string) $this->withdrawalRow()['valueCompensation']));
 
-        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW, null, '0')->done);
+        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
         self::assertTrue(BigDecimal::of('50')->isEqualTo((string) $this->withdrawalRow()['refundAmount']));
     }
 
@@ -525,6 +509,21 @@ final class WithdrawalProcessingTest extends TestCase
      * Block Zahlung Mollie (R1, R2): the payment method's part through the
      * provider — booked like before, paid out after the commit.
      */
+    /**
+     * Spec 9.6 B: a refund made at the provider and still open is named, so
+     * the form does not preselect paying the same money out again.
+     */
+    public function testOffeneFremdeErstattungStehtImVorschlag(): void
+    {
+        $payouts = $this->payouts(new FakeRefundingHandler());
+
+        self::assertSame([], $this->processing(payouts: $payouts)->proposal(self::WITHDRAWAL)['outside']);
+
+        $this->connection->insert('tl_consho_provider_event', ['id' => 3, 'pid' => self::ORDER, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '2.0000', 'currency' => 'EUR', 'state' => 'open']);
+
+        self::assertSame([['id' => 3, 'reference' => 're_x', 'amount' => '2.0000', 'currency' => 'EUR']], $this->processing(payouts: $payouts)->proposal(self::WITHDRAWAL)['outside']);
+    }
+
     public function testUeberDieZahlungsartZurueckgezahlt(): void
     {
         $card = new FakeRefundingHandler();
@@ -565,7 +564,7 @@ final class WithdrawalProcessingTest extends TestCase
         $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true);
 
         self::assertFalse($result->done);
-        self::assertSame(['confirmPayout', ['30.00', '0.00'], [ProcessingResult::MONEY, ProcessingResult::MONEY]], [$result->key, $result->params, $result->kinds]);
+        self::assertSame(['confirmPayout', ['30.00', '0.00', '0.00'], [ProcessingResult::MONEY, ProcessingResult::MONEY, ProcessingResult::MONEY]], [$result->key, $result->params, $result->kinds]);
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
         self::assertNull($this->withdrawalRow()['refundedAt']);
         self::assertSame([], $card->refunds);
@@ -611,7 +610,71 @@ final class WithdrawalProcessingTest extends TestCase
         $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
         $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true);
 
-        self::assertSame(['confirmPayout', ['20.00', '10.00']], [$result->key, $result->params]);
+        self::assertSame(['confirmPayout', ['20.00', '10.00', '0.00']], [$result->key, $result->params]);
+    }
+
+    /**
+     * Geldflüsse T5: a refund made at the provider, ticked, is part of the
+     * refund — booked first, and the provider pays only the rest.
+     */
+    public function testEineAngekreuzteFremdeErstattungWirdZuerstGebucht(): void
+    {
+        $card = new FakeRefundingHandler();
+        $card->refund = RefundResult::done('re_1');
+        $payouts = $this->payouts($card);
+        $paymentId = (int) $this->connection->fetchOne("SELECT id FROM tl_consho_payment WHERE reference = 'tr_1'");
+        $this->connection->insert('tl_consho_provider_event', ['id' => 9, 'pid' => self::ORDER, 'payment' => $paymentId, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '10.0000', 'currency' => 'EUR', 'state' => 'open']);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true, foreign: [9]);
+        self::assertSame(['confirmPayout', ['20.00', '0.00', '10.00']], [$result->key, $result->params]);
+
+        $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, throughProvider: true, confirmed: '20.00', foreign: [9], by: 'k.muster');
+        self::assertTrue($result->done, $result->key);
+
+        // First the refund made at the provider, then the provider's own.
+        self::assertSame([['re_x', '-10'], ['re_1', '-20']], array_map(
+            static fn (array $row): array => [(string) $row['payoutReference'], (string) BigDecimal::of((string) $row['amount'])->strippedOfTrailingZeros()],
+            $this->connection->fetchAllAssociative('SELECT payoutReference, amount FROM tl_consho_payment WHERE amount < 0 ORDER BY id'),
+        ));
+        self::assertSame(['assigned', 'k.muster'], array_values((array) $this->connection->fetchAssociative('SELECT state, resolvedBy FROM tl_consho_provider_event WHERE id = 9')));
+        self::assertCount(1, $card->refunds);
+        self::assertSame('20.0000', $card->refunds[0]->amount);
+    }
+
+    /**
+     * Without the provider: the ticked refund first, the rest by hand. While
+     * one is open, the form does not preselect the provider (proposal).
+     */
+    public function testFremdeErstattungOhneAnbieterRestVonHand(): void
+    {
+        $payouts = $this->payouts(new FakeRefundingHandler());
+        $paymentId = (int) $this->connection->fetchOne("SELECT id FROM tl_consho_payment WHERE reference = 'tr_1'");
+        $this->connection->insert('tl_consho_provider_event', ['id' => 9, 'pid' => self::ORDER, 'payment' => $paymentId, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '10.0000', 'currency' => 'EUR', 'state' => 'open']);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        self::assertTrue($this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, foreign: [9])->done);
+
+        self::assertSame([['done', '-10'], ['manual', '-20']], array_map(
+            static fn (array $row): array => [(string) $row['payoutState'], (string) BigDecimal::of((string) $row['amount'])->strippedOfTrailingZeros()],
+            $this->connection->fetchAllAssociative('SELECT payoutState, amount FROM tl_consho_payment WHERE amount < 0 ORDER BY id'),
+        ));
+    }
+
+    public function testEineUnpassendeFremdeErstattungBuchtNichts(): void
+    {
+        $payouts = $this->payouts(new FakeRefundingHandler());
+        $paymentId = (int) $this->connection->fetchOne("SELECT id FROM tl_consho_payment WHERE reference = 'tr_1'");
+        // More than this refund gives back to the payment method (30).
+        $this->connection->insert('tl_consho_provider_event', ['id' => 9, 'pid' => self::ORDER, 'payment' => $paymentId, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '40.0000', 'currency' => 'EUR', 'state' => 'open']);
+
+        $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        $result = $this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW, foreign: [9]);
+
+        self::assertSame([false, 'foreignInvalid'], [$result->done, $result->key]);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        self::assertNull($this->withdrawalRow()['refundedAt']);
+        self::assertSame([], $this->documentCalls);
     }
 
     public function testOhneHakenWirdNurGebucht(): void
@@ -622,10 +685,18 @@ final class WithdrawalProcessingTest extends TestCase
         $this->processing(payouts: $payouts)->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
         self::assertTrue($this->processing(payouts: $payouts)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
 
-        $row = $this->connection->fetchAssociative('SELECT payoutState, refundOf FROM tl_consho_payment WHERE amount < 0');
+        // Geldflüsse T3: by hand, but tied to the payment it pays back — so
+        // "Erstatten" no longer offers it (D1) and a refund made at the
+        // provider can be assigned to it (D2).
+        $paymentId = (int) $this->connection->fetchOne("SELECT id FROM tl_consho_payment WHERE reference = 'tr_1'");
+        $row = $this->connection->fetchAssociative('SELECT id, amount, payoutState, refundOf FROM tl_consho_payment WHERE amount < 0');
         self::assertIsArray($row);
-        self::assertSame(['', 0], [$row['payoutState'], (int) $row['refundOf']]);
+        self::assertSame(['manual', $paymentId], [$row['payoutState'], (int) $row['refundOf']]);
         self::assertSame([], $card->refunds);
+        self::assertSame([$paymentId => '70.0000'], $payouts->refundable(self::ORDER));
+
+        $this->connection->insert('tl_consho_provider_event', ['pid' => self::ORDER, 'payment' => $paymentId, 'kind' => 'refund', 'reference' => 're_x', 'amount' => (string) BigDecimal::of((string) $row['amount'])->negated(), 'currency' => 'EUR', 'state' => 'open']);
+        self::assertSame([(int) $row['id']], array_map(static fn (array $assignable): int => (int) $assignable['id'], $payouts->assignableRows((int) $this->connection->lastInsertId())));
     }
 
     /**
@@ -1159,13 +1230,32 @@ final class WithdrawalProcessingTest extends TestCase
             $links,
             $mail,
             new MoneyFormatter(),
+            $payouts ?? $this->noProvider(),
             $subscriptions,
             null,
             $stock,
             $vouchers,
             $revocations,
-            $payouts,
         );
+    }
+
+    /**
+     * The payout without any provider that could pay back: the method's part
+     * is booked by hand against the payments.
+     */
+    private function noProvider(): RefundPayout
+    {
+        $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
+        $orders->method('lockOrder')->willReturn(['id' => (string) self::ORDER]);
+
+        $methods = new class implements PaymentMethodLookupInterface {
+            public function byId(int $methodId): PaymentMethod|null
+            {
+                return null;
+            }
+        };
+
+        return new RefundPayout($this->connection, $orders, $methods, new PaymentHandlers(new ServiceLocator([])));
     }
 
     /**
@@ -1174,7 +1264,6 @@ final class WithdrawalProcessingTest extends TestCase
      */
     private function payouts(FakeRefundingHandler $card): RefundPayout
     {
-        DcaSchema::create($this->connection, 'tl_consho_payment_attempt');
         $this->connection->insert('tl_consho_payment_attempt', ['id' => 30, 'pid' => self::ORDER, 'tokenHash' => 'h30', 'method' => 1, 'methodType' => 'card']);
         $this->connection->update('tl_consho_payment', ['attempt' => 30, 'reference' => 'tr_1', 'receivedAt' => self::NOW - 86400], ['pid' => self::ORDER]);
 

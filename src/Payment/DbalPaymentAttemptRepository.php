@@ -45,6 +45,42 @@ final class DbalPaymentAttemptRepository implements PaymentAttemptRepositoryInte
         ));
     }
 
+    public function findByReference(int $methodId, string $reference): PaymentAttempt|null
+    {
+        if ('' === $reference) {
+            return null;
+        }
+
+        return self::attemptOf($this->connection->fetchAssociative(
+            \sprintf('SELECT %s FROM tl_consho_payment_attempt WHERE method = ? AND providerReference = ? ORDER BY id DESC LIMIT 1', self::COLUMNS),
+            [$methodId, $reference],
+        ));
+    }
+
+    public function byId(int $attemptId): PaymentAttempt|null
+    {
+        return self::attemptOf($this->connection->fetchAssociative(
+            \sprintf('SELECT %s FROM tl_consho_payment_attempt WHERE id = ?', self::COLUMNS),
+            [$attemptId],
+        ));
+    }
+
+    public function markPolled(int $attemptId, int $now): void
+    {
+        $this->connection->update('tl_consho_payment_attempt', ['polled' => $now], ['id' => $attemptId]);
+    }
+
+    public function polledSince(int $since): array
+    {
+        $counts = [];
+
+        foreach ($this->connection->fetchAllAssociative('SELECT method, COUNT(*) AS n FROM tl_consho_payment_attempt WHERE polled >= ? AND polled > 0 GROUP BY method', [$since]) as $row) {
+            $counts[(int) $row['method']] = (int) $row['n'];
+        }
+
+        return $counts;
+    }
+
     public function lock(int $attemptId): PaymentAttempt|null
     {
         return self::attemptOf($this->connection->fetchAssociative(

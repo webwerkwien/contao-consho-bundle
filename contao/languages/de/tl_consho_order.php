@@ -73,7 +73,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendFailed'] = 'Die Bestätigung der B
 // E8: postpone the payment due date
 $GLOBALS['TL_LANG']['tl_consho_order']['deferPayment'] = ['Zahlungsziel verschieben', 'Das Zahlungsziel der Bestellung ID %s auf einen späteren Tag legen'];
 $GLOBALS['TL_LANG']['tl_consho_order']['followUps'] = ['Nachträge', 'Rückbuchungen und Erstattungen, die der Zahlungsanbieter zur Bestellung ID %s nachträglich gemeldet hat'];
-$GLOBALS['TL_LANG']['tl_consho_order']['followUpsNone'] = 'Keine Nachträge — der Zahlungsanbieter hat zu dieser Bestellung keine Rückbuchung oder Erstattung gemeldet';
+$GLOBALS['TL_LANG']['tl_consho_order']['moneyFlows'] = ['Geldflüsse', 'Saldo und alle Geldbewegungen der Bestellung ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
     'back' => 'Zurück',
     'legend' => 'Nachträge',
@@ -88,10 +88,47 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
         'assigned' => 'einer Erstattungszeile zugeordnet',
     ],
     'reason' => 'Grund',
+    // Geldflüsse (3.6).
+    'balanceLegend' => 'Saldo',
+    'movementsLegend' => 'Bewegungen',
+    'noMovements' => 'Zu dieser Bestellung ist noch kein Geld geflossen.',
+    'balance' => [
+        'claim' => 'Forderung',
+        'claimCancelled' => 'Forderung (storniert)',
+        'received' => 'Bezahlt',
+        'refunded' => 'Zurückgezahlt',
+        'chargedBack' => 'Zurückgebucht',
+        'outside' => 'Beim Zahlungsanbieter erstattet, noch nicht erfasst',
+        'outstanding' => 'Offen',
+        'tooMuch' => 'Zu viel bezahlt',
+        'settled' => 'Ausgeglichen',
+    ],
+    'movements' => [
+        'payment' => 'Zahlung',
+        'refund' => 'Rückzahlung',
+        'correction' => 'Korrektur',
+        'chargeback' => 'Rückbuchung',
+        'chargebackReversal' => 'Rückbuchung aufgehoben',
+        'foreignRefund' => 'Erstattung beim Zahlungsanbieter',
+    ],
+    'providerId' => 'Kennung beim Zahlungsanbieter: %s',
+    'of' => 'zur Zahlung über %s vom %s',
+    'locked' => 'gesperrt',
+    'withdrawalLink' => 'Widerruf %s',
+    'documentLink' => 'Rechnungskorrektur',
+    'paymentsLink' => 'Zahlungsliste',
+    'assignPayment' => 'Zahlung zuordnen',
+    'assignPaymentLabel' => 'Zahlung',
+    'assignOption' => '%s vom %s, offen %s',
+    'assignPaymentHelp' => 'Diese Rückzahlung nennt keine Zahlung, deshalb zeigt „Erstatten" an den Zahlungen zu viel als offen. Die Zahlung wählen, von der das Geld zurückging. Es fließt dabei kein Geld.',
+    'noPaymentToAssign' => 'Diese Rückzahlung nennt keine Zahlung, und keine Zahlung der Bestellung hat noch so viel offen. Den Betrag der Rückzahlung prüfen.',
     'record' => 'In Consho erfassen',
     'assign' => 'Einer Zeile zuordnen',
     'row' => 'Erstattungszeile',
-    'noDocuments' => 'Erfassen bucht nur das Geld. Eine Gutschrift oder Steuerkorrektur entsteht dabei nicht — dafür den Widerruf oder die Stornierung der Bestellung verwenden.',
+    'noDocuments' => 'Erfassen bucht nur das Geld, etwa für eine Überzahlung. Eine Gutschrift oder Steuerkorrektur entsteht dabei nicht — gehört die Erstattung zu einer Stornierung, die Bestellung zuerst stornieren.',
+    'recordCancelled' => 'Die Bestellung ist storniert, die Storno-Rechnung ist ausgestellt. Erfassen bucht die Erstattung als Rückzahlung dieser Stornierung.',
+    'toWithdrawal' => 'Zum Widerruf %s',
+    'toWithdrawalHelp' => 'Zu dieser Bestellung wartet ein Widerruf auf seine Erstattung. Gehört diese Erstattung dazu, dort zurückzahlen: Sie ist dort schon angekreuzt, und der Widerruf erstellt die Rechnungskorrektur. Erfassen ist bis dahin nicht möglich, sonst bliebe dem Widerruf nichts mehr zu erstatten.',
     'noRows' => 'Keine offene Erstattungszeile über diesen Betrag, der sie zugeordnet werden könnte.',
     'claim' => [
         'legend' => 'Zahlung einfordern',
@@ -102,6 +139,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
     'done' => [
         'record' => 'Die Erstattung ist in Consho erfasst.',
         'assign' => 'Die Erstattung ist der Zeile zugeordnet.',
+        'assignPayment' => 'Die Rückzahlung ist der Zahlung zugeordnet.',
         'claim' => 'Die Zahlungsaufforderung ist versendet.',
     ],
     'refused' => [
@@ -110,8 +148,10 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
         'notFuture' => 'Bitte einen Tag in der Zukunft wählen.',
         'mailNotSent' => 'Das Zahlungsziel ist gesetzt, die Zahlungsaufforderung konnte aber nicht versendet werden. Den Grund nennt das Systemlog.',
         'stateChanged' => 'Die Erstattung wurde inzwischen erfasst oder zugeordnet.',
+        'withdrawalOpen' => 'Zu dieser Bestellung wartet ein Widerruf auf seine Erstattung. Die Erstattung bitte dort zurückzahlen.',
         'exceeds' => 'Die Erstattung ist höher als das, was von der Zahlung noch nicht zurückgezahlt ist. Bitte im Konto beim Zahlungsanbieter nachsehen.',
         'rowNotAssignable' => 'Diese Zeile kann der Erstattung nicht zugeordnet werden: anderer Betrag, oder sie ist schon erledigt.',
+        'paymentNotAssignable' => 'Die Rückzahlung kann dieser Zahlung nicht zugeordnet werden: Sie hat nicht mehr so viel offen, oder die Rückzahlung ist schon zugeordnet.',
     ],
 ];
 $GLOBALS['TL_LANG']['tl_consho_order']['deferBack'] = 'Zurück';

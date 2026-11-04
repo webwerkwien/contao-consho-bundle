@@ -9,7 +9,9 @@
  * for how much was refunded.
  *
  * A refund is a row with a negative amount, which is why `amount` has no
- * `natural` regexp.
+ * `natural` regexp. Only Consho writes negative rows — refunds, chargebacks,
+ * corrections; what the operator types is money received
+ * (PaymentAmountListener).
  */
 $GLOBALS['TL_DCA']['tl_consho_payment'] = [
     'config' => [
@@ -67,6 +69,9 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
             'refundPayment' => ['href' => 'key=refundPayment', 'icon' => 'undo.svg', 'primary' => true],
             'refundRetry' => ['href' => 'key=refundRetry', 'icon' => 'sync.svg', 'primary' => true],
             'refundManual' => ['href' => 'key=refundManual', 'icon' => 'ok.svg', 'primary' => true],
+
+            // Geldflüsse E8: a locked payment booked too high.
+            'correctPayment' => ['href' => 'key=correctPayment', 'icon' => 'editor.svg', 'primary' => true],
         ],
     ],
 
@@ -128,8 +133,9 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
          * When this payment had consequences — an invoice, a status, a mail
          * (D-1, decision A2). From then on the mask is read-only and the row
          * cannot be deleted: an invoice would otherwise name a payment that
-         * no longer exists as it was. A correction is a counter-entry, a
-         * negative amount. Written by PaymentRecorded, never typed.
+         * no longer exists as it was. A correction is a counter-entry
+         * through "Korrigieren" (CorrectionRow). Written by PaymentRecorded,
+         * never typed.
          */
         'lockedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false]],
 
@@ -148,7 +154,8 @@ $GLOBALS['TL_DCA']['tl_consho_payment'] = [
          * A refund paid out through the provider (block Zahlung Mollie, 4.2).
          * Written by RefundPayout, never typed.
          *
-         * refundOf: the payment this negative row pays back; 0 for none.
+         * refundOf: the payment this row pays back, takes back (chargeback),
+         * gives back (its reversal) or corrects; 0 for none.
          * payoutState: '' for any row that is no such refund — and for refunds
          * booked before this existed, whose state nobody knows; a migration
          * claiming "paid out" would invent it. `manual` the operator pays,

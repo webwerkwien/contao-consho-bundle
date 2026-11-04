@@ -51,6 +51,50 @@ final class InMemoryPaymentAttempts implements PaymentAttemptRepositoryInterface
         return false === $id ? null : $this->attempts[$id];
     }
 
+    /** @var array<int, int> polled timestamp per attempt id */
+    public array $polled = [];
+
+    public function findByReference(int $methodId, string $reference): PaymentAttempt|null
+    {
+        if ('' === $reference) {
+            return null;
+        }
+
+        $found = null;
+
+        foreach ($this->attempts as $attempt) {
+            if ($attempt->methodId === $methodId && $attempt->providerReference === $reference) {
+                $found = $attempt;
+            }
+        }
+
+        return $found;
+    }
+
+    public function byId(int $attemptId): PaymentAttempt|null
+    {
+        return $this->attempts[$attemptId] ?? null;
+    }
+
+    public function markPolled(int $attemptId, int $now): void
+    {
+        $this->polled[$attemptId] = $now;
+    }
+
+    public function polledSince(int $since): array
+    {
+        $counts = [];
+
+        foreach ($this->polled as $id => $at) {
+            if ($at >= $since && isset($this->attempts[$id])) {
+                $method = $this->attempts[$id]->methodId;
+                $counts[$method] = ($counts[$method] ?? 0) + 1;
+            }
+        }
+
+        return $counts;
+    }
+
     public function lock(int $attemptId): PaymentAttempt|null
     {
         ++$this->locks;

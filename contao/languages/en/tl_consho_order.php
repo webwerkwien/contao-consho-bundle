@@ -73,7 +73,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendFailed'] = 'The confirmation of or
 // E8: move the payment term
 $GLOBALS['TL_LANG']['tl_consho_order']['deferPayment'] = ['Move payment term', 'Move the payment term of order ID %s to a later day'];
 $GLOBALS['TL_LANG']['tl_consho_order']['followUps'] = ['Follow-ups', 'Chargebacks and refunds the payment provider reported later for order ID %s'];
-$GLOBALS['TL_LANG']['tl_consho_order']['followUpsNone'] = 'No follow-ups — the payment provider reported no chargeback or refund for this order';
+$GLOBALS['TL_LANG']['tl_consho_order']['moneyFlows'] = ['Money flows', 'Balance and all money movements of order ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
     'back' => 'Back',
     'legend' => 'Follow-ups',
@@ -88,10 +88,47 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
         'assigned' => 'assigned to a refund line',
     ],
     'reason' => 'Reason',
+    // Money flows (3.6).
+    'balanceLegend' => 'Balance',
+    'movementsLegend' => 'Movements',
+    'noMovements' => 'No money has moved for this order yet.',
+    'balance' => [
+        'claim' => 'Claim',
+        'claimCancelled' => 'Claim (cancelled)',
+        'received' => 'Paid',
+        'refunded' => 'Paid back',
+        'chargedBack' => 'Charged back',
+        'outside' => 'Refunded at the payment provider, not recorded yet',
+        'outstanding' => 'Open',
+        'tooMuch' => 'Paid too much',
+        'settled' => 'Settled',
+    ],
+    'movements' => [
+        'payment' => 'Payment',
+        'refund' => 'Refund',
+        'correction' => 'Correction',
+        'chargeback' => 'Chargeback',
+        'chargebackReversal' => 'Chargeback reversed',
+        'foreignRefund' => 'Refund at the payment provider',
+    ],
+    'providerId' => 'ID at the payment provider: %s',
+    'of' => 'for the payment of %s on %s',
+    'locked' => 'locked',
+    'withdrawalLink' => 'Withdrawal %s',
+    'documentLink' => 'Invoice correction',
+    'paymentsLink' => 'Payment list',
+    'assignPayment' => 'Assign payment',
+    'assignPaymentLabel' => 'Payment',
+    'assignOption' => '%s of %s, %s left',
+    'assignPaymentHelp' => 'This refund names no payment, so "Erstatten" at the payments shows too much as left. Choose the payment the money went back from. No money moves.',
+    'noPaymentToAssign' => 'This refund names no payment, and no payment of the order has that much left. Check the amount of the refund.',
     'record' => 'Record in Consho',
     'assign' => 'Assign to a line',
     'row' => 'Refund line',
-    'noDocuments' => 'Recording books the money only. No credit note or tax correction is created — use the withdrawal or the cancellation of the order for those.',
+    'noDocuments' => 'Recording books the money only, for example for an overpayment. No credit note or tax correction is created — if the refund belongs to a cancellation, cancel the order first.',
+    'recordCancelled' => 'The order is cancelled and its cancellation invoice issued. Recording books the refund as the money paid back for this cancellation.',
+    'toWithdrawal' => 'To withdrawal %s',
+    'toWithdrawalHelp' => 'A withdrawal of this order is waiting for its refund. If this refund belongs to it, pay back there: it is ticked there already, and the withdrawal creates the invoice correction. Until then it cannot be recorded, or the withdrawal would have nothing left to refund.',
     'noRows' => 'No open refund line of this amount to assign it to.',
     'claim' => [
         'legend' => 'Claim payment',
@@ -102,6 +139,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
     'done' => [
         'record' => 'The refund is recorded in Consho.',
         'assign' => 'The refund is assigned to the line.',
+        'assignPayment' => 'The refund is assigned to the payment.',
         'claim' => 'The payment request has been sent.',
     ],
     'refused' => [
@@ -110,8 +148,10 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
         'notFuture' => 'Please choose a day in the future.',
         'mailNotSent' => 'The payment term is set, but the payment request could not be sent. The reason is in the system log.',
         'stateChanged' => 'The refund has been recorded or assigned meanwhile.',
+        'withdrawalOpen' => 'A withdrawal of this order is waiting for its refund. Please pay this refund back there.',
         'exceeds' => 'The refund is higher than what is left of the payment. Please check the payment provider\'s account.',
         'rowNotAssignable' => 'This line cannot be assigned to the refund: another amount, or it is settled already.',
+        'paymentNotAssignable' => 'The refund cannot be assigned to this payment: it has no longer that much left, or the refund is assigned already.',
     ],
 ];
 $GLOBALS['TL_LANG']['tl_consho_order']['deferBack'] = 'Back';

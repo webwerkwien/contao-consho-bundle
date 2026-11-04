@@ -3,7 +3,8 @@
   inside the back end frame by PaymentRefundBackendController; every form
   posts back to the same address with Contao's request token.
 
-  step: refund (the form), confirm (R5), retry, manual.
+  step: refund (the form), confirm (R5), retry, manual; correct (the form)
+  and correctConfirm for a correction of a locked payment (Geldflüsse E8).
 #}
 <div id="tl_buttons">
     <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.refundBack|default('Zurück') }}</a>
@@ -12,13 +13,14 @@
 {# Contao's own HTML. #}
 {{ messages|raw }}
 
-{% set legend %}{{ lang.refundLegend|default('Erstattung') }}: {{ number }} — {{ method }}, {{ paymentLabel }}{% if paymentReference %} ({{ paymentReference }}){% endif %}{% endset %}
+{% set correction = step starts with 'correct' %}
+{% set legend %}{{ correction ? lang.correctLegend|default('Korrektur') : lang.refundLegend|default('Erstattung') }}: {{ number }} — {{ method }}, {{ paymentLabel }}{% if paymentReference %} ({{ paymentReference }}){% endif %}{% endset %}
 
-{% if step == 'refund' and refundable is null %}
+{% if step in ['refund', 'correct'] and refundable is null %}
     <div class="tl_formbody_edit">
         <fieldset class="tl_box">
             <legend>{{ legend }}</legend>
-            <p class="tl_info">{{ lang.refundNotPossible|default('') }}</p>
+            <p class="tl_info">{{ correction ? lang.correctNotPossible|default('') : lang.refundNotPossible|default('') }}</p>
         </fieldset>
     </div>
 {% else %}
@@ -41,11 +43,56 @@
                         <input type="text" name="consho_reference" id="ctrl_consho_reference" class="tl_text" maxlength="255" value="{{ reference }}">
                         <p class="tl_help tl_tip">{{ lang.refundReferenceHelp|default('') }}</p>
                     </div>
-                {% elseif step == 'confirm' %}
+                    {# Geldflüsse T4: the ways; what none of them takes goes back by hand. #}
+                    {% if not canProvider and foreignOffered is empty %}
+                    <div class="widget clr">
+                        <p class="tl_help tl_tip">{{ lang.refundWaysHandOnly|default('') }}</p>
+                    </div>
+                    {% else %}
+                    <div class="widget clr">
+                        <h3>{{ lang.refundWays|default('Wege') }}</h3>
+                        <div class="tl_checkbox_container">
+                            {% if canProvider %}
+                                <input type="checkbox" name="consho_payout" id="ctrl_consho_payout" class="tl_checkbox" value="1"{% if payOut %} checked{% endif %}>
+                                <label for="ctrl_consho_payout">{{ lang.refundWayProviderOption|default('%s')|format(method) }}</label><br>
+                            {% endif %}
+                            {% for event in foreignOffered %}
+                                <input type="checkbox" name="consho_foreign[]" id="ctrl_consho_foreign_{{ event.id }}" class="tl_checkbox" value="{{ event.id }}"{% if event.id in foreignChosen %} checked{% endif %}>
+                                <label for="ctrl_consho_foreign_{{ event.id }}">{{ lang.refundWayForeignOption|default('%s (%s)')|format(event.amountLabel, event.reference) }}</label><br>
+                            {% endfor %}
+                        </div>
+                        <p class="tl_help tl_tip">{{ lang.refundWaysHelp|default('') }}</p>
+                    </div>
+                    {% endif %}
+                {% elseif step == 'correct' %}
+                    <div class="widget w50">
+                        <h3><label for="ctrl_consho_amount">{{ lang.refundAmount|default('Betrag') }}</label></h3>
+                        <input type="text" name="consho_amount" id="ctrl_consho_amount" class="tl_text" inputmode="decimal" value="{{ amount }}" required>
+                        <p class="tl_help tl_tip">{{ lang.correctAmountHelp|default('%s')|format(refundableLabel) }}</p>
+                    </div>
+                    <div class="widget w50">
+                        <h3><label for="ctrl_consho_reference">{{ lang.correctReason|default('Grund') }}</label></h3>
+                        <input type="text" name="consho_reference" id="ctrl_consho_reference" class="tl_text" maxlength="255" value="{{ reference }}" required>
+                        <p class="tl_help tl_tip">{{ lang.correctReasonHelp|default('') }}</p>
+                    </div>
+                {% elseif step == 'correctConfirm' %}
                     <input type="hidden" name="consho_amount" value="{{ amount }}">
                     <input type="hidden" name="consho_reference" value="{{ reference }}">
                     <input type="hidden" name="consho_confirmed" value="1">
-                    <p class="tl_info">{{ lang.refundConfirm|default('%s / %s')|format(amountLabel, method) }}</p>
+                    <p class="tl_info">{{ lang.correctConfirm|default('%s / %s / %s')|format(paymentLabel, correctedLabel, reference) }}</p>
+                {% elseif step == 'confirm' %}
+                    <input type="hidden" name="consho_amount" value="{{ amount }}">
+                    <input type="hidden" name="consho_reference" value="{{ reference }}">
+                    {% if payOut %}<input type="hidden" name="consho_payout" value="1">{% endif %}
+                    {% for id in foreignChosen %}<input type="hidden" name="consho_foreign[]" value="{{ id }}">{% endfor %}
+                    {# The split the operator sees; booked only if it still holds. #}
+                    <input type="hidden" name="consho_way_foreign" value="{{ ways.foreign }}">
+                    <input type="hidden" name="consho_way_provider" value="{{ ways.provider }}">
+                    <input type="hidden" name="consho_way_hand" value="{{ ways.hand }}">
+                    <input type="hidden" name="consho_confirmed" value="1">
+                    {% for line in confirmLines %}
+                        <p class="tl_info">{{ line }}</p>
+                    {% endfor %}
                 {% elseif step == 'retry' %}
                     <p class="tl_info">{{ lang.refundRetryConfirm|default('%s / %s')|format(amountLabel, method) }}</p>
                 {% else %}

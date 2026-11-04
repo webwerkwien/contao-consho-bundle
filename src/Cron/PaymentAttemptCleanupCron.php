@@ -6,10 +6,13 @@ use Contao\CoreBundle\DependencyInjection\Attribute\AsCronJob;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Webwerkwien\ContaoConshoBundle\Payment\NotificationProcessor;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentAttempt;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentAttemptRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentStarter;
+use Webwerkwien\ContaoConshoBundle\Payment\PollingPaymentHandlerInterface;
 
 /**
  * Closes open payment attempts nobody came back to (C-11).
@@ -22,6 +25,15 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentStarter;
  *
  * Money that arrives afterwards is still booked (Z3): a cancelled attempt
  * stops nothing but a new start.
+ *
+ * A handler that can be asked (PollingPaymentHandlerInterface) is asked
+ * first (spec Zahlung PayPal, PP2 d): a provider with one fixed webhook
+ * address may have sent its notification to an address that is no longer
+ * this installation's, and the customer's money would sit there unbooked.
+ * A payment found is booked like a notified one and the attempt is not
+ * cancelled; nor is one the provider reports pending (still clearing), which
+ * is asked again on the next run. Anything else — no payment, an error —
+ * cancels as before.
  *
  * Hourly: the lifetime is 30 minutes, and a nightly run would leave a
  * provider session payable for up to a day. The criterion is each row's own
@@ -40,6 +52,8 @@ class PaymentAttemptCleanupCron
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly \Closure|null $clock = null,
+        // Optional for the tests built by hand; the container wires it.
+        private readonly NotificationProcessor|null $notifications = null,
     ) {
     }
 
@@ -48,6 +62,10 @@ class PaymentAttemptCleanupCron
         $now = null !== $this->clock ? ($this->clock)() : time();
 
         foreach ($this->attempts->openBefore($now - PaymentStarter::ATTEMPT_LIFETIME) as $attempt) {
+            if ($this->paidMeanwhile($attempt, $now)) {
+                continue;
+            }
+
             // Conditional: the notification may have paid it a moment ago.
             if (!$this->attempts->cancelIfOpen($attempt->id, $now)) {
                 continue;
@@ -62,6 +80,29 @@ class PaymentAttemptCleanupCron
             } catch (\Throwable $e) {
                 $this->logger->error(\sprintf('Cancelling lapsed payment attempt %d with its provider failed: %s', $attempt->id, $e->getMessage()), ['exception' => $e]);
             }
+        }
+    }
+
+    /**
+     * Whether the provider, asked, reports the attempt paid — then it is
+     * booked — or still pending; either way it must not be cancelled.
+     */
+    private function paidMeanwhile(PaymentAttempt $attempt, int $now): bool
+    {
+        if (null === $this->notifications || !$this->handlers->has($attempt->methodType)) {
+            return false;
+        }
+
+        if (!$this->handlers->get($attempt->methodType) instanceof PollingPaymentHandlerInterface) {
+            return false;
+        }
+
+        try {
+            return $this->notifications->processPolled($attempt, $now);
+        } catch (\Throwable $e) {
+            $this->logger->error(\sprintf('Asking the provider about lapsing payment attempt %d failed: %s', $attempt->id, $e->getMessage()), ['exception' => $e]);
+
+            return false;
         }
     }
 }

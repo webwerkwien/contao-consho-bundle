@@ -19,7 +19,11 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionMandates;
  * A provider's notification (spec 7.4) — the only way money gets into an
  * order without the operator typing it.
  *
- *   1. attempt by the token of the address; unknown → 404
+ *   1. attempt by the token of the address; unknown → 404. A method with
+ *      one fixed webhook address (processWebhook) finds it by the provider
+ *      reference the handler names instead; the cleanup cron asks the
+ *      provider before an attempt lapses (processPolled) — both continue
+ *      here at step 2 or 3
  *   2. the handler checks authenticity; forged → 400, nothing written
  *   3. attempt locked FOR UPDATE — the lock between return and notification,
  *      the pattern of the number range, no Symfony Lock
@@ -95,6 +99,113 @@ class NotificationProcessor
             return Response::HTTP_NOT_FOUND;
         }
 
+        return $this->processAttempt($attempt, $request, $now);
+    }
+
+    /**
+     * A notification sent to the one fixed address of a payment method
+     * (spec Zahlung PayPal, PP1): the handler proves it is the provider's and
+     * names the attempt; from there on it is process() exactly.
+     *
+     * An unknown reference is answered 200: the provider resends anything
+     * else for days, and a reference missing here will never turn up here —
+     * an order of another installation on the same account, or one deleted.
+     */
+    public function processWebhook(int $methodId, Request $request, int $now): int
+    {
+        $method = $this->methods->byId($methodId);
+
+        if (null === $method || !$this->handlers->has($method->type)) {
+            return Response::HTTP_NOT_FOUND;
+        }
+
+        $handler = $this->handlers->get($method->type);
+
+        if (!$handler instanceof WebhookPaymentHandlerInterface) {
+            return Response::HTTP_NOT_FOUND;
+        }
+
+        try {
+            $about = $handler->webhookReference($request, $method);
+        } catch (NotificationRejected $e) {
+            $this->logger->warning(\sprintf('Webhook for payment method %d rejected: %s', $methodId, $e->getMessage()));
+
+            return Response::HTTP_BAD_REQUEST;
+        } catch (\Throwable $e) {
+            $this->logger->error(\sprintf('Webhook for payment method %d failed: %s', $methodId, $e->getMessage()), ['exception' => $e]);
+
+            return Response::HTTP_INTERNAL_SERVER_ERROR;
+        }
+
+        // Said in the log: a notification the shop dropped is otherwise not
+        // told from one that never came.
+        if ($about->isIgnored()) {
+            $this->logger->info(\sprintf('Webhook for payment method %d ignored: %s', $methodId, $about->ignoredBecause));
+
+            return Response::HTTP_OK;
+        }
+
+        $attempt = $this->attempts->findByReference($methodId, $about->reference);
+
+        if (null === $attempt && $about->attemptId > 0) {
+            // A charge whose reference never came back (P94): only an attempt
+            // of this method that still has none.
+            $candidate = $this->attempts->byId($about->attemptId);
+
+            if (null !== $candidate && $candidate->methodId === $methodId && '' === $candidate->providerReference) {
+                $attempt = $candidate;
+            }
+        }
+
+        if (null === $attempt) {
+            $this->logger->warning(\sprintf('Webhook for payment method %d is about "%s", which no attempt here carries.', $methodId, $about->reference));
+
+            return Response::HTTP_OK;
+        }
+
+        return $this->processAttempt($attempt, $request, $now);
+    }
+
+    /**
+     * The safety net before an open attempt lapses (spec Zahlung PayPal,
+     * PP2 d): the handler asks its provider, and a payment found there is
+     * booked like one notified — marked, so that a finding can say the
+     * webhook did not come. Whether the attempt must stay — succeeded
+     * afterwards, or still under way at the provider (NotificationResult::
+     * pending); exceptions go to the caller.
+     */
+    public function processPolled(PaymentAttempt $attempt, int $now): bool
+    {
+        $handler = $this->handlers->has($attempt->methodType) ? $this->handlers->get($attempt->methodType) : null;
+
+        if (!$handler instanceof PollingPaymentHandlerInterface) {
+            return false;
+        }
+
+        $method = $this->methods->byId($attempt->methodId);
+        $result = $handler->poll($attempt, $method->config ?? []);
+
+        // Cancelled now, the provider would be told to drop a payment it
+        // still clears; asked again on the next run.
+        if (NotificationOutcome::Pending === $result->outcome) {
+            $this->logger->info(\sprintf('Lapsing payment attempt %d kept open: pending at the provider.', $attempt->id));
+
+            return true;
+        }
+
+        if (NotificationOutcome::Ignored !== $result->outcome) {
+            $this->processResult($attempt, $method, $handler, $result, $now, true);
+        }
+
+        return AttemptState::Succeeded === $this->attempts->byId($attempt->id)?->state;
+    }
+
+    private function processAttempt(PaymentAttempt $attempt, Request $request, int $now): int
+    {
+        if (!$this->handlers->has($attempt->methodType)) {
+            return Response::HTTP_NOT_FOUND;
+        }
+
         $method = $this->methods->byId($attempt->methodId);
         $handler = $this->handlers->get($attempt->methodType);
 
@@ -111,9 +222,24 @@ class NotificationProcessor
         }
 
         if (NotificationOutcome::Ignored === $result->outcome) {
+            $this->logger->info(\sprintf('Payment notification for attempt %d ignored%s', $attempt->id, '' === $result->because ? '.' : ': '.$result->because));
+
             return Response::HTTP_OK;
         }
 
+        // Under way at the provider: nothing to book yet, the next
+        // notification says how it ended.
+        if (NotificationOutcome::Pending === $result->outcome) {
+            $this->logger->info(\sprintf('Payment for attempt %d is pending at the provider.', $attempt->id));
+
+            return Response::HTTP_OK;
+        }
+
+        return $this->processResult($attempt, $method, $handler, $result, $now);
+    }
+
+    private function processResult(PaymentAttempt $attempt, PaymentMethod|null $method, PaymentHandlerInterface $handler, NotificationResult $result, int $now, bool $polled = false): int
+    {
         $booked = false;
         $failed = false;
         $charged = false;
@@ -195,6 +321,10 @@ class NotificationProcessor
                 // checked against; the payment's own is on the payment row.
                 $this->attempts->setState($locked->id, AttemptState::Succeeded, $now, $reference);
                 $booked = true;
+
+                if ($polled) {
+                    $this->attempts->markPolled($locked->id, $now);
+                }
 
                 // A first message may already carry a chargeback.
                 $this->events?->book($locked->orderId, $locked->id, $result->events, $now);

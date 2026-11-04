@@ -95,14 +95,15 @@ final class PaymentRefundBackendControllerTest extends TestCase
     {
         $this->card->refund = RefundResult::done('re_1');
 
-        $html = $this->controller($this->post('refundPayment', ['consho_amount' => '12,50', 'consho_reference' => 'Kulanz']))->refund($this->dc(5));
+        $html = $this->controller($this->post('refundPayment', ['consho_amount' => '12,50', 'consho_reference' => 'Kulanz', 'consho_payout' => '1']))->refund($this->dc(5));
 
         self::assertStringContainsString('12,50', $html);
         self::assertStringContainsString('über „Visa&quot; an den Kunden', $html);
         self::assertStringContainsString('name="consho_confirmed" value="1"', $html);
+        self::assertStringContainsString('name="consho_way_provider" value="12.5000"', $html);
         self::assertSame([], $this->card->refunds, 'noch nichts ausgelöst');
 
-        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '12.5000', 'consho_reference' => 'Kulanz', 'consho_confirmed' => '1']))->refund($this->dc(5)));
+        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '12.5000', 'consho_reference' => 'Kulanz', 'consho_payout' => '1'] + self::split('0', '12.5', '0') + ['consho_confirmed' => '1']))->refund($this->dc(5)));
 
         self::assertCount(1, $this->card->refunds);
         self::assertSame('12.5000', $this->card->refunds[0]->amount);
@@ -123,12 +124,79 @@ final class PaymentRefundBackendControllerTest extends TestCase
         self::assertSame([], $this->card->refunds);
     }
 
-    public function testEineZahlungOhneAnbieterHatKeinFormular(): void
+    /**
+     * Geldflüsse T4: a payment no provider can pay back is refunded by hand,
+     * through the same form — a row tied to it, `manual`.
+     */
+    public function testEineZahlungOhneAnbieterWirdVonHandErstattet(): void
     {
+        $html = $this->controller($this->get('refundPayment'))->refund($this->dc(6));
+        self::assertStringContainsString('zurückzahlen müssen Sie von Hand', $html);
+        self::assertStringNotContainsString('consho_payout', $html);
+
+        $html = $this->controller($this->post('refundPayment', ['consho_amount' => '5', 'consho_reference' => 'Kulanz', 'consho_payout' => '1']))->refund($this->dc(6));
+        self::assertStringContainsString("5,00\u{a0}€ zahlen Sie von Hand zurück.", $html);
+
+        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '5', 'consho_reference' => 'Kulanz'] + self::split('0', '0', '5') + ['consho_confirmed' => '1']))->refund($this->dc(6)));
+
+        self::assertSame(['manual', 6], array_map(static fn ($v) => is_numeric($v) ? (int) $v : $v, array_values($this->connection->fetchAssociative('SELECT payoutState, refundOf FROM tl_consho_payment WHERE amount < 0') ?: [])));
+        self::assertSame([], $this->card->refunds);
+        self::assertSame([1], $this->recorded);
+    }
+
+    public function testNichtsUebrigHatKeinFormular(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '-15.0000', 'method' => 'refund', 'refundOf' => 6, 'payoutState' => 'manual']);
+
         $html = $this->controller($this->get('refundPayment'))->refund($this->dc(6));
 
         self::assertStringNotContainsString('<form', $html);
-        self::assertStringContainsString('lässt sich nicht über den Zahlungsanbieter erstatten', $html);
+        self::assertStringContainsString('nichts mehr zurückzuzahlen', $html);
+    }
+
+    /**
+     * A refund made at the provider, ticked, is booked first; the provider
+     * pays only the rest — and is not preselected while one is open.
+     */
+    public function testEineFremdeErstattungWirdAngekreuztUndNichtNochmalAusgezahlt(): void
+    {
+        $this->connection->insert('tl_consho_provider_event', ['id' => 40, 'pid' => 1, 'payment' => 5, 'kind' => 'refund', 'reference' => 're_x', 'amount' => '20.0000', 'currency' => 'EUR', 'state' => 'open']);
+        $this->card->refund = RefundResult::done('re_1');
+
+        $html = $this->controller($this->get('refundPayment'))->refund($this->dc(5));
+        self::assertStringContainsString('value="10.00"', $html, 'what is not out yet');
+        self::assertStringContainsString('name="consho_foreign[]" id="ctrl_consho_foreign_40" class="tl_checkbox" value="40">', $html);
+        self::assertStringContainsString('name="consho_payout" id="ctrl_consho_payout" class="tl_checkbox" value="1">', $html, 'not preselected');
+
+        $html = $this->controller($this->post('refundPayment', ['consho_amount' => '30', 'consho_reference' => 'Widerruf', 'consho_payout' => '1', 'consho_foreign' => ['40']]))->refund($this->dc(5));
+        self::assertStringContainsString("20,00\u{a0}€ sind beim Zahlungsanbieter schon zurückgezahlt (re_x)", $html);
+        self::assertStringContainsString("10,00\u{a0}€ werden über „Visa&quot;", $html);
+
+        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '30', 'consho_reference' => 'Widerruf', 'consho_payout' => '1', 'consho_foreign' => ['40']] + self::split('20', '10', '0') + ['consho_confirmed' => '1']))->refund($this->dc(5)));
+
+        self::assertSame('assigned', $this->connection->fetchOne('SELECT state FROM tl_consho_provider_event WHERE id = 40'));
+        self::assertCount(1, $this->card->refunds);
+        self::assertSame('10.0000', $this->card->refunds[0]->amount);
+    }
+
+    /**
+     * The split changed between confirmation and booking: nothing is booked
+     * rather than a split the operator never saw.
+     */
+    public function testEinAndererSplitAlsBestaetigtBuchtNichts(): void
+    {
+        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '10', 'consho_reference' => 'x', 'consho_payout' => '1'] + self::split('0', '0', '10') + ['consho_confirmed' => '1']))->refund($this->dc(5)));
+
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
+        self::assertSame('addError', $this->messages[0][0]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function split(string $foreign, string $provider, string $hand): array
+    {
+        return ['consho_way_foreign' => $foreign, 'consho_way_provider' => $provider, 'consho_way_hand' => $hand];
     }
 
     public function testErstattenBrauchtDasRechtZahlungenAnzulegen(): void
@@ -195,7 +263,7 @@ final class PaymentRefundBackendControllerTest extends TestCase
         $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '40.0000', 'receivedAt' => 300, 'attempt' => 11, 'reference' => 'tr_2', 'method' => 'Karte']);
         $this->card->refund = RefundResult::done('re_1');
 
-        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '10', 'consho_reference' => 'Kulanz', 'consho_confirmed' => '1']))->refund($this->dc(5)));
+        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '10', 'consho_reference' => 'Kulanz', 'consho_payout' => '1'] + self::split('0', '10', '0') + ['consho_confirmed' => '1']))->refund($this->dc(5)));
 
         self::assertSame('tr_1', $this->card->refunds[0]->paymentReference);
         self::assertSame(5, (int) $this->connection->fetchOne('SELECT refundOf FROM tl_consho_payment WHERE amount < 0'));
@@ -211,7 +279,7 @@ final class PaymentRefundBackendControllerTest extends TestCase
             $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '-30.0000', 'method' => 'refund', 'refundOf' => 5, 'payoutState' => 'done']);
         };
 
-        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '30', 'consho_reference' => 'Kulanz', 'consho_confirmed' => '1']))->refund($this->dc(5)));
+        $this->redirected(fn () => $this->controller($this->post('refundPayment', ['consho_amount' => '30', 'consho_reference' => 'Kulanz', 'consho_payout' => '1'] + self::split('0', '30', '0') + ['consho_confirmed' => '1']))->refund($this->dc(5)));
 
         self::assertSame([], $this->card->refunds);
         self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE amount < 0'));
@@ -278,13 +346,60 @@ final class PaymentRefundBackendControllerTest extends TestCase
         self::assertSame('manual', $this->connection->fetchOne('SELECT payoutState FROM tl_consho_payment WHERE id = 7'));
     }
 
+    /**
+     * Geldflüsse E8: amount and reason, a confirmation, then a locked
+     * counter-booking — no provider asked, the balance's consequences as
+     * after any row.
+     */
+    public function testKorrigierenBuchtNachDerBestaetigungEineGegenbuchung(): void
+    {
+        $this->connection->update('tl_consho_payment', ['lockedAt' => 50], ['id' => 6]);
+
+        $html = $this->controller($this->get('correctPayment'))->correct($this->dc(6));
+        self::assertStringContainsString('Korrektur zu Bestellung: WEB-1 — Bar', $html);
+        self::assertStringContainsString("Höchstens 15,00\u{a0}€", $html);
+
+        $html = $this->controller($this->post('correctPayment', ['consho_amount' => '13,50', 'consho_reference' => '15 statt 1,50 erfasst']))->correct($this->dc(6));
+        self::assertStringContainsString("Die Zahlung über 15,00\u{a0}€ zählt danach nur noch 1,50\u{a0}€. Grund: 15 statt 1,50 erfasst.", $html);
+        self::assertStringContainsString('name="consho_confirmed" value="1"', $html);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_payment WHERE refundOf = 6'), 'nothing booked yet');
+
+        $this->redirected(fn () => $this->controller($this->post('correctPayment', ['consho_amount' => '13.5000', 'consho_reference' => '15 statt 1,50 erfasst', 'consho_confirmed' => '1']))->correct($this->dc(6)));
+
+        $row = $this->connection->fetchAssociative('SELECT * FROM tl_consho_payment WHERE refundOf = 6') ?: self::fail('no row');
+        self::assertSame(['correction', '15 statt 1,50 erfasst', ''], [$row['method'], $row['reference'], $row['payoutState']]);
+        self::assertSame([], $this->card->refunds);
+        self::assertSame([1], $this->recorded);
+        self::assertSame(['addConfirmation', 'Die Zahlung ist korrigiert.'], $this->messages[0]);
+    }
+
+    public function testKorrigierenVerlangtGrundUndHoechstensDenRest(): void
+    {
+        $this->connection->update('tl_consho_payment', ['lockedAt' => 50], ['id' => 6]);
+
+        foreach ([['15,01', 'zu viel'], ['5', ''], ['0', 'null']] as [$amount, $reason]) {
+            $html = $this->controller($this->post('correctPayment', ['consho_amount' => $amount, 'consho_reference' => $reason]))->correct($this->dc(6));
+            self::assertStringNotContainsString('consho_confirmed', $html, $amount.'/'.$reason);
+        }
+
+        self::assertSame(['addError', "Bitte einen Betrag über 0 und höchstens 15,00\u{a0}€ sowie einen Grund eingeben."], $this->messages[0]);
+    }
+
+    public function testEineUngesperrteZahlungWirdBearbeitetNichtKorrigiert(): void
+    {
+        $html = $this->controller($this->get('correctPayment'))->correct($this->dc(6));
+
+        self::assertStringNotContainsString('<form', $html);
+        self::assertStringContainsString('noch nicht gesperrt', $html);
+    }
+
     private function get(string $key): Request
     {
         return Request::create('/contao?do=consho_order&table=tl_consho_payment&key='.$key.'&id=5');
     }
 
     /**
-     * @param array<string, string> $data
+     * @param array<string, string|list<string>> $data
      */
     private function post(string $key, array $data): Request
     {

@@ -153,4 +153,15 @@ class DbalPaymentChangeRepositoryTest extends TestCase
         self::assertSame(['50.0000', '-10.0000'], array_map(static fn (string $a): string => (string) BigDecimal::of($a)->toScale(4), $repository->paymentAmounts(1)));
         self::assertSame(['-40.0000', '40.0000'], array_map(static fn (string $a): string => (string) BigDecimal::of($a)->toScale(4), $repository->chargebackAmounts(1)));
     }
+
+    public function testEineKorrekturWirdInIhreZahlungEingerechnet(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 1, 'pid' => 1, 'amount' => '100.0000', 'method' => 'Karte']);
+        $this->connection->insert('tl_consho_payment', ['id' => 2, 'pid' => 1, 'amount' => '-90.0000', 'method' => 'correction', 'refundOf' => 1]);
+        $this->connection->insert('tl_consho_payment', ['id' => 3, 'pid' => 1, 'amount' => '-5.0000', 'method' => 'refund', 'refundOf' => 1]);
+
+        $repository = new DbalPaymentChangeRepository($this->connection);
+
+        self::assertSame(['10.0000', '-5.0000'], array_map(static fn (string $a): string => (string) BigDecimal::of($a)->toScale(4), $repository->paymentAmounts(1)));
+    }
 }

@@ -39,7 +39,7 @@ final class RefundPayoutTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt', 'tl_consho_provider_event'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -82,15 +82,53 @@ final class RefundPayoutTest extends TestCase
         self::assertSame([
             ['-20.0000', 102, 'requested'],
             ['-30.0000', 101, 'requested'],
-            ['-10.0000', 0, 'manual'],
+            // Geldflüsse T2: the rest by hand against a payment no provider takes.
+            ['-10.0000', 104, 'manual'],
         ], $this->rows($booked));
     }
 
+    /**
+     * Geldflüsse T2: by hand goes first against what no provider can pay
+     * back (newest first), then against the providers' payments — never
+     * against nothing while a payment has money left.
+     */
     public function testOhneAuszahlungGehtAllesVonHand(): void
     {
         $booked = $this->payout()->book(1, '35', 'W-1', self::NOW, false);
 
-        self::assertSame([['-35.0000', 0, 'manual']], $this->rows($booked));
+        self::assertSame([['-15.0000', 104, 'manual'], ['-20.0000', 103, 'manual']], $this->rows($booked));
+    }
+
+    public function testVonHandMindertDasErstattbare(): void
+    {
+        $this->payout()->book(1, '70', 'W-1', self::NOW, false);
+
+        self::assertSame([102 => '15.0000', 101 => '30.0000'], $this->payout()->refundable(1));
+    }
+
+    public function testNurWasUeberAlleZahlungenHinausgehtHaengtAnKeiner(): void
+    {
+        $booked = $this->payout()->book(1, '120', 'W-1', self::NOW, false);
+
+        self::assertSame([
+            ['-15.0000', 104, 'manual'],
+            ['-50.0000', 103, 'manual'],
+            ['-20.0000', 102, 'manual'],
+            ['-30.0000', 101, 'manual'],
+            ['-5.0000', 0, 'manual'],
+        ], $this->rows($booked));
+    }
+
+    public function testVonHandUeberspringtGutscheinzeilenUndBereitsErstattetes(): void
+    {
+        // Voucher money goes back onto the voucher, not by hand.
+        $this->payment(105, '40.0000', 500, null, 'voucher:7');
+        // 104 is paid back already.
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '-15.0000', 'method' => 'refund', 'refundOf' => 104, 'payoutState' => 'manual']);
+
+        $booked = $this->payout()->book(1, '10', 'W-1', self::NOW, false);
+
+        self::assertSame([['-10.0000', 103, 'manual']], $this->rows($booked));
     }
 
     public function testNurGegenDieGewaehlteZahlung(): void

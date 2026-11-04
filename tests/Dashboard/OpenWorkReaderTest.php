@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Dashboard\OpenWorkReader;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReader;
+use Webwerkwien\ContaoConshoBundle\Order\OverpaidOrders;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
@@ -30,7 +31,7 @@ final class OpenWorkReaderTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         WithdrawalSchema::create($this->connection);
 
-        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_status', 'tl_consho_payment', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_complaint'] as $table) {
+        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_status', 'tl_consho_payment', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_complaint', 'tl_consho_provider_event'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -144,6 +145,25 @@ final class OpenWorkReaderTest extends TestCase
         self::assertSame([6, 9], $this->reader()->ids(OpenWorkReader::TO_DELIVER, self::NOW, 2));
     }
 
+    /**
+     * Geldflüsse D5: a cancelled order that holds money is not done — its
+     * own tile, and the list behind it.
+     */
+    public function testStorniertUndBezahltZaehltAlsZuVielBezahlt(): void
+    {
+        $this->order(10, 1, ['cancelledAt' => self::NOW], pay: '50.0000');
+        $this->order(11, 2, ['paymentSettledAt' => self::NOW], pay: '60.0000', ship: true);
+
+        $work = $this->reader()->byShop(self::NOW);
+
+        self::assertSame(1, $work[1]->overpaid);
+        self::assertSame(1, $work[2]->overpaid);
+        self::assertSame([3, 2], [$work[1]->unpaid, $work[1]->toDeliver], 'storniert bleibt aus den anderen Kacheln');
+        self::assertSame([10, 11], $this->reader()->ids(OpenWorkReader::OVERPAID, self::NOW));
+        self::assertSame([11], $this->reader()->ids(OpenWorkReader::OVERPAID, self::NOW, 2));
+        self::assertSame(0, (new OpenWorkReader($this->connection, $this->balances()))->byShop(self::NOW)[1]->overpaid, 'ohne Leser keine Zählung');
+    }
+
     public function testDieListeHinterDerKachelIstDieGezaehlte(): void
     {
         self::assertSame([1, 2, 7], $this->reader()->ids(OpenWorkReader::UNPAID, self::NOW));
@@ -173,6 +193,11 @@ final class OpenWorkReaderTest extends TestCase
 
     private function reader(): OpenWorkReader
     {
-        return new OpenWorkReader($this->connection, new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator()));
+        return new OpenWorkReader($this->connection, $this->balances(), new OverpaidOrders($this->connection, $this->balances()));
+    }
+
+    private function balances(): OrderBalanceReader
+    {
+        return new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator());
     }
 }

@@ -34,7 +34,7 @@ final class DashboardFilterListener
 {
     /** Filters each module accepts — another value is ignored, not trusted. */
     private const FILTERS = [
-        'consho_order' => ['tl_consho_order', [OpenWorkReader::UNPAID, OpenWorkReader::OVERDUE, OpenWorkReader::TO_DELIVER, OpenWorkReader::COMPLAINT]],
+        'consho_order' => ['tl_consho_order', [OpenWorkReader::UNPAID, OpenWorkReader::OVERDUE, OpenWorkReader::TO_DELIVER, OpenWorkReader::COMPLAINT, OpenWorkReader::OVERPAID]],
         'consho_withdrawal' => ['tl_consho_withdrawal', [OpenWorkReader::UNDECIDED, OpenWorkReader::REFUND_OPEN]],
         'consho_stock' => ['tl_consho_stock', ['low']],
     ];

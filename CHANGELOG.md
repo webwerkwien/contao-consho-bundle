@@ -5,6 +5,86 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.4.0] – 2026-11-04
+
+### Added
+
+- **Webhook address per payment method.** Payment modules whose provider sends every notification to one fixed
+  address (instead of one per payment) receive them at `/_consho/payment/webhook/{method}` and name the payment
+  attempt they are about; from there the notification is booked exactly like one sent to the per-payment address.
+  A module can build that address with `PaymentMethodAddresses`, which takes it from the domains of the start
+  points whose shop offers the method, not from the back-end host. Run `contao:migrate` (new index and column on
+  `tl_consho_payment_attempt`). (Block Zahlung PayPal)
+- **Asking the provider before a payment attempt lapses.** Before the hourly cleanup cancels an open attempt, a
+  payment module that supports it is asked what became of it. A payment found there is booked like a notified one,
+  and the warning „Zahlungen ohne Rückmeldung“ names the payment method for seven days: its webhook does not
+  arrive. (Block Zahlung PayPal)
+- **„Korrigieren" at a locked payment.** A payment recorded too high is corrected by a counter-booking with a
+  mandatory reason, at most what is left of the payment. It moves no money: no payout, no mail, no document, and
+  it is not a refund in the payment state. The order page and the documents show the corrected payment instead of
+  the wrong booking. (Block Geldflüsse)
+- **Refunds made at the provider as part of a refund.** „Erstatten" and the withdrawal refund list the refunds
+  made directly in the provider's account that are still open. Ticked, they are booked first with the provider's
+  ID, and the provider pays only the rest. While one is open, paying out through the provider is not preselected.
+  (Block Geldflüsse)
+- **„Zu viel bezahlt".** A paid order that is cancelled, or an order paid more than it claims (from 0.01), is a
+  warning and a dashboard tile that leads to these orders. Refunds already made at the provider count as paid back;
+  an accepted withdrawal not yet refunded stays on the tile „Erstattungen". Nothing is paid out automatically: the
+  money goes back through „Erstatten" at a payment. (Block Geldflüsse)
+- **A refund made at the provider leads to its withdrawal.** Under „Nachträge", a refund made directly in the
+  provider's account links to each withdrawal of the order still to be refunded; there it is already ticked, and the
+  withdrawal books it with its invoice correction. While such a withdrawal is open, „In Consho erfassen" is not
+  offered, so the withdrawal keeps something to refund. At a cancelled order, recording books the refund of the
+  cancellation. (Block Geldflüsse)
+- **„Geldflüsse" per order.** The page formerly called „Nachträge" shows the balance of the order (claim, received,
+  refunded, charged back, refunded at the provider, open or too much) and every money movement in time: payments,
+  refunds, corrections, chargebacks and their reversals, and refunds made at the provider, each with its state, the
+  payment it belongs to and, where there is one, its withdrawal and invoice correction. Each payment row offers the
+  operations of the payment list that apply to it („Erstatten", „Erneut auszahlen", „Von Hand erledigt",
+  „Korrigieren", „Bearbeiten"); the payment list itself is linked at the top. In the order list one button
+  „Geldflüsse" replaces „Zahlungen" and „Nachträge"; it is red while something waits: a refund made at the provider
+  not booked yet, a standing chargeback, a refund that failed or hangs (the same thresholds as the warning
+  „Erstattungen ohne Abschluss"), or an order paid too much. The address `key=followUps` keeps working. (Block Geldflüsse)
+- **„Zahlung zuordnen".** A refund that names no payment (a voucher's refund aside) is a warning, turns the button
+  „Geldflüsse" red, and offers on that page the payments of the order with enough left; choosing one ties the
+  refund to it. No money moves and no amount changes, but „Erstatten" no longer offers money that is already back.
+  (Block Geldflüsse)
+- **Payments held by the provider.** A payment module can report a payment as pending (the provider is still
+  reviewing or clearing it): the attempt then stays open instead of lapsing, and is asked about every hour until the
+  provider decides. One still open after 7 days is a warning naming its orders. (Block Geldflüsse)
+
+### Changed
+
+- **„Erstatten" at every payment.** The operation is offered at every payment with something left, not only at a
+  provider's: through the provider where the payment method can pay back, the rest by hand. The confirmation names
+  each way with its amount, and nothing is booked if that split changed in the meantime. (Block Geldflüsse)
+- **Only money received in the payment mask.** A payment entered by hand must be above 0. Money goes back through
+  „Erstatten", a withdrawal or a cancellation; a locked payment recorded too high through „Korrigieren".
+  (Block Geldflüsse)
+- **The voucher share of a withdrawal refund is fixed.** What gift vouchers paid of the order goes back onto them
+  first, at most what the refund pays out; the rest to the payment method. The refund form shows that share instead
+  of offering a field to change it. (Block Wertgutscheine, WG11)
+- **For module developers:** `handleReturn()` may complete at the provider what the customer approved (a capture),
+  idempotently, and still never books money. `methodProblems()` receives the method's ID under the reserved key
+  `PaymentReadinessInterface::METHOD_ID`. `NotificationResult::pending()` reports a payment still under way at the
+  provider: nothing is booked, and an attempt asked before it lapses stays open. `NotificationResult::ignored()`
+  takes a reason, logged (info) like the reason of an ignored `WebhookReference`. Extensions with an exhaustive
+  `match` over `NotificationOutcome` need the new case `Pending`. (Block Zahlung PayPal)
+
+### Fixed
+
+- The help text of the field „Referenz" when refunding through the provider said the reference is sent to the
+  provider. It is not; the text now says so.
+- **Money paid back could be offered or booked twice.** A withdrawal refunded without the provider booked a row
+  tied to no payment and without payout state: „Erstatten" still offered that money through the provider, and a
+  refund made in the provider's account could not be assigned to the row, only recorded a second time. Such rows
+  are now booked „von Hand", tied to the payments they pay back — first those no provider can pay back, then the
+  providers' ones, each newest first. Existing rows are migrated; they are tied to the payment where the order has
+  only one. Run `contao:migrate`. (Block Geldflüsse)
+- **A refund made in the provider's account is no longer offered again.** Until it is recorded or assigned under
+  „Nachträge", the amount is no longer refundable through the provider — neither at a withdrawal nor with
+  „Erstatten". (Block Geldflüsse)
+
 ## [0.3.0] – 2026-11-03
 
 ### Added

@@ -4,11 +4,15 @@ namespace Webwerkwien\ContaoConshoBundle\Payment\Refund;
 
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
+use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
@@ -65,6 +69,11 @@ class RefundPayout
      * What the order's providers could still pay back, per payment, newest
      * first — the payments book() would use.
      *
+     * Less every row that took money back from the payment (`refundOf`), and
+     * less the refunds made at the provider that are still open (Geldflüsse
+     * D3): that money is gone already, only not yet recorded or assigned.
+     * Once it is, its row counts instead — never both.
+     *
      * @param int|null $against one payment only (the operation "Erstatten")
      *
      * @return array<int, string> payment id → refundable amount, positive
@@ -73,7 +82,9 @@ class RefundPayout
     {
         $rows = $this->connection->fetchAllAssociative(
             'SELECT p.id, p.amount, a.method AS methodId,
-                    (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id) AS refunded
+                    (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id) AS refunded,
+                    (SELECT COALESCE(SUM(e.amount), 0) FROM tl_consho_provider_event e
+                      WHERE e.payment = p.id AND e.kind = \'refund\' AND e.state = \'open\') AS outside
                FROM tl_consho_payment p
                JOIN tl_consho_payment_attempt a ON a.id = p.attempt
               WHERE p.pid = ? AND p.amount > 0 AND p.reference <> \'\'
@@ -92,7 +103,7 @@ class RefundPayout
                 continue;
             }
 
-            $left = BigDecimal::of((string) $row['amount'])->plus((string) $row['refunded']);
+            $left = BigDecimal::of((string) $row['amount'])->plus((string) $row['refunded'])->minus((string) $row['outside']);
 
             if ($left->isPositive()) {
                 $refundable[(int) $row['id']] = (string) $left->toScale(4, RoundingMode::HalfUp);
@@ -123,13 +134,25 @@ class RefundPayout
     /**
      * Books the refund. Call inside a transaction that holds the order's lock.
      *
-     * @param string   $amount  positive: what goes back
-     * @param bool     $payOut  false books the whole amount as one `manual` row
-     * @param int|null $against one payment only
+     * One refund, up to three ways, taken in this order (Geldflüsse T3):
+     * the refunds already made at the provider that the operator chose, then
+     * the provider, then by hand.
      *
-     * @return list<int> the rows booked, the provider rows first
+     * @param string    $amount  positive: what goes back
+     * @param bool      $payOut  false books what the chosen foreign refunds do
+     *                           not cover `manual`, spread over the payments as
+     *                           byHand() takes them
+     * @param int|null  $against one payment only
+     * @param list<int> $foreign open refunds at the provider (tl_consho_provider_event)
+     *                           this refund consists of: each becomes a row `done`
+     *                           with the provider's ID, the event `assigned`
+     *
+     * @throws RefundStateChangedException where a chosen foreign refund is no
+     *                                     longer open or does not fit
+     *
+     * @return list<int> the rows booked: foreign, provider, by hand
      */
-    public function book(int $orderId, string $amount, string $reference, int $now, bool $payOut = true, int|null $against = null): array
+    public function book(int $orderId, string $amount, string $reference, int $now, bool $payOut = true, int|null $against = null, array $foreign = [], string $by = ''): array
     {
         $left = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
 
@@ -139,7 +162,13 @@ class RefundPayout
 
         $booked = [];
 
-        foreach ($payOut ? $this->refundable($orderId, $against) : [] as $paymentId => $refundable) {
+        foreach (array_unique($foreign) as $eventId) {
+            [$rowId, $part] = $this->bookForeign($orderId, $eventId, $against, $left, $reference, $now, $by);
+            $booked[] = $rowId;
+            $left = $left->minus($part);
+        }
+
+        foreach ($payOut && $left->isPositive() ? $this->refundable($orderId, $against) : [] as $paymentId => $refundable) {
             if (!$left->isPositive()) {
                 break;
             }
@@ -149,6 +178,21 @@ class RefundPayout
             $left = $left->minus($part);
         }
 
+        // Geldflüsse T2: by hand still pays back a payment. Tied to it, the
+        // row lowers what refundable() offers — otherwise "Erstatten" offered
+        // money already paid back (D1), and a refund made at the provider
+        // found no row to be assigned to (D2).
+        foreach ($left->isPositive() ? $this->byHand($orderId, $against) : [] as $paymentId => $remaining) {
+            if (!$left->isPositive()) {
+                break;
+            }
+
+            $part = BigDecimal::min($left, $remaining);
+            $booked[] = $this->insert($orderId, $part, $reference, $now, $paymentId, 'manual');
+            $left = $left->minus($part);
+        }
+
+        // More than all payments: a refund of nothing in particular.
         if ($left->isPositive()) {
             $booked[] = $this->insert($orderId, $left, $reference, $now, 0, 'manual');
         }
@@ -157,37 +201,235 @@ class RefundPayout
     }
 
     /**
+     * One chosen foreign refund as a row of this refund; call under the
+     * order's lock. Read again here: between the form and the booking it may
+     * have been recorded, assigned, or turned out to be an own refund.
+     *
+     * @return array{int, BigDecimal} the row and its amount
+     */
+    private function bookForeign(int $orderId, int $eventId, int|null $against, BigDecimal $left, string $reference, int $now, string $by): array
+    {
+        $event = $this->connection->fetchAssociative(
+            "SELECT * FROM tl_consho_provider_event WHERE id = ? AND pid = ? AND kind = 'refund' AND state = 'open' AND payment > 0",
+            [$eventId, $orderId],
+        );
+
+        if (false === $event || (null !== $against && (int) $event['payment'] !== $against)) {
+            throw new RefundStateChangedException(\sprintf('The refund at the provider %d is no longer open for order %d.', $eventId, $orderId));
+        }
+
+        $amount = BigDecimal::of((string) $event['amount'])->toScale(4, RoundingMode::HalfUp);
+        $own = $this->connection->fetchOne(
+            "SELECT id FROM tl_consho_payment WHERE pid = ? AND method = 'refund' AND payoutReference = ?",
+            [$orderId, (string) $event['reference']],
+        );
+        $paid = $this->connection->fetchOne(
+            'SELECT p.amount + (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id)
+               FROM tl_consho_payment p WHERE p.id = ? AND p.pid = ?',
+            [(int) $event['payment'], $orderId],
+        );
+
+        // An own refund reported early, more than the refund, or more than is
+        // left of its payment: nothing of it may go another way.
+        if (false !== $own || $amount->isGreaterThan($left) || false === $paid || BigDecimal::of((string) $paid)->isLessThan($amount)) {
+            throw new RefundStateChangedException(\sprintf('The refund at the provider %d does not fit the refund of order %d.', $eventId, $orderId));
+        }
+
+        $rowId = $this->insert($orderId, $amount, $reference, $now, (int) $event['payment'], 'done');
+        $this->connection->update('tl_consho_payment', ['payoutReference' => (string) $event['reference'], 'payoutCheckedAt' => $now], ['id' => $rowId]);
+        $this->resolve($eventId, 'assigned', $rowId, $now, $by);
+
+        return [$rowId, $amount];
+    }
+
+    /**
+     * What is left of each payment for a refund by hand, in the order it is
+     * taken (Geldflüsse T2): first the payments no provider can pay back —
+     * prepayment, typed by the operator — then the providers' payments, each
+     * newest first. That keeps the providers' share free for a refund through
+     * them, and takes it away where the money is back already.
+     *
+     * Not voucher payments: their money goes back onto the voucher.
+     *
+     * @return array<int, BigDecimal> payment id → what is left, positive
+     */
+    private function byHand(int $orderId, int|null $against): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            "SELECT p.id, p.amount, p.reference, a.method AS methodId,
+                    (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id) AS refunded,
+                    (SELECT COALESCE(SUM(e.amount), 0) FROM tl_consho_provider_event e
+                      WHERE e.payment = p.id AND e.kind = 'refund' AND e.state = 'open') AS outside
+               FROM tl_consho_payment p
+               LEFT JOIN tl_consho_payment_attempt a ON a.id = p.attempt
+              WHERE p.pid = ? AND p.amount > 0 AND p.refundOf = 0 AND p.reference NOT LIKE 'voucher:%'
+              ORDER BY p.receivedAt DESC, p.id DESC",
+            [$orderId],
+        );
+
+        $plain = [];
+        $provider = [];
+
+        foreach ($rows as $row) {
+            if (null !== $against && (int) $row['id'] !== $against) {
+                continue;
+            }
+
+            $left = BigDecimal::of((string) $row['amount'])->plus((string) $row['refunded'])->minus((string) $row['outside']);
+
+            if (!$left->isPositive()) {
+                continue;
+            }
+
+            $byProvider = null !== $row['methodId'] && '' !== (string) $row['reference'] && null !== $this->handlerFor((int) $row['methodId']);
+
+            if ($byProvider) {
+                $provider[(int) $row['id']] = $left;
+            } else {
+                $plain[(int) $row['id']] = $left;
+            }
+        }
+
+        return $plain + $provider;
+    }
+
+    /**
+     * What can still go back from one payment, over every way (Geldflüsse
+     * T4): what byHand() sees left of it plus its refunds still open at the
+     * provider, which a refund can consist of. Null where nothing is left, or
+     * where the row is no payment of its own — a refund, a chargeback, a
+     * correction, a voucher payment (its money goes back onto the voucher).
+     */
+    public function remainder(int $orderId, int $paymentId): string|null
+    {
+        $left = $this->byHand($orderId, $paymentId)[$paymentId] ?? null;
+
+        if (null === $left) {
+            // Nothing by hand — perhaps all of it is out at the provider.
+            $isPayment = $this->connection->fetchOne(
+                "SELECT 1 FROM tl_consho_payment WHERE id = ? AND pid = ? AND amount > 0 AND refundOf = 0 AND reference NOT LIKE 'voucher:%'",
+                [$paymentId, $orderId],
+            );
+
+            if (false === $isPayment) {
+                return null;
+            }
+
+            $left = BigDecimal::zero();
+        }
+
+        $total = $left->plus($this->outside($orderId, $paymentId));
+
+        return $total->isPositive() ? (string) $total->toScale(4, RoundingMode::HalfUp) : null;
+    }
+
+    /**
+     * How a refund splits over its ways, as book() will take them (Geldflüsse
+     * T3/T4) — for the confirmation, and checked again under the lock.
+     *
+     * @param list<int> $foreign the open refunds at the provider it consists of
+     *
+     * @return array{foreign: string, provider: string, hand: string}|null null
+     *                                                                     where a chosen foreign refund is not open, or where one payment has
+     *                                                                     not that much left
+     */
+    public function ways(int $orderId, string $amount, int|null $against, array $foreign, bool $payOut): array|null
+    {
+        $amount = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
+        $foreign = array_values(array_unique($foreign));
+        $chosen = [] === $foreign ? [] : $this->connection->fetchAllAssociative(
+            "SELECT payment, amount FROM tl_consho_provider_event WHERE id IN (?) AND pid = ? AND kind = 'refund' AND state = 'open' AND payment > 0",
+            [$foreign, $orderId],
+            [ArrayParameterType::INTEGER, ParameterType::INTEGER],
+        );
+
+        if (\count($chosen) !== \count($foreign)) {
+            return null;
+        }
+
+        $foreignSum = BigDecimal::zero();
+
+        foreach ($chosen as $event) {
+            if (null !== $against && (int) $event['payment'] !== $against) {
+                return null;
+            }
+
+            $foreignSum = $foreignSum->plus((string) $event['amount']);
+        }
+
+        $rest = $amount->minus($foreignSum);
+
+        if (!$amount->isPositive() || $rest->isNegative()) {
+            return null;
+        }
+
+        // Booking the chosen foreign refunds moves their money from
+        // `outside` to `refunded`: what is left of each payment stays.
+        $provider = BigDecimal::zero();
+
+        if ($payOut) {
+            $refundable = array_reduce($this->refundable($orderId, $against), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero());
+            $provider = BigDecimal::min($rest, $refundable);
+        }
+
+        $hand = $rest->minus($provider);
+
+        if (null !== $against) {
+            $byHand = $this->byHand($orderId, $against)[$against] ?? BigDecimal::zero();
+
+            if ($hand->isGreaterThan($byHand->minus($provider))) {
+                return null;
+            }
+        }
+
+        return [
+            'foreign' => (string) $foreignSum->toScale(4),
+            'provider' => (string) $provider->toScale(4),
+            'hand' => (string) $hand->toScale(4),
+        ];
+    }
+
+    /**
      * Books and pays out in one go, under the order's lock — the operation
      * "Erstatten" on a payment.
      *
-     * @return list<int> the rows booked
+     * @param list<int>                                                  $foreign  open refunds at the provider this refund consists of, see book()
+     * @param array{foreign: string, provider: string, hand: string}|null $expected the split the operator confirmed (ways()); null allows
+     *                                                                             nothing by hand
+     *
+     * @return list<int> the rows booked; none where the payment or a chosen
+     *                   foreign refund changed meanwhile
      */
-    public function refund(int $orderId, string $amount, string $reference, int $now, int|null $against = null): array
+    public function refund(int $orderId, string $amount, string $reference, int $now, int|null $against = null, array $foreign = [], string $by = '', bool $payOut = true, array|null $expected = null): array
     {
         $this->connection->beginTransaction();
 
         try {
             // Checked again under the lock: two operators refunding the same
-            // payment both passed the form's check. The second must not fall
-            // into book()'s "rest by hand", which is meant for withdrawals —
-            // it would book a refund nobody owes. The sum is read after the
-            // lock, or it is the stale one the form already had.
+            // payment both passed the form's check. The second must not end
+            // up with a split the operator never confirmed — a share by hand
+            // nobody owes, or the provider's share moved by hand. The sums
+            // are read after the lock, or they are the stale ones the form had.
             if (null === $this->orders->lockOrder($orderId)) {
                 $this->connection->commit();
 
                 return [];
             }
 
-            $refundable = array_reduce($this->refundable($orderId, $against), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero());
+            $ways = $this->ways($orderId, $amount, $against, $foreign, $payOut);
 
-            if ($refundable->isLessThan(BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp))) {
+            if (null === $ways || (null === $expected ? !BigDecimal::of($ways['hand'])->isZero() : !self::sameWays($ways, $expected))) {
                 $this->connection->commit();
 
                 return [];
             }
 
-            $booked = $this->book($orderId, $amount, $reference, $now, true, $against);
+            $booked = $this->book($orderId, $amount, $reference, $now, $payOut, $against, $foreign, $by);
             $this->connection->commit();
+        } catch (RefundStateChangedException) {
+            $this->connection->rollBack();
+
+            return [];
         } catch (\Throwable $e) {
             if ($this->connection->isTransactionActive()) {
                 $this->connection->rollBack();
@@ -199,6 +441,173 @@ class RefundPayout
         $this->payOut($booked, $now);
 
         return $booked;
+    }
+
+    /**
+     * @param array{foreign: string, provider: string, hand: string} $a
+     * @param array{foreign: string, provider: string, hand: string} $b
+     */
+    private static function sameWays(array $a, array $b): bool
+    {
+        foreach (['foreign', 'provider', 'hand'] as $way) {
+            if (!BigDecimal::of($a[$way])->isEqualTo($b[$way])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The refunds of one payment still open at the provider.
+     */
+    private function outside(int $orderId, int $paymentId): BigDecimal
+    {
+        return BigDecimal::of((string) $this->connection->fetchOne(
+            "SELECT COALESCE(SUM(amount), 0) FROM tl_consho_provider_event WHERE pid = ? AND payment = ? AND kind = 'refund' AND state = 'open'",
+            [$orderId, $paymentId],
+        ));
+    }
+
+    /**
+     * What a correction may still take from a payment (Geldflüsse E8): its
+     * amount less every row tied to it and less the refunds still open at the
+     * provider — the same remainder a refund sees. Null where the row is no
+     * locked payment of its own: an unlocked one is edited instead, a voucher
+     * payment carries the voucher's tax and is never typed.
+     */
+    public function correctable(int $paymentId): string|null
+    {
+        $row = $this->connection->fetchAssociative(
+            "SELECT p.amount, p.method, p.reference, p.refundOf, p.lockedAt,
+                    (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id) AS refunded,
+                    (SELECT COALESCE(SUM(e.amount), 0) FROM tl_consho_provider_event e
+                      WHERE e.payment = p.id AND e.kind = 'refund' AND e.state = 'open') AS outside
+               FROM tl_consho_payment p
+              WHERE p.id = ?",
+            [$paymentId],
+        );
+
+        if (false === $row || null === $row['lockedAt'] || (int) $row['refundOf'] > 0 || !BigDecimal::of((string) $row['amount'])->isPositive()
+            || ChargebackRow::is((string) $row['method']) || CorrectionRow::is((string) $row['method']) || str_starts_with((string) $row['reference'], 'voucher:')) {
+            return null;
+        }
+
+        $left = BigDecimal::of((string) $row['amount'])->plus((string) $row['refunded'])->minus((string) $row['outside']);
+
+        return $left->isPositive() ? (string) $left->toScale(4, RoundingMode::HalfUp) : null;
+    }
+
+    /**
+     * Books a correction of a locked payment (Geldflüsse E8) under the
+     * order's lock: a negative row tied to the payment, locked at once. No
+     * money moves — no payout state, no mail, no document.
+     *
+     * @param string $amount positive: what the payment was booked too high
+     *
+     * @return int|null the row, or null where less is left than asked for
+     */
+    public function correct(int $orderId, int $paymentId, string $amount, string $reason, int $now): int|null
+    {
+        $amount = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
+
+        if (!$amount->isPositive() || '' === trim($reason)) {
+            throw new \InvalidArgumentException('A correction needs a positive amount and a reason.');
+        }
+
+        $this->connection->beginTransaction();
+
+        try {
+            $left = null === $this->orders->lockOrder($orderId)
+                || $orderId !== (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_payment WHERE id = ?', [$paymentId])
+                ? null : $this->correctable($paymentId);
+
+            if (null === $left || $amount->isGreaterThan($left)) {
+                $this->connection->commit();
+
+                return null;
+            }
+
+            $this->connection->insert('tl_consho_payment', [
+                'pid' => $orderId,
+                'tstamp' => $now,
+                'receivedAt' => $now,
+                'amount' => (string) $amount->negated(),
+                'method' => CorrectionRow::METHOD,
+                'reference' => mb_substr(trim($reason), 0, 255),
+                'lockedAt' => $now,
+                'refundOf' => $paymentId,
+            ]);
+            $rowId = (int) $this->connection->lastInsertId();
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
+
+            throw $e;
+        }
+
+        return $rowId;
+    }
+
+    /**
+     * The payments a refund row without its payment can be tied to
+     * (Geldflüsse J3): those of its order of its own whose rest still covers
+     * the row — what byHand() sees left, the row not yet counted anywhere.
+     *
+     * @return array<int, string> payment id → what is left of it now
+     */
+    public function assignablePayments(int $rowId): array
+    {
+        $row = $this->connection->fetchAssociative('SELECT pid, amount, refundOf, reference, method FROM tl_consho_payment WHERE id = ?', [$rowId]);
+
+        if (false === $row || !UnassignedRefunds::is($row)) {
+            return [];
+        }
+
+        $needed = BigDecimal::of((string) $row['amount'])->abs();
+        $payments = [];
+
+        foreach ($this->byHand((int) $row['pid'], null) as $paymentId => $left) {
+            if ($left->isGreaterThanOrEqualTo($needed)) {
+                $payments[$paymentId] = (string) $left->toScale(4, RoundingMode::HalfUp);
+            }
+        }
+
+        ksort($payments);
+
+        return $payments;
+    }
+
+    /**
+     * Ties a refund row without its payment to one (Geldflüsse J3), under the
+     * order's lock and only where assignablePayments() still offers it. Moves
+     * no money and changes no amount: the row now counts against that payment.
+     */
+    public function assignToPayment(int $orderId, int $rowId, int $paymentId): bool
+    {
+        $this->connection->beginTransaction();
+
+        try {
+            $ok = null !== $this->orders->lockOrder($orderId)
+                && $orderId === (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_payment WHERE id = ?', [$rowId])
+                && isset($this->assignablePayments($rowId)[$paymentId]);
+
+            if ($ok) {
+                $this->connection->update('tl_consho_payment', ['refundOf' => $paymentId], ['id' => $rowId]);
+            }
+
+            $this->connection->commit();
+        } catch (\Throwable $e) {
+            if ($this->connection->isTransactionActive()) {
+                $this->connection->rollBack();
+            }
+
+            throw $e;
+        }
+
+        return $ok;
     }
 
     /**
@@ -368,6 +777,33 @@ class RefundPayout
     }
 
     /**
+     * Refunds made at the provider and not yet recorded or assigned (spec
+     * 9.6 B). refundable() still counts their money: paying out a withdrawal
+     * or "Erstatten" through the provider would send the same refund twice
+     * when it is the one already made there — so the forms point to them.
+     *
+     * @param int|null $payment one payment only
+     *
+     * @return list<array{id: int, reference: string, amount: string, currency: string}>
+     */
+    public function openForeign(int $orderId, int|null $payment = null): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            "SELECT id, reference, amount, currency FROM tl_consho_provider_event
+              WHERE pid = ? AND kind = 'refund' AND state = 'open'".(null !== $payment ? ' AND payment = ?' : '').'
+              ORDER BY occurredAt, id',
+            null !== $payment ? [$orderId, $payment] : [$orderId],
+        );
+
+        return array_map(static fn (array $row): array => [
+            'id' => (int) $row['id'],
+            'reference' => (string) $row['reference'],
+            'amount' => (string) BigDecimal::of((string) $row['amount'])->toScale(4),
+            'currency' => (string) $row['currency'],
+        ], $rows);
+    }
+
+    /**
      * The refund rows a foreign refund can be assigned to (P4): the order's,
      * not tied to a provider's refund yet, and of the same amount — matching
      * stays by ID, the amount only narrows what is offered.
@@ -400,7 +836,8 @@ class RefundPayout
      * as "Erstatten"; those come with a withdrawal or a cancellation.
      *
      * @return string|null null when recorded, otherwise why not:
-     *                     `stateChanged` (resolved meanwhile) or `exceeds`
+     *                     `stateChanged` (resolved meanwhile), `withdrawalOpen`
+     *                     (a withdrawal waits for its refund) or `exceeds`
      *                     (more than is left of the payment)
      */
     public function recordForeign(int $eventId, int $now, string $by = ''): string|null
@@ -417,7 +854,8 @@ class RefundPayout
             }
 
             // An own refund the provider reported before its answer reached
-            // the row: the money is booked there already.
+            // the row: the money is booked there already. First, so that an
+            // open withdrawal of the order does not hold it up.
             $own = $this->connection->fetchOne(
                 "SELECT id FROM tl_consho_payment WHERE pid = ? AND method = 'refund' AND payoutReference = ?",
                 [(int) $event['pid'], (string) $event['reference']],
@@ -428,6 +866,21 @@ class RefundPayout
                 $this->connection->commit();
 
                 return 'stateChanged';
+            }
+
+            // Geldflüsse H2: recorded here, the money is gone from the payment
+            // and a withdrawal waiting for its refund could never pay it back
+            // — the withdrawal books it. Read under the lock: a withdrawal
+            // accepted meanwhile counts.
+            $withdrawal = $this->connection->fetchOne(
+                "SELECT id FROM tl_consho_withdrawal WHERE pid = ? AND state IN ('received', 'accepted') AND refundedAt IS NULL",
+                [(int) $event['pid']],
+            );
+
+            if (false !== $withdrawal) {
+                $this->connection->commit();
+
+                return 'withdrawalOpen';
             }
 
             $left = $this->connection->fetchOne(

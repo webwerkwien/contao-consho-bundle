@@ -138,15 +138,18 @@ $conshoBackendModules = [
             // "Zahlungsziel verschieben" at an order (E8).
             'deferPayment' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentDeferralBackendController::class, '__invoke'],
 
-            // "Nachträge" at an order: chargebacks and refunds made at the
-            // provider (block Zahlung Mollie, 9).
-            'followUps' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\ProviderEventBackendController::class, '__invoke'],
+            // "Geldflüsse" at an order (block Geldflüsse, 3.6). `followUps`
+            // is the address of the page "Nachträge" it took over.
+            'moneyFlows' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\MoneyFlowBackendController::class, '__invoke'],
+            'followUps' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\MoneyFlowBackendController::class, '__invoke'],
 
             // "Erstatten", "Erneut auszahlen", "Von Hand erledigt" at a
             // payment (block Zahlung Mollie, 4.4).
             'refundPayment' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'refund'],
             'refundRetry' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'retry'],
             'refundManual' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'manual'],
+            // "Korrigieren" at a locked payment (Geldflüsse E8).
+            'correctPayment' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\PaymentRefundBackendController::class, 'correct'],
 
             // "Als versandt melden" at a delivery (D-1).
             'reportDelivery' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DeliveryReportBackendController::class, 'report'],

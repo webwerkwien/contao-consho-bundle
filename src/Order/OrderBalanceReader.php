@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\Order;
 use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 
 /**
  * Reads the two balances of an order (spec D 5.1).
@@ -66,21 +67,24 @@ final class OrderBalanceReader implements OrderBalanceReaderInterface
         $claim = $cancelled ? '0' : (string) BigDecimal::max(BigDecimal::zero(), BigDecimal::of((string) $order['grandTotal'])->minus($credited));
 
         // Chargebacks apart: they lower what is paid, but are not refunds (P2).
-        $amounts = [];
+        // Corrections are netted into the row they correct: no refund either.
+        $rows = [];
         $chargedBack = [];
         $paid = BigDecimal::zero();
 
-        foreach ($this->connection->fetchAllAssociative('SELECT amount, method FROM tl_consho_payment WHERE pid = ?', [$orderId]) as $row) {
+        foreach ($this->connection->fetchAllAssociative('SELECT id, amount, method, refundOf FROM tl_consho_payment WHERE pid = ? ORDER BY id', [$orderId]) as $row) {
             $amount = (string) $row['amount'];
 
             if (ChargebackRow::is((string) $row['method'])) {
                 $chargedBack[] = $amount;
             } else {
-                $amounts[] = $amount;
+                $rows[] = ['id' => (int) $row['id'], 'amount' => $amount, 'method' => (string) $row['method'], 'refundOf' => (int) $row['refundOf']];
             }
 
             $paid = $paid->plus($amount);
         }
+
+        $amounts = CorrectionRow::net($rows);
 
         $ordered = [];
         $performed = [];

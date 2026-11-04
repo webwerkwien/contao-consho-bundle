@@ -22,6 +22,14 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
 interface PaymentReadinessInterface extends PaymentHandlerInterface
 {
     /**
+     * Reserved key in the $config of methodProblems(): the ID of the method,
+     * for a module that keeps state per method beside its settings (the
+     * PayPal webhook it registered). A module must not define a virtual
+     * field of that name.
+     */
+    public const METHOD_ID = 'consho_method_id';
+
+    /**
      * Asked once per published method of this type, with its settings —
      * a module installed and not yet used is no warning.
      *

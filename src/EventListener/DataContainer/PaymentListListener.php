@@ -8,6 +8,7 @@ use Contao\Date;
 use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 
 /**
@@ -42,11 +43,17 @@ class PaymentListListener
             'refund' => 'methodRefund',
             ChargebackRow::METHOD => 'methodChargeback',
             ChargebackRow::REVERSAL => 'methodChargebackReversal',
+            CorrectionRow::METHOD => 'methodCorrection',
             default => null,
         };
 
         if (null !== $marker) {
             $method = (string) ($GLOBALS['TL_LANG']['tl_consho_payment'][$marker] ?? $method);
+        }
+
+        // A correction carries its reason in `reference` (Geldflüsse E8).
+        if (CorrectionRow::is((string) ($row['method'] ?? '')) && '' !== trim((string) ($row['reference'] ?? ''))) {
+            $method .= ': '.trim((string) $row['reference']);
         }
         // A refund through a provider says where its money is (block
         // Zahlung Mollie, 4.4).

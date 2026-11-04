@@ -8,6 +8,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Webwerkwien\ContaoConshoBundle\Payment\AttemptState;
 use Webwerkwien\ContaoConshoBundle\Payment\ChargebackRow;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentAttempt;
 
 final class DbalPaymentChangeRepository implements PaymentChangeRepositoryInterface
@@ -49,14 +50,17 @@ final class DbalPaymentChangeRepository implements PaymentChangeRepositoryInterf
 
     public function paymentAmounts(int $orderId): array
     {
-        return array_map(
-            static fn ($amount): string => (string) $amount,
-            $this->connection->fetchFirstColumn(
-                'SELECT amount FROM tl_consho_payment WHERE pid = ? AND method NOT IN (?)',
-                [$orderId, ChargebackRow::METHODS],
-                [ParameterType::INTEGER, ArrayParameterType::STRING],
-            ),
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT id, amount, method, refundOf FROM tl_consho_payment WHERE pid = ? AND method NOT IN (?) ORDER BY id',
+            [$orderId, ChargebackRow::METHODS],
+            [ParameterType::INTEGER, ArrayParameterType::STRING],
         );
+
+        // A correction is part of the row it corrects, not a refund.
+        return CorrectionRow::net(array_map(
+            static fn (array $row): array => ['id' => (int) $row['id'], 'amount' => (string) $row['amount'], 'method' => (string) $row['method'], 'refundOf' => (int) $row['refundOf']],
+            $rows,
+        ));
     }
 
     public function chargebackAmounts(int $orderId): array

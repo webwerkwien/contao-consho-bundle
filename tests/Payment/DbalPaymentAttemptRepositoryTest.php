@@ -69,6 +69,39 @@ class DbalPaymentAttemptRepositoryTest extends TestCase
         self::assertNull($this->repository()->latestFor(6));
     }
 
+    public function testDieReferenzFindetDenVersuchNurDerselbenZahlungsart(): void
+    {
+        $first = $this->repository()->open(4, new PaymentMethod(7, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('a', 64), 100);
+        $other = $this->repository()->open(5, new PaymentMethod(8, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('b', 64), 100);
+        $second = $this->repository()->open(4, new PaymentMethod(7, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('c', 64), 101);
+        $this->repository()->setState($first, AttemptState::Failed, 100, 'ORDER-1');
+        $this->repository()->setState($other, AttemptState::Open, 100, 'ORDER-1');
+        $this->repository()->setState($second, AttemptState::Open, 101, 'ORDER-1');
+
+        self::assertSame($second, $this->repository()->findByReference(7, 'ORDER-1')?->id, 'der neueste');
+        self::assertSame($other, $this->repository()->findByReference(8, 'ORDER-1')?->id);
+        self::assertNull($this->repository()->findByReference(7, 'ORDER-2'));
+        self::assertNull($this->repository()->findByReference(7, ''), 'leer findet nie, auch nicht Versuche ohne Referenz');
+        self::assertSame($first, $this->repository()->byId($first)?->id);
+        self::assertNull($this->repository()->byId(999));
+    }
+
+    public function testNachgefragteZahlungenWerdenJeZahlungsartGezaehlt(): void
+    {
+        $a = $this->repository()->open(4, new PaymentMethod(7, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('a', 64), 100);
+        $b = $this->repository()->open(5, new PaymentMethod(7, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('b', 64), 100);
+        $c = $this->repository()->open(6, new PaymentMethod(8, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('c', 64), 100);
+        $this->repository()->open(7, new PaymentMethod(8, 'paypal', 'PayPal', []), '10', 'EUR', str_repeat('d', 64), 100);
+
+        $this->repository()->markPolled($a, 500);
+        $this->repository()->markPolled($b, 1000);
+        $this->repository()->markPolled($c, 1000);
+
+        self::assertSame([7 => 2, 8 => 1], $this->repository()->polledSince(500));
+        self::assertSame([7 => 1, 8 => 1], $this->repository()->polledSince(501));
+        self::assertSame([], $this->repository()->polledSince(1001));
+    }
+
     public function testZustandUndReferenz(): void
     {
         $id = $this->repository()->open(4, new PaymentMethod(7, 'test', 'Test', []), '10', 'EUR', str_repeat('a', 64), 100);

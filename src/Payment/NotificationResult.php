@@ -38,12 +38,13 @@ final class NotificationResult
         public readonly string $currency = '',
         /** @var list<ProviderEvent> */
         public readonly array $events = [],
+        public readonly string $because = '',
     ) {
     }
 
     public function withEvents(ProviderEvent ...$events): self
     {
-        return new self($this->outcome, $this->amount, $this->reference, $this->mandate, $this->for, $this->currency, array_values($events));
+        return new self($this->outcome, $this->amount, $this->reference, $this->mandate, $this->for, $this->currency, array_values($events), $this->because);
     }
 
     public static function paid(string $amount, string $currency, string $for, string $reference, string $mandate = ''): self
@@ -71,8 +72,23 @@ final class NotificationResult
         return trim($for);
     }
 
-    public static function ignored(): self
+    /**
+     * The payment is under way at the provider — a capture held for review,
+     * a bank payment not cleared yet. Nothing is booked; asked by the cleanup
+     * cron (PollingPaymentHandlerInterface), the attempt stays open and is
+     * asked again on the next run.
+     */
+    public static function pending(string $for): self
     {
-        return new self(NotificationOutcome::Ignored);
+        return new self(NotificationOutcome::Pending, for: self::forOf($for));
+    }
+
+    /**
+     * Nothing to act on. `because` goes to the log (info), so that a
+     * notification the shop dropped can be told from one that never came.
+     */
+    public static function ignored(string $because = ''): self
+    {
+        return new self(NotificationOutcome::Ignored, because: trim($because));
     }
 }

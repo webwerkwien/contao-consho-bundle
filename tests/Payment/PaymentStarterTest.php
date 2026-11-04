@@ -484,6 +484,25 @@ class PaymentStarterTest extends TestCase
                 return null;
             }
 
+            public function findByReference(int $methodId, string $reference): PaymentAttempt|null
+            {
+                return null;
+            }
+
+            public function byId(int $attemptId): PaymentAttempt|null
+            {
+                return null;
+            }
+
+            public function markPolled(int $attemptId, int $now): void
+            {
+            }
+
+            public function polledSince(int $since): array
+            {
+                return [];
+            }
+
             public function lock(int $attemptId): PaymentAttempt|null
             {
                 return null;

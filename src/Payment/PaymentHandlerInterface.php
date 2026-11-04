@@ -60,6 +60,11 @@ interface PaymentHandlerInterface
      * unverified is `Pending`. `Failed` and `Cancelled` stop no money and
      * need no proof.
      *
+     * It may complete at the provider what the customer approved — PayPal's
+     * capture (spec Zahlung PayPal, PP3) — idempotently, so that a
+     * notification doing the same at the same moment moves the money once.
+     * It never records it: booking stays with the notification.
+     *
      * @param array<string, mixed> $config
      */
     public function handleReturn(Request $request, PaymentAttempt $attempt, array $config): AttemptState;

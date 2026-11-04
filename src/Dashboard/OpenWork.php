@@ -27,8 +27,11 @@ final class OpenWork
 
     public int $complaints = 0;
 
+    // Block Geldflüsse, 3.4: orders holding money that has to go back.
+    public int $overpaid = 0;
+
     public function isEmpty(): bool
     {
-        return 0 === $this->unpaid + $this->toDeliver + $this->undecided + $this->refundOpen + $this->complaints;
+        return 0 === $this->unpaid + $this->toDeliver + $this->undecided + $this->refundOpen + $this->complaints + $this->overpaid;
     }
 }

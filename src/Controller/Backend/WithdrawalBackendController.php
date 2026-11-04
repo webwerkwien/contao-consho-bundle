@@ -55,6 +55,9 @@ final class WithdrawalBackendController
     public const TEMPLATE = '@Contao/backend/consho_withdrawal_process.html.twig';
     public const ASSIGN_TEMPLATE = '@Contao/backend/consho_withdrawal_assign.html.twig';
 
+    /** Query key: the refund made at the provider to tick (Geldflüsse H1). */
+    public const FOREIGN = 'consho_foreign';
+
     public function __construct(
         private readonly Connection $connection,
         private readonly Security $security,
@@ -103,7 +106,7 @@ final class WithdrawalBackendController
                 'accept' => $this->processing->accept($id, self::strings($post->all('accepted')), $now),
                 'reject' => $this->processing->reject($id, $post->getString('reason'), $now),
                 'return' => $this->processing->recordReturn($id, self::date($post->getString('returnReceivedAt')), self::strings($post->all('returned')), $now, self::restock($post->all('restockShown'), $post->all('restock')), $this->userId()),
-                'refund' => $this->processing->refund($id, $post->getString('shipping'), $now, $post->has('compensation') ? $post->getString('compensation') : null, $post->has('vouchers') ? $post->getString('vouchers') : null, $post->has('throughProvider'), $post->has('consho_confirmed') ? $post->getString('consho_confirmed') : null),
+                'refund' => $this->processing->refund($id, $post->getString('shipping'), $now, $post->has('compensation') ? $post->getString('compensation') : null, $post->has('throughProvider'), $post->has('consho_confirmed') ? $post->getString('consho_confirmed') : null, self::ids($post->all()['foreign'] ?? []), $this->userName()),
                 default => ProcessingResult::refused('unknown'),
             };
 
@@ -113,8 +116,7 @@ final class WithdrawalBackendController
                 return $this->confirmation($withdrawal, $order, $result, $request->getUri(), [
                     'shipping' => $post->getString('shipping'),
                     'compensation' => $post->has('compensation') ? $post->getString('compensation') : null,
-                    'vouchers' => $post->has('vouchers') ? $post->getString('vouchers') : null,
-                ]);
+                ], self::ids($post->all()['foreign'] ?? []));
             }
 
             $params = $result->params;
@@ -163,12 +165,13 @@ final class WithdrawalBackendController
      * @param array<string, mixed>       $withdrawal
      * @param array<string, mixed>       $order
      * @param array<string, string|null> $inputs
+     * @param list<int>                  $foreign the refunds made at the provider that are part of it
      */
-    private function confirmation(array $withdrawal, array $order, ProcessingResult $result, string $action, array $inputs): string
+    private function confirmation(array $withdrawal, array $order, ProcessingResult $result, string $action, array $inputs, array $foreign): string
     {
         $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
         $currency = (string) $order['currency'];
-        [$provider, $manual] = $result->params;
+        [$provider, $manual, $recorded] = $result->params + [2 => '0'];
 
         return $this->twig->render(self::TEMPLATE, [
             'messages' => '',
@@ -180,7 +183,9 @@ final class WithdrawalBackendController
                 'amount' => $provider,
                 'amountLabel' => $this->money->format($provider, $currency, $language),
                 'manualLabel' => BigDecimal::of($manual)->isPositive() ? $this->money->format($manual, $currency, $language) : '',
+                'recordedLabel' => BigDecimal::of($recorded)->isPositive() ? $this->money->format($recorded, $currency, $language) : '',
                 'inputs' => array_filter($inputs, static fn (string|null $value): bool => null !== $value),
+                'foreign' => $foreign,
             ],
         ]);
     }
@@ -420,13 +425,25 @@ final class WithdrawalBackendController
                     ? (string) BigDecimal::of((string) ($withdrawal['valueCompensation'] ?? '0'))->toScale(2, RoundingMode::HalfUp)
                     : null,
                 'compensationLines' => $compensationLines,
-                // WG11: shown where vouchers paid; at most that goes back onto them.
+                // WG11: shown where vouchers paid; the refund goes back onto
+                // them first, at most that — a fixed split, not a form value.
                 'vouchers' => BigDecimal::of($proposal['vouchers'])->isPositive() ? (string) BigDecimal::of($proposal['vouchers'])->toScale(2, RoundingMode::Down) : null,
                 'vouchersMax' => $this->money->format($proposal['vouchers'], $currency, $language),
                 // Block Zahlung Mollie (R2): the option, preselected, where a
                 // provider can pay back — with the most and the methods.
                 'provider' => BigDecimal::of($proposal['provider'])->isPositive() ? $this->money->format($proposal['provider'], $currency, $language) : null,
                 'providerMethods' => implode(', ', $proposal['providerMethods']),
+                // Spec 9.6 B, Geldflüsse T5: open refunds made at the provider,
+                // "2,00 € (ID)", to tick as part of this refund. While one is
+                // open, the provider is not preselected — it may be this money.
+                // Geldflüsse H1: coming from "Nachträge", the refund chosen
+                // there is ticked — through the decision too, as the page
+                // posts back to its own address.
+                'outside' => array_map(fn (array $refund): array => [
+                    'id' => $refund['id'],
+                    'label' => \sprintf('%s (%s)', $this->money->format($refund['amount'], $refund['currency'], $language), $refund['reference']),
+                    'chosen' => $refund['id'] === $this->requests->getCurrentRequest()?->query->getInt(self::FOREIGN),
+                ], $proposal['outside']),
             ],
         ];
     }
@@ -466,6 +483,13 @@ final class WithdrawalBackendController
         return $user instanceof BackendUser ? (int) $user->id : 0;
     }
 
+    private function userName(): string
+    {
+        $user = $this->security->getUser();
+
+        return $user instanceof BackendUser ? (string) $user->username : '';
+    }
+
     private static function strings(array $values): array
     {
         $strings = [];
@@ -477,6 +501,21 @@ final class WithdrawalBackendController
         }
 
         return $strings;
+    }
+
+    /**
+     * The ticked refunds made at the provider, as IDs. Which of them are
+     * this order's and still open, RefundPayout checks under the lock.
+     *
+     * @return list<int>
+     */
+    private static function ids(mixed $values): array
+    {
+        if (!\is_array($values)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(static fn (mixed $value): int => \is_scalar($value) ? (int) $value : 0, $values), static fn (int $id): bool => $id > 0)));
     }
 
     private static function date(string $value): int

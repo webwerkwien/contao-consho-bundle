@@ -8,6 +8,7 @@ use Doctrine\DBAL\ParameterType;
 use Symfony\Contracts\Service\ResetInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
+use Webwerkwien\ContaoConshoBundle\Order\OverpaidOrders;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentState;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryState;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
@@ -40,6 +41,9 @@ final class OpenWorkReader implements ResetInterface
 
     public const REFUND_OPEN = 'refundOpen';
 
+    // Block Geldflüsse, 3.4: cancelled and paid, or paid more than claimed.
+    public const OVERPAID = 'overpaid';
+
     // The shop of a withdrawal: its order's, or — not assigned yet (WA) —
     // the one it came in through. Withdrawals from before WA have shop 0
     // and always an order.
@@ -51,6 +55,8 @@ final class OpenWorkReader implements ResetInterface
     public function __construct(
         private readonly Connection $connection,
         private readonly OrderBalanceReaderInterface $balances,
+        // Optional for tests built by hand; the container wires it.
+        private readonly OverpaidOrders|null $overpaid = null,
     ) {
     }
 
@@ -82,6 +88,14 @@ final class OpenWorkReader implements ResetInterface
 
             if ($order['toDeliver']) {
                 ++$shop->toDeliver;
+            }
+        }
+
+        // Cancelled orders are left out above; one that holds money is not
+        // done (Geldflüsse, D5).
+        foreach ($this->overpaid?->all() ?? [] as $order) {
+            if (isset($work[$order['shop']])) {
+                ++$work[$order['shop']]->overpaid;
             }
         }
 
@@ -133,6 +147,7 @@ final class OpenWorkReader implements ResetInterface
     public function reset(): void
     {
         $this->orders = null;
+        $this->overpaid?->reset();
     }
 
     /**
@@ -165,6 +180,7 @@ final class OpenWorkReader implements ResetInterface
                 ['state' => 'accepted'],
                 $shop,
             ),
+            self::OVERPAID => $this->overpaidIds($shop),
             default => [],
         };
     }
@@ -186,6 +202,20 @@ final class OpenWorkReader implements ResetInterface
         }
 
         $ids = array_map(intval(...), $this->connection->fetchFirstColumn($sql, $params, $types));
+        sort($ids);
+
+        return $ids;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function overpaidIds(int $shop): array
+    {
+        $ids = array_keys(array_filter(
+            $this->overpaid?->all() ?? [],
+            static fn (array $o): bool => 0 === $shop || $o['shop'] === $shop,
+        ));
         sort($ids);
 
         return $ids;

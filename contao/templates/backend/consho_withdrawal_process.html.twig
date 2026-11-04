@@ -129,9 +129,12 @@
                 {% for name, value in confirm.inputs %}
                     <input type="hidden" name="{{ name }}" value="{{ value }}">
                 {% endfor %}
+                {% for id in confirm.foreign %}
+                    <input type="hidden" name="foreign[]" value="{{ id }}">
+                {% endfor %}
                 <input type="hidden" name="throughProvider" value="1">
                 <input type="hidden" name="consho_confirmed" value="{{ confirm.amount }}">
-                <p class="tl_info">{{ (l.refundConfirm|default('%s / %s'))|format(confirm.amountLabel, refund.providerMethods) }}{% if confirm.manualLabel %} {{ (l.refundConfirmManual|default('%s'))|format(confirm.manualLabel) }}{% endif %}</p>
+                <p class="tl_info">{% if confirm.recordedLabel %}{{ (l.refundConfirmRecorded|default('%s'))|format(confirm.recordedLabel) }} {% endif %}{{ (l.refundConfirm|default('%s / %s'))|format(confirm.amountLabel, refund.providerMethods) }}{% if confirm.manualLabel %} {{ (l.refundConfirmManual|default('%s'))|format(confirm.manualLabel) }}{% endif %}</p>
                 <div class="tl_submit_container consho-withdrawal-actions">
                     <button type="submit" name="consho_action" value="refund" class="tl_submit">{{ l.refundConfirmSubmit|default('Jetzt zurückzahlen') }}</button>
                     <a href="{{ action }}" class="tl_submit">{{ l.refundConfirmCancel|default('Abbrechen') }}</a>
@@ -187,21 +190,35 @@
                             {% if refund.compensation is not null %}
                                 <tr><td class="tl_label"><label for="ctrl_compensation">{{ l.valueCompensation.0|default('Wertersatz') }}</label></td><td><input type="text" inputmode="decimal" name="compensation" id="ctrl_compensation" class="tl_text consho-quantity" value="{{ refund.compensation }}"></td></tr>
                             {% endif %}
-                            {# WG11: refunded onto the vouchers first, at most what they paid. #}
+                            {# WG11: refunded onto the vouchers first, at most what they
+                               paid — a fixed split, shown, not chosen. #}
                             {% if refund.vouchers|default(null) is not null %}
-                                <tr><td class="tl_label"><label for="ctrl_vouchers">{{ l.refundVouchers.0|default('Davon auf Gutscheine') }}</label></td><td><input type="text" inputmode="decimal" name="vouchers" id="ctrl_vouchers" class="tl_text consho-quantity" value="{{ refund.vouchers }}"></td></tr>
+                                <tr><td class="tl_label">{{ l.refundVouchers.0|default('Mit Gutschein bezahlt') }}</td><td>{{ refund.vouchersMax }}</td></tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
                 <p class="tl_help">{{ (l.shippingHelp|default('%s'))|format(refund.shippingLeft) }}</p>
                 {% if refund.vouchers|default(null) is not null %}
-                    <p class="tl_help">{{ (l.refundVouchers.1|default('%s'))|format(refund.vouchersMax) }}</p>
+                    <p class="tl_help">{{ l.refundVouchers.1|default('') }}</p>
                 {% endif %}
-                {# Block Zahlung Mollie (R2): through the provider, preselected where one can. #}
+                {# Geldflüsse T5: refunds already made at the provider, to tick
+                   as part of this refund — booked first, never paid out again. #}
+                {% if refund.outside is not empty %}
+                    <div class="widget">
+                        <h3>{{ l.refundForeign.0|default('Schon beim Zahlungsanbieter zurückgezahlt') }}</h3>
+                        {% for event in refund.outside %}
+                            <input type="checkbox" name="foreign[]" id="ctrl_foreign_{{ event.id }}" class="tl_checkbox" value="{{ event.id }}"{% if event.chosen|default(false) %} checked{% endif %}>
+                            <label for="ctrl_foreign_{{ event.id }}">{{ event.label }}</label><br>
+                        {% endfor %}
+                        <p class="tl_help">{{ l.refundForeign.1|default('') }}</p>
+                    </div>
+                {% endif %}
+                {# Block Zahlung Mollie (R2): through the provider, preselected
+                   where one can — not while a refund made there is open. #}
                 {% if refund.provider|default(null) is not null %}
                     <div class="widget">
-                        <input type="checkbox" name="throughProvider" id="ctrl_throughProvider" class="tl_checkbox" value="1" checked>
+                        <input type="checkbox" name="throughProvider" id="ctrl_throughProvider" class="tl_checkbox" value="1"{% if refund.outside is empty %} checked{% endif %}>
                         <label for="ctrl_throughProvider">{{ (l.throughProvider.0|default('%s'))|format(refund.providerMethods) }}</label>
                         <p class="tl_help">{{ (l.throughProvider.1|default('%s'))|format(refund.provider) }}</p>
                     </div>

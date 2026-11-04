@@ -1,0 +1,155 @@
+{#
+  "Geldflüsse" at an order (block Geldflüsse, 3.6): the balance, then every
+  movement of money in time with what can be done about it. Rendered inside
+  the back end frame by MoneyFlowBackendController; every form posts back to
+  the same address with Contao's request token.
+
+  Built like Contao's own info page (act=show, J4): sections with a legend
+  that folds, figures in a table, hints next to the button they explain.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.back|default('Zurück') }}</a>
+    {% if payments %}<a href="{{ payments }}" class="header_edit">{{ lang.paymentsLink|default('Zahlungsliste') }}</a>{% endif %}
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+<div class="tl_formbody_edit consho-money-flows">
+    <fieldset class="tl_tbox" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ lang.balanceLegend|default('Saldo') }}: {{ number }}</button></legend>
+        <table class="tl_show with-padding with-zebra">
+            <tbody>
+                {% for line in balance %}
+                    <tr>
+                        <td class="tl_label">{% if line.strong %}<strong>{{ line.label }}</strong>{% else %}{{ line.label }}{% endif %}</td>
+                        <td style="text-align:right; white-space:nowrap">{% if line.strong %}<strong>{{ line.value }}</strong>{% else %}{{ line.value }}{% endif %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </fieldset>
+
+    {# After a chargeback, while the order owes money (P3). #}
+    {% if claim %}
+        <fieldset class="tl_box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ lang.claim.legend|default('Zahlung einfordern') }}: {{ claim.outstanding }}</button></legend>
+            <form action="{{ action }}" method="post" class="tl_form">
+                <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                <input type="hidden" name="consho_action" value="claim">
+                <label for="consho_day">{{ lang.claim.day|default('Zahlbar bis') }}</label>
+                <input type="date" id="consho_day" name="consho_day" value="{{ claim.day }}" class="tl_text" style="width:auto" required>
+                <button type="submit" class="tl_submit">{{ lang.claim.submit|default('Zahlung einfordern') }}</button>
+                <p class="tl_help tl_tip">{{ lang.claim.help|default('') }}</p>
+            </form>
+        </fieldset>
+    {% endif %}
+
+    <fieldset class="tl_box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ lang.movementsLegend|default('Bewegungen') }}</button></legend>
+
+        {% if movements is empty %}
+            <p class="tl_info">{{ lang.noMovements|default('') }}</p>
+        {% else %}
+            <table class="tl_show with-padding with-zebra">
+                <tbody>
+                    {% for m in movements %}
+                        <tr class="consho-money-flows__{{ m.kind }}">
+                            <td class="tl_label" style="white-space:nowrap">{{ m.date }}</td>
+                            <td>
+                                <strong>{{ m.label }}</strong>
+                                {% if m.details is not empty %} — {{ m.details|join(' · ') }}{% endif %}
+                                {% if m.of %}<br>{{ m.of }}{% endif %}
+                                {% if m.withdrawal %}
+                                    <br><a href="{{ m.withdrawal.url }}">{{ (lang.withdrawalLink|default('Widerruf %s'))|format(m.withdrawal.number) }}</a>
+                                    {% if m.withdrawal.document %} · <a href="{{ m.withdrawal.document }}">{{ lang.documentLink|default('Beleg') }}</a>{% endif %}
+                                {% endif %}
+                                {# The operations of the payment list that apply to this row (PaymentActions). #}
+                                {% if m.actions is not empty %}
+                                    <br>{% for a in m.actions %}<a href="{{ a.url }}" title="{{ a.title }}">{{ a.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right; white-space:nowrap">{{ m.amount }}</td>
+                            <td style="white-space:nowrap">{{ m.state }}</td>
+                        </tr>
+
+                        {# J3: a refund that names no payment, tied to one here. #}
+                        {% if m.unassigned %}
+                            <tr>
+                                <td></td>
+                                <td colspan="3">
+                                    {% if m.assignTo is not empty %}
+                                        <form action="{{ action }}" method="post" class="tl_form" style="display:inline-block">
+                                            <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                                            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                            <input type="hidden" name="consho_action" value="assignPayment">
+                                            <input type="hidden" name="consho_row" value="{{ m.id }}">
+                                            <select name="consho_payment" class="tl_select" style="width:auto" aria-label="{{ lang.assignPaymentLabel|default('Zahlung') }}">
+                                                {% for p in m.assignTo %}
+                                                    <option value="{{ p.id }}">{{ p.label }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="tl_submit">{{ lang.assignPayment|default('Zahlung zuordnen') }}</button>
+                                        </form>
+                                        <p class="tl_help tl_tip">{{ lang.assignPaymentHelp|default('') }}</p>
+                                    {% else %}
+                                        <p class="tl_help tl_tip">{{ lang.noPaymentToAssign|default('') }}</p>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+
+                        {# The actions of a refund made at the provider (Nachträge, H1–H3). #}
+                        {% set event = m.event %}
+                        {% if event %}
+                            <tr>
+                                <td></td>
+                                <td colspan="3">
+                                    {% if event.withdrawals is not empty %}
+                                        {% for withdrawal in event.withdrawals %}
+                                            <a href="{{ withdrawal.url }}" class="tl_submit" style="display:inline-block; margin-right:1em">{{ (lang.toWithdrawal|default('Zum Widerruf %s'))|format(withdrawal.number) }}</a>
+                                        {% endfor %}
+                                        <p class="tl_help tl_tip">{{ lang.toWithdrawalHelp|default('') }}</p>
+                                    {% endif %}
+
+                                    {% if event.canRecord %}
+                                        <form action="{{ action }}" method="post" class="tl_form" style="display:inline-block; margin-right:1em">
+                                            <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                                            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                            <input type="hidden" name="consho_action" value="record">
+                                            <input type="hidden" name="consho_event" value="{{ event.id }}">
+                                            <button type="submit" class="tl_submit">{{ lang.record|default('In Consho erfassen') }}</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if event.rows is not empty %}
+                                        <form action="{{ action }}" method="post" class="tl_form" style="display:inline-block">
+                                            <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
+                                            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                            <input type="hidden" name="consho_action" value="assign">
+                                            <input type="hidden" name="consho_event" value="{{ event.id }}">
+                                            <select name="consho_row" class="tl_select" style="width:auto" aria-label="{{ lang.row|default('Erstattungszeile') }}">
+                                                {% for row in event.rows %}
+                                                    <option value="{{ row.id }}">{{ row.label ?: ('ID ' ~ row.id) }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            <button type="submit" class="tl_submit">{{ lang.assign|default('Einer Zeile zuordnen') }}</button>
+                                        </form>
+                                    {% endif %}
+
+                                    {% if event.canRecord %}
+                                        <p class="tl_help tl_tip">{{ event.cancelled ? lang.recordCancelled|default('') : lang.noDocuments|default('') }}</p>
+                                    {% endif %}
+                                    {% if event.rows is empty %}
+                                        <p class="tl_help tl_tip">{{ lang.noRows|default('') }}</p>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </fieldset>
+</div>

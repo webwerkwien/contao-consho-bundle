@@ -56,6 +56,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlerInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\InvoicePaymentHandler;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Payment\TestPaymentHandler;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
@@ -674,7 +675,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
         $this->deliveries = new DeliveryReported($this->connection, $orders, $this->balances, $methods, $handlers, $this->issuer, $archiver, $statuses, $links, $mail, $money, $this->logger);
         $this->windows = new WithdrawalWindowReader($this->connection, $this->balances);
         $this->recorder = new WithdrawalRecorder($this->connection, $this->windows, new DbalWithdrawalRepository($this->connection), $mail, $links, $this->logger);
-        $this->processing = new WithdrawalProcessing($this->connection, $orders, $documentRows, $this->issuer, $archiver, $payloads, $this->balances, $statuses, $links, $mail, $money);
+        $this->processing = new WithdrawalProcessing($this->connection, $orders, $documentRows, $this->issuer, $archiver, $payloads, $this->balances, $statuses, $links, $mail, $money, new RefundPayout($this->connection, $orders, $methods, $handlers));
     }
 
     private function mail(DocumentPayloadBuilder $payloads, MoneyFormatter $money): OrderEventMail
@@ -742,6 +743,7 @@ final class AfterSaleAgreesWithOrderTest extends TestCase
             'tl_consho_shop', 'tl_consho_mail_transport', 'tl_consho_order_status', 'tl_consho_number_range',
             'tl_consho_payment_method', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_payment',
             'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_document',
+            'tl_consho_payment_attempt', 'tl_consho_provider_event',
         ] as $table) {
             DcaSchema::create($c, $table);
         }

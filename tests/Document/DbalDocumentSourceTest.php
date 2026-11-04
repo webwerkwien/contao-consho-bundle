@@ -288,6 +288,25 @@ class DbalDocumentSourceTest extends TestCase
     }
 
     /**
+     * Geldflüsse E8: a correction is part of the payment it corrects — the
+     * customer never reads the wrong booking, and one corrected to zero is gone.
+     */
+    public function testEineKorrekturStehtNichtAlsErstattungAufDemBeleg(): void
+    {
+        \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_payment');
+        \Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema::create($this->connection, 'tl_consho_delivery');
+        $this->connection->insert('tl_consho_payment', ['id' => 1, 'pid' => 9, 'receivedAt' => 100, 'amount' => '100.0000', 'method' => 'Überweisung']);
+        $this->connection->insert('tl_consho_payment', ['id' => 2, 'pid' => 9, 'receivedAt' => 300, 'amount' => '-90.0000', 'method' => 'correction', 'refundOf' => 1]);
+        $this->connection->insert('tl_consho_payment', ['id' => 3, 'pid' => 9, 'receivedAt' => 100, 'amount' => '5.0000', 'method' => 'bar']);
+        $this->connection->insert('tl_consho_payment', ['id' => 4, 'pid' => 9, 'receivedAt' => 300, 'amount' => '-5.0000', 'method' => 'correction', 'refundOf' => 3]);
+
+        self::assertSame(
+            [['method' => 'Überweisung', 'amount' => '10.0000']],
+            $this->source()->contextFor(['id' => '9'] + $this->order('de'))['payments'],
+        );
+    }
+
+    /**
      * EZ-4: per single-purpose voucher what it paid on this order, refunds to
      * it deducted, with the tax its sale carried — named as the redemption
      * named it. A voucher refunded in full drops out, other payments are not

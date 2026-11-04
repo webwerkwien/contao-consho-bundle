@@ -41,6 +41,10 @@ in the free core stays there.
 
 - PHP 8.4 with `gd`, `sodium` and `zip`
 - Contao 5.7
+- `contao/conflicts` in the project's `composer.json`, as in the Contao Managed Edition and in Contao's setup for a
+  Symfony application. It keeps out
+  `doctrine/dbal` 4.5.0, which reports every unique key twice on MySQL and MariaDB: `contao:migrate` and restoring
+  a backup then fail with "Duplicate key name", and Consho's tables have unique keys.
 
 ## Installation
 

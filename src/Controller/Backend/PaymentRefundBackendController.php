@@ -23,6 +23,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Intl\Currencies;
 use Twig\Environment;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentRecorded;
+use Webwerkwien\ContaoConshoBundle\Payment\CorrectionRow;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\ProviderEvent;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
@@ -31,14 +32,16 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 /**
  * The refund operations at a payment row (block Zahlung Mollie, 4.4):
  *
- * - "Erstatten" at a received payment whose provider can pay back: amount
- *   and reference, then a confirmation naming both and the payment method
- *   (R5), then RefundPayout against that payment only. No mail, no
- *   document — the same as a negative row typed by hand; the balance has
- *   the same consequences (PaymentRecorded).
+ * - "Erstatten" at any received payment with something left (Geldflüsse
+ *   T4): amount, reference and the ways — the provider where its method can
+ *   pay back, refunds already made there to tick, the rest by hand — then a
+ *   confirmation naming every way (R5), then RefundPayout against that
+ *   payment only, with the split confirmed. No mail, no document; the
+ *   balance has the consequences of any row (PaymentRecorded).
  * - "Erneut auszahlen" at a refund the provider refused.
  * - "Von Hand erledigt" at a refund that failed, hangs or is pending: the
  *   operator paid back by hand or saw it go through at the provider.
+ * - "Korrigieren" at a locked payment booked too high (Geldflüsse E8).
  *
  * Every page is a GET and every action a POST with Contao's request token,
  * as at "Zahlungsziel verschieben". The confirmation is a page, not a
@@ -78,19 +81,32 @@ final class PaymentRefundBackendController
         $request = $this->requests->getCurrentRequest();
         $paymentId = (int) $row['id'];
         $orderId = (int) $order['id'];
-        $refundable = $this->payout->refundable($orderId, $paymentId)[$paymentId] ?? null;
+        $remainder = $this->payout->remainder($orderId, $paymentId);
         $vars = $this->vars('refund', $row, $order);
 
-        if (null === $refundable) {
+        if (null === $remainder) {
             return $this->render($vars + ['refundable' => null]);
         }
 
+        // Geldflüsse T4: every payment with something left, over its ways —
+        // the provider where its method can pay back, the refunds already
+        // made there to tick, the rest by hand.
         $digits = $this->digits((string) $order['currency']);
+        $canProvider = [] !== $this->payout->refundable($orderId, $paymentId);
+        $offered = $this->payout->openForeign($orderId, $paymentId);
+        $outside = array_reduce($offered, static fn (BigDecimal $sum, array $event): BigDecimal => $sum->plus($event['amount']), BigDecimal::zero());
+        $proposed = BigDecimal::of($remainder)->minus($outside);
         $vars += [
-            'refundable' => (string) BigDecimal::of($refundable)->toScale($digits, RoundingMode::Down),
-            'refundableLabel' => $this->money((string) $refundable, $order),
-            'amount' => (string) BigDecimal::of($refundable)->toScale($digits, RoundingMode::Down),
+            'refundable' => (string) BigDecimal::of($remainder)->toScale($digits, RoundingMode::Down),
+            'refundableLabel' => $this->money($remainder, $order),
+            'amount' => (string) ($proposed->isPositive() ? $proposed : BigDecimal::of($remainder))->toScale($digits, RoundingMode::Down),
             'reference' => \sprintf((string) ($lang['refundReferenceDefault'] ?? 'Refund %s'), (string) $order['orderNumber']),
+            'canProvider' => $canProvider,
+            // Not preselected while a refund made there is open: it may be
+            // the same money (spec 9.6 B).
+            'payOut' => $canProvider && [] === $offered,
+            'foreignOffered' => array_map(fn (array $event): array => ['id' => $event['id'], 'reference' => $event['reference'], 'amountLabel' => $this->money->format($event['amount'], $event['currency'], (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de'))], $offered),
+            'foreignChosen' => [],
         ];
 
         if (null === $request || !$request->isMethod('POST')) {
@@ -99,22 +115,42 @@ final class PaymentRefundBackendController
 
         $post = $request->request;
         $reference = trim($post->getString('consho_reference'));
-        $amount = $this->amount($post->getString('consho_amount'), $refundable, $digits);
+        $amount = $this->amount($post->getString('consho_amount'), $remainder, $digits);
+        $offeredIds = array_column($offered, 'id');
+        $posted = $post->all()['consho_foreign'] ?? [];
+        // Only those offered: the list is read again for every request.
+        $foreign = array_values(array_intersect($offeredIds, array_map(intval(...), \is_array($posted) ? $posted : [])));
+        $payOut = $canProvider && $post->has('consho_payout');
         $vars['reference'] = $reference;
         $vars['amount'] = $post->getString('consho_amount');
+        $vars['payOut'] = $payOut;
+        $vars['foreignChosen'] = $foreign;
+        $ways = null === $amount ? null : $this->payout->ways($orderId, $amount, $paymentId, $foreign, $payOut);
 
-        if (null === $amount) {
-            $this->framework->getAdapter(Message::class)->addError(\sprintf((string) ($lang['refundInvalidAmount'] ?? '%s'), $vars['refundableLabel']));
+        if (null === $amount || null === $ways) {
+            $this->framework->getAdapter(Message::class)->addError(\sprintf((string) ($lang[null === $amount ? 'refundInvalidAmount' : 'refundWaysInvalid'] ?? '%s'), $vars['refundableLabel']));
 
             return $this->render(['messages' => (string) $this->framework->getAdapter(Message::class)->generate()] + $vars);
         }
 
-        // First POST: the confirmation (R5). Second POST: the refund.
+        // First POST: the confirmation (R5), naming every way. Second POST:
+        // the refund, with the split the operator saw.
         if (!$post->has('consho_confirmed')) {
-            return $this->render(['step' => 'confirm', 'amount' => $amount, 'amountLabel' => $this->money($amount, $order)] + $vars);
+            return $this->render(['step' => 'confirm', 'amount' => $amount, 'ways' => $ways, 'confirmLines' => $this->confirmLines($ways, $vars['method'], $offered, $foreign, $order)] + $vars);
         }
 
-        $booked = $this->payout->refund($orderId, $amount, $reference, time(), $paymentId);
+        $expected = [
+            'foreign' => $post->getString('consho_way_foreign'),
+            'provider' => $post->getString('consho_way_provider'),
+            'hand' => $post->getString('consho_way_hand'),
+        ];
+
+        try {
+            $booked = $this->payout->refund($orderId, $amount, $reference, time(), $paymentId, $foreign, $this->userName(), $payOut, $expected);
+        } catch (MathException) {
+            // A tampered split: no number, nothing booked.
+            $booked = [];
+        }
 
         if ([] === $booked) {
             // Refunded meanwhile by someone else: under the lock less was left
@@ -126,6 +162,72 @@ final class PaymentRefundBackendController
 
         $this->recorded->handle($orderId, false, time());
         $this->report($booked);
+
+        throw new RedirectResponseException($vars['back']);
+    }
+
+    /**
+     * "Korrigieren" at a locked payment booked too high (Geldflüsse E8):
+     * amount and a mandatory reason, a confirmation, then a counter-booking
+     * tied to the payment. No money moves, so no payment method is asked —
+     * but the balance changes, hence PaymentRecorded as after any row.
+     */
+    public function correct(DataContainer $dc): string
+    {
+        [$row, $order] = $this->load($dc);
+
+        if (!$this->security->isGranted(ContaoCorePermissions::DC_PREFIX.'tl_consho_payment', new CreateAction('tl_consho_payment', ['pid' => (int) $order['id']]))) {
+            throw new AccessDeniedHttpException();
+        }
+
+        $lang = $this->lang();
+        $request = $this->requests->getCurrentRequest();
+        $paymentId = (int) $row['id'];
+        $orderId = (int) $order['id'];
+        $left = $this->payout->correctable($paymentId);
+        $vars = $this->vars('correct', $row, $order);
+
+        if (null === $left) {
+            return $this->render($vars + ['refundable' => null]);
+        }
+
+        $digits = $this->digits((string) $order['currency']);
+        $vars += [
+            'refundable' => (string) BigDecimal::of($left)->toScale($digits, RoundingMode::Down),
+            'refundableLabel' => $this->money($left, $order),
+            'amount' => '',
+            'reference' => '',
+        ];
+
+        if (null === $request || !$request->isMethod('POST')) {
+            return $this->render($vars);
+        }
+
+        $post = $request->request;
+        $reason = trim($post->getString('consho_reference'));
+        $amount = $this->amount($post->getString('consho_amount'), $left, $digits);
+        $vars['reference'] = $reason;
+        $vars['amount'] = $post->getString('consho_amount');
+
+        if (null === $amount || '' === $reason) {
+            $this->framework->getAdapter(Message::class)->addError(\sprintf((string) ($lang['correctInvalid'] ?? '%s'), $vars['refundableLabel']));
+
+            return $this->render(['messages' => (string) $this->framework->getAdapter(Message::class)->generate()] + $vars);
+        }
+
+        if (!$post->has('consho_confirmed')) {
+            return $this->render(['step' => 'correctConfirm', 'amount' => $amount, 'amountLabel' => $this->money($amount, $order),
+                'correctedLabel' => $this->money((string) BigDecimal::of((string) $row['amount'])->plus((string) $this->corrected($paymentId))->minus($amount), $order)] + $vars);
+        }
+
+        if (null === $this->payout->correct($orderId, $paymentId, $amount, $reason, time())) {
+            $this->framework->getAdapter(Message::class)->addError((string) ($lang['correctStateChanged'] ?? 'The payment has changed meanwhile.'));
+
+            throw new RedirectResponseException($vars['back']);
+        }
+
+        $this->recorded->handle($orderId, false, time());
+        $this->framework->getAdapter(Message::class)->addConfirmation((string) ($lang['correctDone'] ?? 'The payment is corrected.'));
 
         throw new RedirectResponseException($vars['back']);
     }
@@ -201,6 +303,50 @@ final class PaymentRefundBackendController
         }
 
         throw new RedirectResponseException($vars['back']);
+    }
+
+    /**
+     * One sentence per way the refund takes (Geldflüsse T4).
+     *
+     * @param array{foreign: string, provider: string, hand: string}            $ways
+     * @param list<array{id: int, reference: string, amount: string, currency: string}> $offered
+     * @param list<int>                                                         $chosen
+     * @param array<string, mixed>                                              $order
+     *
+     * @return list<string>
+     */
+    private function confirmLines(array $ways, string $method, array $offered, array $chosen, array $order): array
+    {
+        $lang = $this->lang();
+        $lines = [];
+
+        if (BigDecimal::of($ways['foreign'])->isPositive()) {
+            $references = array_column(array_filter($offered, static fn (array $event): bool => \in_array($event['id'], $chosen, true)), 'reference');
+            $lines[] = \sprintf((string) ($lang['refundWayForeign'] ?? '%s (%s)'), $this->money($ways['foreign'], $order), implode(', ', $references));
+        }
+
+        if (BigDecimal::of($ways['provider'])->isPositive()) {
+            $lines[] = \sprintf((string) ($lang['refundWayProvider'] ?? '%s / %s'), $this->money($ways['provider'], $order), $method);
+        }
+
+        if (BigDecimal::of($ways['hand'])->isPositive()) {
+            $lines[] = \sprintf((string) ($lang['refundWayHand'] ?? '%s'), $this->money($ways['hand'], $order));
+        }
+
+        $lines[] = (string) ($lang['refundConfirm'] ?? '');
+
+        return $lines;
+    }
+
+    /**
+     * The corrections a payment already carries, negative.
+     */
+    private function corrected(int $paymentId): string
+    {
+        return (string) $this->connection->fetchOne(
+            'SELECT COALESCE(SUM(amount), 0) FROM tl_consho_payment WHERE refundOf = ? AND method = ?',
+            [$paymentId, CorrectionRow::METHOD],
+        );
     }
 
     /**

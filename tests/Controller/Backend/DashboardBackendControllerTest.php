@@ -23,6 +23,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\Oss\OssLedger;
 use Webwerkwien\ContaoConshoBundle\Tax\Oss\OssReport;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReader;
+use Webwerkwien\ContaoConshoBundle\Order\OverpaidOrders;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
 use Webwerkwien\ContaoConshoBundle\Stock\Availability;
 use Webwerkwien\ContaoConshoBundle\Setup\SetupGuide;
@@ -43,7 +44,7 @@ final class DashboardBackendControllerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         WithdrawalSchema::create($this->connection);
 
-        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_status', 'tl_consho_payment', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_complaint', 'tl_consho_stock', 'tl_consho_product', 'tl_consho_document'] as $table) {
+        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_status', 'tl_consho_payment', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_complaint', 'tl_consho_stock', 'tl_consho_product', 'tl_consho_document', 'tl_consho_provider_event'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -101,6 +102,23 @@ final class DashboardBackendControllerTest extends TestCase
         $html = $this->controller()();
 
         self::assertStringContainsString('<span class="consho-dashboard__label">Reklamationen</span>', $html);
+        self::assertSame(5, substr_count($html, '<li class="consho-dashboard__tile'));
+    }
+
+    /**
+     * Geldflüsse G4: its own tile, only when there is one, into the order
+     * list narrowed to it.
+     */
+    public function testZuVielBezahltErscheintNurMitFall(): void
+    {
+        self::assertStringNotContainsString('Zu viel bezahlt', $this->controller()());
+
+        $this->connection->insert('tl_consho_order', ['id' => 50, 'shop' => 1, 'orderNumber' => 'WEB-50', 'grandTotal' => '10.0000', 'currency' => 'EUR', 'language' => 'de', 'cancelledAt' => time()]);
+        $this->connection->insert('tl_consho_payment', ['pid' => 50, 'amount' => '10.0000']);
+
+        $html = $this->controller()();
+
+        self::assertStringContainsString('consho_filter=overpaid&amp;consho_shop=1"><strong class="consho-dashboard__count">1</strong><span class="consho-dashboard__label">Zu viel bezahlt</span>', $html);
         self::assertSame(5, substr_count($html, '<li class="consho-dashboard__tile'));
     }
 
@@ -382,7 +400,11 @@ final class DashboardBackendControllerTest extends TestCase
 
         return new DashboardBackendController(
             $this->connection,
-            new OpenWorkReader($this->connection, new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator())),
+            new OpenWorkReader(
+                $this->connection,
+                new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator()),
+                new OverpaidOrders($this->connection, new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator())),
+            ),
             new StockIssueSource($this->connection, new Availability($this->connection)),
             new Environment($loader, ['strict_variables' => true]),
             $router,

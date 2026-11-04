@@ -47,6 +47,25 @@ class PaymentController
         return $response;
     }
 
+    /**
+     * The one fixed address of a payment method whose provider sends every
+     * notification there (spec Zahlung PayPal, PP1).
+     */
+    #[Route(
+        path: '/_consho/payment/webhook/{method}',
+        name: 'consho_payment_webhook',
+        requirements: ['method' => '\d+'],
+        defaults: ['_scope' => 'frontend', '_token_check' => false],
+        methods: ['POST'],
+    )]
+    public function webhook(int $method, Request $request): Response
+    {
+        $response = new Response('', $this->notifications->processWebhook($method, $request, time()));
+        $response->headers->set('Cache-Control', 'no-store');
+
+        return $response;
+    }
+
     #[Route(
         path: '/_consho/payment/return/{token}',
         name: 'consho_payment_return',

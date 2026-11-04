@@ -79,6 +79,9 @@ class WithdrawalProcessing
         private readonly OrderPageLink $links,
         private readonly OrderEventMail $mail,
         private readonly MoneyFormatter $money,
+        // The payment method's part, booked against the payments it pays
+        // back: through the provider, or by hand.
+        private readonly RefundPayout $payouts,
         private readonly SubscriptionPurchaseCancellation|null $subscriptions = null,
         private readonly ValueCompensation|null $compensations = null,
         // Block G (G9): returned goods back into stock. Optional for the
@@ -89,9 +92,6 @@ class WithdrawalProcessing
         private readonly VoucherReturn|null $vouchers = null,
         // Nachlese E6: delivery modules told of revoked entitlements.
         private readonly EntitlementRevocations|null $revocations = null,
-        // Block Zahlung Mollie (R2): the payment method's part paid back
-        // through its provider. Optional like the ones above.
-        private readonly RefundPayout|null $payouts = null,
     ) {
     }
 
@@ -320,8 +320,6 @@ class WithdrawalProcessing
      * @param string      $shipping     the delivery costs to refund with it, gross
      * @param string|null $compensation the value compensation kept back for a
      *                                  service (P79), gross; '' is 0, null keeps the proposal
-     * @param string|null $toVouchers   the part of the payout booked back onto the order's
-     *                                  vouchers (WG11); null: all they paid, up to the payout
      * @param bool $throughProvider the payment method's part through its provider
      *                              (block Zahlung Mollie, R2): booked here, paid out
      *                              after the commit (R1); what no provider takes, by hand
@@ -331,12 +329,17 @@ class WithdrawalProcessing
      *                               `confirmPayout` with that amount and the rest by
      *                               hand; with it, a different amount under the lock
      *                               books nothing either (`payoutChanged`)
+     * @param list<int> $foreign refunds already made at the provider that are part
+     *                           of this one (Geldflüsse T5): booked first, so the
+     *                           provider pays only the rest
+     * @param string $by the back-end user who booked it, recorded at the
+     *                   provider's refunds taken over
      */
-    public function refund(int $withdrawalId, string $shipping, int $now, string|null $compensation = null, string|null $toVouchers = null, bool $throughProvider = false, string|null $confirmed = null): ProcessingResult
+    public function refund(int $withdrawalId, string $shipping, int $now, string|null $compensation = null, bool $throughProvider = false, string|null $confirmed = null, array $foreign = [], string $by = ''): ProcessingResult
     {
         $booked = null;
 
-        $result = $this->locked($withdrawalId, function (array $withdrawal, array $order) use ($shipping, $now, $compensation, $toVouchers, $throughProvider, $confirmed, &$booked): ProcessingResult {
+        $result = $this->locked($withdrawalId, function (array $withdrawal, array $order) use ($shipping, $now, $compensation, $throughProvider, $confirmed, $foreign, $by, &$booked): ProcessingResult {
             if ('accepted' !== $withdrawal['state']) {
                 return ProcessingResult::refused('notAccepted');
             }
@@ -407,35 +410,24 @@ class WithdrawalProcessing
             $remaining = BigDecimal::max(BigDecimal::zero(), $claimAfter->minus($paid))->toScale($digits, RoundingMode::HalfUp);
 
             /*
-             * WG11: the payout goes onto the order's vouchers first, up to
-             * what they paid — the same means of payment (§ 14 Abs. 1 FAGG,
-             * § 357 Abs. 3 BGB) —, the rest to the payment method. The
-             * operator may change the split (null: the proposal).
+             * WG11: the payout goes back where it came from — onto the
+             * order's vouchers first, up to what they paid (the same means of
+             * payment, § 14 Abs. 1 FAGG, § 357 Abs. 3 BGB), the rest to the
+             * payment method. The split is fixed: money moved off a voucher
+             * would be paid back by hand against no payment of its own, and
+             * nothing could ever tie it to one.
              *
              * EZ-4: a single-purpose voucher takes back only what the credited
-             * lines of its pot give back, so that is the most the field
-             * takes. A cancellation (everything) gives back all.
+             * lines of its pot give back. A cancellation (everything) gives
+             * back all.
              */
             $creditLines = $everything ? null : $lines;
             $voucherPaid = null === $this->vouchers
                 ? BigDecimal::zero()->toScale($digits)
                 : $this->vouchers->onVouchers($orderId, (string) $this->vouchers->paidTotal($orderId), $creditLines)->toScale($digits, RoundingMode::Down);
 
-            try {
-                $toVouchers = null === $toVouchers
-                    ? $voucherPaid
-                    : BigDecimal::of('' !== trim($toVouchers) ? str_replace(',', '.', trim($toVouchers)) : '0')->toScale($digits, RoundingMode::HalfUp);
-            } catch (MathException) {
-                return ProcessingResult::refused('invalidVoucherShare', [(string) $voucherPaid], [ProcessingResult::MONEY]);
-            }
-
-            if ($toVouchers->isNegative() || $toVouchers->isGreaterThan($voucherPaid)) {
-                return ProcessingResult::refused('invalidVoucherShare', [(string) $voucherPaid], [ProcessingResult::MONEY]);
-            }
-
-            // "At most": the field is filled before the delivery share is
-            // decided, so it never asks for more than this refund pays out.
-            $toVouchers = BigDecimal::min($toVouchers, $payout);
+            // Never more than this refund pays out.
+            $toVouchers = BigDecimal::min($voucherPaid, $payout);
 
             // Within the most above the plan books it all; read back so the
             // documents, the payments and the mail state what is booked.
@@ -452,13 +444,28 @@ class WithdrawalProcessing
              * refusal). The confirmed amount must still hold under the lock: a
              * payment refunded in between changes it.
              */
-            if ($throughProvider && null !== $this->payouts) {
-                $viaProvider = $toMethod->isPositive()
-                    ? BigDecimal::min($toMethod, array_reduce($this->payouts->refundable($orderId), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero()))->toScale($digits, RoundingMode::Down)
-                    : BigDecimal::zero()->toScale($digits);
+            // Geldflüsse T5: the split over the ways, as book() takes it —
+            // the chosen refunds made at the provider first, then the
+            // provider, then by hand. A chosen one that no longer fits (more
+            // than goes to the payment method, resolved meanwhile) books
+            // nothing: its money must not go another way.
+            $ways = null;
+
+            if ($toMethod->isPositive()) {
+                $ways = $this->payouts->ways($orderId, (string) $toMethod, null, $foreign, $throughProvider);
+            }
+
+            if ([] !== $foreign && null === $ways) {
+                return ProcessingResult::refused('foreignInvalid');
+            }
+
+            if ($throughProvider) {
+                $viaProvider = BigDecimal::of(null === $ways ? '0' : $ways['provider'])->toScale($digits, RoundingMode::Down);
+                $byHand = BigDecimal::of(null === $ways ? '0' : $ways['hand'])->toScale($digits, RoundingMode::HalfUp);
+                $recorded = BigDecimal::of(null === $ways ? '0' : $ways['foreign'])->toScale($digits, RoundingMode::HalfUp);
 
                 if (null === $confirmed && $viaProvider->isPositive()) {
-                    return ProcessingResult::refused('confirmPayout', [(string) $viaProvider, (string) $toMethod->minus($viaProvider)->toScale($digits)], [ProcessingResult::MONEY, ProcessingResult::MONEY]);
+                    return ProcessingResult::refused('confirmPayout', [(string) $viaProvider, (string) $byHand, (string) $recorded], [ProcessingResult::MONEY, ProcessingResult::MONEY, ProcessingResult::MONEY]);
                 }
 
                 if (null !== $confirmed && !self::sameAmount($confirmed, $viaProvider)) {
@@ -506,20 +513,14 @@ class WithdrawalProcessing
                 : [];
             $payoutRows = [];
 
-            if ($toMethod->isPositive() && $throughProvider && null !== $this->payouts) {
-                $payoutRows = $this->payouts->book($orderId, (string) $toMethod, (string) $withdrawal['number'], $now);
+            if ($toMethod->isPositive()) {
+                // One refund over its ways (Geldflüsse T3/T5). By hand is
+                // booked `manual` and tied to the payments it pays back, so
+                // nothing offers this money again and a refund made at the
+                // provider can be assigned to it. payOut() after the commit
+                // sends only the provider's rows.
+                $payoutRows = $this->payouts->book($orderId, (string) $toMethod, (string) $withdrawal['number'], $now, $throughProvider, null, $foreign, $by);
                 $paymentId = $payoutRows[0];
-            } elseif ($toMethod->isPositive()) {
-                $this->connection->insert('tl_consho_payment', [
-                    'pid' => $orderId,
-                    'tstamp' => $now,
-                    'receivedAt' => $now,
-                    'amount' => (string) $toMethod->negated(),
-                    'method' => 'refund',
-                    'reference' => (string) $withdrawal['number'],
-                    'lockedAt' => $now,
-                ]);
-                $paymentId = (int) $this->connection->lastInsertId();
             }
 
             // Paid back onto vouchers alone: the first of their payments.
@@ -558,7 +559,7 @@ class WithdrawalProcessing
 
         // After the commit (R1); never throws — a refusal stays on the row
         // and becomes a finding.
-        $this->payouts?->payOut($booked['payoutRows'], $now);
+        $this->payouts->payOut($booked['payoutRows'], $now);
 
         // The invoice issued with it (F3a) first, then the correction — the
         // order a reader of the mail needs them in.
@@ -592,7 +593,7 @@ class WithdrawalProcessing
      * What the page proposes (F1): the goods lines of the acceptance, and the
      * delivery costs still refundable.
      *
-     * @return array{goods: string, shippingLeft: string, vouchers: string, provider: string, providerMethods: list<string>}
+     * @return array{goods: string, shippingLeft: string, vouchers: string, provider: string, providerMethods: list<string>, outside: list<array{id: int, reference: string, amount: string, currency: string}>}
      */
     public function proposal(int $withdrawalId): array
     {
@@ -600,7 +601,7 @@ class WithdrawalProcessing
         $orderId = (int) ($withdrawal['pid'] ?? 0);
 
         if ($orderId < 1) {
-            return ['goods' => '0', 'shippingLeft' => '0', 'vouchers' => '0', 'provider' => '0', 'providerMethods' => []];
+            return ['goods' => '0', 'shippingLeft' => '0', 'vouchers' => '0', 'provider' => '0', 'providerMethods' => [], 'outside' => []];
         }
 
         $order = $this->orders->order($orderId);
@@ -615,8 +616,11 @@ class WithdrawalProcessing
             // Block Zahlung Mollie (R2): what the providers could pay back,
             // and through which methods — the option is offered, and
             // preselected, only where this is positive.
-            'provider' => null === $this->payouts ? '0' : (string) array_reduce($this->payouts->refundable($orderId), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero()),
-            'providerMethods' => null === $this->payouts ? [] : $this->payouts->methodTitles($orderId),
+            'provider' => (string) array_reduce($this->payouts->refundable($orderId), static fn (BigDecimal $sum, string $left): BigDecimal => $sum->plus($left), BigDecimal::zero()),
+            'providerMethods' => $this->payouts->methodTitles($orderId),
+            // Spec 9.6 B: refunds made at the provider and still open — the
+            // option is then not preselected, and the form names them.
+            'outside' => $this->payouts->openForeign($orderId),
         ];
     }
 

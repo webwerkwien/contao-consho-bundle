@@ -261,10 +261,27 @@ enum ConfigurationFinding: string
     case RefundOutsideConsho = 'refundOutsideConsho';
     case ChargebackReversedAfterPayment = 'chargebackReversedAfterPayment';
 
+    // Block Geldflüsse, 3.4: a paid order cancelled, or paid more than it
+    // claims (OverpaidOrderIssueSource).
+    case OrderOverpaid = 'orderOverpaid';
+
+    // Block Geldflüsse, J3: a refund row that names no payment
+    // (UnassignedRefundIssueSource).
+    case RefundWithoutPayment = 'refundWithoutPayment';
+
     // Block Zahlung Mollie: a published payment method of a module that will
     // not work as expected — one finding for every module, as for delivery
     // types (PaymentReadinessIssueSource).
     case PaymentMethodNotReady = 'paymentMethodNotReady';
+
+    // Spec Zahlung PayPal, PP2 d: payments found only by asking the provider
+    // before the attempt lapsed — the webhook does not arrive
+    // (PaymentWithoutWebhookIssueSource).
+    case PaymentWithoutWebhook = 'paymentWithoutWebhook';
+
+    // Block Geldflüsse: payments the provider has held for more than a week
+    // (PaymentHeldIssueSource).
+    case PaymentHeld = 'paymentHeld';
 
     /**
      * The back end modules in which the finding is put right (H1): a user sees it if they may open ONE of them. An empty
@@ -294,7 +311,7 @@ enum ConfigurationFinding: string
             self::ShippingPriceMissing, self::ShippingMethodMissing, self::AgeGateMissing,
             self::DeliveryCountryWithoutShipping => ['consho_shop', 'consho_shipping'],
             self::PaymentMethodMissing, self::SubscriptionBillingMethodMissing => ['consho_shop', 'consho_payment'],
-            self::PaymentFeeTaxMissing, self::PaymentMethodNotReady => ['consho_payment'],
+            self::PaymentFeeTaxMissing, self::PaymentMethodNotReady, self::PaymentWithoutWebhook => ['consho_payment'],
             self::ProductManufacturerMissing, self::DuplicateGtin, self::TranslationMissing,
             self::TranslationSafetyMissing, self::ProductShopMissing, self::ProductPriceMissing, self::PriceTie, self::PriceCutAsPromotion,
             self::GroupPriceAboveList, self::DigitalFileMissing, self::SaleModePriceMissing,
@@ -311,7 +328,7 @@ enum ConfigurationFinding: string
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
             self::InvoiceArchiveFailed, self::ExternalInvoiceFailed, self::ConfirmationNotSent, self::AnonymizationDue,
             self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid,
-            self::RefundPayoutFailed, self::RefundPayoutStuck, self::PaymentChargedBack, self::RefundOutsideConsho, self::ChargebackReversedAfterPayment => ['consho_order'],
+            self::RefundPayoutFailed, self::RefundPayoutStuck, self::PaymentChargedBack, self::RefundOutsideConsho, self::ChargebackReversedAfterPayment, self::OrderOverpaid, self::RefundWithoutPayment, self::PaymentHeld => ['consho_order'],
             // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
@@ -735,6 +752,14 @@ enum ConfigurationFinding: string
             // neither is a judgement to acknowledge. A warning.
             self::PaymentMethodNotReady => true,
 
+            // Orders went without invoice, status and mail until the cron
+            // asked; the next ones too, until the address is right. A warning.
+            self::PaymentWithoutWebhook => true,
+
+            // An order waits for money that may never come; the provider
+            // decides, but someone should look. A warning.
+            self::PaymentHeld => true,
+
             // The checkout no longer offers a country the operator ticked
             // (E-5, V3). Said loudly, so it is not mistaken for a decision.
             self::DeliveryCountryWithoutShipping => true,
@@ -868,6 +893,11 @@ enum ConfigurationFinding: string
             // The customer paid twice: money that is owed back — a warning,
             // which only paying it back resolves.
             self::ChargebackReversedAfterPayment => true,
+            // Likewise for a cancelled paid order or any overpayment.
+            self::OrderOverpaid => true,
+            // Each payment reads more left than it has: "Erstatten" could pay
+            // the same money back twice — a warning until the row is assigned.
+            self::RefundWithoutPayment => true,
         };
     }
 }

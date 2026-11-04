@@ -2,6 +2,14 @@
 
 Consho creates its own tables and extends `tl_page`. Contao derives the schema from the DCA files; `contao:migrate` creates the columns.
 
+## Keep `contao/conflicts` in `composer.json`
+
+Contao's conflict package blocks dependency versions known to break Contao, among them `doctrine/dbal` 4.5.0. That version reports every unique key twice on MySQL and MariaDB, as an index and as a constraint; the schema built from it fails with "Duplicate key name" — in `contao:migrate` and when restoring a backup. Consho's tables have unique keys. An installation without `contao/conflicts` pulls 4.5.0 at the next update, so check that it is required before updating:
+
+```bash
+grep '"contao/conflicts"' composer.json
+```
+
 ## The order is cache → migrate → cache
 
 ```bash
