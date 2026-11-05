@@ -631,6 +631,10 @@ class CartController extends AbstractContentElementController
         // rule's discount, as the checkout counts it. Free shipping takes
         // nothing off the articles.
         $shares = null === $discount || $discount->freeShipping || null === $this->pots ? [] : $this->pots->discountShares($discount->shares, $country, $now);
+        // Where the checkout already knows the address, the basket filters by
+        // it as the checkout will: a voucher that will not pay there does not
+        // look as if it would here. Before an address, nothing is left out.
+        $deliveryCountry = null === $cart || null === $this->pots ? '' : $this->repository->checkoutDataOf($cart->id)->deliveryCountry();
 
         $payable = [] !== array_filter($view->lines, static fn (CartLine $line): bool => !$line->kind->isVoucher());
         $codes = null === $cart || null === $this->vouchers ? [] : $this->repository->vouchersOf($cart->id);
@@ -642,7 +646,7 @@ class CartController extends AbstractContentElementController
             'value' => VoucherCode::format($voucher->code),
             'status' => $voucher->status->value,
             'balance' => $this->money->format($voucher->balance, $view->currency, $language),
-        ], null === $this->vouchers ? [] : $this->vouchers->apply($codes, $shopId, $view->currency, '0', 2, $now, $this->pots?->of($view->lines, $shares, $now, false, $country) ?? [])));
+        ], null === $this->vouchers ? [] : $this->vouchers->apply($codes, $shopId, $view->currency, '0', 2, $now, $this->pots?->of($view->lines, $shares, $now, false, $country, $deliveryCountry, [] === $shares ? [] : $discount->lines) ?? [])));
     }
 
     /**

@@ -39,21 +39,36 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
     ],
 
     'list' => [
+        /*
+         * A column list like the order list, not the parent view: Contao
+         * draws columns only in its list view (DC_Table::listView). With a
+         * ptable the list view still shows only this order's lines — it
+         * filters by pid itself. The order's head is in the headline.
+         */
         'sorting' => [
-            'mode' => 4,
+            'mode' => 1,
             // Tie-break: sorting values collide after a paste, so the order would otherwise be
             // whatever MySQL finds cheapest. id is autoincrement and never ties.
             'fields' => ['sorting', 'id'],
             'panelLayout' => 'limit',
-            'headerFields' => ['orderNumber', 'lastname', 'grandTotal'],
             'defaultSearchField' => 'productName',
         ],
-        'label' => ['fields' => ['productName', 'quantity', 'lineTotal'], 'format' => '%s × %s = %s'],
+        /*
+         * Formatted by OrderItemLabelListener — amounts as money in the
+         * order's currency, quantities without the four stored decimals.
+         * `stateColumn` is virtual: rendered, released, or when.
+         */
+        'label' => [
+            // The kind first, with the icon of the order list.
+            'fields' => ['kind', 'productName', 'quantity', 'unitPrice', 'taxRate', 'lineTotal', 'stateColumn'],
+            'showColumns' => true,
+            // Otherwise Contao adds the sort field as a column of its own: "sorting".
+            'showFirstOrderBy' => false,
+        ],
         'operations' => [
-            // DL3. POST, with a question first: it cannot be taken back and
-            // may end the right of withdrawal. Only on a released service
-            // without subscription (ServicePerformedButtonListener).
-            'performed' => ['href' => 'key=servicePerformed', 'icon' => 'ok.svg', 'method' => 'POST', 'primary' => true],
+            // "Leistung erbracht" (DL3) is offered in the delivery list, with
+            // everything else that fulfils the order (DeliveryServiceListener);
+            // the key=servicePerformed action stays on this table.
             'edit',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
             '!versions',
@@ -284,5 +299,15 @@ $GLOBALS['TL_DCA']['tl_consho_order_item'] = [
         // Whole or half years (GA9, GuaranteeYears).
         'durabilityYears' => ['sql' => ['type' => 'decimal', 'precision' => 3, 'scale' => 1, 'default' => '0.0']],
         'durabilityLabel' => ['sql' => ['type' => 'binary', 'length' => 16, 'notnull' => false]],
+
+        // No column, no widget: only the heading of the state column.
+        'stateColumn' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_order_item']['stateColumn']],
     ],
 ];
+
+// showColumns reads the heading straight off the field.
+foreach (['productName', 'kind', 'quantity', 'unitPrice', 'taxRate', 'lineTotal'] as $conshoName) {
+    $GLOBALS['TL_DCA']['tl_consho_order_item']['fields'][$conshoName]['label'] = &$GLOBALS['TL_LANG']['tl_consho_order_item'][$conshoName];
+}
+
+unset($conshoName);

@@ -85,6 +85,25 @@ final class LockedRecordVoterTest extends TestCase
         self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($voter, new UpdateAction('tl_consho_payment', ['id' => '2'])));
     }
 
+    /**
+     * A refund may be booked against a payment the order has not settled
+     * yet — not locked by `lockedAt`. Deleting or changing it would leave a
+     * refund of nothing, so the refund locks it as well.
+     */
+    public function testEineZahlungMitRueckzahlungIstGesperrt(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 3, 'amount' => '10.0000']);
+        $this->connection->insert('tl_consho_payment', ['id' => 4, 'amount' => '-10.0000', 'refundOf' => 3, 'lockedAt' => 100]);
+        $voter = new PaymentLockVoter($this->connection);
+
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($voter, new DeleteAction('tl_consho_payment', ['id' => '3'])));
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote($voter, new UpdateAction('tl_consho_payment', ['id' => '3', 'amount' => '10.0000'], ['amount' => '30.00'])));
+        // Opening the mask stays allowed, as for every locked row.
+        self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($voter, new UpdateAction('tl_consho_payment', ['id' => '3', 'amount' => '10.0000'])));
+        // The payment without a refund is still free.
+        self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote($voter, new DeleteAction('tl_consho_payment', ['id' => '2'])));
+    }
+
     public function testZahlenWerdenAlsZahlenVerglichen(): void
     {
         $voter = new PaymentLockVoter($this->connection);

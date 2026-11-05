@@ -10,7 +10,6 @@ use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\CoreBundle\Security\DataContainer\UpdateAction;
 use Contao\DataContainer;
 use Contao\Message;
-use Contao\StringUtil;
 use Contao\System;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -74,19 +73,12 @@ final class DeliveryReportBackendController
         }
 
         $result = $this->reported->report($id, time());
-        $lang = $GLOBALS['TL_LANG']['tl_consho_delivery']['reportResult'] ?? [];
-        $message = $this->framework->getAdapter(Message::class);
-        $number = StringUtil::specialchars((string) $order['orderNumber']);
 
-        match ($result->outcome) {
-            'reported' => $result->mailSent
-                ? $message->addConfirmation(\sprintf($lang['reported'] ?? '%s', $number))
-                : $message->addInfo(\sprintf($lang['reportedNoMail'] ?? '%s', $number)),
-            'tooMuch' => $message->addError(\sprintf($lang['tooMuch'] ?? '%s', StringUtil::specialchars(implode(', ', $result->tooMuch)))),
-            'empty' => $message->addError($lang['empty'] ?? 'empty'),
-            'alreadyReported' => $message->addInfo($lang['alreadyReported'] ?? 'alreadyReported'),
-            default => throw new NotFoundHttpException(),
-        };
+        if (!\in_array($result->outcome, ['reported', 'tooMuch', 'empty', 'alreadyReported'], true)) {
+            throw new NotFoundHttpException();
+        }
+
+        DeliveryReportMessages::add($this->framework->getAdapter(Message::class), $result, (string) $order['orderNumber']);
 
         throw new RedirectResponseException($this->framework->getAdapter(System::class)->getReferer());
     }

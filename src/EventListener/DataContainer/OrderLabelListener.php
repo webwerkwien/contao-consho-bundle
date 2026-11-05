@@ -5,7 +5,10 @@ namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\Date;
 use Contao\StringUtil;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
+use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
+use Webwerkwien\ContaoConshoBundle\Digital\DigitalRelease;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentState;
 use Webwerkwien\ContaoConshoBundle\Order\StatusColour;
@@ -39,7 +42,9 @@ class OrderLabelListener
      * cannot name it — "refunded" is grey like "open", and a cancelled,
      * refunded order read "Zahlung: offen" (the dashboard showed it).
      *
-     * @var array<int, array{0: StatusColour, 1: StatusColour, 2: string}>
+     * The fourth entry is the delivery title, by what is still open.
+     *
+     * @var array<int, array{0: StatusColour, 1: StatusColour, 2: string, 3: string}>
      */
     private array $states = [];
 
@@ -49,6 +54,8 @@ class OrderLabelListener
     public function __construct(
         private readonly Connection $connection,
         private readonly OrderBalanceReaderInterface $balances,
+        // For the date an open service or digital line is released on.
+        private readonly DigitalRelease|null $release = null,
     ) {
     }
 
@@ -61,7 +68,7 @@ class OrderLabelListener
      * `return is_array($label) ? $label : $args`. A string here would not
      * error; the carefully built line would simply never appear.
      *
-     * The signals lead the row rather than trail it. At the end they would sit
+     * The kind and the signals lead the row rather than trail it. At the end they would sit
      * against the operation buttons — coloured glyphs beside coloured glyphs,
      * one set meaning "state" and the other "click me". In the first column the
      * eye runs straight down them.
@@ -73,6 +80,7 @@ class OrderLabelListener
     public function __invoke(array $row, string $label): array
     {
         return [
+            $this->kindColumn((int) ($row['id'] ?? 0)),
             $this->signals((int) ($row['id'] ?? 0), $row),
             '<strong>'.StringUtil::specialchars((string) ($row['orderNumber'] ?? '')).'</strong>',
             $this->formatDate($row),
@@ -106,14 +114,125 @@ class OrderLabelListener
 
     private function signals(int $orderId, array $row): string
     {
-        [$payment, $delivery, $paymentState] = $this->statesFor($orderId);
+        [$payment, $delivery, $paymentState, $deliveryTitle] = $this->statesFor($orderId, $row);
         [$statusColour, $statusTitle] = $this->statusFor((int) ($row['orderStatus'] ?? 0));
 
         return '<span class="consho-signals">'
             .$this->signal('store', $statusColour, $statusTitle)
             .$this->signal('sync', $payment, $this->label('payment', $paymentState))
-            .$this->signal('copy', $delivery, $this->label('delivery', $delivery->value))
+            .$this->signal('copy', $delivery, $deliveryTitle)
             .'</span>';
+    }
+
+    /**
+     * What the order is, a column of its own before the states: whether
+     * "Lieferung" means a parcel, a release or nothing to pack at all depends
+     * on it, and the state signals alone did not tell. The icon alone, named
+     * in its title; a mix names its kinds there. An order without product
+     * lines leaves the column empty.
+     */
+    private function kindColumn(int $orderId): string
+    {
+        $stored = $this->connection->fetchFirstColumn(
+            "SELECT DISTINCT kind FROM tl_consho_order_item WHERE pid = ? AND lineType = 'product'",
+            [$orderId],
+        );
+
+        $kinds = [];
+
+        foreach ($stored as $kind) {
+            $kinds[ProductKind::stored((string) $kind)->value] = true;
+        }
+
+        // A fixed order, so a mix always reads the same way.
+        $kinds = array_values(array_filter(
+            array_map(static fn (ProductKind $kind): string => $kind->value, ProductKind::cases()),
+            static fn (string $kind): bool => isset($kinds[$kind]),
+        ));
+
+        if ([] === $kinds) {
+            return '';
+        }
+
+        $names = array_map(fn (string $kind): string => $this->label('kind', $kind), $kinds);
+
+        if (1 === \count($kinds)) {
+            return $this->signal('kind', null, $names[0], 'kind-'.$kinds[0]);
+        }
+
+        return $this->signal('kind', null, \sprintf($this->label('kind', 'mixed'), implode(', ', $names)), 'kind-mixed');
+    }
+
+    /**
+     * The third signal covers everything the order still owes, not only
+     * parcels — content, services and vouchers count as delivered once
+     * released (DigitalRelease reports an electronic delivery). Its title
+     * therefore names what is open by kind: a service-only order read
+     * "Lieferung: offen" while the delivery list rightly refused a new
+     * delivery, and the two seemed to contradict each other.
+     *
+     * @param array<int, string>   $open  order item id => quantity still owed
+     * @param array<string, mixed> $order the list row: the whole order record
+     */
+    private function deliveryTitle(StatusColour $colour, array $open, bool $anyShipped, array $order): string
+    {
+        // Nothing owed and nothing ever delivered — withdrawn or cancelled
+        // before shipping: "vollständig" would claim a delivery.
+        if ([] === $open) {
+            return $this->label('delivery', StatusColour::Done === $colour && !$anyShipped ? 'nothingLeft' : $colour->value);
+        }
+
+        $kinds = $this->connection->fetchAllKeyValue(
+            'SELECT id, kind FROM tl_consho_order_item WHERE id IN (?)',
+            [array_keys($open)],
+            [ArrayParameterType::INTEGER],
+        );
+
+        $parts = [];
+
+        foreach (array_keys($open) as $itemId) {
+            $key = match (ProductKind::stored(isset($kinds[$itemId]) ? (string) $kinds[$itemId] : null)) {
+                ProductKind::Physical => $anyShipped ? 'progress' : 'open',
+                ProductKind::Service => 'service',
+                ProductKind::Digital => 'digital',
+                ProductKind::Voucher => 'voucher',
+            };
+
+            $parts[$key] = ('service' === $key || 'digital' === $key ? $this->releaseNote($order, $key) : null)
+                ?? $this->label('delivery', $key);
+        }
+
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * When an open service or digital line will be released (DigitalRelease::
+     * dueAt()): waiting for the payment, or for the end of the withdrawal
+     * period. Nothing where the moment has passed — the release is then due
+     * and runs with the next cron, or a delivery handler cannot hand out yet.
+     *
+     * @param array<string, mixed> $order
+     * @param 'service'|'digital'  $key
+     *
+     * @return string|null null: the plain "noch nicht freigeschaltet"
+     */
+    private function releaseNote(array $order, string $key): string|null
+    {
+        if (null === $this->release || !isset($order['createdAt'])) {
+            return null;
+        }
+
+        $dueAt = $this->release->dueAt($order);
+
+        if (null === $dueAt) {
+            return $this->label('delivery', $key.'AwaitingPayment');
+        }
+
+        if ($dueAt <= time()) {
+            return null;
+        }
+
+        return \sprintf($this->label('delivery', $key.'ReleasedOn'), Date::parse(Date::getNumericDateFormat(), $dueAt));
     }
 
     /**
@@ -125,12 +244,12 @@ class OrderLabelListener
      * colour blindness there is. A list that encodes its meaning in hue alone
      * is unreadable for roughly one man in twelve.
      */
-    private function signal(string $icon, StatusColour $colour, string $title): string
+    private function signal(string $icon, StatusColour|null $colour, string $title, string|null $variant = null): string
     {
         return \sprintf(
             '<span class="consho-signal consho-signal--%s consho-signal--%s" title="%s"></span>',
             $icon,
-            $colour->value,
+            $variant ?? $colour?->value,
             StringUtil::specialchars($title),
         );
     }
@@ -167,9 +286,11 @@ class OrderLabelListener
     }
 
     /**
-     * @return array{0: StatusColour, 1: StatusColour, 2: string}
+     * @param array<string, mixed> $row
+     *
+     * @return array{0: StatusColour, 1: StatusColour, 2: string, 3: string}
      */
-    private function statesFor(int $orderId): array
+    private function statesFor(int $orderId, array $row): array
     {
         if (isset($this->states[$orderId])) {
             return $this->states[$orderId];
@@ -178,13 +299,16 @@ class OrderLabelListener
         $balance = $this->balances->of($orderId);
 
         if (null === $balance) {
-            return $this->states[$orderId] = [StatusColour::Open, StatusColour::Open, PaymentState::Open->value];
+            return $this->states[$orderId] = [StatusColour::Open, StatusColour::Open, PaymentState::Open->value, $this->label('delivery', StatusColour::Open->value)];
         }
+
+        $delivery = StatusColour::forDelivery($balance->deliveryState);
 
         return $this->states[$orderId] = [
             StatusColour::forPayment($balance->paymentState),
-            StatusColour::forDelivery($balance->deliveryState),
+            $delivery,
             $balance->paymentState->value,
+            $this->deliveryTitle($delivery, $balance->openGoods, $balance->anyShipped, $row),
         ];
     }
 

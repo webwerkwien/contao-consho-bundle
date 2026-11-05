@@ -99,7 +99,7 @@ final class PaymentRefundBackendController
         $vars += [
             'refundable' => (string) BigDecimal::of($remainder)->toScale($digits, RoundingMode::Down),
             'refundableLabel' => $this->money($remainder, $order),
-            'amount' => (string) ($proposed->isPositive() ? $proposed : BigDecimal::of($remainder))->toScale($digits, RoundingMode::Down),
+            'amount' => self::typed((string) ($proposed->isPositive() ? $proposed : BigDecimal::of($remainder))->toScale($digits, RoundingMode::Down)),
             'reference' => \sprintf((string) ($lang['refundReferenceDefault'] ?? 'Refund %s'), (string) $order['orderNumber']),
             'canProvider' => $canProvider,
             // Not preselected while a refund made there is open: it may be
@@ -392,6 +392,12 @@ final class PaymentRefundBackendController
     private function vars(string $step, array $row, array $order): array
     {
         $request = $this->requests->getCurrentRequest();
+        $key = null === $request ? '' : $request->query->getString('key');
+
+        if ('' !== $key) {
+            // "Zahlung der Bestellung WEB-00012 …" instead of "Zahlung ID 7 …".
+            Headline::name('tl_consho_payment', $key, \sprintf((string) ($GLOBALS['TL_LANG']['tl_consho_payment']['headlineOrder'] ?? 'der Bestellung %s'), (string) $order['orderNumber']));
+        }
 
         return [
             'step' => $step,
@@ -422,6 +428,18 @@ final class PaymentRefundBackendController
         );
 
         return false === $methodId ? (string) $row['method'] : ($this->methods->byId((int) $methodId)->title ?? (string) $row['method']);
+    }
+
+    /**
+     * A proposed amount as the operator types it: with the decimal separator
+     * of the back end language ("8,90"), like the maximum shown under the
+     * field. amount() reads either separator.
+     */
+    private static function typed(string $amount): string
+    {
+        $separator = (new \NumberFormatter((string) ($GLOBALS['TL_LANGUAGE'] ?? 'de'), \NumberFormatter::DECIMAL))->getSymbol(\NumberFormatter::DECIMAL_SEPARATOR_SYMBOL);
+
+        return str_replace('.', '' !== $separator ? $separator : '.', $amount);
     }
 
     /**

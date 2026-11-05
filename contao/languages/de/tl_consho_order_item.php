@@ -22,8 +22,6 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['kind'] = ['Art', 'Beim Kauf aus dem
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionRule'] = ['Aboregel', 'Die Aboregel, in der gekauft wurde. Leer: Einmalkauf.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionTerms'] = ['Abo-Bedingungen', 'Wie der Kunde sie beim Kauf gelesen hat, eingefroren. Eine spätere Änderung der Aboregel berührt diese Bestellung nicht.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedAt'] = ['Leistung erbracht am', 'Gesetzt mit „Leistung erbracht". Hat der Kunde dem vorzeitigen Beginn zugestimmt, erlischt damit das Widerrufsrecht für diese Position.'];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['performed'] = ['Leistung erbracht', 'Position ID %s als vollständig erbracht melden'];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['performedConfirm'] = 'Leistung als vollständig erbracht melden? Das lässt sich nicht zurücknehmen. Hat der Kunde dem vorzeitigen Beginn zugestimmt, erlischt damit sein Widerrufsrecht für diese Position.';
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedResult'] = [
     'performed' => 'Leistung „%s" als erbracht gemeldet.',
     'notService' => 'Nur eine Dienstleistung kann als erbracht gemeldet werden.',
@@ -34,3 +32,11 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['performedResult'] = [
 ];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['kinds'] = ['physical' => 'Ware', 'digital' => 'Digitales', 'service' => 'Dienstleistung', 'voucher' => 'Wertgutschein'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedOn'] = 'erbracht am %s';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['stateColumn'] = ['Stand', ''];
+// The "Art" column of a line that is no product.
+$GLOBALS['TL_LANG']['tl_consho_order_item']['lineTypes'] = ['shipping' => 'Versand', 'paymentFee' => 'Zahlungsgebühr', 'paymentDiscount' => 'Zahlungsnachlass', 'discount' => 'Rabatt'];
+// The state of a service line: when it will be released, or where "Leistung erbracht" is.
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedFrom'] = 'Freischaltung am %s';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedAfterPayment'] = 'Freischaltung nach Zahlungseingang';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedReleaseDue'] = 'Freischaltung steht an';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedInDeliveries'] = 'freigeschaltet — „Leistung erbracht“ unter Lieferungen';

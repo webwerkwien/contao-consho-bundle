@@ -46,22 +46,23 @@
                     {# Geldflüsse T4: the ways; what none of them takes goes back by hand. #}
                     {% if not canProvider and foreignOffered is empty %}
                     <div class="widget clr">
-                        <p class="tl_help tl_tip">{{ lang.refundWaysHandOnly|default('') }}</p>
+                        <p class="tl_help">{{ lang.refundWaysHandOnly|default('') }}</p>
                     </div>
                     {% else %}
+                    {# Contao's own checkbox markup (CheckBox widget): a fieldset with
+                       a legend and one span per option. The hint is too long for a
+                       one-line tl_tip, which cuts it off. #}
                     <div class="widget clr">
-                        <h3>{{ lang.refundWays|default('Wege') }}</h3>
-                        <div class="tl_checkbox_container">
+                        <fieldset class="tl_checkbox_container">
+                            <legend>{{ lang.refundWays|default('Wege') }}</legend>
                             {% if canProvider %}
-                                <input type="checkbox" name="consho_payout" id="ctrl_consho_payout" class="tl_checkbox" value="1"{% if payOut %} checked{% endif %}>
-                                <label for="ctrl_consho_payout">{{ lang.refundWayProviderOption|default('%s')|format(method) }}</label><br>
+                                <span><input type="checkbox" name="consho_payout" id="ctrl_consho_payout" class="tl_checkbox" value="1"{% if payOut %} checked{% endif %}> <label for="ctrl_consho_payout">{{ lang.refundWayProviderOption|default('%s')|format(method) }}</label></span>
                             {% endif %}
                             {% for event in foreignOffered %}
-                                <input type="checkbox" name="consho_foreign[]" id="ctrl_consho_foreign_{{ event.id }}" class="tl_checkbox" value="{{ event.id }}"{% if event.id in foreignChosen %} checked{% endif %}>
-                                <label for="ctrl_consho_foreign_{{ event.id }}">{{ lang.refundWayForeignOption|default('%s (%s)')|format(event.amountLabel, event.reference) }}</label><br>
+                                <span><input type="checkbox" name="consho_foreign[]" id="ctrl_consho_foreign_{{ event.id }}" class="tl_checkbox" value="{{ event.id }}"{% if event.id in foreignChosen %} checked{% endif %}> <label for="ctrl_consho_foreign_{{ event.id }}">{{ lang.refundWayForeignOption|default('%s (%s)')|format(event.amountLabel, event.reference) }}</label></span>
                             {% endfor %}
-                        </div>
-                        <p class="tl_help tl_tip">{{ lang.refundWaysHelp|default('') }}</p>
+                        </fieldset>
+                        <p class="tl_help">{{ lang.refundWaysHelp|default('') }}</p>
                     </div>
                     {% endif %}
                 {% elseif step == 'correct' %}
@@ -103,20 +104,18 @@
                         <div class="widget clr">
                             <h3>{{ lang.refundProviderChoice|default('') }}</h3>
                             {% if providerRefunds is empty %}
-                                <p class="tl_help tl_tip">{{ lang.refundProviderNone|default('') }}</p>
+                                <p class="tl_help">{{ lang.refundProviderNone|default('') }}</p>
                             {% else %}
-                                <div class="tl_radio_container">
+                                <fieldset class="tl_radio_container">
                                     {% for refund in providerRefunds %}
-                                        <input type="radio" name="consho_provider_refund" id="ctrl_consho_provider_refund_{{ loop.index }}" class="tl_radio" value="{{ refund.reference }}">
-                                        <label for="ctrl_consho_provider_refund_{{ loop.index }}">{{ refund.reference }}{% if refund.date %} — {{ refund.date }}{% endif %} ({{ attribute(lang.refundProviderStates|default({}), refund.state)|default(refund.state) }})</label><br>
+                                        <span><input type="radio" name="consho_provider_refund" id="ctrl_consho_provider_refund_{{ loop.index }}" class="tl_radio" value="{{ refund.reference }}"> <label for="ctrl_consho_provider_refund_{{ loop.index }}">{{ refund.reference }}{% if refund.date %} — {{ refund.date }}{% endif %} ({{ attribute(lang.refundProviderStates|default({}), refund.state)|default(refund.state) }})</label></span>
                                     {% endfor %}
-                                    <input type="radio" name="consho_provider_refund" id="ctrl_consho_provider_refund_0" class="tl_radio" value="" checked>
-                                    <label for="ctrl_consho_provider_refund_0">{{ lang.refundProviderWithout|default('') }}</label>
-                                </div>
+                                    <span><input type="radio" name="consho_provider_refund" id="ctrl_consho_provider_refund_0" class="tl_radio" value="" checked> <label for="ctrl_consho_provider_refund_0">{{ lang.refundProviderWithout|default('') }}</label></span>
+                                </fieldset>
                             {% endif %}
                         </div>
                     {% elseif step == 'manual' and not payoutReference %}
-                        <p class="tl_help tl_tip">{{ lang.refundProviderUnavailable|default('') }}</p>
+                        <p class="tl_help">{{ lang.refundProviderUnavailable|default('') }}</p>
                     {% endif %}
                 {% endif %}
             </fieldset>

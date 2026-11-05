@@ -89,6 +89,83 @@ class CoverablePotsTest extends TestCase
         self::assertSame([], $this->pots()->of([$this->line(1, '60.0000', 1, 'CH')], [], 1_800_000_000, false));
     }
 
+    /**
+     * A single-purpose voucher fixes the place of supply at its issue (Art. 30a
+     * no. 2 VAT Directive): goods taxed in the shop's country only because the
+     * distance sale stays below the threshold are not supplied there when they
+     * travel abroad. A service is taxed where it is performed, wherever the
+     * customer lives.
+     */
+    public function testNurWasImSteuerlandAnkommt(): void
+    {
+        $lines = [
+            $this->line(1, '60.0000', 1, 'AT'),
+            $this->line(2, '12.0000', 1, 'AT', ProductKind::Digital),
+            $this->line(3, '30.0000', 1, 'AT', ProductKind::Service),
+            $this->line(4, '59.5000', 1, 'DE'),
+        ];
+
+        $abroad = $this->pots()->of($lines, [], 1_800_000_000, false, 'AT', 'de');
+        self::assertSame(
+            [[1, 'AT', '30.0000'], [1, 'DE', '59.5000']],
+            array_map(static fn (CoverablePot $pot): array => [$pot->taxClass, $pot->taxCountry, $pot->amount], $abroad),
+        );
+
+        $home = $this->pots()->of($lines, [], 1_800_000_000, false, 'AT', 'AT');
+        self::assertSame('102.0000', $home[0]->amount);
+
+        // Without a delivery country (the basket before an address) nothing is left out.
+        self::assertSame('102.0000', $this->pots()->of($lines, [], 1_800_000_000, false, 'AT')[0]->amount);
+    }
+
+    /**
+     * The cart rule's share covers every line of its class and country. Where
+     * the goods go abroad, only the part on what stays reduces the pot: goods
+     * 90 and a service 30, 10 % off (-12) — at home 108, abroad 27, not 18.
+     */
+    public function testImAuslandNurDerRabattAufWasBleibt(): void
+    {
+        $lines = [
+            $this->line(1, '90.0000', 1, 'AT'),
+            $this->line(2, '30.0000', 1, 'AT', ProductKind::Service),
+        ];
+        $shares = [new ShippingShare(1, '-10.0000', '-12.0000', 'AT')];
+
+        self::assertSame('108.0000', $this->pots()->of($lines, $shares, 1_800_000_000, false, 'AT', 'AT')[0]->amount);
+        self::assertSame('27.0000', $this->pots()->of($lines, $shares, 1_800_000_000, false, 'AT', 'DE')[0]->amount);
+
+        // A large discount no longer drives the pot below zero: -40 of 120,
+        // a quarter of it on the service — 30 - 10 = 20.
+        $large = [new ShippingShare(1, '-33.3333', '-40.0000', 'AT')];
+        self::assertSame('20.0000', $this->pots()->of($lines, $large, 1_800_000_000, false, 'AT', 'DE')[0]->amount);
+
+        // Rounded towards the larger discount: -10 on a third is -3.3334.
+        $third = [$this->line(1, '60.0000', 1, 'AT'), $this->line(2, '30.0000', 1, 'AT', ProductKind::Service)];
+        self::assertSame('26.6666', $this->pots()->of($third, [new ShippingShare(1, '-8.3333', '-10.0000', 'AT')], 1_800_000_000, false, 'AT', 'DE')[0]->amount);
+    }
+
+    /**
+     * A rule need not reach every line: with its split per line the pot takes
+     * exactly the discount on what it kept. Goods 90 abroad, the service 30
+     * stays; the rule gives 20 off — net, per line (20 % AT).
+     */
+    public function testMitDerAufteilungJeZeileGenau(): void
+    {
+        $lines = [
+            $this->line(1, '90.0000', 1, 'AT'),
+            $this->line(2, '30.0000', 1, 'AT', ProductKind::Service),
+        ];
+        $share = [new ShippingShare(1, '-16.6667', '-20.0000', 'AT')];
+        $now = 1_800_000_000;
+
+        // Only on the service: all 20 of it come off — 10 left, not 25.
+        self::assertSame('10.0000', $this->pots()->of($lines, $share, $now, false, 'AT', 'DE', [1 => '16.6667'])[0]->amount);
+        // Only on the goods: nothing comes off the service — 30 stay, not 25.
+        self::assertSame('30.0000', $this->pots()->of($lines, $share, $now, false, 'AT', 'DE', [0 => '16.6667'])[0]->amount);
+        // At home nothing is left out: the share, whatever its split.
+        self::assertSame('100.0000', $this->pots()->of($lines, $share, $now, false, 'AT', 'AT', [1 => '16.6667'])[0]->amount);
+    }
+
     private function line(int $id, string $gross, int $class, string $country, ProductKind $kind = ProductKind::Physical): CartLine
     {
         return new CartLine($id, $id, $id, '1.0000', '0.0000', '0.0000', $gross, $class, 0, 0, $country, kind: $kind);

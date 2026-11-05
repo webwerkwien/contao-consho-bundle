@@ -84,6 +84,16 @@
  * form a column that can be scanned downwards.
  */
 
+/*
+ * Lists in columns: Contao centres the cells vertically but sets the
+ * operations cell to `top`, so in a row that wraps the buttons sit above
+ * the middle of the text. The table carries no class of its own table, so
+ * this holds for every column list; in a single-line row nothing changes.
+ */
+.tl_listing.showColumns td.tl_right_nowrap {
+    vertical-align: middle;
+}
+
 .consho-signals {
     display: inline-flex;
     gap: 5px;
@@ -108,13 +118,11 @@
 }
 
 /*
- * Delivery: the duplicate icon — two offset boxes that read as parcels.
- * Contao has neither a lorry nor a parcel in the matching stroke width;
- * `archive` would be more literal, but it is drawn with stroke-width 1.5 and
- * looks too thin next to the others.
+ * Delivery: the lorry of the "Lieferungen" button beside it — the same
+ * picture means the same thing in the signal and in the button.
  */
 .consho-signal--copy {
-    --consho-icon: url("../../system/themes/flexible/icons/copy.svg");
+    --consho-icon: url("icons/deliveries.svg");
 }
 
 /* The withdrawal (D-3): the undo arrow — the list "Widerrufe" turns the
@@ -127,6 +135,18 @@
 .consho-signal--visible {
     --consho-icon: url("../../system/themes/flexible/icons/visible.svg");
 }
+
+/*
+ * What the order is (goods, digital, service, voucher, mixed) — before the
+ * three state signals, in the text colour: it is a fact about the order,
+ * not a state, and grey would read as "open". The icons are Consho's own;
+ * Contao has no parcel, download or ticket in its set.
+ */
+.consho-signal--kind { background-color: var(--text, #222); margin-right: 4px; vertical-align: -2px; }.consho-signal--kind-physical { --consho-icon: url("icons/kind-physical.svg"); }
+.consho-signal--kind-digital { --consho-icon: url("icons/kind-digital.svg"); }
+.consho-signal--kind-service { --consho-icon: url("icons/kind-service.svg"); }
+.consho-signal--kind-voucher { --consho-icon: url("icons/kind-voucher.svg"); }
+.consho-signal--kind-mixed { --consho-icon: url("icons/kind-mixed.svg"); }
 
 .consho-signal--open { background-color: var(--gray, #747476); }
 .consho-signal--progress { background-color: var(--orange, #e67300); }

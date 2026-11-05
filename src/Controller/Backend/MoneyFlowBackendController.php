@@ -4,12 +4,15 @@ namespace Webwerkwien\ContaoConshoBundle\Controller\Backend;
 
 use Brick\Math\BigDecimal;
 use Contao\BackendUser;
+use Contao\CoreBundle\Csrf\ContaoCsrfTokenManager;
 use Contao\CoreBundle\Exception\RedirectResponseException;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\CoreBundle\Security\DataContainer\CreateAction;
+use Contao\CoreBundle\Security\DataContainer\DeleteAction;
 use Contao\CoreBundle\Security\DataContainer\UpdateAction;
 use Contao\DataContainer;
+use Contao\Image;
 use Contao\Message;
 use Contao\System;
 use Doctrine\DBAL\Connection;
@@ -27,6 +30,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\Refund\PaymentActions;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\UnassignedRefunds;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
+use Webwerkwien\ContaoConshoBundle\Security\LockedRecords;
 
 /**
  * "Geldflüsse" at an order (block Geldflüsse, 3.6, J1): the balance on top,
@@ -60,6 +64,19 @@ final class MoneyFlowBackendController
 {
     public const TEMPLATE = '@Contao/backend/consho_money_flows.html.twig';
 
+    /**
+     * The icons of the operations in tl_consho_payment's list.
+     */
+    private const ICONS = [
+        'edit' => 'edit.svg',
+        'refundPayment' => 'undo.svg',
+        'refundRetry' => 'sync.svg',
+        'refundManual' => 'ok.svg',
+        'correctPayment' => 'editor.svg',
+        'delete' => 'delete.svg',
+        'show' => 'show.svg',
+    ];
+
     public function __construct(
         private readonly Connection $connection,
         private readonly Security $security,
@@ -73,6 +90,8 @@ final class MoneyFlowBackendController
         // Links to the withdrawals (Geldflüsse H1); optional for tests built by hand.
         private readonly UrlGeneratorInterface|null $router = null,
         private readonly MoneyFlows|null $flows = null,
+        // The token Contao asks of a create link (DC_Table checks `rt` on GET).
+        private readonly ContaoCsrfTokenManager|null $tokens = null,
     ) {
     }
 
@@ -91,6 +110,9 @@ final class MoneyFlowBackendController
 
         $request = $this->requests->getCurrentRequest();
         $lang = $this->lang();
+
+        // "… der Bestellung WEB-00012" instead of "… der Bestellung ID 7".
+        Headline::name('tl_consho_order', null === $request ? 'moneyFlows' : ($request->query->getString('key') ?: 'moneyFlows'), (string) $order['orderNumber']);
 
         if (null !== $request && $request->isMethod('POST')) {
             if ('claim' === $request->request->getString('consho_action')) {
@@ -118,16 +140,23 @@ final class MoneyFlowBackendController
             $rows[(int) $row['id']] = $row;
         }
 
+        $balance = null === $flows ? [] : $this->balance($flows['balance'], $flows['cancelled'], (string) $order['currency']);
+
         return $this->twig->render(self::TEMPLATE, [
             'messages' => (string) $this->framework->getAdapter(Message::class)->generate(),
             'number' => (string) $order['orderNumber'],
-            // The payment list stays one click away: new payments, deleting one not locked yet.
-            'payments' => $this->url(['do' => 'consho_order', 'table' => 'tl_consho_payment', 'id' => $id]),
+            // Neither open nor too much (the two strong lines): shown in the legend.
+            'settled' => null !== $flows && !array_filter($balance, static fn (array $line): bool => $line['strong']),
+            // Recording money received (a transfer for prepayment or an
+            // invoice) — what took the payment list before; Contao's own mask.
+            'create' => $this->security->isGranted(ContaoCorePermissions::DC_PREFIX.'tl_consho_payment', new CreateAction('tl_consho_payment', ['pid' => $id]))
+                ? $this->url(['do' => 'consho_order', 'table' => 'tl_consho_payment', 'act' => 'create', 'mode' => 2, 'pid' => $id] + (null === $this->tokens ? [] : ['rt' => $this->tokens->getDefaultTokenValue()]))
+                : '',
             'claim' => null === $outstanding ? null : [
                 'outstanding' => $this->money->format($outstanding, (string) $order['currency'], (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de')),
                 'day' => PaymentClaim::defaultDay(time()),
             ],
-            'balance' => null === $flows ? [] : $this->balance($flows['balance'], $flows['cancelled'], (string) $order['currency']),
+            'balance' => $balance,
             'movements' => null === $flows ? [] : $this->movements($flows['movements'], $events, $rows, (string) $order['currency']),
             'action' => null === $request ? '' : $request->getUri(),
             'back' => $this->framework->getAdapter(System::class)->getReferer(),
@@ -335,11 +364,8 @@ final class MoneyFlowBackendController
             ];
         }
 
-        // Neither open nor too much: settled.
-        if (!array_filter($lines, static fn (array $line): bool => $line['strong'])) {
-            $lines[] = ['label' => (string) ($labels['settled'] ?? 'Ausgeglichen'), 'value' => '', 'strong' => true];
-        }
-
+        // Neither open nor too much: settled. A state, not an amount — it goes
+        // into the legend, not as a row without a value.
         return $lines;
     }
 
@@ -361,7 +387,7 @@ final class MoneyFlowBackendController
         $this->framework->getAdapter(System::class)->loadLanguageFile('tl_consho_payment');
 
         $lang = $this->lang();
-        $actions = new PaymentActions($this->payout);
+        $actions = new PaymentActions($this->payout, null, new LockedRecords($this->connection));
         $payment = $GLOBALS['TL_LANG']['tl_consho_payment'] ?? [];
         $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
         $format = (string) ($GLOBALS['TL_CONFIG']['datimFormat'] ?? 'd.m.Y H:i');
@@ -384,8 +410,11 @@ final class MoneyFlowBackendController
                 $details[] = (string) $m['method'];
             }
 
-            // A correction's reason, a payment's or refund's reference.
-            $showsReference = '' !== $m['reference'] && 'foreignRefund' !== $kind && null === $m['withdrawal'];
+            // A correction's reason, a payment's or refund's reference. A
+            // chargeback's row holds the bank's reason, which its event names
+            // below as "Grund" — once is enough.
+            $eventReason = null !== $event ? (string) $event['reason'] : '';
+            $showsReference = '' !== $m['reference'] && 'foreignRefund' !== $kind && null === $m['withdrawal'] && $m['reference'] !== $eventReason;
 
             if ($showsReference) {
                 $details[] = ('correction' === $kind ? ($lang['reason'] ?? 'Grund').': ' : '').$m['reference'];
@@ -396,8 +425,8 @@ final class MoneyFlowBackendController
                 $details[] = \sprintf((string) ($lang['providerId'] ?? 'Anbieter: %s'), $m['payoutReference']);
             }
 
-            if (null !== $event && '' !== $event['reason']) {
-                $details[] = ($lang['reason'] ?? 'Grund').': '.$event['reason'];
+            if ('' !== $eventReason) {
+                $details[] = ($lang['reason'] ?? 'Grund').': '.$eventReason;
             }
 
             $of = $byId[$m['refundOf']] ?? null;
@@ -469,17 +498,40 @@ final class MoneyFlowBackendController
      * @param array<string, mixed> $row
      * @param array<string, mixed> $payment the language of tl_consho_payment
      *
-     * @return list<array{label: string, title: string, url: string}>
+     * Besides the money operations: deleting a row not locked yet — a typo
+     * in a payment just recorded — and its details, which every row has.
+     * Delete is Contao's own act, sent as DELETE with the token in the body
+     * and asked first, as the list's delete button does.
+     *
+     * @return list<array{label: string, title: string, icon: string, url: string, method: string, confirm: string}>
      */
     private function rowActions(array $row, PaymentActions $actions, array $payment): array
     {
         $id = (int) $row['id'];
+        $image = $this->framework->getAdapter(Image::class);
+        $operations = $actions->of($row);
 
-        return array_map(fn (string $operation): array => [
-            'label' => (string) ($payment[$operation][0] ?? $operation),
-            'title' => \sprintf((string) ($payment[$operation][1] ?? '%s'), $id),
-            'url' => $this->url(['do' => 'consho_order', 'table' => 'tl_consho_payment', 'edit' === $operation ? 'act' : 'key' => $operation, 'id' => $id]),
-        ], $actions->of($row));
+        if ($actions->canEdit($row) && $this->security->isGranted(ContaoCorePermissions::DC_PREFIX.'tl_consho_payment', new DeleteAction('tl_consho_payment', $row))) {
+            $operations[] = 'delete';
+        }
+
+        $operations[] = 'show';
+
+        return array_map(function (string $operation) use ($payment, $id, $image): array {
+            $label = (string) ($payment[$operation][0] ?? $operation);
+            $act = \in_array($operation, ['edit', 'delete', 'show'], true);
+
+            return [
+                'label' => $label,
+                'title' => \sprintf((string) ($payment[$operation][1] ?? '%s'), $id),
+                // The icon the payment list shows for it (tl_consho_payment), so
+                // both pages offer the same operation the same way.
+                'icon' => (string) $image->getHtml(self::ICONS[$operation] ?? 'edit.svg', $label),
+                'url' => $this->url(['do' => 'consho_order', 'table' => 'tl_consho_payment', $act ? 'act' : 'key' => $operation, 'id' => $id]),
+                'method' => 'delete' === $operation ? 'DELETE' : 'GET',
+                'confirm' => 'delete' === $operation ? \sprintf((string) ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? '%s'), $id) : '',
+            ];
+        }, $operations);
     }
 
     /**

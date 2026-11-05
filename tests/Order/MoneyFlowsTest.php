@@ -53,6 +53,8 @@ final class MoneyFlowsTest extends TestCase
         self::assertSame('0.0000', $flows['balance']['chargedBack'], 'aufgehoben');
         self::assertSame('4.0000', $flows['balance']['refunded']);
         self::assertSame('0.0000', $flows['balance']['outstanding'], 'a refund is deliberate: nothing is demanded');
+        // Payment 1 has no lockedAt, but refunds against it lock it (LockedRecords).
+        self::assertSame([true, false], [$flows['movements'][0]['locked'], $flows['movements'][1]['locked']]);
     }
 
     public function testEineOffeneFremdeErstattungIstEineBewegungUndZaehltAlsZurueck(): void

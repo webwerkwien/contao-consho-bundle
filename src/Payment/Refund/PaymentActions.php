@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Payment\Refund;
 
 use Brick\Math\BigDecimal;
+use Webwerkwien\ContaoConshoBundle\Security\LockedRecords;
 
 /**
  * Which money operations a payment row offers, decided in one place for the
@@ -25,9 +26,13 @@ final class PaymentActions
     /** The operations in the order the payment list draws them. */
     public const ALL = ['refundPayment', 'refundRetry', 'refundManual', 'correctPayment', 'edit'];
 
+    /**
+     * @param LockedRecords|null $locks also a payment with a refund against it counts as locked; without, `lockedAt` alone
+     */
     public function __construct(
         private readonly RefundPayout $payout,
         private readonly \Closure|null $clock = null,
+        private readonly LockedRecords|null $locks = null,
     ) {
     }
 
@@ -66,8 +71,8 @@ final class PaymentActions
      */
     public function canCorrect(array $record): bool
     {
-        return null !== ($record['lockedAt'] ?? null)
-            && BigDecimal::of((string) ($record['amount'] ?? '0'))->isPositive()
+        // Locked by lockedAt or by a refund against it — correctable() asks both.
+        return BigDecimal::of((string) ($record['amount'] ?? '0'))->isPositive()
             && null !== $this->payout->correctable((int) ($record['id'] ?? 0));
     }
 
@@ -101,6 +106,6 @@ final class PaymentActions
      */
     public function canEdit(array $record): bool
     {
-        return null === ($record['lockedAt'] ?? null);
+        return null === $this->locks ? null === ($record['lockedAt'] ?? null) : !$this->locks->isPaymentLocked($record);
     }
 }

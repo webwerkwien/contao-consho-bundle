@@ -474,12 +474,14 @@ class RefundPayout
      * amount less every row tied to it and less the refunds still open at the
      * provider — the same remainder a refund sees. Null where the row is no
      * locked payment of its own: an unlocked one is edited instead, a voucher
-     * payment carries the voucher's tax and is never typed.
+     * payment carries the voucher's tax and is never typed. A refund against
+     * it locks a payment as well (LockedRecords), so then it is corrected too.
      */
     public function correctable(int $paymentId): string|null
     {
         $row = $this->connection->fetchAssociative(
             "SELECT p.amount, p.method, p.reference, p.refundOf, p.lockedAt,
+                    (SELECT COUNT(*) FROM tl_consho_payment r WHERE r.refundOf = p.id) AS refunds,
                     (SELECT COALESCE(SUM(r.amount), 0) FROM tl_consho_payment r WHERE r.refundOf = p.id) AS refunded,
                     (SELECT COALESCE(SUM(e.amount), 0) FROM tl_consho_provider_event e
                       WHERE e.payment = p.id AND e.kind = 'refund' AND e.state = 'open') AS outside
@@ -488,7 +490,7 @@ class RefundPayout
             [$paymentId],
         );
 
-        if (false === $row || null === $row['lockedAt'] || (int) $row['refundOf'] > 0 || !BigDecimal::of((string) $row['amount'])->isPositive()
+        if (false === $row || (null === $row['lockedAt'] && 0 === (int) $row['refunds']) || (int) $row['refundOf'] > 0 || !BigDecimal::of((string) $row['amount'])->isPositive()
             || ChargebackRow::is((string) $row['method']) || CorrectionRow::is((string) $row['method']) || str_starts_with((string) $row['reference'], 'voucher:')) {
             return null;
         }

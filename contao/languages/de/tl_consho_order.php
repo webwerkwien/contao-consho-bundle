@@ -116,7 +116,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
     'locked' => 'gesperrt',
     'withdrawalLink' => 'Widerruf %s',
     'documentLink' => 'Rechnungskorrektur',
-    'paymentsLink' => 'Zahlungsliste',
+    'newPayment' => 'Zahlung erfassen',
     'assignPayment' => 'Zahlung zuordnen',
     'assignPaymentLabel' => 'Zahlung',
     'assignOption' => '%s vom %s, offen %s',
@@ -190,6 +190,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendNoOrderPage'] = 'Die Bestätigung 
  * of all things is the most common colour vision deficiency.
  */
 $GLOBALS['TL_LANG']['tl_consho_order']['signalsColumn'] = 'Status';
+$GLOBALS['TL_LANG']['tl_consho_order']['kindColumn'] = 'Art';
 
 $GLOBALS['TL_LANG']['tl_consho_order']['customerColumn'] = 'Kunde';
 
@@ -197,6 +198,13 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
     'status' => [
         'none' => 'Kein Status gesetzt',
     ],
+    // What the order is, by the kinds of its product lines.
+    'kind' => [
+        'physical' => 'Ware',
+        'digital' => 'Digitales',
+        'service' => 'Dienstleistung',
+        'voucher' => 'Gutschein',
+        'mixed' => 'Gemischt: %s',    ],
     'payment' => [
         // Keyed by PaymentState, not by colour: "erstattet" is grey like "offen".
         'open' => 'Zahlung: offen',
@@ -212,6 +220,17 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
         'progress' => 'Lieferung: teilweise versendet',
         'attention' => 'Lieferung: prüfen',
         'done' => 'Lieferung: vollständig',
+        // Keyed by the kind of what is still open (OrderLabelListener).
+        // Released, a service or digital line counts as delivered (DigitalRelease reports it).
+        'service' => 'Leistung: noch nicht freigeschaltet',
+        'digital' => 'Digitales: noch nicht freigeschaltet',
+        'voucher' => 'Gutschein: noch nicht ausgegeben',
+        'nothingLeft' => 'Lieferung: nichts mehr offen',
+        // In place of "service" and "digital" where the release is still to come.
+        'serviceAwaitingPayment' => 'Leistung: wartet auf die Zahlung',
+        'serviceReleasedOn' => 'Leistung: wird am %s freigeschaltet',
+        'digitalAwaitingPayment' => 'Digitales: wartet auf die Zahlung',
+        'digitalReleasedOn' => 'Digitales: wird am %s freigeschaltet',
     ],
 ];
 $GLOBALS['TL_LANG']['tl_consho_order']['remainderDeliveryDays'] = ['Restlieferung nach Teillieferung (Werktage)', 'Leer: der Grundwert des Shops. Gilt für die Rechnung, die mit der ersten Sendung entsteht.'];

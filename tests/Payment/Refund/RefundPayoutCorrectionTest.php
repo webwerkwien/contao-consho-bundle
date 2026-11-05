@@ -13,6 +13,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Payment\PrepaymentHandler;
+use Webwerkwien\ContaoConshoBundle\Payment\Refund\PaymentActions;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Payment\FakeRefundingHandler;
@@ -82,6 +83,19 @@ final class RefundPayoutCorrectionTest extends TestCase
         foreach ([102 => 'unlocked: edit it', 103 => 'voucher', 104 => 'reversal', 105 => 'refund', 999 => 'missing'] as $id => $why) {
             self::assertNull($this->payout()->correctable($id), $why);
         }
+    }
+
+    /**
+     * A refund against a payment not locked yet locks it (LockedRecords) —
+     * editing is gone, so correcting must be there, or nothing resolves it.
+     */
+    public function testEineDurchErstattungGesperrteZahlungIstKorrigierbar(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 102, 'pid' => 1, 'amount' => '100.0000', 'method' => 'Überweisung']);
+        $this->connection->insert('tl_consho_payment', ['pid' => 1, 'amount' => '-30.0000', 'method' => 'refund', 'refundOf' => 102, 'payoutState' => 'manual', 'lockedAt' => self::NOW]);
+
+        self::assertSame('70.0000', $this->payout()->correctable(102));
+        self::assertTrue((new PaymentActions($this->payout()))->canCorrect(['id' => 102, 'amount' => '100.0000', 'lockedAt' => null]));
     }
 
     public function testEineZahlungEinerAnderenBestellungWirdNichtKorrigiert(): void

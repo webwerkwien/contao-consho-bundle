@@ -89,13 +89,14 @@ final class MoneyFlowBackendControllerTest extends TestCase
     {
         $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-10.0000', 'method' => 'refund', 'payoutState' => 'manual', 'reference' => 'W-1']);
         // The chargeback's row, as ProviderEventBooker writes it.
-        $this->connection->insert('tl_consho_payment', ['id' => 6, 'pid' => 1, 'amount' => '-30.0000', 'method' => 'chargeback', 'refundOf' => 5, 'payoutReference' => 'chb_1', 'receivedAt' => 1_800_000_000]);
+        $this->connection->insert('tl_consho_payment', ['id' => 6, 'pid' => 1, 'amount' => '-30.0000', 'method' => 'chargeback', 'refundOf' => 5, 'reference' => 'MD06', 'payoutReference' => 'chb_1', 'receivedAt' => 1_800_000_000]);
 
         $html = $this->controller(Request::create('/contao?do=consho_order&key=followUps&id=1'))($this->dc());
 
         self::assertStringContainsString('chb_1', $html);
         self::assertStringContainsString('zurückgebucht', $html);
-        self::assertStringContainsString('MD06', $html);
+        // The row's reference is the bank's reason the event names as well: once.
+        self::assertSame(1, substr_count($html, 'MD06'));
         self::assertStringContainsString('re_x', $html);
         self::assertStringContainsString('In Consho erfassen', $html);
         self::assertStringContainsString('<option value="8">', $html);
@@ -118,12 +119,15 @@ final class MoneyFlowBackendControllerTest extends TestCase
 
         // Received 30 less the correction, 5 paid back, 10 back at the provider.
         self::assertMatchesRegularExpression('#Bezahlt</td>\s*<td[^>]*>28,00\s€#u', $html);
+        // Still open: not "ausgeglichen", neither in the legend nor as a row.
+        self::assertStringNotContainsStringIgnoringCase('ausgeglichen', $html);
         self::assertMatchesRegularExpression('#Zurückgezahlt</td>\s*<td[^>]*>5,00\s€#u', $html);
         self::assertMatchesRegularExpression('#Beim Zahlungsanbieter erstattet, noch nicht erfasst</td>\s*<td[^>]*>10,00\s€#u', $html);
         self::assertMatchesRegularExpression('#<strong>Offen</strong></td>\s*<td[^>]*><strong>7,00\s€#u', $html);
 
         $payment = strpos($html, '<strong>Zahlung</strong>');
-        self::assertMatchesRegularExpression('#<strong>Korrektur</strong>\s*— Grund: Tippfehler#u', $html);
+        // Each detail on a line of its own, grey.
+        self::assertMatchesRegularExpression('#<strong>Korrektur</strong>\s*<br><span class="tl_gray">Grund: Tippfehler</span>#u', $html);
         $correction = strpos($html, '<strong>Korrektur</strong>');
         $refund = strpos($html, '<strong>Rückzahlung</strong>');
         $foreign = strpos($html, '<strong>Erstattung beim Zahlungsanbieter</strong>');
@@ -139,7 +143,46 @@ final class MoneyFlowBackendControllerTest extends TestCase
         self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;key=refundPayment&amp;id=5"', $html, '13 € left at the payment');
         self::assertStringNotContainsString('key=refundPayment&amp;id=8"', $html, 'a refund is not refunded');
         self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=edit&amp;id=9"', $html, 'not locked');
-        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;id=1" class="header_edit">Zahlungsliste</a>', $html);
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=create&amp;mode=2&amp;pid=1" class="header_new">Zahlung erfassen</a>', $html);
+        self::assertStringNotContainsString('Zahlungsliste', $html);
+    }
+
+    /**
+     * What the payment list offered besides: deleting a row not locked yet —
+     * as Contao's DELETE with the token in the body, asked first — and the
+     * details of every row.
+     */
+    public function testDeletingAndDetailsAsInThePaymentList(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 9, 'pid' => 1, 'amount' => '20.0000', 'method' => 'Überweisung', 'receivedAt' => 200]);
+        $this->connection->update('tl_consho_payment', ['lockedAt' => 150], ['id' => 5]);
+        // Contao's text, as the list's delete button uses it.
+        $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] = 'Soll der Eintrag ID %s wirklich gelöscht werden?';
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+
+        self::assertMatchesRegularExpression('#<form action="/contao\?do=consho_order&amp;table=tl_consho_payment&amp;act=delete&amp;id=9" method="post"[^>]*>\s*<input type="hidden" name="_method" value="DELETE">\s*<input type="hidden" name="REQUEST_TOKEN" value="tok">#', $html);
+        self::assertStringContainsString('data-confirm="Soll der Eintrag ID 9 wirklich gelöscht werden?"', $html);
+        self::assertStringNotContainsString('act=delete&amp;id=5"', $html, 'locked');
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=show&amp;id=5"', $html, 'details also when locked');
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=show&amp;id=9"', $html);
+    }
+
+    /**
+     * A payment not locked yet, but with a refund against it, offers neither
+     * editing nor deleting: either would leave a refund of nothing.
+     */
+    public function testAPaymentWithARefundIsNeitherEditedNorDeleted(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 9, 'pid' => 1, 'amount' => '20.0000', 'method' => 'Überweisung', 'receivedAt' => 200]);
+        $this->connection->insert('tl_consho_payment', ['id' => 10, 'pid' => 1, 'amount' => '-20.0000', 'refundOf' => 9, 'receivedAt' => 300, 'lockedAt' => 300]);
+        $GLOBALS['TL_LANG']['MSC']['deleteConfirm'] = 'Delete ID %s?';
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+
+        self::assertStringNotContainsString('act=delete&amp;id=9"', $html);
+        self::assertStringNotContainsString('act=edit&amp;id=9"', $html);
+        self::assertStringContainsString('act=show&amp;id=9"', $html);
     }
 
     public function testACancelledPaidOrderShowsWhatIsTooMuch(): void

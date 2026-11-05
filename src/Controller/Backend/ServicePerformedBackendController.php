@@ -19,13 +19,15 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Csrf\CsrfToken;
 use Webwerkwien\ContaoConshoBundle\Order\ServicePerformed;
 
 /**
- * "Leistung erbracht" at an order line (Dienstleistung, DL3).
+ * "Leistung erbracht" for a service line (Dienstleistung, DL3), offered in
+ * the order's delivery list (DeliveryServiceListener).
  *
- * POST with the request token, like "Als versandt melden" (D-1): it may end
+ * Only with the request token — a POST, or a link carrying `rt`: it may end
  * the customer's right of withdrawal, and no link an editor opens may do
  * that. Checked as an update of the ORDER, which it changes.
  *
@@ -45,6 +47,7 @@ final class ServicePerformedBackendController
         #[Autowire(param: 'contao.csrf_token_name')]
         private readonly string $csrfTokenName,
         private readonly ServicePerformed $performed,
+        private readonly UrlGeneratorInterface|null $router = null,
     ) {
     }
 
@@ -79,6 +82,10 @@ final class ServicePerformedBackendController
             ? $message->addConfirmation(\sprintf($lang[$outcome] ?? '%s', $name))
             : $message->addError($lang[$outcome] ?? $outcome);
 
-        throw new RedirectResponseException($this->framework->getAdapter(System::class)->getReferer());
+        // Back to the order's deliveries, where the button is
+        // (DeliveryServiceListener) — the referer would be the line list.
+        throw new RedirectResponseException(null === $this->router
+            ? $this->framework->getAdapter(System::class)->getReferer()
+            : $this->router->generate('contao_backend', ['do' => 'consho_order', 'table' => 'tl_consho_delivery', 'id' => (int) $order['id']]));
     }
 }

@@ -50,7 +50,8 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
         ],
     ],
 
-    'palettes' => ['default' => '{delivery_legend},shippedAt,carrier,trackingNumber'],
+    // The last two legends only while the delivery is not reported (DeliveryMaskListener).
+    'palettes' => ['default' => '{delivery_legend},shippedAt,carrier,trackingNumber;{contents_legend},contents;{report_legend},notify'],
 
     'fields' => [
         'id' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'autoincrement' => true]],
@@ -66,13 +67,14 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
         'shippedAt' => [
             'inputType' => 'text',
             'exclude' => true,
-            'eval' => ['mandatory' => true, 'rgxp' => 'datim', 'datepicker' => true, 'tl_class' => 'w50 wizard'],
+            'eval' => ['mandatory' => true, 'rgxp' => 'datim', 'datepicker' => true, 'tl_class' => 'w25 wizard'],
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
         ],
         'carrier' => [
             'inputType' => 'text',
             'exclude' => true,
-            'eval' => ['maxlength' => 64, 'tl_class' => 'w50'],
+            // 25 / 25 / 50: the tracking number is the long one.
+            'eval' => ['maxlength' => 64, 'tl_class' => 'w25'],
             'sql' => ['type' => 'string', 'length' => 64, 'default' => ''],
         ],
         'trackingNumber' => [
@@ -95,5 +97,14 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
         // are read-only, and neither can be deleted — the mail about this
         // parcel is out.
         'lockedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false]],
+
+        /*
+         * No columns: what is in the parcel lives in tl_consho_delivery_item,
+         * and "notify" is an action, not a state. Both are drawn by an
+         * input_field callback and read on submit (DeliveryMaskListener) — no
+         * inputType, so DC_Table neither validates nor saves them.
+         */
+        'contents' => ['exclude' => true],
+        'notify' => ['exclude' => true],
     ],
 ];

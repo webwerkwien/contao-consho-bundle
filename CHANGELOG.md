@@ -5,6 +5,56 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.5.0] – 2026-11-05
+
+### Changed
+
+- **"Geldflüsse" and "Erstatten" in the back end, tidied up.** "Ausgeglichen" stands in the heading of the balance
+  instead of as a row without an amount; each movement lists its details on lines of their own, a chargeback's
+  reason only once, and offers its operations as the icons of the payment list. "Erstatten" proposes the amount
+  with the decimal separator of the back end language, shows the ways as Contao's checkboxes and its hints in
+  full. Both headings name the order number instead of a record ID.
+- **"Geldflüsse" takes over the payment list.** "Zahlung erfassen" records money received (a bank transfer for
+  prepayment or an invoice); each payment offers its details, and one not locked yet can be deleted there. The
+  separate payment list leads to "Geldflüsse", so "Zurück" and "Speichern und schließen" at a payment return
+  there.
+- **A delivery in one mask.** While a delivery is not reported, its mask shows "Lieferung vollständig" (ticked:
+  everything still open goes in) and, unticked, the open items with a quantity each for a partial delivery. "Als
+  versandt melden und Kunden verständigen" reports it on saving, with the shipping mail; unticked, it stays a draft
+  and is reported later from the list. The list of the delivery's items stays for corrections. With nothing left
+  to ship, the mask says why per item (shipped, withdrawn, in another draft) or that the order is cancelled.
+  When saving fails on another field, the mask keeps what was entered.
+  Contents and notification are fields of their own: for back end users who are not administrators, allow the
+  delivery fields `contents` and `notify` in the user group's allowed fields, or the mask shows neither.
+- **No "Neue Lieferung" where no parcel can concern the order:** withdrawn or cancelled before anything shipped,
+  or without physical goods. Once a parcel has left, a new delivery stays possible.
+- **The delivery signal in the order list names what is open:** a service or digital content not yet released, or
+  a voucher not yet issued, instead of "Lieferung: offen" for all of them. For a release still to come it adds
+  the date, or that the payment is awaited. An order with nothing left to ship that never shipped anything reads
+  "Lieferung: nichts mehr offen" instead of "vollständig".
+- **The order list shows what an order is:** a column "Art" before the status signals, with an icon for goods,
+  digital content, service, voucher or a mix of them, named in its title.
+- **Deliveries come first among the order's operations,** then the lines, then the rest as before. Their colours
+  follow Contao's: orange where something is done (deliveries, now a lorry, money flows, withdrawals), blue for
+  the lines, which are only viewed. The delivery signal shows the same lorry.
+- **"Leistung erbracht" moved from the order's lines to its deliveries:** a released service shows the action at
+  the delivery that reported its release, or the date it was performed. Until the release, the delivery list says
+  when it will come. The lines only show the state.
+- **The order's line list in columns:** kind as an icon (charge lines in words), name, quantity, gross unit price, tax rate, line total
+  and state, with amounts in the order's currency and quantities without trailing zeros.
+
+### Fixed
+
+- **A single-purpose voucher pays only for what is supplied in its country.** Goods and downloads delivered to
+  another country no longer count towards it, even where they are taxed in the shop's country below the
+  distance-selling threshold; the voucher then shows "passt zu keinem Artikel in diesem Einkauf". Services are not
+  affected: they are taxed where they are performed. Of a basket discount, only the part on what the voucher may
+  pay reduces what it pays, line by line where the discount names its lines. The basket shows the same once the
+  delivery address is known. (Einzweck-Gutscheine)
+- **A payment with a refund against it can no longer be deleted or changed,** even before the order is settled:
+  it opens read-only, and "Geldflüsse" offers neither editing nor deleting it. "Korrigieren" stays available.
+- **Operation buttons sit in the middle of a wrapped row** in back end lists with columns, like the other cells.
+
 ## [0.4.0] – 2026-11-04
 
 ### Added

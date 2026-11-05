@@ -13,7 +13,7 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['edit'] = ['Bearbeiten', 'Zahlung ID %s
 $GLOBALS['TL_LANG']['tl_consho_payment']['delete'] = ['Löschen', 'Zahlung ID %s löschen'];
 $GLOBALS['TL_LANG']['tl_consho_payment']['show'] = ['Details', 'Details der Zahlung ID %s anzeigen'];
 
-$GLOBALS['TL_LANG']['tl_consho_payment']['locked'] = 'Diese Zahlung hatte bereits Folgen (Rechnung, Status oder Mail) und ist gesperrt. War sie zu hoch erfasst, berichtigen Sie sie über „Korrigieren“ an der Zahlung.';
+$GLOBALS['TL_LANG']['tl_consho_payment']['locked'] = 'Diese Zahlung hatte bereits Folgen (Rechnung, Status, Mail oder eine Erstattung) und ist gesperrt. War sie zu hoch erfasst, berichtigen Sie sie über „Korrigieren“ an der Zahlung.';
 
 // Erstattung über den Zahlungsanbieter (Block Zahlung Mollie, 4.4).
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundPayment'] = ['Erstatten', 'Zahlung ID %s ganz oder teilweise zurückzahlen'];
@@ -27,6 +27,8 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['methodCorrection'] = 'Korrektur';
 
 // Korrektur einer gesperrten Zahlung (Geldflüsse E8).
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctPayment'] = ['Korrigieren', 'Gesperrte Zahlung ID %s berichtigen, ohne dass Geld fließt'];
+// Replaces "ID %s" in the headline of these pages (Headline).
+$GLOBALS['TL_LANG']['tl_consho_payment']['headlineOrder'] = 'der Bestellung %s';
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctLegend'] = 'Korrektur zu Bestellung';
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctAmountHelp'] = 'Höchstens %s. Um so viel war die Zahlung zu hoch erfasst.';
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctReason'] = 'Grund';

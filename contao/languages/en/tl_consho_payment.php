@@ -13,7 +13,7 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['edit'] = ['Edit', 'Edit payment ID %s'
 $GLOBALS['TL_LANG']['tl_consho_payment']['delete'] = ['Delete', 'Delete payment ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_payment']['show'] = ['Details', 'Show details of payment ID %s'];
 
-$GLOBALS['TL_LANG']['tl_consho_payment']['locked'] = 'This payment has already had consequences (invoice, status or mail) and is locked. If it was recorded too high, correct it through "Korrigieren" on the payment.';
+$GLOBALS['TL_LANG']['tl_consho_payment']['locked'] = 'This payment has already had consequences (invoice, status, mail or a refund) and is locked. If it was recorded too high, correct it through "Korrigieren" on the payment.';
 
 // Refunds through the payment provider (block Zahlung Mollie, 4.4).
 $GLOBALS['TL_LANG']['tl_consho_payment']['refundPayment'] = ['Refund', 'Pay back payment ID %s in full or in part'];
@@ -27,6 +27,8 @@ $GLOBALS['TL_LANG']['tl_consho_payment']['methodCorrection'] = 'Correction';
 
 // Correction of a locked payment (Geldflüsse E8).
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctPayment'] = ['Correct', 'Correct locked payment ID %s without moving money'];
+// Replaces "ID %s" in the headline of these pages (Headline).
+$GLOBALS['TL_LANG']['tl_consho_payment']['headlineOrder'] = 'of order %s';
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctLegend'] = 'Correction for order';
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctAmountHelp'] = 'At most %s. The amount the payment was recorded too high.';
 $GLOBALS['TL_LANG']['tl_consho_payment']['correctReason'] = 'Reason';

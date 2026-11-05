@@ -8,6 +8,7 @@ use Contao\DataContainer;
 use Contao\Message;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Webwerkwien\ContaoConshoBundle\Security\LockedRecords;
 
 /**
  * A payment or delivery that had consequences opens read-only (D-1, A2).
@@ -57,9 +58,8 @@ class LockedRecordListener
         }
 
         $table = $dc->table;
-        $locked = $this->connection->fetchOne(\sprintf('SELECT lockedAt FROM %s WHERE id = ?', $table), [(int) $dc->id]);
 
-        if (null === $locked || false === $locked) {
+        if (!(new LockedRecords($this->connection))->isLocked($table, (int) $dc->id)) {
             return;
         }
 
@@ -91,9 +91,8 @@ class LockedRecordListener
     public function refuseLocked(array $values, DataContainer $dc): array
     {
         $table = (string) $dc->table;
-        $locked = $this->connection->fetchOne(\sprintf('SELECT lockedAt FROM %s WHERE id = ?', $table), [(int) $dc->id]);
 
-        if (null !== $locked && false !== $locked) {
+        if ((new LockedRecords($this->connection))->isLocked($table, (int) $dc->id)) {
             throw new \RuntimeException($GLOBALS['TL_LANG'][$table]['locked'] ?? 'locked');
         }
 

@@ -501,6 +501,55 @@ class CheckoutAgreesWithOrderTest extends TestCase
         self::assertSame('60.00', $this->drafts[0]->vouchers[0]['amount']);
     }
 
+    /**
+     * The same voucher, the goods going to Germany: taxed in Austria only by
+     * the distance-sale threshold, they are not supplied there, and the
+     * Austrian single-purpose voucher pays nothing of them. Asked through the
+     * checkout, so that the delivery country reaches the pots.
+     */
+    public function testEinEinzweckGutscheinZahltNichtsInsAusland(): void
+    {
+        $db = SqliteWithoutRowLocks::connection();
+
+        foreach (['tl_consho_voucher', 'tl_consho_voucher_booking', 'tl_consho_payment'] as $table) {
+            DcaSchema::create($db, $table);
+        }
+
+        $db->insert('tl_consho_voucher', ['id' => 1, 'code' => 'AAAABBBBCCCCMDSN', 'shop' => 1, 'currency' => 'EUR', 'faceValue' => '500', 'balance' => '500', 'taxClass' => 1, 'taxRate' => '20.0000', 'taxCountry' => 'AT']);
+
+        $state = $this->state('DE', false, 'ATU12345678', [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(2, 8, '3.0000', 1)], vouchers: new VoucherWallet($db), voucherCodes: ['AAAABBBBCCCCMDSN'], pots: new CoverablePots($this->taxes()));
+
+        self::assertTrue($state->isReady());
+        self::assertFalse($state->coveredByVouchers);
+        self::assertSame([], $state->payingVouchers());
+        self::assertEquals(BigDecimal::of($state->grossTotal), BigDecimal::of($state->toPay()));
+    }
+
+    /**
+     * Tea (60.00) and consulting (120.00) share class 1 in Austria; the tea goes
+     * to Germany and leaves the pot, the consulting stays (place of the
+     * service). The rule gives 10 % on the tea only: nothing of it comes off
+     * the consulting, so the voucher pays all 120.00 — spread over both lines
+     * by their gross it would have been 116.00.
+     */
+    public function testDerRabattAufAusgeschiedeneWareMindertDenTopfNicht(): void
+    {
+        $db = SqliteWithoutRowLocks::connection();
+
+        foreach (['tl_consho_voucher', 'tl_consho_voucher_booking', 'tl_consho_payment', 'tl_consho_cart_rule', 'tl_consho_cart_rule_redemption', 'tl_consho_product', 'tl_consho_product_property'] as $table) {
+            DcaSchema::create($db, $table);
+        }
+
+        $db->insert('tl_consho_voucher', ['id' => 1, 'code' => 'AAAABBBBCCCCMDSN', 'shop' => 1, 'currency' => 'EUR', 'faceValue' => '500', 'balance' => '500', 'taxClass' => 1, 'taxRate' => '20.0000', 'taxCountry' => 'AT']);
+        $db->insert('tl_consho_cart_rule', ['tstamp' => 1, 'title' => 'Tee', 'code' => 'Tee', 'published' => 1, 'effect' => 'percent', 'percent' => '10', 'products' => serialize(['7'])]);
+
+        $state = $this->state('DE', false, 'ATU12345678', [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(3, 9, '1.0000', 1)], 'Tee', new CartDiscounts($db, new ProductConditions($db)), vouchers: new VoucherWallet($db), voucherCodes: ['AAAABBBBCCCCMDSN'], pots: new CoverablePots($this->taxes()));
+
+        self::assertTrue($state->isReady());
+        self::assertSame(CodeStatus::Applied, $state->codeStatus);
+        self::assertSame(['120.00'], array_map(static fn ($voucher): string => $voucher->applied, $state->payingVouchers()));
+    }
+
     private function dreiArten(): array
     {
         return [new CartItemRow(1, 7, '1.0000', 1), new CartItemRow(2, 8, '1.0000', 1), new CartItemRow(3, 9, '1.0000', 1)];

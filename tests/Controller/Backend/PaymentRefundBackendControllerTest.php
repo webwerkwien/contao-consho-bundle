@@ -85,7 +85,7 @@ final class PaymentRefundBackendControllerTest extends TestCase
 
         $html = $this->controller($this->get('refundPayment'))->refund($this->dc(5));
 
-        self::assertStringContainsString('name="consho_amount" id="ctrl_consho_amount" class="tl_text" inputmode="decimal" value="20.00"', $html);
+        self::assertStringContainsString('name="consho_amount" id="ctrl_consho_amount" class="tl_text" inputmode="decimal" value="20,00"', $html, 'with the separator of the back end language');
         self::assertStringContainsString('value="Erstattung WEB-1"', $html);
         self::assertStringContainsString('WEB-1 — Visa, 30,00', $html);
         self::assertStringContainsString('name="REQUEST_TOKEN" value="tok"', $html);
@@ -164,7 +164,7 @@ final class PaymentRefundBackendControllerTest extends TestCase
         $this->card->refund = RefundResult::done('re_1');
 
         $html = $this->controller($this->get('refundPayment'))->refund($this->dc(5));
-        self::assertStringContainsString('value="10.00"', $html, 'what is not out yet');
+        self::assertStringContainsString('value="10,00"', $html, 'what is not out yet');
         self::assertStringContainsString('name="consho_foreign[]" id="ctrl_consho_foreign_40" class="tl_checkbox" value="40">', $html);
         self::assertStringContainsString('name="consho_payout" id="ctrl_consho_payout" class="tl_checkbox" value="1">', $html, 'not preselected');
 

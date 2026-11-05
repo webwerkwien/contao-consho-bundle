@@ -101,7 +101,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
          * gone. Alignment was worth more here — amounts under amounts.
          */
         'label' => [
-            'fields' => ['signals', 'orderNumber', 'createdAt', 'customer', 'grandTotal'],
+            'fields' => ['kindColumn', 'signals', 'orderNumber', 'createdAt', 'customer', 'grandTotal'],
             'showColumns' => true,
         ],
         'operations' => [
@@ -121,7 +121,19 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
              * drawn there at all, instead of greyed out (see
              * EveryDeleteButtonAsksBeforeDeletingTest, which lists these).
              */
-            // Contao's children icon in orange, the colour of the order.
+            /*
+             * The colours follow Contao's: orange where something is done
+             * (deliveries, money flows, withdrawals), blue where it is only
+             * viewed (the lines), green for new and copy only.
+             *
+             * Deliveries first, then the lines: fulfilling an order is the
+             * daily work, and "Leistung erbracht" is there too. A lorry, not
+             * Contao's copy icon, which means "copy"; and not a parcel, which
+             * is the kind "Ware" in the column before.
+             */
+            'deliveries' => ['href' => 'table=tl_consho_delivery', 'icon' => 'bundles/contaoconsho/icons/deliveries.svg', 'primary' => true],
+
+            // Contao's children icon in blue: nothing is done here any more.
             'items' => ['href' => 'table=tl_consho_order_item', 'icon' => 'bundles/contaoconsho/icons/order-items.svg', 'primary' => true],
 
             // Not show.svg, which the 'show' operation already uses — the same
@@ -144,7 +156,6 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
             // place of the buttons "Zahlungen" and "Nachträge"; red while
             // something waits for the operator (MoneyFlowsButtonListener).
             'moneyFlows' => ['href' => 'key=moneyFlows', 'icon' => 'sync.svg', 'primary' => true],
-            'deliveries' => ['href' => 'table=tl_consho_delivery', 'icon' => 'copy.svg', 'primary' => true],
 
             // F-4. What the customer may use from the digital lines.
             'entitlements' => ['href' => 'table=tl_consho_entitlement', 'icon' => 'lock-locked.svg', 'primary' => false],
@@ -156,7 +167,8 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
 
             // D-2. The declared withdrawals. Both buttons show whether there
             // is anything behind them (F13, OrderAftercareButtonListener).
-            'withdrawals' => ['href' => 'table=tl_consho_withdrawal', 'icon' => 'undo.svg', 'primary' => true],
+            // Undo in orange, with its own --disabled twin for disable().
+            'withdrawals' => ['href' => 'table=tl_consho_withdrawal', 'icon' => 'bundles/contaoconsho/icons/withdrawals.svg', 'primary' => true],
 
             // D-3 (U2): complaints as notes.
             'complaints' => ['href' => 'table=tl_consho_complaint', 'icon' => 'important.svg', 'primary' => true],
@@ -192,6 +204,9 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
          * palette.
          */
         'signals' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_order']['signalsColumn']],
+
+        // Likewise virtual: what the order is, a column of its own before the states.
+        'kindColumn' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_order']['kindColumn']],
 
         // Likewise virtual. The column shows first AND last name, so it cannot
         // borrow the `lastname` label — the heading would say "Nachname" over

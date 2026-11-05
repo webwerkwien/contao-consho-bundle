@@ -19,9 +19,17 @@ trait TaxFixture
      */
     protected function grossCalculator(array $rates = ['AT' => '20.0000']): GrossCalculator
     {
+        return new GrossCalculator($this->taxResolver($rates));
+    }
+
+    /**
+     * @param array<string, string> $rates ISO code => rate
+     */
+    protected function taxResolver(array $rates = ['AT' => '20.0000']): TaxResolver
+    {
         $countries = $this->createMock(Countries::class);
         $countries->method('getCountryCodes')->willReturn(array_keys($rates));
 
-        return new GrossCalculator(new TaxResolver(new FixedTaxRates($rates), new CountryProvider($countries)));
+        return new TaxResolver(new FixedTaxRates($rates), new CountryProvider($countries));
     }
 }

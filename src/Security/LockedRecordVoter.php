@@ -56,15 +56,7 @@ abstract class LockedRecordVoter extends AbstractDataContainerVoter
             return true;
         }
 
-        $id = (int) $action->getCurrentId();
-
-        if ($id < 1) {
-            return true;
-        }
-
-        $locked = $this->connection->fetchOne(\sprintf('SELECT lockedAt FROM %s WHERE id = ?', $this->getTable()), [$id]);
-
-        if (null === $locked || false === $locked) {
+        if (!(new LockedRecords($this->connection))->isLocked($this->getTable(), (int) $action->getCurrentId())) {
             return true;
         }
 

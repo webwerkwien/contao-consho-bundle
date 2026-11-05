@@ -69,6 +69,19 @@ class ServicePerformed
     }
 
     /**
+     * What report() would answer for this line, without writing — so the
+     * button is offered exactly where the report would take it.
+     *
+     * @param array<string, mixed> $item a tl_consho_order_item row
+     *
+     * @return self::*
+     */
+    public function preview(array $item): string
+    {
+        return $this->check($item);
+    }
+
+    /**
      * @param array<string, mixed> $item
      *
      * @return self::*

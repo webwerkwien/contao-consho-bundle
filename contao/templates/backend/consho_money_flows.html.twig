@@ -6,10 +6,11 @@
 
   Built like Contao's own info page (act=show, J4): sections with a legend
   that folds, figures in a table, hints next to the button they explain.
+  "Ausgeglichen" is a state and stands in the legend, not as a row.
 #}
 <div id="tl_buttons">
     <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.back|default('Zurück') }}</a>
-    {% if payments %}<a href="{{ payments }}" class="header_edit">{{ lang.paymentsLink|default('Zahlungsliste') }}</a>{% endif %}
+    {% if create %}<a href="{{ create }}" class="header_new">{{ lang.newPayment|default('Zahlung erfassen') }}</a>{% endif %}
 </div>
 
 {# Contao's own HTML. #}
@@ -17,7 +18,7 @@
 
 <div class="tl_formbody_edit consho-money-flows">
     <fieldset class="tl_tbox" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
-        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ lang.balanceLegend|default('Saldo') }}: {{ number }}</button></legend>
+        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ lang.balanceLegend|default('Saldo') }}: {{ number }}{% if settled %} — {{ lang.balance.settled|default('Ausgeglichen')|lower }}{% endif %}</button></legend>
         <table class="tl_show with-padding with-zebra">
             <tbody>
                 {% for line in balance %}
@@ -52,33 +53,50 @@
         {% if movements is empty %}
             <p class="tl_info">{{ lang.noMovements|default('') }}</p>
         {% else %}
+            {# Date as narrow as it gets (width:1%), the description takes the
+               room; each detail on a line of its own in grey, as Contao's lists
+               show secondary information; the operations as the payment list's
+               icons in a column of their own. #}
             <table class="tl_show with-padding with-zebra">
                 <tbody>
                     {% for m in movements %}
                         <tr class="consho-money-flows__{{ m.kind }}">
-                            <td class="tl_label" style="white-space:nowrap">{{ m.date }}</td>
-                            <td>
+                            <td class="tl_label" style="width:1%; white-space:nowrap; vertical-align:top">{{ m.date }}</td>
+                            {# white-space:normal: tl_show keeps the line breaks of
+                               its cells, here those of this template. #}
+                            <td style="vertical-align:top; white-space:normal">
                                 <strong>{{ m.label }}</strong>
-                                {% if m.details is not empty %} — {{ m.details|join(' · ') }}{% endif %}
-                                {% if m.of %}<br>{{ m.of }}{% endif %}
+                                {% for detail in m.details %}<br><span class="tl_gray">{{ detail }}</span>{% endfor %}
+                                {% if m.of %}<br><span class="tl_gray">{{ m.of }}</span>{% endif %}
                                 {% if m.withdrawal %}
                                     <br><a href="{{ m.withdrawal.url }}">{{ (lang.withdrawalLink|default('Widerruf %s'))|format(m.withdrawal.number) }}</a>
                                     {% if m.withdrawal.document %} · <a href="{{ m.withdrawal.document }}">{{ lang.documentLink|default('Beleg') }}</a>{% endif %}
                                 {% endif %}
-                                {# The operations of the payment list that apply to this row (PaymentActions). #}
-                                {% if m.actions is not empty %}
-                                    <br>{% for a in m.actions %}<a href="{{ a.url }}" title="{{ a.title }}">{{ a.label }}</a>{% if not loop.last %} · {% endif %}{% endfor %}
-                                {% endif %}
                             </td>
-                            <td style="text-align:right; white-space:nowrap">{{ m.amount }}</td>
-                            <td style="white-space:nowrap">{{ m.state }}</td>
+                            <td style="width:1%; text-align:right; white-space:nowrap; vertical-align:top">{{ m.amount }}</td>
+                            <td style="width:1%; white-space:nowrap; vertical-align:top">{{ m.state }}</td>
+                            {# The operations of the payment list that apply to this row (PaymentActions). #}
+                            <td class="tl_right_nowrap" style="width:1%; vertical-align:top; white-space:nowrap">
+                                {% for a in m.actions %}
+                                    {% if a.method == 'GET' %}
+                                        <a href="{{ a.url }}" title="{{ a.title }}">{{ a.icon ? a.icon|raw : a.label }}</a>
+                                    {% else %}
+                                        {# As Contao's list draws an operation with a method: a form, the token in its body. #}
+                                        <form action="{{ a.url }}" method="post" style="display:inline">
+                                            <input type="hidden" name="_method" value="{{ a.method }}">
+                                            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                                            <button type="submit" title="{{ a.title }}" data-confirm="{{ a.confirm }}" onclick="if(this.dataset.confirm&amp;&amp;!confirm(this.dataset.confirm))return false" style="background:none; border:0; padding:0; cursor:pointer">{{ a.icon ? a.icon|raw : a.label }}</button>
+                                        </form>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
                         </tr>
 
                         {# J3: a refund that names no payment, tied to one here. #}
                         {% if m.unassigned %}
                             <tr>
                                 <td></td>
-                                <td colspan="3">
+                                <td colspan="4" style="white-space:normal">
                                     {% if m.assignTo is not empty %}
                                         <form action="{{ action }}" method="post" class="tl_form" style="display:inline-block">
                                             <input type="hidden" name="FORM_SUBMIT" value="consho_provider_event">
@@ -105,7 +123,7 @@
                         {% if event %}
                             <tr>
                                 <td></td>
-                                <td colspan="3">
+                                <td colspan="4" style="white-space:normal">
                                     {% if event.withdrawals is not empty %}
                                         {% for withdrawal in event.withdrawals %}
                                             <a href="{{ withdrawal.url }}" class="tl_submit" style="display:inline-block; margin-right:1em">{{ (lang.toWithdrawal|default('Zum Widerruf %s'))|format(withdrawal.number) }}</a>

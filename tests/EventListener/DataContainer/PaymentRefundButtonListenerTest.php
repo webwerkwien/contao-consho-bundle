@@ -39,8 +39,11 @@ final class PaymentRefundButtonListenerTest extends TestCase
 
         $shown = fn (array $record): bool => $this->shown(static fn (DataContainerOperation $o) => $listener->correct($o), $record);
 
+        // Whether the payment is locked (lockedAt or a refund against it) is
+        // decided by correctable(), see RefundPayoutCorrectionTest.
         self::assertTrue($shown(['id' => 5, 'amount' => '30.0000', 'lockedAt' => 100]));
-        self::assertFalse($shown(['id' => 5, 'amount' => '30.0000', 'lockedAt' => null]), 'ungesperrt: bearbeiten');
+        self::assertTrue($shown(['id' => 5, 'amount' => '30.0000', 'lockedAt' => null]), 'durch eine Erstattung gesperrt');
+        self::assertFalse($shown(['id' => 8, 'amount' => '30.0000', 'lockedAt' => null]), 'ungesperrt: bearbeiten');
         self::assertFalse($shown(['id' => 5, 'amount' => '-10.0000', 'lockedAt' => 100]), 'eine Erstattung');
         self::assertFalse($shown(['id' => 6, 'amount' => '30.0000', 'lockedAt' => 100]), 'nichts mehr übrig');
     }

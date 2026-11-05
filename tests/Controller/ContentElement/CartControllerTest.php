@@ -29,7 +29,10 @@ use Webwerkwien\ContaoConshoBundle\Cart\PurchaseCheck;
 use Webwerkwien\ContaoConshoBundle\Cart\ShopPageUrls;
 use Webwerkwien\ContaoConshoBundle\Cart\CodeAttemptLimit;
 use Webwerkwien\ContaoConshoBundle\Cart\CodeEntry;
+use Webwerkwien\ContaoConshoBundle\Voucher\CoverablePots;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
+use Webwerkwien\ContaoConshoBundle\Address\Address;
+use Webwerkwien\ContaoConshoBundle\Checkout\CheckoutData;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Webwerkwien\ContaoConshoBundle\Catalog\VisibilityCriteria;
@@ -90,6 +93,9 @@ class CartControllerTest extends TestCase
 
     // DL: the kind of every article; null = no kind reader.
     private string|null $kind = null;
+
+    /** EZ-1: whether the controller gets the single-purpose voucher pots. */
+    private bool $withPots = false;
     private const LONG = 3;
     private const PLAIN = 21;
 
@@ -737,6 +743,28 @@ class CartControllerTest extends TestCase
     }
 
     /**
+     * EZ-1: once the checkout knows the delivery address, the basket filters
+     * single-purpose vouchers by it as the checkout will — goods to Germany are
+     * not supplied in Austria, and the Austrian voucher does not look as if it
+     * would pay for them. Before an address, nothing is left out.
+     */
+    public function testDerKorbFiltertNachDerBekanntenLieferadresse(): void
+    {
+        $this->cartConnection->update('tl_consho_product', ['taxClass' => 1], ['id' => self::PLAIN]);
+        $cartId = $this->fill([self::PLAIN => '1']);
+        $this->cartConnection->insert('tl_consho_voucher', ['code' => 'AAAABBBBCCCCDDDD', 'shop' => self::SHOP, 'currency' => 'EUR', 'faceValue' => '25', 'balance' => '20', 'taxClass' => 1, 'taxRate' => '20.0000', 'taxCountry' => 'AT']);
+        $this->cartConnection->update('tl_consho_cart', ['vouchers' => 'AAAABBBBCCCCDDDD'], ['id' => $cartId]);
+        $this->withPots = true;
+
+        self::assertSame('usable', $this->render()['data']['vouchers'][0]['status'], 'noch ohne Adresse');
+
+        $repository = new DbalCartRepository($this->cartConnection);
+        $repository->saveCheckoutData($cartId, (new CheckoutData())->withBilling(new Address(lastname: 'Muster', street: 'Hauptstr. 1', postal: '10115', city: 'Berlin', country: 'DE', email: 'eva@example.org')), 2_000);
+
+        self::assertSame('notApplicable', $this->render()['data']['vouchers'][0]['status'], 'Lieferung nach Deutschland');
+    }
+
+    /**
      * WG-7: if only non-taxable items are in the cart, the total says nothing
      * about tax; a taxable article next to it brings the sentence back.
      */
@@ -962,6 +990,7 @@ class CartControllerTest extends TestCase
                     return $this->issues;
                 }
             }]),
+            $this->withPots ? new CoverablePots($this->taxResolver()) : null,
         ) extends CartController implements TestableCartElement {
             public function respond(FragmentTemplate $template, ContentModel $model, Request $request): Response
             {

@@ -55,6 +55,23 @@ final class LockedRecordListenerTest extends TestCase
         self::assertArrayNotHasKey('eval', $dca['fields']['id'], 'Spalten ohne Widget bleiben unberührt');
     }
 
+    /**
+     * A payment with a refund against it is locked too, though `lockedAt`
+     * is not set: the mask opens read-only and saving refuses it.
+     */
+    public function testEineZahlungMitRueckzahlungOeffnetSchreibgeschuetzt(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 3, 'amount' => '10.0000']);
+        $this->connection->insert('tl_consho_payment', ['id' => 4, 'amount' => '-10.0000', 'refundOf' => 3]);
+        $GLOBALS['TL_LANG']['tl_consho_payment']['locked'] = 'Gesperrt';
+
+        $this->listener()($this->dc(3));
+        self::assertTrue($GLOBALS['TL_DCA']['tl_consho_payment']['fields']['amount']['eval']['readonly'] ?? false);
+
+        $this->expectExceptionObject(new \RuntimeException('Gesperrt'));
+        $this->listener()->refuseLocked(['amount' => '30'], $this->dc(3));
+    }
+
     public function testEineOffeneZahlungBleibtBearbeitbar(): void
     {
         $this->listener()($this->dc(2));

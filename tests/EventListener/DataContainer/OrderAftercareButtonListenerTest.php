@@ -50,6 +50,33 @@ final class OrderAftercareButtonListenerTest extends TestCase
         self::assertFalse(isset($without['href']), 'gesperrt, nicht nur grau');
     }
 
+    /**
+     * The button uses the bundle's own icon: disable() asks for a twin with
+     * "--disabled", which Contao only ships for its own icons.
+     */
+    public function testDasEigeneWiderrufsIconHatSeinenGesperrtenZwilling(): void
+    {
+        require __DIR__.'/../../../contao/dca/tl_consho_order.php';
+
+        $icon = (string) $GLOBALS['TL_DCA']['tl_consho_order']['list']['operations']['withdrawals']['icon'];
+        unset($GLOBALS['TL_DCA']);
+
+        self::assertStringStartsWith('bundles/contaoconsho/icons/', $icon);
+        $twin = __DIR__.'/../../../public/icons/'.str_replace('.svg', '--disabled.svg', basename($icon));
+        self::assertFileExists($twin);
+
+        // Well-formed XML: a "--" inside a comment makes the browser drop the
+        // image without a word.
+        self::assertNotFalse(@simplexml_load_file($twin), 'not well-formed');
+    }
+
+    public function testDieEigenenIconsSindWohlgeformt(): void
+    {
+        foreach (glob(__DIR__.'/../../../public/icons/*.svg') ?: [] as $file) {
+            self::assertNotFalse(@simplexml_load_file($file), basename($file));
+        }
+    }
+
     public function testReklamationOhneEintragGrauAberErfassbar(): void
     {
         $listener = new OrderAftercareButtonListener($this->connection);

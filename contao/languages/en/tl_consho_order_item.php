@@ -22,8 +22,6 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['kind'] = ['Kind', 'Taken from the p
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionRule'] = ['Subscription rule', 'The subscription rule the line was bought in. Empty: one-time purchase.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['subscriptionTerms'] = ['Subscription terms', 'As the customer read them at the purchase, frozen. A later change of the rule does not touch this order.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedAt'] = ['Service performed on', 'Set with "Service performed". If the customer agreed to the early start, this ends the right of withdrawal for this line.'];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['performed'] = ['Service performed', 'Report line ID %s as fully performed'];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['performedConfirm'] = 'Report the service as fully performed? This cannot be undone. If the customer agreed to the early start, their right of withdrawal for this line ends.';
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedResult'] = [
     'performed' => 'Service "%s" reported as performed.',
     'notService' => 'Only a service can be reported as performed.',
@@ -34,3 +32,11 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['performedResult'] = [
 ];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['kinds'] = ['physical' => 'Goods', 'digital' => 'Digital content', 'service' => 'Service', 'voucher' => 'Gift voucher'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['performedOn'] = 'performed on %s';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['stateColumn'] = ['State', ''];
+// The "Kind" column of a line that is no product.
+$GLOBALS['TL_LANG']['tl_consho_order_item']['lineTypes'] = ['shipping' => 'Shipping', 'paymentFee' => 'Payment fee', 'paymentDiscount' => 'Payment discount', 'discount' => 'Discount'];
+// The state of a service line: when it will be released, or where "Service performed" is.
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedFrom'] = 'Released on %s';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedAfterPayment'] = 'Released after payment';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedReleaseDue'] = 'Release pending';
+$GLOBALS['TL_LANG']['tl_consho_order_item']['performedInDeliveries'] = 'released — "Service performed" under deliveries';

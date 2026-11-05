@@ -80,6 +80,8 @@ final class MoneyFlows
         }
 
         $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
+        // A refund against a payment locks it as well (LockedRecords).
+        $hasRefund = array_fill_keys(array_map(static fn (array $row): int => (int) $row['refundOf'], $rows), true);
         $movements = [];
         $booked = [];
 
@@ -110,7 +112,7 @@ final class MoneyFlows
                 'reference' => (string) $row['reference'],
                 'payoutState' => (string) $row['payoutState'],
                 'payoutReference' => (string) $row['payoutReference'],
-                'locked' => null !== $row['lockedAt'],
+                'locked' => null !== $row['lockedAt'] || isset($hasRefund[(int) $row['id']]),
                 // The payment it pays back, takes back or corrects — if it is
                 // one of this order's.
                 'refundOf' => \in_array((int) $row['refundOf'], $ids, true) ? (int) $row['refundOf'] : 0,

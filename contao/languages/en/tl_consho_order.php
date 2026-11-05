@@ -116,7 +116,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['followUpPage'] = [
     'locked' => 'locked',
     'withdrawalLink' => 'Withdrawal %s',
     'documentLink' => 'Invoice correction',
-    'paymentsLink' => 'Payment list',
+    'newPayment' => 'Record payment',
     'assignPayment' => 'Assign payment',
     'assignPaymentLabel' => 'Payment',
     'assignOption' => '%s of %s, %s left',
@@ -190,6 +190,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['resendNoOrderPage'] = 'The confirmation 
  * most common colour blindness of all.
  */
 $GLOBALS['TL_LANG']['tl_consho_order']['signalsColumn'] = 'Status';
+$GLOBALS['TL_LANG']['tl_consho_order']['kindColumn'] = 'Kind';
 
 $GLOBALS['TL_LANG']['tl_consho_order']['customerColumn'] = 'Customer';
 
@@ -197,6 +198,13 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
     'status' => [
         'none' => 'No status set',
     ],
+    // What the order is, by the kinds of its product lines.
+    'kind' => [
+        'physical' => 'Goods',
+        'digital' => 'Digital',
+        'service' => 'Service',
+        'voucher' => 'Voucher',
+        'mixed' => 'Mixed: %s',    ],
     'payment' => [
         'open' => 'Payment: open',
         'partial' => 'Payment: partly received',
@@ -211,6 +219,17 @@ $GLOBALS['TL_LANG']['tl_consho_order']['signals'] = [
         'progress' => 'Delivery: partly shipped',
         'attention' => 'Delivery: check',
         'done' => 'Delivery: complete',
+        // Keyed by the kind of what is still open (OrderLabelListener).
+        // Released, a service or digital line counts as delivered (DigitalRelease reports it).
+        'service' => 'Service: not yet released',
+        'digital' => 'Digital: not yet released',
+        'voucher' => 'Voucher: not yet issued',
+        'nothingLeft' => 'Delivery: nothing left open',
+        // In place of "service" and "digital" where the release is still to come.
+        'serviceAwaitingPayment' => 'Service: awaiting payment',
+        'serviceReleasedOn' => 'Service: released on %s',
+        'digitalAwaitingPayment' => 'Digital: awaiting payment',
+        'digitalReleasedOn' => 'Digital: released on %s',
     ],
 ];
 $GLOBALS['TL_LANG']['tl_consho_order']['remainderDeliveryDays'] = ['Remainder after a partial delivery (working days)', 'Empty: the shop default. Applies to the invoice issued with the first parcel.'];

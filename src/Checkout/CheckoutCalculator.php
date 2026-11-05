@@ -408,8 +408,9 @@ final class CheckoutCalculator
          * voucher, so such a basket always leaves something to pay.
          */
         $voucherLines = $this->voucherLinesGross($cart);
-        // EZ-1, F2: the articles a single-purpose voucher may pay, after the discount.
-        $pots = $this->pots?->of($cart->lines, $discountShares, $now, $reverseCharge, $taxCountry) ?? [];
+        // EZ-1, F2: the articles a single-purpose voucher may pay, after the
+        // discount — only what is supplied in the country it was taxed in.
+        $pots = $this->pots?->of($cart->lines, $discountShares, $now, $reverseCharge, $taxCountry, $country, [] === $discountShares ? [] : $discount->lines) ?? [];
         $coveredByVouchers = false;
         $vouchersPay = false;
 

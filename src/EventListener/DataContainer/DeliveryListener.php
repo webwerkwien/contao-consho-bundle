@@ -2,7 +2,6 @@
 
 namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 
-use Brick\Math\BigDecimal;
 use Contao\CoreBundle\DataContainer\DataContainerOperation;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\DataContainer;
@@ -10,6 +9,7 @@ use Contao\Date;
 use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
+use Webwerkwien\ContaoConshoBundle\Order\DeliveryContents;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
@@ -27,65 +27,37 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  */
 class DeliveryListener
 {
+    private readonly DeliveryContents $contents;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly OrderBalanceReaderInterface $balances,
         private readonly MoneyFormatter $money,
+        DeliveryContents|null $contents = null,
+        // "Leistung erbracht" at the row of an electronic delivery.
+        private readonly DeliveryServiceListener|null $services = null,
     ) {
+        $this->contents = $contents ?? new DeliveryContents($connection, $balances);
     }
 
     /**
+     * What is still available goes in (DeliveryContents) — the mask's
+     * "Lieferung vollständig", ticked from the start.
+     *
      * @param array<string, mixed> $fields
      */
     #[AsCallback(table: 'tl_consho_delivery', target: 'config.oncreate')]
     public function prefill(string $table, int $insertId, array $fields, DataContainer $dc): void
     {
         $orderId = (int) ($fields['pid'] ?? 0);
-        $balance = $orderId > 0 ? $this->balances->of($orderId) : null;
 
-        if (null === $balance) {
+        if ($orderId < 1 || null === $this->balances->of($orderId)) {
             return;
         }
 
         $now = time();
         $this->connection->update('tl_consho_delivery', ['shippedAt' => $now], ['id' => $insertId]);
-
-        // Digital lines are released, not packed (F-4, F17).
-        $digital = array_map(intval(...), $this->connection->fetchFirstColumn("SELECT id FROM tl_consho_order_item WHERE pid = ? AND lineType = 'product' AND kind <> 'physical'", [$orderId]));
-
-        /*
-         * Only reported deliveries count in the balance, so a second delivery
-         * not yet reported was filled with the same open quantities — and the
-         * first report then refused "more than open" (Block D).
-         * What other unreported deliveries of this order already carry is
-         * subtracted; nothing left, no line.
-         */
-        $planned = array_map(strval(...), $this->connection->fetchAllKeyValue(
-            'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
-             INNER JOIN tl_consho_delivery d ON d.id = di.pid
-             WHERE d.pid = ? AND d.reportedAt IS NULL AND d.id <> ?
-             GROUP BY di.orderItem',
-            [$orderId, $insertId],
-        ));
-
-        foreach ($balance->openGoods as $itemId => $quantity) {
-            if (\in_array($itemId, $digital, true)) {
-                continue;
-            }
-
-            $left = BigDecimal::of($quantity)->minus($planned[$itemId] ?? '0');
-
-            if (!$left->isPositive()) {
-                continue;
-            }
-
-            $this->connection->insert('tl_consho_delivery_item', [
-                'pid' => $insertId,
-                'tstamp' => $now,
-                'orderItem' => $itemId,
-                'quantity' => (string) $left,
-            ]);
-        }
+        $this->contents->replace($insertId, $this->contents->available($orderId, $insertId), $now);
     }
 
     #[AsCallback(table: 'tl_consho_delivery', target: 'list.operations.report.button')]
@@ -125,7 +97,8 @@ class DeliveryListener
             ? '<span class="tl_gray">'.($lang['notReported'] ?? 'not reported').'</span>'
             : \sprintf($lang['reportedOn'] ?? '%s', Date::parse(Date::getNumericDatimFormat(), (int) $reportedAt));
 
-        return implode(' — ', array_filter($parts, static fn (string $p): bool => '' !== $p));
+        return implode(' — ', array_filter($parts, static fn (string $p): bool => '' !== $p))
+            .($this->services?->rowSuffix((int) ($row['id'] ?? 0)) ?? '');
     }
 
     /**
