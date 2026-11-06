@@ -85,7 +85,7 @@ class PaymentChange
         private readonly DocumentRepositoryInterface $documentRows,
         private readonly DocumentIssuerInterface $documents,
         private readonly DocumentArchiverInterface $archiver,
-        private readonly WithdrawalCredit $credits,
+        private readonly OrderCredit $credits,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {

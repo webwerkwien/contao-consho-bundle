@@ -35,6 +35,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  *    documents, status). Without it the delivery stays a draft and is
  *    reported later with the button in the list.
  *
+ * A replacement delivery (RK-5) uses the same mask: it carries what is still
+ * to be replaced for its complaint, not what the order still owes.
+ *
  * Neither field has a column. They are drawn by input_field callbacks and
  * read from the request on submit, only in the single edit mask
  * (`act=edit`) of a delivery not reported yet: a reported delivery is
@@ -88,14 +91,22 @@ final class DeliveryMaskListener
         }
 
         $lang = $this->lang();
-        $available = $this->contents->available((int) $delivery['pid'], (int) $delivery['id']);
+        $available = $this->open($delivery);
         $current = $this->contents->current((int) $delivery['id']);
 
         $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
         $names = $this->names((int) $delivery['pid']);
+        $complaint = (int) $delivery['complaint'];
+
+        // RK-5, S8: a replacement says so before anything else.
+        $head = $complaint > 0
+            ? '<div class="widget clr"><p class="tl_info">'.self::e(\sprintf((string) ($lang['replacementFor'] ?? '%s'), (string) $this->connection->fetchOne('SELECT number FROM tl_consho_complaint WHERE id = ?', [$complaint]))).'</p></div>'
+            : '';
 
         if ([] === $available && [] === $current) {
-            return '<div class="widget clr"><p class="tl_info">'.$this->nothingOpen((int) $delivery['pid'], (int) $delivery['id'], $names, $language).'</p></div>';
+            $why = $complaint > 0 ? self::e((string) ($lang['replacementNothingLeft'] ?? '')) : $this->nothingOpen((int) $delivery['pid'], (int) $delivery['id'], $names, $language);
+
+            return $head.'<div class="widget clr"><p class="tl_info">'.$why.'</p></div>';
         }
 
         // Drawn again after a failed save: what was entered, not the stored state.
@@ -116,7 +127,7 @@ final class DeliveryMaskListener
             );
         }
 
-        return \sprintf(
+        return $head.\sprintf(
             '<div class="widget clr consho-toggle">'
             .'<input type="hidden" name="%1$s" value="1">'
             .self::TOGGLE
@@ -128,11 +139,11 @@ final class DeliveryMaskListener
             self::COMPLETE,
             $complete ? ' checked' : '',
             self::e($lang['contentsComplete'] ?? ''),
-            self::e($lang['contentsCompleteHelp'] ?? ''),
+            self::e($lang[$complaint > 0 ? 'replacementCompleteHelp' : 'contentsCompleteHelp'] ?? ''),
             self::QUANTITY,
             $complete ? ' hidden' : '',
             self::e($lang['contentsItem'] ?? ''),
-            self::e($lang['contentsOpen'] ?? ''),
+            self::e($lang[$complaint > 0 ? 'contentsToReplace' : 'contentsOpen'] ?? ''),
             self::e($lang['contentsInParcel'] ?? ''),
             $rows,
         );
@@ -144,7 +155,7 @@ final class DeliveryMaskListener
         $delivery = $this->draft($dc);
 
         // Nothing to carry, nothing to report: the report would refuse "empty".
-        if (null === $delivery || ([] === $this->contents->current((int) $delivery['id']) && [] === $this->contents->available((int) $delivery['pid'], (int) $delivery['id']))) {
+        if (null === $delivery || ([] === $this->contents->current((int) $delivery['id']) && [] === $this->open($delivery))) {
             return '';
         }
 
@@ -156,7 +167,7 @@ final class DeliveryMaskListener
             self::NOTIFY,
             '1' === ($this->posted()[self::NOTIFY] ?? null) ? ' checked' : '',
             self::e($lang['notify'] ?? ''),
-            self::e($lang['notifyHelp'] ?? ''),
+            self::e($lang[(int) $delivery['complaint'] > 0 ? 'notifyReplacementHelp' : 'notifyHelp'] ?? ''),
         );
     }
 
@@ -173,7 +184,7 @@ final class DeliveryMaskListener
 
         $message = $this->framework->getAdapter(Message::class);
         $lang = $this->lang();
-        $available = $this->contents->available((int) $delivery['pid'], (int) $delivery['id']);
+        $available = $this->open($delivery);
 
         if ('1' === $request->request->getString(self::COMPLETE)) {
             $items = $available;
@@ -181,7 +192,7 @@ final class DeliveryMaskListener
             $items = $this->entered($request->request->all(self::QUANTITY), $available);
 
             if (null === $items) {
-                $message->addError((string) ($lang['contentsInvalid'] ?? 'contentsInvalid'));
+                $message->addError((string) ($lang[(int) $delivery['complaint'] > 0 ? 'replacementInvalid' : 'contentsInvalid'] ?? 'contentsInvalid'));
 
                 return;
             }
@@ -312,9 +323,24 @@ final class DeliveryMaskListener
             return null;
         }
 
-        $delivery = $this->connection->fetchAssociative('SELECT id, pid, reportedAt FROM tl_consho_delivery WHERE id = ?', [(int) $dc->id]);
+        $delivery = $this->connection->fetchAssociative('SELECT id, pid, reportedAt, complaint FROM tl_consho_delivery WHERE id = ?', [(int) $dc->id]);
 
         return false === $delivery || null !== $delivery['reportedAt'] ? null : $delivery;
+    }
+
+    /**
+     * What the draft can carry: the order's open goods, or for a replacement
+     * delivery what is still to be replaced for its complaint (RK-5, S2).
+     *
+     * @param array<string, mixed> $delivery
+     *
+     * @return array<int, string>
+     */
+    private function open(array $delivery): array
+    {
+        return (int) $delivery['complaint'] > 0
+            ? $this->contents->replaceable((int) $delivery['complaint'], (int) $delivery['id'])
+            : $this->contents->available((int) $delivery['pid'], (int) $delivery['id']);
     }
 
     /**

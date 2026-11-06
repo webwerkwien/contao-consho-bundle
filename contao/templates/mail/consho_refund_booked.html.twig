@@ -26,8 +26,12 @@
                 '' where none (Abo-8, P81)
     subscriptions  the numbers of the subscriptions the withdrawal ended,
                 comma-separated; '' where none (P78, P81)
+
+  A complaint's refund (RK-4) uses the same mail, with
+    complaint   the complaint number ('' or undefined for a withdrawal)
+    remedy      'rescission' or 'reduction'
 #}
-{% block subject %}{{ 'CONSHO.mail.refund.subject'|trans([withdrawal, order.orderNumber], 'contao_default') }}{% endblock %}
+{% block subject %}{% if complaint|default('') %}{{ ('CONSHO.mail.complaintRefund.subject.' ~ remedy)|trans([complaint, order.orderNumber], 'contao_default') }}{% else %}{{ 'CONSHO.mail.refund.subject'|trans([withdrawal, order.orderNumber], 'contao_default') }}{% endif %}{% endblock %}
 
 {% block body %}
 {% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
@@ -38,7 +42,11 @@
 <tr><td style="padding: 24px 28px;">
 
 <p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+{% if complaint|default('') %}
+<p style="margin: 0 0 12px 0;">{{ ('CONSHO.mail.complaintRefund.intro.' ~ remedy)|trans([complaint, order.orderNumber], 'contao_default') }}</p>
+{% else %}
 <p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.refund.intro'|trans([withdrawal, order.orderNumber], 'contao_default') }}</p>
+{% endif %}
 
 {% if payout %}
 <p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.refund.payout'|trans([payout], 'contao_default') }}</strong></p>

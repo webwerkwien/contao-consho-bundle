@@ -21,4 +21,7 @@ enum StockReason: string
 
     /** Goods received against a purchase list (G-7, E3). */
     case Receipt = 'receipt';
+
+    /** Sent out with a replacement delivery for a complaint (RK-5). */
+    case Replacement = 'replacement';
 }

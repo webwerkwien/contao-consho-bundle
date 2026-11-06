@@ -164,6 +164,22 @@ final class OrderBalanceReaderTest extends TestCase
         self::assertFalse($balance->anyShipped);
     }
 
+    /**
+     * RK-5 (spec 3.3): a replacement delivery replaces a defective piece; it
+     * never delivers what is still owed.
+     */
+    public function testEineErsatzlieferungZaehltNichtAlsGeliefert(): void
+    {
+        $this->ship([1 => '1']);
+        $this->ship([1 => '1', 2 => '1'], complaint: 7);
+
+        $balance = $this->balance();
+
+        self::assertSame(DeliveryState::Partial, $balance->deliveryState);
+        self::assertAmount('1', $balance->openGoods[1]);
+        self::assertAmount('1', $balance->openGoods[2]);
+    }
+
     public function testEineUnbekannteBestellungHatKeinenSaldo(): void
     {
         $reader = new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator());
@@ -321,9 +337,9 @@ final class OrderBalanceReaderTest extends TestCase
     /**
      * @param array<int, string> $quantities
      */
-    private function ship(array $quantities, bool $reported = true): void
+    private function ship(array $quantities, bool $reported = true, int $complaint = 0): void
     {
-        $this->connection->insert('tl_consho_delivery', ['pid' => self::ORDER, 'reportedAt' => $reported ? 1_790_000_000 : null]);
+        $this->connection->insert('tl_consho_delivery', ['pid' => self::ORDER, 'reportedAt' => $reported ? 1_790_000_000 : null, 'complaint' => $complaint]);
         $delivery = (int) $this->connection->lastInsertId();
 
         foreach ($quantities as $item => $quantity) {

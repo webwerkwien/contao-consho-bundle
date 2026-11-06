@@ -64,6 +64,9 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_order'],
         ],
         'tstamp' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
+        // The complaint a replacement delivery belongs to (block Reklamation,
+        // 3.3); 0 for every ordinary delivery.
+        'complaint' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
         'shippedAt' => [
             'inputType' => 'text',
             'exclude' => true,

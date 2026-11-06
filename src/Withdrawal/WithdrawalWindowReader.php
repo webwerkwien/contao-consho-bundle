@@ -73,7 +73,9 @@ final class WithdrawalWindowReader
 
         $last = null;
 
-        foreach ($this->connection->fetchAllAssociative('SELECT shippedAt, reportedAt FROM tl_consho_delivery WHERE pid = ? AND reportedAt IS NOT NULL', [$orderId]) as $row) {
+        // A replacement delivery (RK-5) does not move the window: whether it
+        // starts the period anew is not established (spec 3.3).
+        foreach ($this->connection->fetchAllAssociative('SELECT shippedAt, reportedAt FROM tl_consho_delivery WHERE pid = ? AND reportedAt IS NOT NULL AND complaint = 0', [$orderId]) as $row) {
             $last = max($last ?? 0, (int) $row['shippedAt'], (int) $row['reportedAt']);
         }
 
@@ -110,7 +112,7 @@ final class WithdrawalWindowReader
         $rows = $this->connection->fetchAllAssociative(
             'SELECT d.shippedAt, d.reportedAt, di.orderItem FROM tl_consho_delivery d
              INNER JOIN tl_consho_delivery_item di ON di.pid = d.id
-             WHERE d.pid = ? AND d.reportedAt IS NOT NULL',
+             WHERE d.pid = ? AND d.reportedAt IS NOT NULL AND d.complaint = 0',
             [$orderId],
         );
 

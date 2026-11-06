@@ -40,11 +40,13 @@ class OrderEventMail
     public const PAYMENT_TEMPLATE = '@Contao/mail/consho_payment_received.html.twig';
     public const PAYMENT_OPERATOR_TEMPLATE = '@Contao/mail/consho_payment_received_operator.html.twig';
     public const SHIPPED_TEMPLATE = '@Contao/mail/consho_order_shipped.html.twig';
+    public const REPLACEMENT_SHIPPED_TEMPLATE = '@Contao/mail/consho_replacement_shipped.html.twig';
     public const WITHDRAWAL_TEMPLATE = '@Contao/mail/consho_withdrawal_received.html.twig';
     public const WITHDRAWAL_OPERATOR_TEMPLATE = '@Contao/mail/consho_withdrawal_received_operator.html.twig';
     public const WITHDRAWAL_UNASSIGNED_TEMPLATE = '@Contao/mail/consho_withdrawal_received_unassigned.html.twig';
     public const WITHDRAWAL_UNASSIGNED_OPERATOR_TEMPLATE = '@Contao/mail/consho_withdrawal_received_unassigned_operator.html.twig';
     public const WITHDRAWAL_REJECTED_TEMPLATE = '@Contao/mail/consho_withdrawal_rejected.html.twig';
+    public const COMPLAINT_REJECTED_TEMPLATE = '@Contao/mail/consho_complaint_rejected.html.twig';
     public const REFUND_TEMPLATE = '@Contao/mail/consho_refund_booked.html.twig';
     public const DIGITAL_RELEASED_TEMPLATE = '@Contao/mail/consho_digital_released.html.twig';
     public const VOUCHERS_ISSUED_TEMPLATE = '@Contao/mail/consho_vouchers_issued.html.twig';
@@ -644,6 +646,31 @@ class OrderEventMail
     }
 
     /**
+     * A replacement delivery for a complaint was reported (RK-5, S5): what is
+     * in the parcel and its tracking number. No invoice — a replacement is
+     * free of charge.
+     *
+     * @param array{carrier: string, trackingNumber: string, items: list<array{quantity: string, name: string}>, complaint: string} $delivery
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function replacementShipped(int $orderId, array $delivery, string $viewUrl): bool
+    {
+        try {
+            [$order, , $transport, $from, $payload] = $this->prepare($orderId, null);
+        } catch (\Throwable $e) {
+            $this->fail('replacementShipped', '', $orderId, $e);
+
+            return false;
+        }
+
+        return $this->toCustomer('replacementShipped', $order, self::REPLACEMENT_SHIPPED_TEMPLATE, $payload, [
+            'delivery' => $delivery,
+            'viewUrl' => $viewUrl,
+        ], [], $transport, $from);
+    }
+
+    /**
      * The confirmation of receipt (D-2), and the operator's copy.
      *
      * The moment and the quantities are formatted HERE, per recipient: the
@@ -773,6 +800,29 @@ class OrderEventMail
     }
 
     /**
+     * A rejected complaint (block Reklamation, RK-6, A3): the operator's
+     * reason, verbatim. No copy — the operator wrote it.
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function complaintRejected(int $orderId, string $complaintNumber, string $reason, string $viewUrl): bool
+    {
+        try {
+            [$order, , $transport, $from, $payload] = $this->prepare($orderId, null);
+        } catch (\Throwable $e) {
+            $this->fail('complaintRejected', '', $orderId, $e);
+
+            return false;
+        }
+
+        return $this->toCustomer('complaintRejected', $order, self::COMPLAINT_REJECTED_TEMPLATE, $payload, [
+            'complaint' => $complaintNumber,
+            'reason' => $reason,
+            'viewUrl' => $viewUrl,
+        ], [], $transport, $from);
+    }
+
+    /**
      * A booked refund (D-3, F4), with the documents attached that it issued —
      * the cancellation or the invoice correction, and the invoice where it was
      * issued with it (F3a).
@@ -790,23 +840,7 @@ class OrderEventMail
     {
         try {
             [$order, , $transport, $from, $payload] = $this->prepare($orderId, null);
-
-            $numbers = [];
-            $attachments = [];
-
-            foreach ($documentIds as $documentId) {
-                $document = $this->source->document($orderId, $documentId) ?? throw new \RuntimeException(\sprintf('document %d does not exist', $documentId));
-
-                // A document the shop's invoicing module sends, or one written
-                // while invoicing was off, is neither attached nor named (R21).
-                if ($this->pdfs->sentElsewhere($document['id'])) {
-                    continue;
-                }
-
-                $pdf = $this->pdfs->pdf($document['id']) ?? throw new \RuntimeException(\sprintf('document %d cannot be attached', $documentId));
-                $numbers[] = $document['documentNumber'];
-                $attachments[] = $pdf;
-            }
+            [$numbers, $attachments] = $this->refundDocuments($orderId, $documentIds);
         } catch (\Throwable $e) {
             $this->fail('refund', '', $orderId, $e);
 
@@ -825,6 +859,75 @@ class OrderEventMail
             // WG11: the part of the payout booked back onto the vouchers, formatted; '' for none.
             'vouchers' => $vouchers,
         ], $attachments, $transport, $from);
+    }
+
+    /**
+     * A complaint's booked refund (RK-4): a rescission or a price reduction,
+     * in the same template as a withdrawal's, with its own subject and
+     * opening.
+     *
+     * @param string    $remedy      'rescission' or 'reduction'
+     * @param string    $payout      the amount paid back, formatted; '' where nothing is paid back
+     * @param string    $credit      the amount credited, formatted
+     * @param list<int> $documentIds in the order they were issued; empty where there is none
+     * @param string    $remaining   what is still to pay after this, formatted; '' where nothing is
+     * @param string    $vouchers    the part booked back onto the vouchers, formatted; '' where none
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function complaintRefundBooked(int $orderId, string $complaintNumber, string $remedy, string $payout, string $credit, array $documentIds, string $viewUrl, string $remaining = '', string $vouchers = ''): bool
+    {
+        try {
+            [$order, , $transport, $from, $payload] = $this->prepare($orderId, null);
+            [$numbers, $attachments] = $this->refundDocuments($orderId, $documentIds);
+        } catch (\Throwable $e) {
+            $this->fail('complaintRefund', '', $orderId, $e);
+
+            return false;
+        }
+
+        return $this->toCustomer('complaintRefund', $order, self::REFUND_TEMPLATE, $payload, [
+            'withdrawal' => '',
+            'complaint' => $complaintNumber,
+            'remedy' => 'reduction' === $remedy ? 'reduction' : 'rescission',
+            'payout' => $payout,
+            'credit' => $credit,
+            'documents' => implode(', ', $numbers),
+            'viewUrl' => $viewUrl,
+            'remaining' => $remaining,
+            'kept' => '',
+            'subscriptions' => '',
+            'vouchers' => $vouchers,
+        ], $attachments, $transport, $from);
+    }
+
+    /**
+     * The documents a refund issued, as PDFs to attach, and their numbers.
+     *
+     * @param list<int> $documentIds
+     *
+     * @return array{0: list<string>, 1: list<array{pdf: string, fileName: string}>}
+     */
+    private function refundDocuments(int $orderId, array $documentIds): array
+    {
+        $numbers = [];
+        $attachments = [];
+
+        foreach ($documentIds as $documentId) {
+            $document = $this->source->document($orderId, $documentId) ?? throw new \RuntimeException(\sprintf('document %d does not exist', $documentId));
+
+            // A document the shop's invoicing module sends, or one written
+            // while invoicing was off, is neither attached nor named (R21).
+            if ($this->pdfs->sentElsewhere($document['id'])) {
+                continue;
+            }
+
+            $pdf = $this->pdfs->pdf($document['id']) ?? throw new \RuntimeException(\sprintf('document %d cannot be attached', $documentId));
+            $numbers[] = $document['documentNumber'];
+            $attachments[] = $pdf;
+        }
+
+        return [$numbers, $attachments];
     }
 
     /**
@@ -990,6 +1093,7 @@ class OrderEventMail
                 'withdrawalUnassigned' => '"withdrawal received, not assigned"',
                 'withdrawalRejected' => '"withdrawal rejected"',
                 'refund' => '"refund booked"',
+                'complaintRefund' => '"complaint refund booked"',
                 'subscriptionInvoice' => '"subscription invoice"',
                 'subscriptionSuspended' => '"subscription suspended"',
                 'subscriptionResumed' => '"subscription resumed"',

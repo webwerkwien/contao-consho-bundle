@@ -15,16 +15,15 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentRepositoryInterface;
-use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
-use Webwerkwien\ContaoConshoBundle\Order\DiscountShares;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
-use Webwerkwien\ContaoConshoBundle\Order\NumberRangeNotConfigured;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderEvent;
-use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 use Webwerkwien\ContaoConshoBundle\Order\OrderStatusAdvancer;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
+use Webwerkwien\ContaoConshoBundle\Order\Refund\CreditLines;
+use Webwerkwien\ContaoConshoBundle\Order\Refund\OrderRefund;
+use Webwerkwien\ContaoConshoBundle\Order\Refund\RefundOccasion;
 use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundPayout;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Stock\StockReturn;
@@ -67,14 +66,22 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherReturn;
  */
 class WithdrawalProcessing
 {
+    // The credit lines and their total, shared with the complaint (RK-3).
+    // Built here, not injected: the constructor stays as callers know it.
+    private readonly CreditLines $creditLines;
+
+    // The document and the money of the refund, shared the same way.
+    private readonly OrderRefund $refunds;
+
     public function __construct(
         private readonly Connection $connection,
         private readonly PaymentChangeRepositoryInterface $orders,
-        private readonly DocumentRepositoryInterface $documentRows,
-        private readonly DocumentIssuerInterface $documents,
-        private readonly DocumentArchiverInterface $archiver,
-        private readonly DocumentPayloadBuilder $payloads,
-        private readonly OrderBalanceReaderInterface $balances,
+        // These five only build the shared credit lines and refund below.
+        DocumentRepositoryInterface $documentRows,
+        DocumentIssuerInterface $documents,
+        DocumentArchiverInterface $archiver,
+        DocumentPayloadBuilder $payloads,
+        OrderBalanceReaderInterface $balances,
         private readonly OrderStatusAdvancer $statuses,
         private readonly OrderPageLink $links,
         private readonly OrderEventMail $mail,
@@ -93,6 +100,8 @@ class WithdrawalProcessing
         // Nachlese E6: delivery modules told of revoked entitlements.
         private readonly EntitlementRevocations|null $revocations = null,
     ) {
+        $this->creditLines = new CreditLines($connection, $payloads);
+        $this->refunds = new OrderRefund($documentRows, $documents, $archiver, $balances, $payouts, $this->creditLines, $vouchers);
     }
 
     /**
@@ -391,148 +400,29 @@ class WithdrawalProcessing
             }
 
             $lines = $this->lines($orderId, (int) $withdrawal['id'], $shippingAmount, $kept);
-            $invoiceId = $this->documentRows->findIdByOrderAndType($orderId, DocumentType::Invoice);
             $everything = $kept->isZero() && $this->everything($orderId, (int) $withdrawal['id'], $shippingAmount, $shippingLeft);
 
-            $amount = $everything
-                ? BigDecimal::of((string) $order['grandTotal'])->toScale($digits, RoundingMode::HalfUp)
-                : $this->total($lines, $currency)->negated();
+            // The document and the money (RK-3): shared with the complaint.
+            $booking = $this->refunds->book(
+                new RefundOccasion($order, (string) $withdrawal['number'], $lines, $everything, $this->goodsCredit($orderId, (int) $withdrawal['id'])),
+                $now,
+                $throughProvider,
+                $confirmed,
+                $foreign,
+                $by,
+            );
 
-            // What the customer paid beyond what is still owed after this —
-            // never a refund of money that never came in.
-            $balance = $this->balances->of($orderId);
-            $paid = BigDecimal::of(null === $balance ? '0' : $balance->paid);
-            $claimAfter = BigDecimal::of(null === $balance ? '0' : $balance->claim)->plus($this->goodsCredit($orderId, (int) $withdrawal['id']))->minus($amount);
-            $payout = BigDecimal::min($amount, BigDecimal::max(BigDecimal::zero(), $paid->minus(BigDecimal::max(BigDecimal::zero(), $claimAfter))))->toScale($digits, RoundingMode::HalfUp);
-
-            // What is still to pay after this (F3b) — the mail says so, since
-            // no invoice states that amount.
-            $remaining = BigDecimal::max(BigDecimal::zero(), $claimAfter->minus($paid))->toScale($digits, RoundingMode::HalfUp);
-
-            /*
-             * WG11: the payout goes back where it came from — onto the
-             * order's vouchers first, up to what they paid (the same means of
-             * payment, § 14 Abs. 1 FAGG, § 357 Abs. 3 BGB), the rest to the
-             * payment method. The split is fixed: money moved off a voucher
-             * would be paid back by hand against no payment of its own, and
-             * nothing could ever tie it to one.
-             *
-             * EZ-4: a single-purpose voucher takes back only what the credited
-             * lines of its pot give back. A cancellation (everything) gives
-             * back all.
-             */
-            $creditLines = $everything ? null : $lines;
-            $voucherPaid = null === $this->vouchers
-                ? BigDecimal::zero()->toScale($digits)
-                : $this->vouchers->onVouchers($orderId, (string) $this->vouchers->paidTotal($orderId), $creditLines)->toScale($digits, RoundingMode::Down);
-
-            // Never more than this refund pays out.
-            $toVouchers = BigDecimal::min($voucherPaid, $payout);
-
-            // Within the most above the plan books it all; read back so the
-            // documents, the payments and the mail state what is booked.
-            if ($toVouchers->isPositive() && null !== $this->vouchers) {
-                $toVouchers = $this->vouchers->onVouchers($orderId, (string) $toVouchers, $creditLines)->toScale($digits, RoundingMode::Down);
+            if ($booking instanceof ProcessingResult) {
+                return $booking;
             }
-
-            $toMethod = $payout->minus($toVouchers);
-
-            /*
-             * R5: money that leaves through a provider cannot be taken back, so
-             * the operator confirms the amount first — computed here, before
-             * anything is written, and nothing booked (the lock rolls back on a
-             * refusal). The confirmed amount must still hold under the lock: a
-             * payment refunded in between changes it.
-             */
-            // Geldflüsse T5: the split over the ways, as book() takes it —
-            // the chosen refunds made at the provider first, then the
-            // provider, then by hand. A chosen one that no longer fits (more
-            // than goes to the payment method, resolved meanwhile) books
-            // nothing: its money must not go another way.
-            $ways = null;
-
-            if ($toMethod->isPositive()) {
-                $ways = $this->payouts->ways($orderId, (string) $toMethod, null, $foreign, $throughProvider);
-            }
-
-            if ([] !== $foreign && null === $ways) {
-                return ProcessingResult::refused('foreignInvalid');
-            }
-
-            if ($throughProvider) {
-                $viaProvider = BigDecimal::of(null === $ways ? '0' : $ways['provider'])->toScale($digits, RoundingMode::Down);
-                $byHand = BigDecimal::of(null === $ways ? '0' : $ways['hand'])->toScale($digits, RoundingMode::HalfUp);
-                $recorded = BigDecimal::of(null === $ways ? '0' : $ways['foreign'])->toScale($digits, RoundingMode::HalfUp);
-
-                if (null === $confirmed && $viaProvider->isPositive()) {
-                    return ProcessingResult::refused('confirmPayout', [(string) $viaProvider, (string) $byHand, (string) $recorded], [ProcessingResult::MONEY, ProcessingResult::MONEY, ProcessingResult::MONEY]);
-                }
-
-                if (null !== $confirmed && !self::sameAmount($confirmed, $viaProvider)) {
-                    return ProcessingResult::refused('payoutChanged');
-                }
-            }
-
-            $documentId = 0;
-            $issuedInvoice = null;
-
-            try {
-                /*
-                 * No invoice yet (F3a): the invoice is issued NOW, then corrected. Left
-                 * to the shipment ("Rechnung bei Versand"), it would state the
-                 * whole order and never be corrected — this refund is booked
-                 * already. The shipment finds it and issues no second one
-                 * (issueOnce).
-                 *
-                 * With everything withdrawn too, and cancelled at once: the
-                 * sale was made and its tax counted from the payment on
-                 * (OssLedger), and only a document takes it back — a
-                 * withdrawal without one left the sale standing in the OSS
-                 * report.
-                 *
-                 * Without the Giro-Code (F3b): its amount would be the whole
-                 * order, not what is left to pay. The mail names that.
-                 */
-                if (null === $invoiceId) {
-                    $invoiceId = $issuedInvoice = $this->documents->issueOnce($orderId, (int) $order['shop'], DocumentType::Invoice, null, false);
-                }
-
-                // Nothing left to credit (all of it kept back): no correction.
-                if ($everything || [] !== $lines) {
-                    $documentId = $everything
-                        ? $this->documents->cancel($invoiceId)
-                        : $this->documents->correct($invoiceId, $lines, (string) $withdrawal['number'], $toVouchers->isPositive() ? ($this->vouchers?->prepaidFor($orderId, (string) $toVouchers, (string) ($order['language'] ?? ''), $creditLines) ?? []) : []);
-                }
-            } catch (NumberRangeNotConfigured $e) {
-                return ProcessingResult::refused('numberRangeMissing', [$e->type]);
-            }
-
-            $paymentId = 0;
-            $voucherPayments = $toVouchers->isPositive() && null !== $this->vouchers
-                ? $this->vouchers->refund($orderId, (string) $toVouchers, $now, (string) $withdrawal['number'], (string) ($order['language'] ?? ''), $creditLines)
-                : [];
-            $payoutRows = [];
-
-            if ($toMethod->isPositive()) {
-                // One refund over its ways (Geldflüsse T3/T5). By hand is
-                // booked `manual` and tied to the payments it pays back, so
-                // nothing offers this money again and a refund made at the
-                // provider can be assigned to it. payOut() after the commit
-                // sends only the provider's rows.
-                $payoutRows = $this->payouts->book($orderId, (string) $toMethod, (string) $withdrawal['number'], $now, $throughProvider, null, $foreign, $by);
-                $paymentId = $payoutRows[0];
-            }
-
-            // Paid back onto vouchers alone: the first of their payments.
-            $paymentId = 0 !== $paymentId ? $paymentId : ($voucherPayments[0] ?? 0);
 
             $this->connection->update('tl_consho_withdrawal', [
                 'refundShipping' => (string) $shippingAmount,
                 'valueCompensation' => (string) $kept,
-                'refundAmount' => (string) $amount,
+                'refundAmount' => $booking->amount,
                 'refundedAt' => $now,
-                'refundPayment' => $paymentId,
-                'refundDocument' => $documentId,
+                'refundPayment' => $booking->payment,
+                'refundDocument' => $booking->document,
                 'tstamp' => $now,
             ], ['id' => $withdrawal['id']]);
 
@@ -545,7 +435,7 @@ class WithdrawalProcessing
                 [(int) $withdrawal['id'], $orderId, (int) $withdrawal['decidedAt']],
             ));
 
-            $booked = ['order' => $order, 'number' => (string) $withdrawal['number'], 'invoice' => $issuedInvoice, 'document' => $documentId, 'amount' => (string) $amount, 'payout' => (string) $payout, 'remaining' => (string) $remaining, 'currency' => $currency, 'kept' => (string) $kept, 'ended' => $ended, 'vouchers' => (string) $toVouchers, 'payoutRows' => $payoutRows];
+            $booked = ['order' => $order, 'number' => (string) $withdrawal['number'], 'booking' => $booking, 'kept' => (string) $kept, 'ended' => $ended];
 
             return ProcessingResult::done('refunded', [(string) $withdrawal['number']]);
         });
@@ -556,18 +446,11 @@ class WithdrawalProcessing
 
         $order = $booked['order'];
         $orderId = (int) $order['id'];
+        $booking = $booked['booking'];
 
-        // After the commit (R1); never throws — a refusal stays on the row
-        // and becomes a finding.
-        $this->payouts->payOut($booked['payoutRows'], $now);
-
-        // The invoice issued with it (F3a) first, then the correction — the
-        // order a reader of the mail needs them in.
-        $documents = array_values(array_filter([$booked['invoice'], $booked['document']], static fn (int|null $id): bool => null !== $id && $id > 0));
-
-        foreach ($documents as $documentId) {
-            $this->archiver->archive($documentId);
-        }
+        // After the commit (R1): paid out, archived — the invoice issued with
+        // it (F3a) first, then the correction.
+        $documents = $this->refunds->finish($booking, $now);
 
         $this->statuses->advance($orderId, OrderEvent::WithdrawalRefunded, $now);
 
@@ -575,15 +458,15 @@ class WithdrawalProcessing
         $sent = $this->mail->refundBooked(
             $orderId,
             $booked['number'],
-            BigDecimal::of($booked['payout'])->isPositive() ? $this->money->format($booked['payout'], $booked['currency'], $language) : '',
-            $this->money->format($booked['amount'], $booked['currency'], $language),
+            BigDecimal::of($booking->payout)->isPositive() ? $this->money->format($booking->payout, $booking->currency, $language) : '',
+            $this->money->format($booking->amount, $booking->currency, $language),
             $documents,
             $this->links->forMail($order) ?? '',
-            BigDecimal::of($booked['remaining'])->isPositive() ? $this->money->format($booked['remaining'], $booked['currency'], $language) : '',
-            BigDecimal::of($booked['kept'])->isPositive() ? $this->money->format($booked['kept'], $booked['currency'], $language) : '',
+            BigDecimal::of($booking->remaining)->isPositive() ? $this->money->format($booking->remaining, $booking->currency, $language) : '',
+            BigDecimal::of($booked['kept'])->isPositive() ? $this->money->format($booked['kept'], $booking->currency, $language) : '',
             $booked['ended'],
             // WG11: what of it went back onto the vouchers.
-            BigDecimal::of($booked['vouchers'])->isPositive() ? $this->money->format($booked['vouchers'], $booked['currency'], $language) : '',
+            BigDecimal::of($booking->vouchers)->isPositive() ? $this->money->format($booking->vouchers, $booking->currency, $language) : '',
         );
 
         return $sent ? $result : ProcessingResult::done('refundedNoMail', [$booked['number']]);
@@ -627,19 +510,6 @@ class WithdrawalProcessing
     /**
      * @param \Closure(array<string, mixed>, array<string, mixed>): ProcessingResult $action
      */
-    /**
-     * The confirmed amount comes back from a form field; anything that is not
-     * a number confirms nothing.
-     */
-    private static function sameAmount(string $confirmed, BigDecimal $amount): bool
-    {
-        try {
-            return BigDecimal::of($confirmed)->isEqualTo($amount);
-        } catch (MathException) {
-            return false;
-        }
-    }
-
     private function locked(int $withdrawalId, \Closure $action): ProcessingResult
     {
         $orderId = (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_withdrawal WHERE id = ?', [$withdrawalId]);
@@ -693,40 +563,49 @@ class WithdrawalProcessing
      */
     private function goods(int $orderId): array
     {
-        return array_filter(
-            $this->items($orderId),
-            static fn (array $row): bool => OrderLineType::stored($row['lineType'])->isGoods(),
-        );
+        return $this->creditLines->goods($orderId);
     }
 
     /**
-     * @return array<int, array<string, string>>
+     * The quantities this withdrawal accepted, per order item.
+     *
+     * @return array<int|string, mixed>
      */
-    private function items(int $orderId): array
+    private function accepted(int $withdrawalId): array
     {
-        $items = [];
-
-        foreach ($this->connection->fetchAllAssociative('SELECT * FROM tl_consho_order_item WHERE pid = ? ORDER BY id', [$orderId]) as $row) {
-            $items[(int) $row['id']] = array_map(static fn ($v): string => (string) $v, $row);
-        }
-
-        return $items;
+        return $this->connection->fetchAllKeyValue('SELECT orderItem, SUM(acceptedQuantity) FROM tl_consho_withdrawal_item WHERE pid = ? GROUP BY orderItem', [$withdrawalId]);
     }
 
     /**
-     * Accepted quantities per order item in OTHER accepted withdrawals.
+     * Quantities per order item gone back otherwise: in OTHER accepted
+     * withdrawals and in decided rescissions (RK-4, spec 3.4) — a piece is
+     * withdrawn or rescinded, never both.
      *
      * @return array<int, string>
      */
     private function acceptedElsewhere(int $orderId, int $withdrawalId): array
     {
-        return array_map(strval(...), $this->connection->fetchAllKeyValue(
+        $elsewhere = array_map(strval(...), $this->connection->fetchAllKeyValue(
             "SELECT wi.orderItem, SUM(wi.acceptedQuantity) FROM tl_consho_withdrawal_item wi
                JOIN tl_consho_withdrawal w ON w.id = wi.pid
               WHERE w.pid = ? AND w.id != ? AND w.state = 'accepted'
               GROUP BY wi.orderItem",
             [$orderId, $withdrawalId],
         ));
+
+        $rescinded = $this->connection->fetchAllKeyValue(
+            'SELECT ci.orderItem, SUM(ci.rescindedQuantity) FROM tl_consho_complaint_item ci
+               JOIN tl_consho_complaint c ON c.id = ci.pid
+              WHERE c.pid = ? AND ci.rescindedQuantity > 0
+              GROUP BY ci.orderItem',
+            [$orderId],
+        );
+
+        foreach ($rescinded as $itemId => $quantity) {
+            $elsewhere[(int) $itemId] = (string) BigDecimal::of($elsewhere[(int) $itemId] ?? '0')->plus((string) $quantity);
+        }
+
+        return $elsewhere;
     }
 
     /**
@@ -771,32 +650,31 @@ class WithdrawalProcessing
      */
     private function shippingLeft(int $orderId): BigDecimal
     {
-        $total = BigDecimal::zero();
-
-        foreach ($this->items($orderId) as $row) {
-            if (OrderLineType::Shipping === OrderLineType::stored($row['lineType'])) {
-                $total = $total->plus($row['lineTotal']);
-            }
-        }
-
-        $refunded = (string) ($this->connection->fetchOne(
-            "SELECT SUM(refundShipping) FROM tl_consho_withdrawal WHERE pid = ? AND refundedAt IS NOT NULL AND state = 'accepted'",
-            [$orderId],
-        ) ?: '0');
-
-        return BigDecimal::max(BigDecimal::zero(), $total->minus($refunded));
+        return $this->creditLines->shippingLeft($orderId);
     }
 
     /**
      * Whether this refund completes everything: every goods line accepted in
-     * full over all withdrawals, all delivery costs with it, and no earlier
-     * refund — only then does a cancellation of the invoice say what happened.
+     * full by this withdrawal, all delivery costs with it, and nothing else
+     * refunded or still to be refunded — only then does a cancellation of the
+     * invoice say what happened.
      */
     private function everything(int $orderId, int $withdrawalId, BigDecimal $shipping, BigDecimal $shippingLeft): bool
     {
         $earlier = (int) $this->connection->fetchOne(
-            "SELECT COUNT(*) FROM tl_consho_withdrawal WHERE pid = ? AND id != ? AND refundedAt IS NOT NULL AND state = 'accepted'",
+            // Another accepted withdrawal counts, refunded or not: not yet
+            // refunded, it is booked on its own, and this refund would cancel
+            // the invoice in its stead.
+            "SELECT COUNT(*) FROM tl_consho_withdrawal WHERE pid = ? AND id != ? AND state = 'accepted'",
             [$orderId, $withdrawalId],
+        ) + (int) $this->connection->fetchOne(
+            // RK-4 (L6): a complaint's refund of any kind counts as earlier,
+            // and so does a decided rescission or price reduction not yet
+            // refunded — the grand total would give it back a second time with
+            // its own refund.
+            "SELECT COUNT(*) FROM tl_consho_complaint WHERE pid = ?
+                AND (refundedAt IS NOT NULL OR (remedy IN ('rescission', 'reduction') AND decidedAt IS NOT NULL AND state <> 'rejected'))",
+            [$orderId],
         );
 
         if ($earlier > 0 || !$shipping->isEqualTo($shippingLeft)) {
@@ -858,185 +736,34 @@ class WithdrawalProcessing
      */
     private function credits(int $orderId, int $withdrawalId, ProductKind|null $kind = null): array
     {
-        $items = $this->items($orderId);
-        $parts = DiscountShares::of($items);
-        $credits = [];
-
-        foreach ($this->connection->fetchAllKeyValue('SELECT orderItem, SUM(acceptedQuantity) FROM tl_consho_withdrawal_item WHERE pid = ? GROUP BY orderItem', [$withdrawalId]) as $itemId => $accepted) {
-            $item = $items[(int) $itemId] ?? null;
-
-            if (null === $item || !BigDecimal::of((string) $accepted)->isPositive() || (null !== $kind && $kind->value !== ($item['kind'] ?? ''))) {
-                continue;
-            }
-
-            $credits[(int) $itemId] = DiscountShares::credit($item, $parts[(int) $itemId] ?? [], (string) $accepted);
-        }
-
-        return $credits;
+        return $this->creditLines->credits($orderId, $this->accepted($withdrawalId), $kind, $this->decidedAt($withdrawalId));
     }
 
     /**
-     * The lines of an invoice correction: the accepted goods, and the delivery
-     * costs spread over the shipping lines by their share — every amount
-     * negative, every quantity positive (the cancellation's rule). The value
-     * compensation (P79) lowers the credit of the service lines, in their
-     * order; a service line kept back whole is left out.
-     *
-     * The reductions of the order go back with the goods (H-5, R1): each
-     * reduction line gives back the parts of the withdrawn goods, as one line
-     * of its own after the goods — positive, under its own title, rate and
-     * country, the cancellation's rule turned round. What a service line keeps
-     * back is taken from what it cost after its reductions.
+     * The lines of an invoice correction for this withdrawal's accepted
+     * quantities (CreditLines::lines()).
      *
      * @return list<array<string, string>>
      */
     private function lines(int $orderId, int $withdrawalId, BigDecimal $shipping, BigDecimal|null $kept = null): array
     {
-        $items = $this->items($orderId);
-        $parts = DiscountShares::of($items);
-        $lines = [];
-        $kept ??= BigDecimal::zero();
-        /** @var array<int, array{net: BigDecimal, gross: BigDecimal}> $reductions */
-        $reductions = [];
-
-        foreach ($this->connection->fetchAllKeyValue('SELECT orderItem, SUM(acceptedQuantity) FROM tl_consho_withdrawal_item WHERE pid = ? GROUP BY orderItem', [$withdrawalId]) as $itemId => $accepted) {
-            $item = $items[(int) $itemId] ?? null;
-            $share = BigDecimal::of((string) $accepted);
-
-            if (null === $item || !$share->isPositive() || !BigDecimal::of($item['quantity'])->isPositive()) {
-                continue;
-            }
-
-            $quantity = BigDecimal::of($item['quantity']);
-            $gross = BigDecimal::of($item['lineTotal'])->multipliedBy($share)->dividedBy($quantity, 4, RoundingMode::HalfUp);
-            $tax = BigDecimal::of($item['taxAmount'])->multipliedBy($share)->dividedBy($quantity, 4, RoundingMode::HalfUp);
-            $unit = BigDecimal::of($item['unitPrice']);
-
-            $credit = DiscountShares::credit($item, $parts[(int) $itemId] ?? [], $share);
-
-            if ($kept->isPositive() && ProductKind::Service->value === ($item['kind'] ?? '') && $credit->isPositive()) {
-                $off = BigDecimal::min($kept, $credit);
-                $kept = $kept->minus($off);
-
-                if ($off->isEqualTo($credit)) {
-                    continue;
-                }
-
-                $left = $gross->minus($off);
-
-                // Net and tax from what is left, like the delivery share below.
-                $rate = BigDecimal::of('' !== ($item['taxRate'] ?? '') ? $item['taxRate'] : '0');
-                $net = $left->dividedBy(BigDecimal::one()->plus($rate->dividedBy(100, 6, RoundingMode::HalfUp)), 4, RoundingMode::HalfUp);
-                $tax = $left->minus($net);
-                $unit = $net->dividedBy($share, 4, RoundingMode::HalfUp);
-                $gross = $left;
-            }
-
-            $lines[] = $this->line($item, (string) $share, [
-                'unitPrice' => (string) $unit,
-                'taxAmount' => (string) $tax,
-                'lineTotal' => (string) $gross,
-            ]);
-
-            foreach ($parts[(int) $itemId] ?? [] as $part) {
-                $reduction = $reductions[$part['line']] ?? ['net' => BigDecimal::zero(), 'gross' => BigDecimal::zero()];
-                $reductions[$part['line']] = [
-                    'net' => $reduction['net']->plus($part['net']->multipliedBy($share)->dividedBy($quantity, 4, RoundingMode::HalfUp)),
-                    'gross' => $reduction['gross']->plus($part['gross']->multipliedBy($share)->dividedBy($quantity, 4, RoundingMode::HalfUp)),
-                ];
-            }
-        }
-
-        foreach ($reductions as $lineId => $reduction) {
-            if ($reduction['gross']->isZero() && $reduction['net']->isZero()) {
-                continue;
-            }
-
-            // Negative here, so line() turns them positive.
-            $lines[] = $this->line($items[$lineId], '1', [
-                'unitPrice' => (string) $reduction['net'],
-                'taxAmount' => (string) $reduction['gross']->minus($reduction['net']),
-                'lineTotal' => (string) $reduction['gross'],
-            ]);
-        }
-
-        if ($shipping->isPositive()) {
-            $shippingLines = array_values(array_filter($items, static fn (array $row): bool => OrderLineType::Shipping === OrderLineType::stored($row['lineType'])));
-            $total = BigDecimal::zero();
-
-            foreach ($shippingLines as $row) {
-                $total = $total->plus($row['lineTotal']);
-            }
-
-            $left = $shipping;
-
-            foreach ($shippingLines as $index => $row) {
-                $gross = $index === \count($shippingLines) - 1 || !$total->isPositive()
-                    ? $left
-                    : $shipping->multipliedBy($row['lineTotal'])->dividedBy($total, 4, RoundingMode::HalfUp);
-                $left = $left->minus($gross);
-
-                $rate = BigDecimal::of('' !== $row['taxRate'] ? $row['taxRate'] : '0');
-                $net = $gross->dividedBy(BigDecimal::one()->plus($rate->dividedBy(100, 6, RoundingMode::HalfUp)), 4, RoundingMode::HalfUp);
-
-                $lines[] = $this->line($row, '1', [
-                    'unitPrice' => (string) $net,
-                    'taxAmount' => (string) $gross->minus($net),
-                    'lineTotal' => (string) $gross,
-                ]);
-            }
-        }
-
-        return $lines;
+        return $this->creditLines->lines($orderId, $this->accepted($withdrawalId), $shipping, $kept, $this->decidedAt($withdrawalId));
     }
 
     /**
-     * @param array<string, string> $item
-     * @param array{unitPrice: string, taxAmount: string, lineTotal: string} $amounts positive for a credit, negative
-     *                                                                       for a reduction given back
-     *
-     * @return array<string, string>
+     * When the withdrawal was accepted: a complaint's price reduction decided
+     * before it travels with the goods (RK-4, L3).
      */
-    private function line(array $item, string $quantity, array $amounts): array
+    private function decidedAt(int $withdrawalId): int
     {
-        return [
-            'productName' => $item['productName'] ?? '',
-            'sku' => $item['sku'] ?? '',
-            'quantity' => $quantity,
-            // Four places like every amount on an invoice (decimal(12,4)),
-            // whatever scale the driver or the operator's input brought.
-            'unitPrice' => (string) BigDecimal::of($amounts['unitPrice'])->negated()->toScale(4, RoundingMode::HalfUp),
-            'taxRate' => $item['taxRate'] ?? '',
-            'taxAmount' => (string) BigDecimal::of($amounts['taxAmount'])->negated()->toScale(4, RoundingMode::HalfUp),
-            'lineTotal' => (string) BigDecimal::of($amounts['lineTotal'])->negated()->toScale(4, RoundingMode::HalfUp),
-            'priceSource' => $item['priceSource'] ?? '',
-            'lineType' => $item['lineType'] ?? '',
-            // DL4: the correction sums per country and rate like the invoice
-            // it corrects (DocumentPayloadBuilder::summariseTax()).
-            'taxCountry' => $item['taxCountry'] ?? '',
-            // Block R (R-2): a service stays out of the OSS threshold, on a
-            // correction too.
-            'kind' => $item['kind'] ?? '',
-            // EZ-4: which pot a single-purpose voucher may take back from
-            // (VoucherReturn); not part of the document.
-            'taxClass' => (string) ($item['taxClass'] ?? ''),
-        ];
+        return (int) $this->connection->fetchOne('SELECT decidedAt FROM tl_consho_withdrawal WHERE id = ?', [$withdrawalId]);
     }
 
     /**
-     * The grand total of these lines exactly as the document will state it:
-     * the tax summary's gross, rounded to the currency per rate.
-     *
      * @param list<array<string, string>> $lines
      */
     private function total(array $lines, string $currency): BigDecimal
     {
-        $total = BigDecimal::zero();
-
-        foreach ($this->payloads->summariseTax($lines, $currency) as $entry) {
-            $total = $total->plus($entry['gross']);
-        }
-
-        return $total;
+        return $this->creditLines->total($lines, $currency);
     }
 }

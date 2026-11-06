@@ -252,20 +252,22 @@ final class DocumentIssuer implements DocumentIssuerInterface
 
     /**
      * An invoice correction (D-3, decisions F2/F3): the refunded lines of a
-     * withdrawal, negative, related to the invoice they correct.
+     * withdrawal or a complaint, negative, related to the invoice they correct.
      *
      * Built on the invoice's SNAPSHOT for issuer, customer, logo and notes —
      * like the cancellation, and for the same reason: the correction comes
      * from the issuer that invoiced, not from today's shop. Only the lines are
-     * new; they come from the withdrawal (WithdrawalRefund).
+     * new; they come from the refund (OrderRefund).
      *
      * Not once per invoice, unlike the cancellation: two withdrawals of one
      * order are two corrections.
      *
      * @param list<array<string, string>> $lines
+     * @param string $reference the number of what the correction answers: the withdrawal's or the complaint's
      * @param list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}> $prepaid what goes back onto single-purpose vouchers, negative (EZ-4)
+     * @param string $about     what the reference numbers: 'withdrawal' or 'complaint' (RefundOccasion)
      */
-    public function correct(int $invoiceId, array $lines, string $withdrawalNumber, array $prepaid = []): int
+    public function correct(int $invoiceId, array $lines, string $reference, array $prepaid = [], string $about = 'withdrawal'): int
     {
         $invoice = $this->repository->findDocumentRow($invoiceId);
 
@@ -288,8 +290,9 @@ final class DocumentIssuer implements DocumentIssuerInterface
             (string) $invoice['documentNumber'],
             (int) $invoice['issuedAt'],
             $lines,
-            $withdrawalNumber,
+            $reference,
             $prepaid,
+            $about,
         );
 
         $shopId = (int) $invoice['shop'];

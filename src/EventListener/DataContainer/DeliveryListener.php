@@ -4,10 +4,13 @@ namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 
 use Contao\CoreBundle\DataContainer\DataContainerOperation;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
+use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\DataContainer;
 use Contao\Date;
+use Contao\Image;
 use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryContents;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
@@ -23,7 +26,7 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  *    listed every line of every order, shipping lines included, through a
  *    foreignKey.
  *  - The list says whether a delivery is reported; the report button goes
- *    once it is.
+ *    once it is. A replacement delivery names its complaint (RK-5).
  */
 class DeliveryListener
 {
@@ -36,6 +39,9 @@ class DeliveryListener
         DeliveryContents|null $contents = null,
         // "Leistung erbracht" at the row of an electronic delivery.
         private readonly DeliveryServiceListener|null $services = null,
+        // RK-5, S8: the icon and the link of a replacement delivery.
+        private readonly ContaoFramework|null $framework = null,
+        private readonly UrlGeneratorInterface|null $router = null,
     ) {
         $this->contents = $contents ?? new DeliveryContents($connection, $balances);
     }
@@ -93,12 +99,40 @@ class DeliveryListener
 
         $reportedAt = $row['reportedAt'] ?? null;
         $lang = $GLOBALS['TL_LANG']['tl_consho_delivery'];
+        $parts[] = $this->replacementMarker($row);
         $parts[] = null === $reportedAt
             ? '<span class="tl_gray">'.($lang['notReported'] ?? 'not reported').'</span>'
             : \sprintf($lang['reportedOn'] ?? '%s', Date::parse(Date::getNumericDatimFormat(), (int) $reportedAt));
 
         return implode(' — ', array_filter($parts, static fn (string $p): bool => '' !== $p))
             .($this->services?->rowSuffix((int) ($row['id'] ?? 0)) ?? '');
+    }
+
+    /**
+     * RK-5, S8: a replacement delivery says which complaint it answers, with
+     * a link to the complaint's page — it is not a delivery of the order.
+     *
+     * @param array<string, mixed> $row
+     */
+    public function replacementMarker(array $row): string
+    {
+        $complaintId = (int) ($row['complaint'] ?? 0);
+
+        if ($complaintId < 1) {
+            return '';
+        }
+
+        $number = (string) $this->connection->fetchOne('SELECT number FROM tl_consho_complaint WHERE id = ?', [$complaintId]);
+        $label = StringUtil::specialchars(\sprintf((string) ($GLOBALS['TL_LANG']['tl_consho_delivery']['replacementLabel'] ?? '%s'), $number));
+        $icon = null === $this->framework ? '' : (string) $this->framework->getAdapter(Image::class)->getHtml('sync.svg', $label).' ';
+
+        if (null === $this->router) {
+            return $icon.$label;
+        }
+
+        $url = $this->router->generate('contao_backend', ['do' => 'consho_order', 'table' => 'tl_consho_complaint', 'key' => 'processComplaint', 'id' => $complaintId, 'pid' => (int) ($row['pid'] ?? 0)]);
+
+        return $icon.'<a href="'.StringUtil::specialchars($url).'">'.$label.'</a>';
     }
 
     /**

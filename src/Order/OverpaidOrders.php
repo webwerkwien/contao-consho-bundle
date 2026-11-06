@@ -30,6 +30,10 @@ final class OverpaidOrders implements ResetInterface
 {
     private const MINIMUM = '0.01';
 
+    // RK-4: a complaint that lowers the claim — a decided rescission or price
+    // reduction — counts like an accepted withdrawal.
+    private const DECIDED_COMPLAINT = "c.decidedAt IS NOT NULL AND c.remedy IN ('rescission', 'reduction') AND c.state <> 'rejected'";
+
     /** @var array<int, array{shop: int, number: string, excess: string}>|null */
     private array|null $orders = null;
 
@@ -59,9 +63,12 @@ final class OverpaidOrders implements ResetInterface
                 AND (o.cancelledAt IS NOT NULL
                      OR $paid > o.grandTotal
                      OR o.orderStatus IN (SELECT s.id FROM tl_consho_order_status s WHERE s.isCancelled = 1)
-                     OR EXISTS (SELECT 1 FROM tl_consho_withdrawal w WHERE w.pid = o.id AND w.state = 'accepted'))
+                     OR EXISTS (SELECT 1 FROM tl_consho_withdrawal w WHERE w.pid = o.id AND w.state = 'accepted')
+                     OR EXISTS (SELECT 1 FROM tl_consho_complaint c WHERE c.pid = o.id AND ".self::DECIDED_COMPLAINT."))
                 AND NOT EXISTS (SELECT 1 FROM tl_consho_withdrawal w
                                  WHERE w.pid = o.id AND w.state = 'accepted' AND w.refundedAt IS NULL)
+                AND NOT EXISTS (SELECT 1 FROM tl_consho_complaint c
+                                 WHERE c.pid = o.id AND ".self::DECIDED_COMPLAINT." AND c.refundedAt IS NULL)
                 AND NOT EXISTS (SELECT 1 FROM tl_consho_provider_event e
                                  WHERE e.pid = o.id AND e.kind = 'chargeback' AND e.state IN ('open', 'settled') AND e.reversedAt > 0)
               ORDER BY o.shop, o.id",

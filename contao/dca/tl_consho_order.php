@@ -170,8 +170,9 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
             // Undo in orange, with its own --disabled twin for disable().
             'withdrawals' => ['href' => 'table=tl_consho_withdrawal', 'icon' => 'bundles/contaoconsho/icons/withdrawals.svg', 'primary' => true],
 
-            // D-3 (U2): complaints as notes.
-            'complaints' => ['href' => 'table=tl_consho_complaint', 'icon' => 'important.svg', 'primary' => true],
+            // D-3 (U2): complaints as notes. A cracked glass in red, grey
+            // without a complaint (OrderAftercareButtonListener).
+            'complaints' => ['href' => 'table=tl_consho_complaint', 'icon' => 'bundles/contaoconsho/icons/complaints.svg', 'primary' => true],
             'edit',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => false],
 

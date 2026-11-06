@@ -9,7 +9,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use Webwerkwien\ContaoConshoBundle\Order\WithdrawalCredit;
+use Webwerkwien\ContaoConshoBundle\Order\OrderCredit;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentChangeRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentState;
 use Webwerkwien\ContaoConshoBundle\Order\PaymentStateCalculator;
@@ -59,7 +59,7 @@ class PaymentStarter
         private readonly PaymentAttemptRepositoryInterface $attempts,
         private readonly PaymentStateCalculator $paymentStates,
         private readonly UrlGeneratorInterface $router,
-        private readonly WithdrawalCredit $credits,
+        private readonly OrderCredit $credits,
         #[Autowire(service: 'monolog.logger.contao.error')]
         private readonly LoggerInterface $logger = new NullLogger(),
         // The subscription lines of the order (Abo-4b, P93). Optional for the

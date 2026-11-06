@@ -48,6 +48,7 @@ final class MoneyFlows
         $rows = $this->connection->fetchAllAssociative('SELECT * FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', [$orderId]);
         $events = $this->connection->fetchAllAssociative('SELECT * FROM tl_consho_provider_event WHERE pid = ? ORDER BY occurredAt, id', [$orderId]);
         $withdrawals = $this->connection->fetchAllAssociative('SELECT id, number, refundDocument FROM tl_consho_withdrawal WHERE pid = ?', [$orderId]);
+        $complaints = $this->connection->fetchAllAssociative('SELECT id, number, refundDocument FROM tl_consho_complaint WHERE pid = ?', [$orderId]);
 
         $byReference = [];
 
@@ -59,6 +60,12 @@ final class MoneyFlows
 
         foreach ($withdrawals as $withdrawal) {
             $byNumber[(string) $withdrawal['number']] = $withdrawal;
+        }
+
+        $complaintByNumber = [];
+
+        foreach ($complaints as $complaint) {
+            $complaintByNumber[(string) $complaint['number']] = $complaint;
         }
 
         $received = BigDecimal::zero();
@@ -95,6 +102,7 @@ final class MoneyFlows
             }
 
             $withdrawal = 'refund' === $method ? ($byNumber[(string) $row['reference']] ?? null) : null;
+            $complaint = 'refund' === $method ? ($complaintByNumber[(string) $row['reference']] ?? null) : null;
 
             $movements[] = [
                 'source' => 'payment',
@@ -118,6 +126,8 @@ final class MoneyFlows
                 'refundOf' => \in_array((int) $row['refundOf'], $ids, true) ? (int) $row['refundOf'] : 0,
                 // A refund booked by a withdrawal carries its number (GF-2).
                 'withdrawal' => null === $withdrawal ? null : ['id' => (int) $withdrawal['id'], 'number' => (string) $withdrawal['number'], 'document' => (int) $withdrawal['refundDocument']],
+                // And one booked by a complaint, its number (RK-4).
+                'complaint' => null === $complaint ? null : ['id' => (int) $complaint['id'], 'number' => (string) $complaint['number'], 'document' => (int) $complaint['refundDocument']],
                 'event' => $event,
             ];
         }
@@ -141,6 +151,7 @@ final class MoneyFlows
                 'locked' => false,
                 'refundOf' => \in_array((int) $event['payment'], $ids, true) ? (int) $event['payment'] : 0,
                 'withdrawal' => null,
+                'complaint' => null,
                 'event' => $event,
             ];
         }

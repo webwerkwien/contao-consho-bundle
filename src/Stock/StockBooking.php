@@ -49,8 +49,9 @@ class StockBooking
         int $orderId = 0,
         int $withdrawalId = 0,
         int $purchaseList = 0,
+        int $complaintId = 0,
     ): string {
-        return $this->connection->transactional(function () use ($stockId, $delta, $reason, $now, $user, $orderId, $withdrawalId, $purchaseList): string {
+        return $this->connection->transactional(function () use ($stockId, $delta, $reason, $now, $user, $orderId, $withdrawalId, $purchaseList, $complaintId): string {
             $change = (string) $delta->toScale(4, RoundingMode::HalfUp);
 
             $this->connection->executeStatement(
@@ -70,6 +71,7 @@ class StockBooking
                 'reason' => $reason->value,
                 'orderId' => $orderId,
                 'withdrawalId' => $withdrawalId,
+                'complaintId' => $complaintId,
                 'purchaseList' => $purchaseList,
                 'user' => $user,
             ]);
@@ -90,9 +92,9 @@ class StockBooking
      *
      * @return string|null the quantity after, or NULL when not enough was there
      */
-    public function take(int $stockId, BigDecimal $quantity, bool $allowNegative, StockReason $reason, int $now, int $orderId = 0): string|null
+    public function take(int $stockId, BigDecimal $quantity, bool $allowNegative, StockReason $reason, int $now, int $orderId = 0, int $complaintId = 0): string|null
     {
-        return $this->connection->transactional(function () use ($stockId, $quantity, $allowNegative, $reason, $now, $orderId): string|null {
+        return $this->connection->transactional(function () use ($stockId, $quantity, $allowNegative, $reason, $now, $orderId, $complaintId): string|null {
             $amount = (string) $quantity->toScale(4, RoundingMode::HalfUp);
 
             // The condition is left out rather than switched by a parameter:
@@ -125,6 +127,7 @@ class StockBooking
                 'reason' => $reason->value,
                 'orderId' => $orderId,
                 'withdrawalId' => 0,
+                'complaintId' => $complaintId,
                 'user' => 0,
             ]);
 

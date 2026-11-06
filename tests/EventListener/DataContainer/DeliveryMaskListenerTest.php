@@ -200,6 +200,29 @@ final class DeliveryMaskListenerTest extends TestCase
         unset($GLOBALS['TL_DCA']);
     }
 
+    /**
+     * RK-5: a replacement delivery carries what is left to replace for its
+     * complaint — one stick, not the order's open goods.
+     */
+    public function testEineErsatzlieferungTraegtWasZuErsetzenIst(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => 7, 'number' => 'WEB-7-R1']);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 5, 'orderItem' => 1, 'quantity' => '1', 'replacementQuantity' => '1']);
+        $this->connection->update('tl_consho_delivery', ['complaint' => 5], ['id' => 3]);
+        $this->contents()->replace(3, ['1' => '1'], 100);
+
+        $html = $this->listener($this->edit())->contentsField($this->dc());
+        self::assertStringContainsString('Ersatzlieferung zu Reklamation WEB-7-R1', $html);
+        self::assertStringContainsString('zu ersetzen', $html);
+        self::assertStringContainsString(' checked>', $html, 'alles, was zu ersetzen ist');
+        self::assertStringNotContainsString('consho_quantity[2]', $html);
+        self::assertStringContainsString('Keine Rechnung', $this->listener($this->edit())->notifyField($this->dc()));
+
+        $this->listener($this->post(['consho_quantity' => ['1' => '2']]))->onSubmit($this->dc());
+        self::assertSame(['addError', 'Der Inhalt ist nicht übernommen: Jede Menge muss eine Zahl zwischen 0 und der noch zu ersetzenden Menge sein.'], $this->messages[0]);
+        self::assertSame([1 => '1'], $this->normalized($this->contents()->current(3)));
+    }
+
     public function testOhneDieMaskeKeinEingriff(): void
     {
         // "Mehrere bearbeiten" or any other submit without the field.

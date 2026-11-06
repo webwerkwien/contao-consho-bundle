@@ -20,8 +20,8 @@
         <h2>{{ withdrawal.number }} <span class="consho-withdrawal-head__order">{{ l.unassigned|default('nicht zugeordnet') }}</span></h2>
     </div>
 
-    <fieldset class="tl_tbox consho-withdrawal-box">
-        <legend>{{ l.declarationLegend|default('Erklärung und Fristen') }}</legend>
+    <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.declarationLegend|default('Erklärung und Fristen') }}</button></legend>
         <table class="tl_show">
             <tbody>
                 <tr><td class="tl_label">{{ l.receivedAt.0|default('Eingegangen am') }}</td><td>{{ withdrawal.receivedAt }} ({{ withdrawal.source }})</td></tr>
@@ -38,8 +38,8 @@
     </fieldset>
 
     {% if withdrawal.dismissed %}
-        <fieldset class="tl_tbox consho-withdrawal-box">
-            <legend>{{ l.dismissedLegend|default('Ohne Bestellung abgewiesen') }}</legend>
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.dismissedLegend|default('Ohne Bestellung abgewiesen') }}</button></legend>
             <table class="tl_show">
                 <tbody>
                     <tr><td class="tl_label">{{ l.decidedAt.0|default('Entschieden am') }}</td><td>{{ withdrawal.decidedAt }}</td></tr>
@@ -48,8 +48,8 @@
             </table>
         </fieldset>
     {% else %}
-        <fieldset class="tl_tbox consho-withdrawal-box">
-            <legend>{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.assignLegend|default('Bestellung zuordnen') }}</legend>
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.assignLegend|default('Bestellung zuordnen') }}</button></legend>
             <form action="{{ action }}" method="post">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 <div class="widget">
@@ -63,8 +63,8 @@
         </fieldset>
 
         {# WA: what belongs to no order leaves the open work here. #}
-        <fieldset class="tl_tbox consho-withdrawal-box">
-            <legend>{{ l.dismissLegend|default('Ohne Bestellung abweisen') }}</legend>
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.dismissLegend|default('Ohne Bestellung abweisen') }}</button></legend>
             <form action="{{ action }}" method="post">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 <div class="widget">

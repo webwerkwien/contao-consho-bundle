@@ -41,7 +41,11 @@ final class OrderAnonymizerTest extends TestCase
         $this->connection->insert('tl_consho_document', ['id' => 2, 'pid' => 8, 'documentNumber' => 'RE-2', 'payload' => json_encode(['order' => ['email' => 'erika@example.org']])]);
 
         $this->connection->insert('tl_consho_withdrawal', ['id' => 3, 'pid' => 7, 'number' => 'WEB-7-W1', 'name' => 'Erika Muster', 'email' => 'erika@example.org', 'part' => 'das Salz', 'message' => 'Grüße, Erika', 'reason' => 'Frau Muster, zu spät', 'refundAmount' => '8.9']);
-        $this->connection->insert('tl_consho_complaint', ['id' => 4, 'pid' => 7, 'note' => 'Frau Muster rief an']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 4, 'pid' => 7, 'number' => 'WEB-7-R1', 'state' => 'rejected', 'note' => 'Frau Muster rief an', 'rejectReason' => 'Frau Muster, der Kratzer war schon da']);
+        $this->connection->insert('tl_consho_complaint_item', ['id' => 40, 'pid' => 4, 'orderItem' => 1, 'quantity' => '1.0000', 'defect' => 'Erika sagt: Deckel gesprungen']);
+        // A complaint of the other order, with a line of its own.
+        $this->connection->insert('tl_consho_complaint', ['id' => 41, 'pid' => 8, 'number' => 'WEB-8-R1', 'note' => 'fremd']);
+        $this->connection->insert('tl_consho_complaint_item', ['id' => 42, 'pid' => 41, 'orderItem' => 2, 'quantity' => '1.0000', 'defect' => 'fremd']);
         $this->connection->insert('tl_consho_payment', ['id' => 5, 'pid' => 7, 'amount' => '22.8', 'reference' => 'Erika Muster WEB-7']);
         $this->connection->insert('tl_consho_delivery', ['id' => 6, 'pid' => 7, 'trackingNumber' => '1Z999']);
         $this->connection->insert('tl_consho_payment_attempt', ['pid' => 7, 'tokenHash' => 'a1', 'providerReference' => 'pi_ERIKA']);
@@ -49,7 +53,7 @@ final class OrderAnonymizerTest extends TestCase
         $this->connection->insert('tl_consho_cart_rule_redemption', ['id' => 1, 'rule' => 2, 'orderId' => 7, 'member' => 5, 'email' => 'erika@example.org', 'code' => 'Herbst']);
         $this->connection->insert('tl_consho_cart_rule_redemption', ['id' => 2, 'rule' => 2, 'orderId' => 8, 'member' => 5, 'email' => 'erika@example.org', 'code' => 'Herbst']);
 
-        foreach ([['tl_consho_order', 7], ['tl_consho_order', 8], ['tl_consho_payment', 5], ['tl_consho_delivery', 6], ['tl_consho_complaint', 4], ['tl_consho_withdrawal', 3], ['tl_member', 7]] as [$table, $pid]) {
+        foreach ([['tl_consho_order', 7], ['tl_consho_order', 8], ['tl_consho_payment', 5], ['tl_consho_delivery', 6], ['tl_consho_complaint', 4], ['tl_consho_complaint_item', 40], ['tl_consho_complaint_item', 42], ['tl_consho_withdrawal', 3], ['tl_member', 7]] as [$table, $pid]) {
             $this->connection->insert('tl_version', ['fromTable' => $table, 'pid' => $pid, 'data' => 'a:1:{s:5:"email";s:17:"erika@example.org";}']);
         }
 
@@ -91,7 +95,10 @@ final class OrderAnonymizerTest extends TestCase
 
         self::assertSame(['', '', null, null, null], $this->connection->fetchNumeric('SELECT name, email, part, message, reason FROM tl_consho_withdrawal WHERE id = 3') ?: []);
         self::assertEqualsWithDelta(8.9, (float) $this->connection->fetchOne('SELECT refundAmount FROM tl_consho_withdrawal WHERE id = 3'), 0.0001, 'der Betrag bleibt');
-        self::assertNull($this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE id = 4'));
+        self::assertSame([null, null, 'WEB-7-R1', 'rejected'], $this->connection->fetchNumeric('SELECT note, rejectReason, number, state FROM tl_consho_complaint WHERE id = 4'), 'the texts go, number and state stay');
+        self::assertNull($this->connection->fetchOne('SELECT defect FROM tl_consho_complaint_item WHERE id = 40'));
+        self::assertEqualsWithDelta(1.0, (float) $this->connection->fetchOne('SELECT quantity FROM tl_consho_complaint_item WHERE id = 40'), 0.0001, 'the quantity stays');
+        self::assertSame(['fremd', 'fremd'], [$this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE id = 41'), $this->connection->fetchOne('SELECT defect FROM tl_consho_complaint_item WHERE id = 42')], 'the other order untouched');
         // The amount as a number: the DCA schema stores a decimal, SQLite
         // returns it as one; the old hand-written table had TEXT.
         $payment = $this->connection->fetchNumeric('SELECT reference, amount FROM tl_consho_payment WHERE id = 5') ?: [];
@@ -103,7 +110,7 @@ final class OrderAnonymizerTest extends TestCase
         // H-5: the redemption stays counted without saying by whom — that of the other order untouched.
         self::assertSame([['0', '', 'Herbst', '0'], ['5', 'erika@example.org', 'Herbst', '0']], array_map(static fn (array $r): array => array_map('strval', $r), $this->connection->fetchAllNumeric('SELECT member, email, code, cancelled FROM tl_consho_cart_rule_redemption ORDER BY id')));
 
-        self::assertSame([['tl_consho_order', 8], ['tl_member', 7]], array_map(static fn (array $r): array => [$r['fromTable'], (int) $r['pid']], $this->connection->fetchAllAssociative('SELECT fromTable, pid FROM tl_version ORDER BY id')), 'die Versionen dieser Bestellung und ihrer Kinder sind weg — nicht die fremden');
+        self::assertSame([['tl_consho_order', 8], ['tl_consho_complaint_item', 42], ['tl_member', 7]], array_map(static fn (array $r): array => [$r['fromTable'], (int) $r['pid']], $this->connection->fetchAllAssociative('SELECT fromTable, pid FROM tl_version ORDER BY id')), 'die Versionen dieser Bestellung und ihrer Kinder sind weg — nicht die fremden');
         self::assertSame(['h8'], $this->connection->fetchFirstColumn('SELECT tokenHash FROM tl_consho_order_token'));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart'));
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart_item'));

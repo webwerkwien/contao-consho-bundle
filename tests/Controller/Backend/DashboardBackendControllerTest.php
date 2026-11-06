@@ -97,12 +97,24 @@ final class DashboardBackendControllerTest extends TestCase
 
     public function testEineReklamationErscheintAlsFuenfteKarte(): void
     {
-        $this->connection->insert('tl_consho_complaint', ['pid' => 1, 'receivedAt' => time()]);
+        $this->connection->insert('tl_consho_complaint', ['pid' => 1, 'number' => 'WEB-1-R1', 'receivedAt' => time()]);
 
         $html = $this->controller()();
 
         self::assertStringContainsString('<span class="consho-dashboard__label">Reklamationen</span>', $html);
         self::assertSame(5, substr_count($html, '<li class="consho-dashboard__tile'));
+        // Block Reklamation: into the list "Reklamationen", like the withdrawal tiles.
+        self::assertStringContainsString('do=consho_complaint&amp;consho_filter=complaint', $html);
+    }
+
+    public function testReklamationenOhneRechtAufIhrenMenuepunkt(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['pid' => 1, 'number' => 'WEB-1-R1', 'receivedAt' => time()]);
+
+        $html = $this->controller($this->without('consho_complaint'))();
+
+        self::assertStringNotContainsString('Reklamationen', $html);
+        self::assertSame(4, substr_count($html, '<li class="consho-dashboard__tile'));
     }
 
     /**

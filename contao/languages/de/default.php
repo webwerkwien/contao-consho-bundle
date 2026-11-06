@@ -75,13 +75,13 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'invoicingOff' => 'Die Shop-Konfiguration „%shop%" stellt keine Rechnungen aus. Consho speichert die Rechnungsdaten jeder Bestellung, die Rechnungen selbst müssen außerhalb von Consho entstehen und an die Kunden gehen.',
     'invoiceProviderMissing' => 'Die Shop-Konfiguration „%shop%" überlässt die Rechnungen dem Modul „%module%", das nicht installiert ist. Bis es wieder installiert ist oder eine andere Einstellung gewählt wird, warten die Rechnungen dieses Shops.',
     'externalInvoiceFailed' => 'Belege, die nicht beim Rechnungsmodul angekommen sind: %count%. Die Rechnungsdaten sind gespeichert; den Grund nennt das Fehlerprotokoll. Nach der Behebung reicht „consho:document:verify --retry" sie erneut ein.',
-    'refundPayoutFailed' => 'Erstattungen, die der Zahlungsanbieter abgelehnt hat: %count% (Bestellung %numbers%). Gebucht sind sie, ausgezahlt nicht; den Grund nennt das Fehlerprotokoll. In der Bestellung unter „Zahlungen" erneut auszahlen oder von Hand zurückzahlen und als erledigt vermerken.',
+    'refundPayoutFailed' => 'Erstattungen, die der Zahlungsanbieter abgelehnt hat: %count% (Bestellung %numbers%). Gebucht sind sie, ausgezahlt nicht; den Grund nennt das Fehlerprotokoll. In der Bestellung unter „Geldflüsse" erneut auszahlen oder von Hand zurückzahlen und als erledigt vermerken.',
     'refundPayoutStuck' => 'Erstattungen ohne Abschluss: %count% (Bestellung %numbers%). Auf die Anfrage kam keine Antwort, der Zahlungsanbieter meldet seit einer Woche „in Bearbeitung", oder die Anfrage ging nie hinaus, weil der Contao-Cron nicht läuft. Im Konto beim Anbieter nachsehen, ob das Geld zurückging, und die Zahlung in der Bestellung als erledigt vermerken — sonst von Hand zurückzahlen.',
-    'paymentChargedBack' => 'Die Zahlung zu Bestellung %number% wurde zurückgebucht (Grund: %reason%). Die Bestellung gilt wieder als offen; Mahnung, Abo-Pause und digitale Güter folgen erst, wenn ein Zahlungsziel gesetzt ist. In der Bestellung unter „Nachträge" die Zahlung einfordern — der Kunde erhält eine Zahlungsaufforderung und kann erneut bezahlen — oder zur Kenntnis nehmen, wenn die Forderung anders geklärt wird.',
+    'paymentChargedBack' => 'Die Zahlung zu Bestellung %number% wurde zurückgebucht (Grund: %reason%). Die Bestellung gilt wieder als offen; Mahnung, Abo-Pause und digitale Güter folgen erst, wenn ein Zahlungsziel gesetzt ist. In der Bestellung unter „Geldflüsse" die Zahlung einfordern — der Kunde erhält eine Zahlungsaufforderung und kann erneut bezahlen — oder zur Kenntnis nehmen, wenn die Forderung anders geklärt wird.',
     'chargebackReversedAfterPayment' => 'Die Rückbuchung zu Bestellung %number% (%reference%) wurde aufgehoben, und der Kunde hat nachgezahlt: Die Bestellung ist überzahlt. Den doppelt bezahlten Betrag zurückzahlen, etwa mit „Erstatten" an einer der Zahlungen.',
     'refundWithoutPayment' => 'Bestellungen im Shop „%shop%" mit einer Rückzahlung ohne Zahlung: %count% (%numbers%). Solange die Rückzahlung keiner Zahlung zugeordnet ist, zeigt „Erstatten" an den Zahlungen zu viel als offen. Unter „Geldflüsse" der Bestellung „Zahlung zuordnen" wählen.',
     'orderOverpaid' =>'Bestellungen im Shop „%shop%" mit zu viel Geld — storniert und bezahlt, oder überzahlt: %count% (%numbers%). Consho zahlt nicht von selbst zurück. Den Betrag über „Erstatten" an einer Zahlung der Bestellung zurückzahlen.',
-    'refundOutsideConsho' => 'Erstattung beim Zahlungsanbieter, die Consho nicht kennt: Bestellung %number% (%reference%). Bis sie in der Bestellung unter „Nachträge" erfasst oder einer Erstattungszeile zugeordnet ist, stimmt der Zahlungsstand nicht. Gehört sie zu einem Widerruf, dort zurückzahlen: „Nachträge" führt hin, und der Widerruf erstellt die Rechnungskorrektur.',
+    'refundOutsideConsho' => 'Erstattung beim Zahlungsanbieter, die Consho nicht kennt: Bestellung %number% (%reference%). Bis sie in der Bestellung unter „Geldflüsse" erfasst oder einer Erstattungszeile zugeordnet ist, stimmt der Zahlungsstand nicht. Gehört sie zu einem Widerruf, dort zurückzahlen: „Geldflüsse" führt hin, und der Widerruf erstellt die Rechnungskorrektur.',
     'eInvoiceIncomplete' => 'Die Shop-Konfiguration „%shop%" stellt E-Rechnungen aus, aber es fehlt: %fields%. Bis das ausgefüllt ist, gehen Rechnungen ohne die E-Rechnungsdaten hinaus.',
     'ossThresholdReached' =>'Die Fernverkäufe an Privatkunden in anderen EU-Ländern (%business%) haben %year% die Lieferschwelle von 10.000 € erreicht. Umsätze außerhalb von Consho zählen mit. Über der Schwelle ist die Umsatzsteuer des Kundenlandes zu berechnen — dafür „Steuer im Bestimmungsland" in der Shop-Konfiguration einschalten. Einzelheiten unter „Steuermeldung".',
     'saleModePriceMissing' => 'Produkt „%product%" wird als %modes% angeboten, hat dafür aber keinen Preis — so ist es nicht kaufbar. Am Produkt unter „Preise" eine Zeile mit „Verkauft als" anlegen, oder die Verkaufsart am Produkt abwählen.',
@@ -483,6 +483,7 @@ $GLOBALS['TL_LANG']['CONSHO']['deliveryNote'] = [
     'carrier' => 'Versanddienst',
     'trackingNumber' => 'Sendungsnummer',
     'partial' => 'Teillieferung — die übrigen Artikel folgen separat.',
+    'replacement' => 'Ersatzlieferung zu Reklamation %s',
     'lines' => 'Inhalt dieser Sendung',
     'rest' => 'Folgt separat',
 ];
@@ -494,6 +495,7 @@ $GLOBALS['TL_LANG']['CONSHO']['invoice']['orderNumber'] = 'Bestellnummer';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['cancels'] = 'Storniert Rechnung';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['corrects'] = 'Korrigiert Rechnung';
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['withdrawal'] = 'Widerruf';
+$GLOBALS['TL_LANG']['CONSHO']['invoice']['complaint'] = 'Reklamation';
 // %s, not %date%: Contao fills contao_default with vsprintf, and "%d" in
 // "%date%" asks for a second argument.
 $GLOBALS['TL_LANG']['CONSHO']['invoice']['cancelsDate'] = 'vom %s';
@@ -583,6 +585,10 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['shipped']['rest'] = 'Die übrigen Artikel
 $GLOBALS['TL_LANG']['CONSHO']['mail']['shipped']['tracking'] = 'Sendungsnummer (%s): %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['shipped']['trackingNoCarrier'] = 'Sendungsnummer: %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['shipped']['invoiceAttached'] = 'Die Rechnung %s finden Sie im Anhang.';
+// RK-5: the replacement delivery for a complaint.
+$GLOBALS['TL_LANG']['CONSHO']['mail']['replacement']['subject'] = 'Ersatzlieferung zu Ihrer Bestellung %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['replacement']['intro'] = 'zu Ihrer Reklamation %s haben wir folgende Artikel Ihrer Bestellung %s als Ersatz versandt:';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['replacement']['free'] = 'Die Ersatzlieferung ist für Sie kostenlos.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['subject'] = 'Ihre Rechnung zum Abo %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['intro'] = 'für Ihr Abo %s beginnt ein neuer Zeitraum: vom %s bis %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['subscriptionInvoice']['invoiceAttached'] = 'Die Rechnung %s finden Sie im Anhang.';
@@ -687,6 +693,8 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['i
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawal']['operator']['unassigned']['unconfirmed'] = 'Die Eingangsbestätigung an den Kunden ist nicht hinausgegangen — bitte von Hand bestätigen.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['subject'] = 'Ihr Widerruf %s zur Bestellung %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['withdrawalRejected']['intro'] = 'Ihren Widerruf %s zur Bestellung %s können wir nicht annehmen. Die Begründung:';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['complaintRejected']['subject'] = 'Ihre Reklamation %s zur Bestellung %s';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['complaintRejected']['intro'] = 'Ihre Reklamation %s zur Bestellung %s können wir nicht anerkennen. Die Begründung:';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['subject'] = 'Ihr Widerruf %s zur Bestellung %s: Erstattung';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['intro'] = 'wir haben Ihren Widerruf %s zur Bestellung %s bearbeitet.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['payout'] = 'Wir erstatten Ihnen %s mit demselben Zahlungsmittel, mit dem Sie bezahlt haben, sofern wir nichts anderes vereinbart haben.';
@@ -697,6 +705,11 @@ $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['documentAttached'] = 'Die Beleg
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['remaining'] = 'Bitte überweisen Sie nur den verbleibenden Betrag von %s.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['valueCompensation'] = 'Für die bis zu Ihrem Widerruf erbrachte Leistung behalten wir einen Wertersatz von %s ein.';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['refund']['subscriptionEnded'] = 'Ihr Abo %s ist mit dem Widerruf beendet.';
+// RK-4: a complaint's refund, in the same mail.
+$GLOBALS['TL_LANG']['CONSHO']['mail']['complaintRefund']['subject']['rescission'] = 'Ihre Reklamation %s zur Bestellung %s: Rücktritt und Erstattung';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['complaintRefund']['subject']['reduction'] = 'Ihre Reklamation %s zur Bestellung %s: Preisminderung';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['complaintRefund']['intro']['rescission'] = 'zu Ihrer Reklamation %s zur Bestellung %s nehmen wir die betroffenen Artikel zurück und erstatten Ihnen den Kaufpreis.';
+$GLOBALS['TL_LANG']['CONSHO']['mail']['complaintRefund']['intro']['reduction'] = 'zu Ihrer Reklamation %s zur Bestellung %s mindern wir den Preis der betroffenen Artikel.';
 // "Meine Bestellungen" (D-4, K3).
 $GLOBALS['TL_LANG']['CTE']['consho_my_orders'] = ['Meine Bestellungen', 'Die Bestellungen des angemeldeten Mitglieds in diesem Shop, jede mit einem Link zur Bestellseite. Bestellungen als Gast unter der Kontoadresse erscheinen, sobald das Mitglied die Adresse per Mail bestätigt hat. Gehört auf eine geschützte Seite des Kundenkontos.'];
 $GLOBALS['TL_LANG']['CONSHO']['myOrders'] = [

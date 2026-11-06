@@ -113,8 +113,9 @@ $conshoBackendModules = [
                 'tl_consho_withdrawal',
                 'tl_consho_withdrawal_item',
 
-                // D-3.
+                // D-3; the lines since block Reklamation.
                 'tl_consho_complaint',
+                'tl_consho_complaint_item',
 
                 // F-4.
                 'tl_consho_entitlement',
@@ -122,6 +123,9 @@ $conshoBackendModules = [
 
             // D-3: the page "Widerruf bearbeiten" — decide, return, refund.
             'processWithdrawal' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\WithdrawalBackendController::class, '__invoke'],
+
+            // RK-4: the page "Reklamation entscheiden" — decide, return, refund.
+            'processComplaint' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\ComplaintBackendController::class, '__invoke'],
 
             // The PDF and HTML buttons of a document (C-8). `key` actions
             // run after the module and table checks; the record is checked
@@ -179,6 +183,16 @@ $conshoBackendModules = [
         'consho_withdrawal' => [
             'tables' => ['tl_consho_withdrawal', 'tl_consho_withdrawal_item'],
             'processWithdrawal' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\WithdrawalBackendController::class, '__invoke'],
+        ],
+
+        /*
+         * Block Reklamation (R10): the complaints of all orders in one list,
+         * like the withdrawals — the same table as under the order, listed
+         * flat here (ComplaintListListener).
+         */
+        'consho_complaint' => [
+            'tables' => ['tl_consho_complaint', 'tl_consho_complaint_item'],
+            'processComplaint' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\ComplaintBackendController::class, '__invoke'],
         ],
 
         /*

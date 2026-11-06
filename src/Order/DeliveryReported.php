@@ -21,6 +21,7 @@ use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
+use Webwerkwien\ContaoConshoBundle\Stock\StockAllocation;
 
 /**
  * "Als versandt melden" (D-1, spec D 5.4).
@@ -40,6 +41,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  *  6. after the commit: archive, and the mail "Versendet" with this parcel's
  *     items and the invoice if it was issued now (Z4) — not the delivery
  *     note, which travels in the parcel
+ *
+ * A replacement delivery for a complaint takes its own way from step 1 on,
+ * see reportReplacement().
  */
 class DeliveryReported
 {
@@ -65,6 +69,9 @@ class DeliveryReported
         // back. Optional for tests that do not look at it.
         private readonly DeliveryNoteIssuer|null $deliveryNotes = null,
         private readonly DeferredArchive|null $archive = null,
+        // RK-5, S4: a replacement delivery's goods leave the stock when it is
+        // reported. Optional for tests that do not look at it.
+        private readonly StockAllocation|null $stock = null,
     ) {
     }
 
@@ -105,6 +112,10 @@ class DeliveryReported
                 $this->connection->commit();
 
                 return DeliveryReport::empty();
+            }
+
+            if ((int) ($delivery['complaint'] ?? 0) > 0) {
+                return $this->reportReplacement($order, $delivery, $items, $now);
             }
 
             $before = $this->balances->of($orderId);
@@ -193,6 +204,99 @@ class DeliveryReported
         // Every "reported" hands a nested caller its invoice — whichever branch
         // it leaves by (Abo-4).
         return DeliveryReport::reported($sent, $nested ? $invoiceId : null);
+    }
+
+    /**
+     * A replacement delivery (RK-5, S4–S6). Called inside report()'s
+     * transaction, under the order's lock; commits or rolls back itself.
+     *
+     *  - capped by the complaint, not by the order: the goods were delivered
+     *    once already and are not open any more
+     *  - the stock goes out now, by the purchase click's rule — short stock
+     *    without backorder refuses the report, and nothing stays booked
+     *  - no invoice, no status change: the order's balance does not move
+     *  - the delivery note says which complaint the parcel answers; what
+     *    follows separately is still the order's
+     *  - once the reported replacements cover every complained quantity, the
+     *    complaint is resolved
+     *  - the mail "Ersatzlieferung", without an attachment
+     *
+     * @param array<string, mixed> $order
+     * @param array<string, mixed> $delivery
+     * @param array<int, string>   $items
+     */
+    private function reportReplacement(array $order, array $delivery, array $items, int $now): DeliveryReport
+    {
+        $orderId = (int) $delivery['pid'];
+        $deliveryId = (int) $delivery['id'];
+        $complaintId = (int) $delivery['complaint'];
+
+        $complaint = $this->connection->fetchAssociative('SELECT number, remedy, state FROM tl_consho_complaint WHERE id = ? AND pid = ?', [$complaintId, $orderId]);
+
+        if (false === $complaint || 'replacement' !== $complaint['remedy'] || \in_array($complaint['state'], ['resolved', 'rejected'], true)) {
+            $this->connection->commit();
+
+            return DeliveryReport::notReplacement();
+        }
+
+        $contents = new DeliveryContents($this->connection, $this->balances);
+        $left = $contents->replaceable($complaintId, $deliveryId);
+        $tooMuch = [];
+
+        foreach ($items as $itemId => $quantity) {
+            if (BigDecimal::of($quantity)->isGreaterThan($left[$itemId] ?? '0')) {
+                $tooMuch[] = $itemId;
+            }
+        }
+
+        if ([] !== $tooMuch) {
+            $this->connection->commit();
+
+            return DeliveryReport::tooMuchForComplaint($this->names($orderId, $tooMuch));
+        }
+
+        $short =$this->stock?->bookReplacement($orderId, $deliveryId, $now) ?? [];
+
+        if ([] !== $short) {
+            // What was taken for the lines before the short one goes back.
+            $this->connection->rollBack();
+
+            return DeliveryReport::outOfStock($this->names($orderId, $short));
+        }
+
+        $versions = $this->versions($orderId, $deliveryId);
+        $this->connection->update('tl_consho_delivery', ['reportedAt' => $now, 'lockedAt' => $now, 'tstamp' => $now], ['id' => $deliveryId]);
+        $versions?->create();
+
+        $after = $this->balances->of($orderId);
+        $deliveryNoteId = $this->deliveryNotes?->issue($deliveryId, $after->openGoods ?? []);
+
+        if ($contents->replaced($complaintId)) {
+            $this->connection->update('tl_consho_complaint', ['state' => 'resolved', 'resolvedAt' => $now, 'tstamp' => $now], ['id' => $complaintId]);
+        }
+
+        $this->connection->commit();
+
+        if (null !== $deliveryNoteId) {
+            $this->archive?->after($deliveryNoteId);
+        }
+
+        $viewUrl = $this->links->forMail($order);
+
+        if (null === $viewUrl) {
+            $this->logger->warning(\sprintf('The "replacement shipped" mail of order %s was not sent: the shop has no order page.', $order['orderNumber'] ?? $orderId));
+
+            return DeliveryReport::reportedReplacement(false);
+        }
+
+        $sent = $this->mail->replacementShipped($orderId, [
+            'carrier' => (string) $delivery['carrier'],
+            'trackingNumber' => (string) $delivery['trackingNumber'],
+            'items' => $this->mailItems($orderId, $items, (string) ($order['language'] ?? '')),
+            'complaint' => (string) $complaint['number'],
+        ], $viewUrl);
+
+        return DeliveryReport::reportedReplacement($sent);
     }
 
     /**

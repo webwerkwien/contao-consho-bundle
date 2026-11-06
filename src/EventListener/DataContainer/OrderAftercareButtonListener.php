@@ -16,14 +16,14 @@ use Doctrine\DBAL\Connection;
  *    to open: the button is disabled like Contao's own.
  *  - Complaints are recorded by the operator. A disabled button would lock
  *    out the first one, so without a complaint it turns grey but stays a
- *    link, and says so in its title.
+ *    link, says so in its title and turns green on hover.
  *
  * One query per table and request, not one per row: the orders that have
  * any are read once.
  */
 class OrderAftercareButtonListener
 {
-    public const COMPLAINT_ICON_NONE = 'bundles/contaoconsho/icons/important--none.svg';
+    public const COMPLAINT_ICON_NONE = 'bundles/contaoconsho/icons/complaints--none.svg';
 
     /** @var array<string, array<int, true>> */
     private array $orders = [];
@@ -48,6 +48,8 @@ class OrderAftercareButtonListener
         }
 
         $operation['icon'] = self::COMPLAINT_ICON_NONE;
+        // Turns green on hover: nothing is due, but one can be recorded.
+        $operation['attributes']->addClass('consho-operation--create');
         $operation['title'] = (string) ($GLOBALS['TL_LANG']['tl_consho_order']['complaintsNone'] ?? $operation['title']);
     }
 

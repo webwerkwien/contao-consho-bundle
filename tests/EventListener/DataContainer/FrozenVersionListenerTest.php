@@ -113,6 +113,12 @@ final class FrozenVersionListenerTest extends TestCase
      * Only tables that keep versions at all — otherwise there would be nothing
      * to refuse, and a newly versioned order table would show up here if missing.
      */
+    public function testDieZeilenEinerReklamationAuch(): void
+    {
+        // Block Reklamation: the lines carry what a remedy will count on.
+        self::assertContains('tl_consho_complaint_item', FrozenVersionListener::TABLES);
+    }
+
     public function testDieListeSindGenauDieVersioniertenBestelltabellen(): void
     {
         $versioned = [];

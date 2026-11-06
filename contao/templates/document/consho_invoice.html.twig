@@ -105,9 +105,10 @@
                 <tr><th scope="row">{{ (facts ~ 'date')|trans({}, 'contao_default') }}</th><td>{{ invoice.issuedAt }}</td></tr>
                 {# A cancellation names the invoice it cancels (C-10). #}
                 {% if invoice.cancels %}<tr><th scope="row">{{ 'CONSHO.invoice.cancels'|trans({}, 'contao_default') }}</th><td>{{ invoice.cancels.number }}{% if invoice.cancels.date %} {{ 'CONSHO.invoice.cancelsDate'|trans([invoice.cancels.date], 'contao_default') }}{% endif %}</td></tr>{% endif %}
-                {# A correction names the invoice it corrects and the withdrawal (D-3). #}
+                {# A correction names the invoice it corrects and the withdrawal (D-3) or complaint (RK-4). #}
                 {% if invoice.corrects|default(null) %}<tr><th scope="row">{{ 'CONSHO.invoice.corrects'|trans({}, 'contao_default') }}</th><td>{{ invoice.corrects.number }}{% if invoice.corrects.date %} {{ 'CONSHO.invoice.cancelsDate'|trans([invoice.corrects.date], 'contao_default') }}{% endif %}</td></tr>{% endif %}
                 {% if invoice.withdrawal|default('') %}<tr><th scope="row">{{ 'CONSHO.invoice.withdrawal'|trans({}, 'contao_default') }}</th><td>{{ invoice.withdrawal }}</td></tr>{% endif %}
+                {% if invoice.complaint|default('') %}<tr><th scope="row">{{ 'CONSHO.invoice.complaint'|trans({}, 'contao_default') }}</th><td>{{ invoice.complaint }}</td></tr>{% endif %}
                 <tr><th scope="row">{{ 'CONSHO.invoice.orderNumber'|trans({}, 'contao_default') }}</th><td>{{ invoice.orderNumber }}</td></tr>
                 {% if invoice.orderDate %}<tr><th scope="row">{{ 'CONSHO.invoice.orderDate'|trans({}, 'contao_default') }}</th><td>{{ invoice.orderDate }}</td></tr>{% endif %}
                 {# A follow-up order names its subscription and the period it bills (Abo-4). #}

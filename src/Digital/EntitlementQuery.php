@@ -71,8 +71,8 @@ class EntitlementQuery
 
     /**
      * Order lines whose contract has ended (F): the whole order when
-     * it is cancelled, otherwise every line an ACCEPTED withdrawal covers in
-     * full. Nothing else revokes an entitlement on its own — the operator's
+     * it is cancelled, otherwise every line ACCEPTED withdrawals and decided
+     * rescissions (RK-4) cover in full. Nothing else revokes an entitlement on its own — the operator's
      * "gesperrt" stays the explicit switch — but a use after the money went
      * back would be a delivery nobody pays for.
      *
@@ -82,8 +82,10 @@ class EntitlementQuery
     {
         $cancelled = null !== ($this->connection->fetchOne('SELECT cancelledAt FROM tl_consho_order WHERE id = ?', [$orderId]) ?: null);
 
+        // RK-4: a decided rescission ends a line like an accepted withdrawal.
         $rows = $this->connection->fetchAllAssociative(
-            "SELECT i.id, i.quantity, COALESCE(SUM(CASE WHEN w.state = 'accepted' THEN wi.quantity ELSE 0 END), 0) AS withdrawn
+            "SELECT i.id, i.quantity, COALESCE(SUM(CASE WHEN w.state = 'accepted' THEN wi.quantity ELSE 0 END), 0)
+                    + COALESCE((SELECT SUM(ci.rescindedQuantity) FROM tl_consho_complaint_item ci WHERE ci.orderItem = i.id), 0) AS withdrawn
                FROM tl_consho_order_item i
                LEFT JOIN tl_consho_withdrawal_item wi ON wi.orderItem = i.id
                LEFT JOIN tl_consho_withdrawal w ON w.id = wi.pid

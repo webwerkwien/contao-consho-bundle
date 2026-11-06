@@ -142,7 +142,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
         foreach ([
             'tl_consho_shop', 'tl_consho_number_range', 'tl_consho_order_status', 'tl_consho_payment_method', 'tl_consho_translation',
             'tl_consho_order', 'tl_consho_order_item', 'tl_consho_payment', 'tl_consho_delivery', 'tl_consho_delivery_item',
-            'tl_consho_document', 'tl_consho_subscription', 'tl_consho_entitlement', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item',
+            'tl_consho_document', 'tl_consho_subscription', 'tl_consho_entitlement', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item',
             'tl_consho_payment_attempt', 'tl_consho_cancellation',
         ] as $table) {
             DcaSchema::create($this->connection, $table);

@@ -6,8 +6,10 @@
  * transaction as the change itself — a stock figure nobody can explain is the
  * thing this table exists to prevent.
  *
- * `reason`: order, cancellation, return, manual, receipt (StockReason).
+ * `reason`: order, cancellation, return, manual, receipt, replacement (StockReason).
  * `user`: the back end user for `manual`, 0 for Consho itself.
+ * `withdrawalId` / `complaintId`: the withdrawal or complaint a return or a
+ * replacement delivery belongs to, 0 otherwise.
  */
 $GLOBALS['TL_DCA']['tl_consho_stock_movement'] = [
     'config' => [
@@ -28,7 +30,7 @@ $GLOBALS['TL_DCA']['tl_consho_stock_movement'] = [
         'operations' => ['!show'],
     ],
 
-    'palettes' => ['default' => '{movement_legend},createdAt,delta,quantityAfter,reason,orderId,withdrawalId,purchaseList,user'],
+    'palettes' => ['default' => '{movement_legend},createdAt,delta,quantityAfter,reason,orderId,withdrawalId,complaintId,purchaseList,user'],
 
     'fields' => [
         'id' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'autoincrement' => true]],
@@ -62,6 +64,12 @@ $GLOBALS['TL_DCA']['tl_consho_stock_movement'] = [
         ],
         'withdrawalId' => [
             'foreignKey' => 'tl_consho_withdrawal.number',
+            'inputType' => 'select',
+            'eval' => ['disabled' => true, 'includeBlankOption' => true, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
+        ],
+        'complaintId' => [
+            'foreignKey' => 'tl_consho_complaint.number',
             'inputType' => 'select',
             'eval' => ['disabled' => true, 'includeBlankOption' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],

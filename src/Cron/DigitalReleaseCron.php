@@ -60,6 +60,11 @@ class DigitalReleaseCron
                       FROM tl_consho_withdrawal_item wi
                       INNER JOIN tl_consho_withdrawal w ON w.id = wi.pid
                      WHERE wi.orderItem = i.id AND w.state = 'accepted'
+                ), 0) + COALESCE((
+                    -- RK-4: a decided rescission, like an accepted withdrawal.
+                    SELECT SUM(ci.rescindedQuantity)
+                      FROM tl_consho_complaint_item ci
+                     WHERE ci.orderItem = i.id
                 ), 0)",
         );
 

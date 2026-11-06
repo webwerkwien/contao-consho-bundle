@@ -72,6 +72,10 @@
                                     <br><a href="{{ m.withdrawal.url }}">{{ (lang.withdrawalLink|default('Widerruf %s'))|format(m.withdrawal.number) }}</a>
                                     {% if m.withdrawal.document %} · <a href="{{ m.withdrawal.document }}">{{ lang.documentLink|default('Beleg') }}</a>{% endif %}
                                 {% endif %}
+                                {% if m.complaint|default(null) %}
+                                    <br><a href="{{ m.complaint.url }}">{{ (lang.complaintLink|default('Reklamation %s'))|format(m.complaint.number) }}</a>
+                                    {% if m.complaint.document %} · <a href="{{ m.complaint.document }}">{{ lang.documentLink|default('Beleg') }}</a>{% endif %}
+                                {% endif %}
                             </td>
                             <td style="width:1%; text-align:right; white-space:nowrap; vertical-align:top">{{ m.amount }}</td>
                             <td style="width:1%; white-space:nowrap; vertical-align:top">{{ m.state }}</td>
@@ -129,6 +133,12 @@
                                             <a href="{{ withdrawal.url }}" class="tl_submit" style="display:inline-block; margin-right:1em">{{ (lang.toWithdrawal|default('Zum Widerruf %s'))|format(withdrawal.number) }}</a>
                                         {% endfor %}
                                         <p class="tl_help tl_tip">{{ lang.toWithdrawalHelp|default('') }}</p>
+                                    {% endif %}
+                                    {% if event.complaints|default([]) is not empty %}
+                                        {% for complaint in event.complaints %}
+                                            <a href="{{ complaint.url }}" class="tl_submit" style="display:inline-block; margin-right:1em">{{ (lang.toComplaint|default('Zur Reklamation %s'))|format(complaint.number) }}</a>
+                                        {% endfor %}
+                                        <p class="tl_help tl_tip">{{ lang.toComplaintHelp|default('') }}</p>
                                     {% endif %}
 
                                     {% if event.canRecord %}

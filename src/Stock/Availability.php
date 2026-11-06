@@ -127,7 +127,8 @@ class Availability
      *
      * Pending is what DigitalReleaseCron would still release: a product line
      * of an order neither cancelled nor anonymized, less its reported
-     * deliveries and its accepted withdrawals — a line that ended before its
+     * deliveries, its accepted withdrawals and its rescissions (RK-4; the
+     * quantity is set only once decided) — a line that ended before its
      * release takes no code. "Lizenz verlängern" lines (renews > 0) take none
      * either: the keys move on with the licence.
      *
@@ -161,6 +162,8 @@ class Availability
                         - COALESCE((SELECT SUM(wi.acceptedQuantity) FROM tl_consho_withdrawal_item wi
                                       JOIN tl_consho_withdrawal w ON w.id = wi.pid
                                      WHERE wi.orderItem = i.id AND w.state = 'accepted'), 0)
+                        - COALESCE((SELECT SUM(ci.rescindedQuantity) FROM tl_consho_complaint_item ci
+                                     WHERE ci.orderItem = i.id), 0)
                     ELSE 0 END AS open
                FROM tl_consho_order_item i
                JOIN tl_consho_order o ON o.id = i.pid

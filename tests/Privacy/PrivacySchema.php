@@ -31,7 +31,7 @@ final class PrivacySchema
         // reaches the anonymisation tests without a copy to update.
         foreach ([
             'tl_consho_order', 'tl_consho_order_item', 'tl_consho_document', 'tl_consho_payment', 'tl_consho_delivery',
-            'tl_consho_complaint', 'tl_consho_order_token', 'tl_consho_cart', 'tl_consho_cart_item', 'tl_consho_payment_attempt',
+            'tl_consho_complaint', 'tl_consho_complaint_item', 'tl_consho_order_token', 'tl_consho_cart', 'tl_consho_cart_item', 'tl_consho_payment_attempt',
         ] as $table) {
             DcaSchema::create($c, $table);
         }

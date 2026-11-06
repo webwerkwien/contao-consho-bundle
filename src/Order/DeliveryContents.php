@@ -37,13 +37,7 @@ final class DeliveryContents
 
         $digital = array_map(intval(...), $this->connection->fetchFirstColumn("SELECT id FROM tl_consho_order_item WHERE pid = ? AND lineType = 'product' AND kind <> 'physical'", [$orderId]));
 
-        $planned = array_map(strval(...), $this->connection->fetchAllKeyValue(
-            'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
-             INNER JOIN tl_consho_delivery d ON d.id = di.pid
-             WHERE d.pid = ? AND d.reportedAt IS NULL AND d.id <> ?
-             GROUP BY di.orderItem',
-            [$orderId, $deliveryId],
-        ));
+        $planned = $this->planned($orderId, $deliveryId);
 
         $available = [];
 
@@ -63,34 +57,80 @@ final class DeliveryContents
     }
 
     /**
-     * Whether a parcel can still concern this order: physical goods are still
-     * owed, or one already left — then a replacement may have to follow.
-     * False for an order withdrawn or cancelled before shipping, and for one
-     * without physical goods.
+     * Whether an ordinary parcel can still concern this order: physical goods
+     * are still owed. False for an order withdrawn, cancelled or shipped in
+     * full, and for one without physical goods. A replacement comes from its
+     * complaint (RK-5, S3: "Ersatzlieferung anlegen"), so an ordinary
+     * delivery can never stand in for one.
      */
     public function concernsParcels(int $orderId): bool
     {
         $balance = $orderId > 0 ? $this->balances->of($orderId) : null;
 
-        if (null === $balance) {
+        if (null === $balance || [] === $balance->openGoods) {
             return false;
         }
 
-        if ([] !== $balance->openGoods && [] !== $this->connection->fetchFirstColumn(
+        return [] !== $this->connection->fetchFirstColumn(
             "SELECT id FROM tl_consho_order_item WHERE pid = ? AND lineType = 'product' AND kind = 'physical' AND id IN (?)",
             [$orderId, array_keys($balance->openGoods)],
             [ParameterType::INTEGER, ArrayParameterType::INTEGER],
-        )) {
-            return true;
+        );
+    }
+
+    /**
+     * What a replacement delivery for this complaint can still carry (RK-5,
+     * S2): per order item the quantity decided for replacement (U8) less what
+     * the complaint's other replacement deliveries carry, reported or not.
+     *
+     * @return array<int, string> order item id => quantity, positive only
+     */
+    public function replaceable(int $complaintId, int $deliveryId): array
+    {
+        $sent = array_map(strval(...), $this->connection->fetchAllKeyValue(
+            'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
+             INNER JOIN tl_consho_delivery d ON d.id = di.pid
+             WHERE d.complaint = ? AND d.id <> ?
+             GROUP BY di.orderItem',
+            [$complaintId, $deliveryId],
+        ));
+
+        $left = [];
+
+        foreach ($this->connection->fetchAllKeyValue('SELECT orderItem, SUM(replacementQuantity) FROM tl_consho_complaint_item WHERE pid = ? GROUP BY orderItem', [$complaintId]) as $itemId => $quantity) {
+            $rest = BigDecimal::of((string) $quantity)->minus($sent[(int) $itemId] ?? '0');
+
+            if ($rest->isPositive()) {
+                $left[(int) $itemId] = (string) $rest;
+            }
         }
 
-        return false !== $this->connection->fetchOne(
-            "SELECT 1 FROM tl_consho_delivery_item di
+        return $left;
+    }
+
+    /**
+     * Whether the complaint's reported replacement deliveries cover every
+     * quantity decided for replacement (RK-5, S6; U8).
+     */
+    public function replaced(int $complaintId): bool
+    {
+        $shipped = array_map(strval(...), $this->connection->fetchAllKeyValue(
+            'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
              INNER JOIN tl_consho_delivery d ON d.id = di.pid
-             INNER JOIN tl_consho_order_item i ON i.id = di.orderItem
-             WHERE d.pid = ? AND d.reportedAt IS NOT NULL AND i.kind = 'physical' AND di.quantity > 0",
-            [$orderId],
-        );
+             WHERE d.complaint = ? AND d.reportedAt IS NOT NULL
+             GROUP BY di.orderItem',
+            [$complaintId],
+        ));
+
+        $complained = $this->connection->fetchAllKeyValue('SELECT orderItem, SUM(replacementQuantity) FROM tl_consho_complaint_item WHERE pid = ? GROUP BY orderItem', [$complaintId]);
+
+        foreach ($complained as $itemId => $quantity) {
+            if (BigDecimal::of((string) $quantity)->isGreaterThan($shipped[(int) $itemId] ?? '0')) {
+                return false;
+            }
+        }
+
+        return [] !== $complained;
     }
 
     /**
@@ -103,23 +143,17 @@ final class DeliveryContents
     public function account(int $orderId, int $deliveryId): array
     {
         $balance = $orderId > 0 ? $this->balances->of($orderId) : null;
-        [, $withdrawn] = (new WithdrawalCredit($this->connection))->of($orderId);
+        [, $withdrawn] = (new OrderCredit($this->connection))->of($orderId);
 
         $shipped = array_map(strval(...), $this->connection->fetchAllKeyValue(
             'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
              INNER JOIN tl_consho_delivery d ON d.id = di.pid
-             WHERE d.pid = ? AND d.reportedAt IS NOT NULL
+             WHERE d.pid = ? AND d.reportedAt IS NOT NULL AND d.complaint = 0
              GROUP BY di.orderItem',
             [$orderId],
         ));
 
-        $planned = array_map(strval(...), $this->connection->fetchAllKeyValue(
-            'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
-             INNER JOIN tl_consho_delivery d ON d.id = di.pid
-             WHERE d.pid = ? AND d.reportedAt IS NULL AND d.id <> ?
-             GROUP BY di.orderItem',
-            [$orderId, $deliveryId],
-        ));
+        $planned = $this->planned($orderId, $deliveryId);
 
         $items = [];
 
@@ -135,6 +169,23 @@ final class DeliveryContents
         }
 
         return ['cancelled' => null !== $balance && $balance->cancelled, 'items' => $items];
+    }
+
+    /**
+     * What the order's other ordinary drafts carry. A replacement draft
+     * (RK-5) replaces a defective piece and plans nothing that is owed.
+     *
+     * @return array<int, string> order item id => quantity
+     */
+    private function planned(int $orderId, int $deliveryId): array
+    {
+        return array_map(strval(...), $this->connection->fetchAllKeyValue(
+            'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
+             INNER JOIN tl_consho_delivery d ON d.id = di.pid
+             WHERE d.pid = ? AND d.reportedAt IS NULL AND d.id <> ? AND d.complaint = 0
+             GROUP BY di.orderItem',
+            [$orderId, $deliveryId],
+        ));
     }
 
     /**

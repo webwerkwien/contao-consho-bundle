@@ -31,7 +31,7 @@ class SoldOutMarksTest extends TestCase
 
         foreach ([
             'tl_consho_product', 'tl_consho_product_type', 'tl_consho_stock', 'tl_consho_stock_movement', 'tl_consho_key',
-            'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item',
+            'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item',
             'tl_consho_sold_out',
         ] as $table) {
             DcaSchema::create($this->connection, $table);

@@ -30,7 +30,7 @@ class OssReportTest extends TestCase
     {
         $this->connection = SqliteWithoutRowLocks::connection();
 
-        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_document', 'tl_consho_withdrawal'] as $table) {
+        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_document', 'tl_consho_withdrawal', 'tl_consho_complaint'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -122,6 +122,21 @@ class OssReportTest extends TestCase
     }
 
     /**
+     * A complaint's credit note (rescission or price reduction) corrects
+     * the sale like a withdrawal's.
+     */
+    public function testDieGutschriftEinerReklamationBerichtigtWieEinWiderruf(): void
+    {
+        $order = $this->order(1, paidAt: $this->at('2026-02-01'), items: [$this->goods('DE', 'DE', '19', '100.00')]);
+        $this->creditNote($order, $this->at('2026-08-15'), [
+            ['lineType' => 'product', 'kind' => 'physical', 'taxCountry' => 'DE', 'taxRate' => '19.0000', 'taxAmount' => '-3.8000', 'lineTotal' => '-23.8000', 'priceSource' => 'list', 'productName' => 'Tee'],
+        ], by: 'tl_consho_complaint');
+
+        self::assertSame([['country' => 'DE', 'period' => '2026-Q1', 'currency' => 'EUR', 'net' => '-20.00', 'tax' => '-3.80']], $this->report()->quarter($this->business(), 2026, 3)['b']);
+        self::assertSame(['EUR' => '80.00'], $this->report()->threshold($this->business(), 2026));
+    }
+
+    /**
      * Cancellation after prepayment in the same quarter: sale and correction
      * cancel out in part A. A cancellation before any payment is not a sale.
      */
@@ -183,7 +198,7 @@ class OssReportTest extends TestCase
         $this->creditNote($withdrawn, $this->at('2026-03-10'), $this->wholeTea(), 'cancellation');
 
         $reissued = $this->order(1, paidAt: $this->at('2026-02-01'), items: [$this->goods('DE', 'DE', '19', '100.00')]);
-        $this->creditNote($reissued, $this->at('2026-03-10'), $this->wholeTea(), 'cancellation', withdrawal: false);
+        $this->creditNote($reissued, $this->at('2026-03-10'), $this->wholeTea(), 'cancellation', by: null);
 
         $q1 = $this->report()->quarter($this->business(), 2026, 1);
 
@@ -352,16 +367,17 @@ class OssReportTest extends TestCase
     /**
      * @param list<array<string, string>> $lines
      */
-    private function creditNote(int $orderId, int $issuedAt, array $lines, string $type = 'creditNote', bool $withdrawal = true): void
+    private function creditNote(int $orderId, int $issuedAt, array $lines, string $type = 'creditNote', string|null $by = 'tl_consho_withdrawal'): void
     {
         $this->connection->insert('tl_consho_document', [
             'pid' => $orderId, 'tstamp' => 1, 'shop' => 1, 'type' => $type, 'documentNumber' => 'GS-0000'.$orderId, 'issuedAt' => $issuedAt,
             'payload' => json_encode(['items' => $lines], JSON_THROW_ON_ERROR),
         ]);
 
-        // The withdrawal that names it as its refund document (WithdrawalProcessing).
-        if ($withdrawal) {
-            $this->connection->insert('tl_consho_withdrawal', ['pid' => $orderId, 'tstamp' => 1, 'number' => 'W'.$orderId, 'refundDocument' => (int) $this->connection->lastInsertId()]);
+        // The withdrawal or complaint that names it as its refund document
+        // (WithdrawalProcessing, ComplaintProcessing).
+        if (null !== $by) {
+            $this->connection->insert($by, ['pid' => $orderId, 'tstamp' => 1, 'number' => 'W'.$orderId, 'refundDocument' => (int) $this->connection->lastInsertId()]);
         }
     }
 

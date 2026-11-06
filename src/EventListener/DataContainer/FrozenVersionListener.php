@@ -41,6 +41,7 @@ class FrozenVersionListener
         'tl_consho_payment',
         'tl_consho_delivery',
         'tl_consho_complaint',
+        'tl_consho_complaint_item',
         'tl_consho_entitlement',
         'tl_consho_voucher',
     ];
@@ -56,6 +57,7 @@ class FrozenVersionListener
     #[AsCallback(table: 'tl_consho_payment', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_delivery', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_complaint', target: 'config.onload')]
+    #[AsCallback(table: 'tl_consho_complaint_item', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_entitlement', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_voucher', target: 'config.onload')]
     public function refuseRestoreForm(): void
@@ -80,6 +82,7 @@ class FrozenVersionListener
     #[AsCallback(table: 'tl_consho_payment', target: 'config.onrestore_version')]
     #[AsCallback(table: 'tl_consho_delivery', target: 'config.onrestore_version')]
     #[AsCallback(table: 'tl_consho_complaint', target: 'config.onrestore_version')]
+    #[AsCallback(table: 'tl_consho_complaint_item', target: 'config.onrestore_version')]
     #[AsCallback(table: 'tl_consho_entitlement', target: 'config.onrestore_version')]
     #[AsCallback(table: 'tl_consho_voucher', target: 'config.onrestore_version')]
     public function refuseRestore(string $table, int $id, int $version, array $data): void

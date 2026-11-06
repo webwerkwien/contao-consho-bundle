@@ -6,6 +6,7 @@ use Contao\DataContainer;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Tests\Withdrawal\WithdrawalSchema;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\DeliveryListener;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryStateCalculator;
@@ -112,6 +113,31 @@ final class DeliveryListenerTest extends TestCase
         $dc->method('getCurrentRecord')->willReturn(['id' => 9, 'pid' => 1]);
 
         self::assertArrayNotHasKey(5, $this->listener()->orderItemOptions($dc));
+    }
+
+    /**
+     * RK-5, S8: a replacement delivery names its complaint and links to it;
+     * any other delivery says nothing of the kind.
+     */
+    public function testEineErsatzlieferungNenntIhreReklamationMitLink(): void
+    {
+        $GLOBALS['TL_LANG']['tl_consho_delivery']['replacementLabel'] = 'Ersatz zu %s';
+        $this->connection->insert('tl_consho_complaint', ['id' => 4, 'pid' => 7, 'number' => 'WEB-7-R1']);
+
+        $router = $this->createMock(UrlGeneratorInterface::class);
+        $router->expects(self::once())->method('generate')
+            ->with('contao_backend', ['do' => 'consho_order', 'table' => 'tl_consho_complaint', 'key' => 'processComplaint', 'id' => 4, 'pid' => 7])
+            ->willReturn('/contao?do=consho_order&key=processComplaint&id=4');
+
+        $listener = new DeliveryListener(
+            $this->connection,
+            new OrderBalanceReader($this->connection, new PaymentStateCalculator(), new DeliveryStateCalculator()),
+            new MoneyFormatter(),
+            router: $router,
+        );
+
+        self::assertSame('<a href="/contao?do=consho_order&amp;key=processComplaint&amp;id=4">Ersatz zu WEB-7-R1</a>', $listener->replacementMarker(['id' => 2, 'pid' => 7, 'complaint' => 4]));
+        self::assertSame('', $listener->replacementMarker(['id' => 1, 'pid' => 7, 'complaint' => 0]));
     }
 
     private function listener(): DeliveryListener

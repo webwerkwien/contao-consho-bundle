@@ -5,6 +5,99 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.6.0] – 2026-11-06
+
+### Added
+
+- **Complaints with a number, a state and items.** The complaint recorded at an order becomes a case of its own: a
+  number derived from the order number ("SHOP-00073-R1"), a state (open, in progress, resolved, rejected) and items
+  under "Positionen" — the goods lines it concerns, how many pieces and the defect, at most the quantity ordered and
+  each line once. Existing complaints are numbered by receipt and keep their text and dates. Run `contao:migrate`.
+  (Block Reklamation)
+- **Menu item "Reklamationen".** The complaints of all orders in one list, with state, number, order, customer,
+  receipt, remedy, items and resolution date, filterable by state and remedy. A complaint is still recorded under its
+  order. Back end users need the new module in their user group. (Block Reklamation)
+- **Page "Reklamation entscheiden".** The orange glass button in both complaint lists opens it. Without items it
+  offers only rejecting and closing, with a link to add them; the item list leads back with "Weiter zur
+  Entscheidung". Per item the page shows the complained quantity and "Lieferinformationen": the shipping date of
+  each reported delivery with the gap to the complaint's receipt (information only, no deadline), or "noch nicht
+  versendet", and a link to the order's deliveries. The decision is one form of tiles — "Rücktritt",
+  "Preisminderung", "Ersatz", "Verbesserung", "Ablehnen" and, before a decision, "Abschließen"; only the chosen tile
+  shows its inputs, and "Speichern" or "Speichern und schließen" carries it out. "Entscheidung zurücknehmen" reopens
+  the choice as long as nothing was carried out — no refund, no reported replacement delivery, no return; a
+  replacement delivery in draft is deleted with it. Carrying a decision out has its own sections: "Rücksendung"
+  (physical goods only, "ins Lager" as a switch, off by default since the goods are defective), "Erstattung" and
+  "Verbesserung". (Block Reklamation)
+- **Rescission and price reduction.** A rescission takes goods back by quantity — at most what was complained about
+  and has not gone back otherwise; a price reduction refunds a gross amount per line, at most what the line is still
+  worth. The decision counts at once wherever an accepted withdrawal counts. The refund books an invoice correction —
+  the cancellation only when it takes back everything still on the invoice and no other withdrawal or complaint
+  waits for its refund — and pays out through the payment provider with a confirmation, as for a withdrawal; what a
+  gift voucher paid goes back onto it first. The customer's return costs are no part of the refund; they are settled
+  outside the shop. The customer gets the refund mail with its own subject. Subscriptions cannot be rescinded, bought
+  vouchers take neither remedy; a service or digital line rescinded in full can no longer be used, and that is not
+  undone. A decided complaint can no longer be deleted, nor its items changed. (Block Reklamation)
+- **Replacement ("Ersatz").** For physical goods: per item the quantity to send again (new field
+  `replacementQuantity`, at most the complained quantity). Saving creates a delivery for the complaint, prefilled
+  with what is still to replace, and opens it; partial replacements are possible. Reporting it takes the goods out of
+  stock by the rule of the purchase (short stock that cannot be backordered refuses the report), issues no invoice
+  and changes neither the order's status nor its balance; the delivery note says "Ersatzlieferung zu Reklamation …",
+  and the customer gets the new mail "Ersatzlieferung" with the tracking number, without an attachment. Once that much
+  is reported, the complaint is resolved. A replacement delivery does not count as a delivery of the order anywhere —
+  not for the balance, the withdrawal period, the open work, the status checks, the OSS return or the invoice's
+  delivery date. Goods returned into stock may make up for what replacements took out, and cancelling the order gives
+  that back as well. The delivery list marks a replacement with a link to the complaint; the data export names the
+  complaint. Run `contao:migrate`. (Block Reklamation)
+- **Repair ("Verbesserung").** No quantities, no money, no document. A return can be recorded; the goods go back to
+  the customer, so it has no stock switch. "Verbesserung erledigt" resolves the complaint, final and without a mail.
+  Bought vouchers are excluded. (Block Reklamation)
+- **Rejecting a complaint.** "Ablehnen" takes a required reason and is final: the complaint is rejected and resolved
+  at once. Possible as long as the decision could still be changed — also after one, whose quantities, reductions and
+  replacement quantities it lifts; returned goods taken into stock go out again. Refused where a rescission has
+  already made a line unusable. The customer gets the new mail "Reklamation abgelehnt" with the reason verbatim. The
+  list "Reklamationen" shows "Ablehnung" under "Abwicklung". (Block Reklamation)
+- **Closing a complaint without a remedy.** "Abschließen" resolves it, final and without a mail, for instance when the
+  matter settled otherwise. A rescission or price reduction is closed by its refund, a replacement by the report of
+  its last quantity, a repair by "Verbesserung erledigt". (Block Reklamation)
+- **Withdrawals and complaints work together.** A rescission counts against the quantity a withdrawal may still take
+  back, and the reverse; returns into stock never exceed what was taken out. A price reduction is taken back in
+  proportion when the line is later withdrawn or rescinded, and the value compensation for a withdrawn service starts
+  from the reduced price; once a reduction is decided, a later withdrawal of everything corrects the invoice instead
+  of cancelling it. A refund made at the payment provider waits for a decided complaint as it waits for a
+  withdrawal: "Geldflüsse" leads to the complaint instead of recording it. (Block Reklamation)
+- **A complaint's refund shows as such.** The invoice correction names the complaint, "Geldflüsse" links the refund
+  to it, and the OSS return counts it as a correction. (Block Reklamation)
+- **Stock movements name the complaint.** The new field "Reklamation" (`complaintId`) points to the complaint whose
+  return or replacement delivery booked the movement, as "Widerruf" does for a withdrawal's return.
+  (Block Reklamation)
+
+### Changed
+
+- **The complaint mask.** "Worum es geht" is now called "Beanstandung". The field "Erledigt am" is gone: state and
+  resolution date change only on "Reklamation entscheiden"; dates already recorded stay and show in the lists.
+  (Block Reklamation)
+- **Complaints have their own icon, a cracked glass:** red in the order list's button "Reklamationen" when the order
+  has one, grey without (green on hover, since the first one is recorded there), and coloured by state in the list
+  "Reklamationen". (Block Reklamation)
+- **"Widerruf bearbeiten":** the section "Rücksendung" lists physical goods only, "ins Lager" is a switch, and the
+  sections fold like Contao's own. (Block Reklamation)
+- **"Neue Lieferung" at an order is offered only while physical goods are still open.** Replacements are created from
+  the complaint. (Block Reklamation)
+- **`DocumentIssuerInterface::correct()` takes an optional fifth argument** `$about` (`'withdrawal'` or
+  `'complaint'`). Own implementations of the interface need to add it. (Block Reklamation)
+- **The dashboard tile "Reklamationen" leads into the new list** and counts open and in-progress complaints; it is
+  shown with access to "Reklamationen" instead of "Bestellungen". (Block Reklamation)
+- **Data export, anonymisation and erasure cover the new complaint fields.** The export lists number, state, remedy
+  and items; anonymisation and erasure also empty the rejection reason and the defects. (Block Reklamation)
+
+### Fixed
+
+- **Start page findings about refunds and chargebacks point to "Geldflüsse".** They still named the former pages
+  "Zahlungen" and "Nachträge" ("Payments", "Follow-ups" in English), which the order list no longer shows.
+- **A withdrawal's refund no longer cancels the invoice in place of another withdrawal.** When two accepted
+  withdrawals together took back everything, the refund of the first cancelled the whole invoice, the second one's
+  lines included. It now issues a correction for its own lines, and so does the second.
+
 ## [0.5.0] – 2026-11-05
 
 ### Changed

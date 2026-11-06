@@ -283,6 +283,33 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('<b>x</b>', $html);
     }
 
+    /**
+     * RK-5, S5: the replacement's own mail — complaint, contents, tracking
+     * number, free of charge, no invoice.
+     */
+    public function testErsatzlieferungNenntReklamationUndSendungsnummer(): void
+    {
+        self::assertTrue($this->mail()->replacementShipped(7, [
+            'carrier' => 'Post AT',
+            'trackingNumber' => 'CA987654321AT',
+            'items' => [['quantity' => '1', 'name' => 'Wanderstock']],
+            'complaint' => 'WEB-00054-R1',
+        ], 'https://shop.test/x'));
+
+        self::assertCount(1, $this->transport->sent);
+        $mail = $this->transport->sent[0];
+        $html = (string) $mail->getHtmlBody();
+
+        self::assertSame('Ersatzlieferung zu Ihrer Bestellung WEB-00054', $mail->getSubject());
+        self::assertStringContainsString('zu Ihrer Reklamation WEB-00054-R1', $html);
+        self::assertStringContainsString('1 × Wanderstock', $html);
+        self::assertStringContainsString('Sendungsnummer (Post AT): CA987654321AT', $html);
+        self::assertStringContainsString('kostenlos', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+        self::assertStringNotContainsString('Rechnung', $html);
+        self::assertSame([], $mail->getAttachments());
+    }
+
     public function testDieLetzteSendungOhneSendungsnummerMitRechnung(): void
     {
         $this->mail()->shipped(7, ['carrier' => '', 'trackingNumber' => '', 'items' => [['quantity' => '1', 'name' => 'Rucksack']], 'complete' => true], 16, 'https://shop.test/x');
@@ -420,6 +447,23 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('CONSHO.', $html);
     }
 
+    /** RK-6, A3: the operator's reason, verbatim and escaped. */
+    public function testReklamationAbgelehntMitDerBegruendungDesBetreibers(): void
+    {
+        self::assertTrue($this->mail()->complaintRejected(7, 'WEB-00054-R1', "Kein Mangel erkennbar.\n<i>Gruß</i>", 'https://shop.test/x'));
+
+        self::assertCount(1, $this->transport->sent, 'keine Kopie: der Betreiber hat abgelehnt');
+
+        $mail = $this->transport->sent[0];
+        $html = (string) $mail->getHtmlBody();
+
+        self::assertSame('Ihre Reklamation WEB-00054-R1 zur Bestellung WEB-00054', $mail->getSubject());
+        self::assertStringContainsString('Kein Mangel erkennbar.<br />', $html);
+        self::assertStringContainsString('&lt;i&gt;Gruß&lt;/i&gt;', $html);
+        self::assertStringContainsString('https://shop.test/x', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
     /** D-3, F4: refund with the document attached. */
     public function testErstattungMitBelegImAnhang(): void
     {
@@ -433,6 +477,28 @@ final class OrderEventMailTest extends TestCase
         self::assertStringContainsString('Die Belege finden Sie im Anhang: RE-00016.', $html);
         self::assertCount(1, $mail->getAttachments());
         self::assertStringNotContainsString('CONSHO.', $html);
+    }
+
+    /**
+     * RK-4: a complaint's refund in the same mail — its own subject and
+     * opening per remedy.
+     */
+    public function testErstattungEinerReklamation(): void
+    {
+        self::assertTrue($this->mail()->complaintRefundBooked(7, 'WEB-00054-R1', 'rescission', '30,00 €', '30,00 €', [16], 'https://shop.test/x'));
+        self::assertTrue($this->mail()->complaintRefundBooked(7, 'WEB-00054-R2', 'reduction', '10,00 €', '10,00 €', [], ''));
+
+        [$rescission, $reduction] = $this->transport->sent;
+        $html = (string) $rescission->getHtmlBody();
+
+        self::assertSame('Ihre Reklamation WEB-00054-R1 zur Bestellung WEB-00054: Rücktritt und Erstattung', $rescission->getSubject());
+        self::assertStringContainsString('zu Ihrer Reklamation WEB-00054-R1 zur Bestellung WEB-00054 nehmen wir', $html);
+        self::assertStringContainsString('Die Belege finden Sie im Anhang: RE-00016.', $html);
+        self::assertStringNotContainsString('Widerruf', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+
+        self::assertSame('Ihre Reklamation WEB-00054-R2 zur Bestellung WEB-00054: Preisminderung', $reduction->getSubject());
+        self::assertStringContainsString('mindern wir den Preis', (string) $reduction->getHtmlBody());
     }
 
     public function testErstattungOhneDenBelegDenDasModulSchickt(): void

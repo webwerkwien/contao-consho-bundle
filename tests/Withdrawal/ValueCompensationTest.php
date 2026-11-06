@@ -27,7 +27,7 @@ final class ValueCompensationTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_order', 'tl_consho_order_item', 'tl_consho_subscription', 'tl_consho_entitlement', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_delivery', 'tl_consho_delivery_item'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_order_item', 'tl_consho_subscription', 'tl_consho_entitlement', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_complaint', 'tl_consho_complaint_item'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -115,6 +115,31 @@ final class ValueCompensationTest extends TestCase
         self::assertSame('30.00', (new ValueCompensation($this->connection))->proposal(9)['amount']);
     }
 
+    /**
+     * RK-7 (V1): a price reduction decided before the withdrawal lowered what
+     * the line cost; the units withdrawn take their share of it along, so the
+     * proposal starts from the reduced price.
+     */
+    public function testEineFruehereMinderungSenktDenVorschlag(): void
+    {
+        $this->reduce(6, self::START + 2 * self::DAY);
+        $this->connection->update('tl_consho_withdrawal', ['decidedAt' => self::START + 7 * self::DAY], ['id' => 9]);
+
+        $proposal = (new ValueCompensation($this->connection))->proposal(9);
+
+        // (30.00 − 6.00) × 7 / 30
+        self::assertSame('5.60', $proposal['amount']);
+        self::assertSame('24.00', $proposal['lines'][0]['gross']);
+    }
+
+    public function testEineSpaetereMinderungZaehltNicht(): void
+    {
+        $this->reduce(6, self::START + 8 * self::DAY);
+        $this->connection->update('tl_consho_withdrawal', ['decidedAt' => self::START + 7 * self::DAY], ['id' => 9]);
+
+        self::assertSame('7.00', (new ValueCompensation($this->connection))->proposal(9)['amount']);
+    }
+
     public function testOhneAboKeinePeriode(): void
     {
         $this->connection->delete('tl_consho_subscription', ['id' => 40]);
@@ -123,5 +148,11 @@ final class ValueCompensationTest extends TestCase
 
         self::assertSame('0.00', $proposal['amount']);
         self::assertSame('noPeriod', $proposal['lines'][0]['reason']);
+    }
+
+    private function reduce(int $amount, int $decidedAt): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => 7, 'number' => 'WEB-00007-R1', 'state' => 'resolved', 'remedy' => 'reduction', 'decidedAt' => $decidedAt]);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 5, 'orderItem' => 1, 'quantity' => '1', 'reduction' => (string) $amount]);
     }
 }

@@ -229,8 +229,9 @@ final class DashboardBackendController
             $tiles[] = $this->tile($lang['refundOpen'] ?? 'Erstattungen', $work->refundOpen, $this->url('consho_withdrawal', OpenWorkReader::REFUND_OPEN, $shop), $this->due($work->refundDue, $lang, $language));
         }
 
-        if ($this->may('consho_order') && $work->complaints > 0) {
-            $tiles[] = $this->tile($lang['complaints'] ?? 'Reklamationen', $work->complaints, $this->url('consho_order', OpenWorkReader::COMPLAINT, $shop));
+        // Block Reklamation: into the list "Reklamationen", like the withdrawal tiles.
+        if ($this->may('consho_complaint') && $work->complaints > 0) {
+            $tiles[] = $this->tile($lang['complaints'] ?? 'Reklamationen', $work->complaints, $this->url('consho_complaint', OpenWorkReader::COMPLAINT, $shop));
         }
 
         // Geldflüsse G4: rare like complaints, so only when there is one.

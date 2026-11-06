@@ -10,6 +10,7 @@ $GLOBALS['TL_LANG']['MOD']['consho_dashboard'] = ['Dashboard', 'What is open, no
 $GLOBALS['TL_LANG']['MOD']['consho_order'] = ['Orders', 'Orders, items, payments and deliveries.'];
 $GLOBALS['TL_LANG']['MOD']['consho_subscription'] = ['Subscriptions', 'Subscriptions with their terms at the purchase and their periods.'];
 $GLOBALS['TL_LANG']['MOD']['consho_withdrawal'] = ['Withdrawals', 'All withdrawals with their state and refund deadline.'];
+$GLOBALS['TL_LANG']['MOD']['consho_complaint'] = ['Complaints', 'All complaints with their state and remedy.'];
 $GLOBALS['TL_LANG']['MOD']['consho_voucher'] = ['Gift vouchers', 'Vouchers with balance and bookings, issued by hand.'];
 $GLOBALS['TL_LANG']['MOD']['consho_stock'] = ['Stock', 'Articles with limited stock, purchasing and purchase lists.'];
 $GLOBALS['TL_LANG']['MOD']['consho_customer'] = ['Customers', 'Members with an order, guests and the base group per shop.'];

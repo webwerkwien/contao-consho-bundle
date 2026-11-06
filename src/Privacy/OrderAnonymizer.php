@@ -21,7 +21,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *    birth, VAT ID and VIES identifier, and the link to the account;
  *  - the same fields in every document's snapshot;
  *  - withdrawals (name, e-mail, the customer's and the operator's texts),
- *    complaint notes, payment references, tracking numbers;
+ *    complaint notes, rejection reasons and defects, payment references,
+ *    tracking numbers;
  *  - the versions of these records — Contao keeps the whole row in
  *    tl_version, and a version is a copy;
  *  - the order's tokens (a link from an old mail would open an empty order)
@@ -135,7 +136,17 @@ class OrderAnonymizer
             }
 
             $this->connection->executeStatement("UPDATE tl_consho_withdrawal SET name = '', email = '', part = NULL, message = NULL, reason = NULL, tstamp = ? WHERE pid = ?", [$now, $orderId]);
-            $this->connection->executeStatement('UPDATE tl_consho_complaint SET note = NULL, tstamp = ? WHERE pid = ?', [$now, $orderId]);
+            // Block Reklamation: the lines of the complaints, through their complaint.
+            $childIds['tl_consho_complaint_item'] = array_map('intval', $this->connection->fetchFirstColumn(
+                'SELECT ci.id FROM tl_consho_complaint_item ci INNER JOIN tl_consho_complaint c ON c.id = ci.pid WHERE c.pid = ?',
+                [$orderId],
+            ));
+
+            $this->connection->executeStatement('UPDATE tl_consho_complaint SET note = NULL, rejectReason = NULL, tstamp = ? WHERE pid = ?', [$now, $orderId]);
+            $this->connection->executeStatement(
+                'UPDATE tl_consho_complaint_item SET defect = NULL, tstamp = ? WHERE pid IN (SELECT id FROM tl_consho_complaint WHERE pid = ?)',
+                [$now, $orderId],
+            );
             $this->connection->executeStatement("UPDATE tl_consho_payment SET reference = '', tstamp = ? WHERE pid = ?", [$now, $orderId]);
             $this->connection->executeStatement("UPDATE tl_consho_delivery SET trackingNumber = '', tstamp = ? WHERE pid = ?", [$now, $orderId]);
 

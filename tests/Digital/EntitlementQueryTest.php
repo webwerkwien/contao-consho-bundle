@@ -23,7 +23,7 @@ final class EntitlementQueryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_order', 'tl_consho_order_item', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_entitlement'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_order_item', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item', 'tl_consho_entitlement'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -82,6 +82,19 @@ final class EntitlementQueryTest extends TestCase
         self::assertTrue($this->query()->isActive(7, self::NOW), 'noch nicht entschieden');
 
         $this->connection->update('tl_consho_withdrawal', ['state' => 'accepted'], ['id' => 1]);
+
+        self::assertFalse($this->query()->isActive(7, self::NOW));
+    }
+
+    public function testEinFestgelegterVollerRuecktrittBeendetDieZeile(): void
+    {
+        // RK-4: the rescinded quantity is set only once the rescission is decided.
+        $this->connection->insert('tl_consho_complaint', ['id' => 1, 'pid' => 6, 'number' => 'WEB-00006-R1', 'remedy' => 'rescission', 'decidedAt' => 1_500, 'state' => 'inProgress']);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 1, 'orderItem' => 11, 'quantity' => '1', 'rescindedQuantity' => '0']);
+
+        self::assertTrue($this->query()->isActive(7, self::NOW), 'nichts zurückgetreten');
+
+        $this->connection->update('tl_consho_complaint_item', ['rescindedQuantity' => '1'], ['pid' => 1]);
 
         self::assertFalse($this->query()->isActive(7, self::NOW));
     }

@@ -41,7 +41,7 @@ final class RefundPayoutForeignTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt', 'tl_consho_provider_event', 'tl_consho_withdrawal'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_payment', 'tl_consho_payment_attempt', 'tl_consho_provider_event', 'tl_consho_withdrawal', 'tl_consho_complaint'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -77,6 +77,25 @@ final class RefundPayoutForeignTest extends TestCase
      * there — nothing recorded, the event stays open. A refunded or rejected
      * withdrawal does not hold it up.
      */
+    /**
+     * RK-4: the same while a decided rescission or price reduction waits.
+     */
+    public function testNotRecordedWhileAComplaintWaitsForItsRefund(): void
+    {
+        $event = $this->event('re_x', '20.0000');
+        // Undecided and rejected complaints do not hold it up.
+        $this->connection->insert('tl_consho_complaint', ['id' => 1, 'pid' => 1, 'number' => 'B-1-R1', 'remedy' => 'rescission']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 2, 'pid' => 1, 'number' => 'B-1-R2', 'remedy' => 'reduction', 'decidedAt' => self::NOW - 20, 'state' => 'rejected']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 3, 'pid' => 1, 'number' => 'B-1-R3', 'remedy' => 'reduction', 'decidedAt' => self::NOW - 20, 'state' => 'inProgress']);
+
+        self::assertSame('complaintOpen', $this->payout()->recordForeign($event, self::NOW));
+        self::assertSame('open', $this->connection->fetchOne('SELECT state FROM tl_consho_provider_event WHERE id = ?', [$event]));
+
+        $this->connection->update('tl_consho_complaint', ['refundedAt' => self::NOW - 10], ['id' => 3]);
+
+        self::assertNull($this->payout()->recordForeign($event, self::NOW));
+    }
+
     public function testNotRecordedWhileAWithdrawalWaitsForItsRefund(): void
     {
         $event = $this->event('re_x', '20.0000');

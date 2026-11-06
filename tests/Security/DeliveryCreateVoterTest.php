@@ -68,14 +68,15 @@ final class DeliveryCreateVoterTest extends TestCase
     }
 
     /**
-     * Shipped in full: a replacement may still have to follow.
+     * RK-5, S3: shipped in full, nothing is owed — a replacement comes from
+     * the complaint ("Ersatzlieferung anlegen"), not from "Neue Lieferung".
      */
-    public function testNachDemVersandBleibtEinErsatzMoeglich(): void
+    public function testNachDemVollstaendigenVersandKeinPaketMehr(): void
     {
         $this->connection->insert('tl_consho_delivery', ['id' => 3, 'pid' => 7, 'reportedAt' => 100]);
         $this->connection->insert('tl_consho_delivery_item', ['pid' => 3, 'orderItem' => 1, 'quantity' => '1']);
 
-        self::assertSame(VoterInterface::ACCESS_ABSTAIN, $this->vote());
+        self::assertSame(VoterInterface::ACCESS_DENIED, $this->vote());
     }
 
     private function vote(): int

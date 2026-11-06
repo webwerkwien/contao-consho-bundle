@@ -55,5 +55,11 @@ $GLOBALS['TL_DCA']['tl_consho_delivery_item'] = [
             'eval' => ['mandatory' => true, 'rgxp' => 'digit', 'tl_class' => 'w50'],
             'sql' => ['type' => 'decimal', 'precision' => 10, 'scale' => 4, 'default' => '0.0000'],
         ],
+        // RK-5: what a replacement delivery took out of stock when it was
+        // reported. Raises the cap for goods coming back (StockReturn); 0 for
+        // ordinary deliveries, whose goods the purchase click booked.
+        'stockBooked' => [
+            'sql' => ['type' => 'decimal', 'precision' => 10, 'scale' => 4, 'default' => '0.0000'],
+        ],
     ],
 ];

@@ -32,7 +32,7 @@ class TaxReportBackendControllerTest extends TestCase
     {
         $this->connection = SqliteWithoutRowLocks::connection();
 
-        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_document', 'tl_consho_withdrawal'] as $table) {
+        foreach (['tl_consho_shop', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_document', 'tl_consho_withdrawal', 'tl_consho_complaint'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 

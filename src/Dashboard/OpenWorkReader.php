@@ -126,11 +126,12 @@ final class OpenWorkReader implements ResetInterface
             }
         }
 
+        // Block Reklamation: open and in progress, by state.
         foreach ($this->connection->fetchAllKeyValue(
-            'SELECT o.shop, COUNT(*) FROM tl_consho_complaint c
+            "SELECT o.shop, COUNT(*) FROM tl_consho_complaint c
                INNER JOIN tl_consho_order o ON o.id = c.pid
-              WHERE c.resolvedAt IS NULL OR c.resolvedAt = 0
-              GROUP BY o.shop',
+              WHERE c.state IN ('open', 'inProgress')
+              GROUP BY o.shop",
         ) as $shop => $count) {
             if (isset($work[(int) $shop])) {
                 $work[(int) $shop]->complaints = (int) $count;
@@ -155,7 +156,8 @@ final class OpenWorkReader implements ResetInterface
      *
      * @param int $shop 0 for every shop
      *
-     * @return list<int> order ids, withdrawal ids for the two withdrawal filters
+     * @return list<int> order ids; withdrawal ids for the two withdrawal
+     *                   filters, complaint ids for `complaint`
      */
     public function ids(string $filter, int $now, int $shop = 0): array
     {
@@ -163,9 +165,10 @@ final class OpenWorkReader implements ResetInterface
             self::UNPAID => $this->orderIds($shop, static fn (array $o): bool => $o['unpaid']),
             self::OVERDUE => $this->orderIds($shop, static fn (array $o): bool => $o['unpaid'] && $o['dueAt'] > 0 && $o['dueAt'] < $now),
             self::TO_DELIVER => $this->orderIds($shop, static fn (array $o): bool => $o['toDeliver']),
+            // Block Reklamation: the complaints themselves, for the list "Reklamationen".
             self::COMPLAINT => $this->column(
-                'SELECT DISTINCT c.pid FROM tl_consho_complaint c INNER JOIN tl_consho_order o ON o.id = c.pid
-                  WHERE (c.resolvedAt IS NULL OR c.resolvedAt = 0)',
+                "SELECT c.id FROM tl_consho_complaint c INNER JOIN tl_consho_order o ON o.id = c.pid
+                  WHERE c.state IN ('open', 'inProgress')",
                 [],
                 $shop,
             ),
@@ -254,7 +257,7 @@ final class OpenWorkReader implements ResetInterface
                            AND i.quantity > (SELECT COALESCE(SUM(di.quantity), 0)
                                                FROM tl_consho_delivery_item di
                                               INNER JOIN tl_consho_delivery d ON d.id = di.pid
-                                              WHERE di.orderItem = i.id AND d.reportedAt IS NOT NULL)))
+                                              WHERE di.orderItem = i.id AND d.reportedAt IS NOT NULL AND d.complaint = 0)))
               ORDER BY o.id",
             // Mirrors OrderLineType::stored(): an empty or unknown type counts
             // as goods there, so it must not drop out here.

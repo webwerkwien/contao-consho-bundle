@@ -17,11 +17,11 @@ class DigitalReleaseCronTest extends TestCase
     public function testFragtNurOffeneDigitaleBestellungen(): void
     {
         $c = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
-        foreach (['tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_delivery_item'] as $table) {
+        foreach (['tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item', 'tl_consho_delivery_item'] as $table) {
             DcaSchema::create($c, $table);
         }
 
-        foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9] as $id) {
+        foreach ([1, 2, 3, 4, 5, 6, 7, 8, 9, 11] as $id) {
             // orderNumber is unique in the DCA, as every real order has one.
             $c->insert('tl_consho_order', ['id' => $id, 'orderNumber' => 'WEB-'.$id]);
         }
@@ -47,6 +47,10 @@ class DigitalReleaseCronTest extends TestCase
         $c->insert('tl_consho_order_item', ['id' => 90, 'pid' => 9, 'kind' => 'digital', 'quantity' => 2]); // one withdrawn
         $c->insert('tl_consho_withdrawal', ['id' => 9, 'pid' => 9, 'number' => 'W9', 'state' => 'accepted']);
         $c->insert('tl_consho_withdrawal_item', ['pid' => 9, 'orderItem' => 90, 'quantity' => 1, 'acceptedQuantity' => 1]);
+        // RK-4: a decided rescission counts like an accepted withdrawal.
+        $c->insert('tl_consho_order_item', ['id' => 110, 'pid' => 11, 'kind' => 'digital', 'quantity' => 2]); // fully rescinded
+        $c->insert('tl_consho_complaint', ['id' => 11, 'pid' => 11, 'number' => 'WEB-11-R1', 'remedy' => 'rescission', 'decidedAt' => 1]);
+        $c->insert('tl_consho_complaint_item', ['pid' => 11, 'orderItem' => 110, 'quantity' => 2, 'rescindedQuantity' => 2]);
 
         $c->insert('tl_consho_delivery', ['id' => 1, 'pid' => 3, 'reportedAt' => 100]);
         $c->insert('tl_consho_delivery_item', ['pid' => 1, 'orderItem' => 30, 'quantity' => 1]);
@@ -70,6 +74,6 @@ class DigitalReleaseCronTest extends TestCase
         (new DigitalReleaseCron($c, $releases, clock: static fn (): int => 500))();
 
         sort($asked);
-        self::assertSame([[1, 500, true], [6, 500, true], [9, 500, true]], $asked, 'und nach dem Fehler bei 1 trotzdem 6; der Cron lässt „bereit" schicken; 8 ist ganz widerrufen');
+        self::assertSame([[1, 500, true], [6, 500, true], [9, 500, true]], $asked, 'und nach dem Fehler bei 1 trotzdem 6; der Cron lässt „bereit" schicken; 8 ist ganz widerrufen, 11 ganz zurückgetreten');
     }
 }

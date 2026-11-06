@@ -9,7 +9,8 @@ use Webwerkwien\ContaoConshoBundle\Catalog\CatalogCacheTags;
 /**
  * Goods back into stock (Block G, G9): a cancelled order, a returned
  * withdrawal line. Never more than the purchase click took for that line
- * (tl_consho_order_item.stockBooked) — an order from before stock was kept
+ * (tl_consho_order_item.stockBooked), plus what replacement deliveries took
+ * (tl_consho_delivery_item.stockBooked) — an order from before stock was kept
  * gives nothing back, and the two ways back (stockCancelled, restockedQuantity)
  * cannot add up to more than went out.
  *
@@ -38,7 +39,10 @@ class StockReturn
      * Once, from where `cancelledAt` is set (ContaoOrderStatusWriter,
      * OrderStatusListener) — that mark is set only once. Gives back what the
      * line took, less what a return already brought back and what an earlier
-     * call gave; the amount goes to stockCancelled (G).
+     * call gave; the amount goes to stockCancelled (G). What replacement
+     * deliveries took for the line counts as taken (RK-5), as at a return —
+     * otherwise a return of a replaced piece would shrink what the
+     * cancellation gives back.
      *
      * $user: the backend user who set the cancelling status; 0 when Consho
      * did (a payment provider's cancellation) — G-8.
@@ -47,7 +51,9 @@ class StockReturn
     {
         $lines = $this->connection->fetchAllAssociative(
             "SELECT i.id, i.product, i.stockBooked, i.stockCancelled,
-                    (SELECT COALESCE(SUM(w.restockedQuantity), 0) FROM tl_consho_withdrawal_item w WHERE w.orderItem = i.id) AS restocked
+                    (SELECT COALESCE(SUM(d.stockBooked), 0) FROM tl_consho_delivery_item d WHERE d.orderItem = i.id) AS replaced,
+                    (SELECT COALESCE(SUM(w.restockedQuantity), 0) FROM tl_consho_withdrawal_item w WHERE w.orderItem = i.id)
+                    + (SELECT COALESCE(SUM(c.restockedQuantity), 0) FROM tl_consho_complaint_item c WHERE c.orderItem = i.id) AS restocked
                FROM tl_consho_order_item i
               WHERE i.pid = ? AND i.lineType = 'product' AND i.stockBooked > 0",
             [$orderId],
@@ -55,6 +61,7 @@ class StockReturn
 
         foreach ($lines as $line) {
             $back = BigDecimal::of(StockBooking::scaled($line['stockBooked']))
+                ->plus(BigDecimal::of(StockBooking::scaled($line['replaced'])))
                 ->minus(BigDecimal::of(StockBooking::scaled($line['restocked'])))
                 ->minus(BigDecimal::of(StockBooking::scaled($line['stockCancelled'])));
             $stockId = $this->stockOf((int) $line['product']);
@@ -108,12 +115,28 @@ class StockReturn
      */
     public function forWithdrawalItem(int $withdrawalItemId, bool $restock, int $now, int $user = 0): string
     {
+        return $this->forReturnLine('tl_consho_withdrawal_item', $withdrawalItemId, $restock, $now, $user);
+    }
+
+    /**
+     * The same for a complaint line's return (RK-4, R6): defective goods go
+     * back into stock only when the operator ticks it.
+     *
+     * @return string the quantity now restocked for this complaint line
+     */
+    public function forComplaintItem(int $complaintItemId, bool $restock, int $now, int $user = 0): string
+    {
+        return $this->forReturnLine('tl_consho_complaint_item', $complaintItemId, $restock, $now, $user);
+    }
+
+    private function forReturnLine(string $table, int $rowId, bool $restock, int $now, int $user): string
+    {
         $row = $this->connection->fetchAssociative(
-            'SELECT w.pid, w.returnedQuantity, w.restockedQuantity, i.pid AS orderId, i.product, i.stockBooked, i.stockCancelled
-               FROM tl_consho_withdrawal_item w
-               JOIN tl_consho_order_item i ON i.id = w.orderItem
-              WHERE w.id = ?',
-            [$withdrawalItemId],
+            "SELECT r.pid, r.orderItem, r.returnedQuantity, r.restockedQuantity, i.pid AS orderId, i.product, i.stockBooked, i.stockCancelled
+               FROM $table r
+               JOIN tl_consho_order_item i ON i.id = r.orderItem
+              WHERE r.id = ?",
+            [$rowId],
         );
 
         if (false === $row) {
@@ -126,21 +149,56 @@ class StockReturn
         // (G): before it the cap is what the line took,
         // after it what the return held back then. An untick after the
         // cancellation still takes the damaged piece out again.
-        $cap = BigDecimal::of(StockBooking::scaled($row['stockBooked']))->minus(BigDecimal::of(StockBooking::scaled($row['stockCancelled'])));
-        $target = $restock ? BigDecimal::min($returned, $cap) : BigDecimal::zero();
+        //
+        // RK-4 (spec 3.4): one cap for every return of the order item, the
+        // withdrawals' and the complaints' together — what the others
+        // brought back is no longer this one's to give.
+        //
+        // RK-5 (spec 3.4): a replacement delivery took another piece out, so
+        // one more may come back.
+        $cap = BigDecimal::of(StockBooking::scaled($row['stockBooked']))
+            ->plus(StockBooking::scaled($this->connection->fetchOne(
+                'SELECT COALESCE(SUM(stockBooked), 0) FROM tl_consho_delivery_item WHERE orderItem = ?',
+                [(int) $row['orderItem']],
+            )))
+            ->minus(BigDecimal::of(StockBooking::scaled($row['stockCancelled'])))
+            ->minus($this->restockedByOthers((int) $row['orderItem'], $table, $rowId));
+        $target = $restock ? BigDecimal::max(BigDecimal::zero(), BigDecimal::min($returned, $cap)) : BigDecimal::zero();
         $delta = $target->minus($already);
         $stockId = $this->stockOf((int) $row['product']);
 
         if (null === $stockId || $delta->isZero()) {
-            $this->connection->update('tl_consho_withdrawal_item', ['restock' => $restock ? 1 : 0], ['id' => $withdrawalItemId]);
+            $this->connection->update($table, ['restock' => $restock ? 1 : 0], ['id' => $rowId]);
 
             return (string) $already->toScale(4);
         }
 
-        $this->booking->book($stockId, $delta, StockReason::Return, $now, $user, (int) $row['orderId'], (int) $row['pid']);
-        $this->connection->update('tl_consho_withdrawal_item', ['restockedQuantity' => (string) $target->toScale(4), 'restock' => $restock ? 1 : 0], ['id' => $withdrawalItemId]);
+        // The movement names the withdrawal or the complaint it belongs to.
+        $withdrawalId = 'tl_consho_withdrawal_item' === $table ? (int) $row['pid'] : 0;
+        $complaintId = 'tl_consho_complaint_item' === $table ? (int) $row['pid'] : 0;
+
+        $this->booking->book($stockId, $delta, StockReason::Return, $now, $user, (int) $row['orderId'], $withdrawalId, complaintId: $complaintId);
+        $this->connection->update($table, ['restockedQuantity' => (string) $target->toScale(4), 'restock' => $restock ? 1 : 0], ['id' => $rowId]);
 
         return (string) $target->toScale(4);
+    }
+
+    /**
+     * What the other return lines of an order item brought back into stock.
+     */
+    private function restockedByOthers(int $orderItem, string $table, int $rowId): BigDecimal
+    {
+        $sum = BigDecimal::zero();
+
+        foreach (['tl_consho_withdrawal_item', 'tl_consho_complaint_item'] as $other) {
+            $self = $other === $table ? $rowId : 0;
+            $sum = $sum->plus(StockBooking::scaled($this->connection->fetchOne(
+                "SELECT COALESCE(SUM(restockedQuantity), 0) FROM $other WHERE orderItem = ? AND id <> ?",
+                [$orderItem, $self],
+            )));
+        }
+
+        return $sum;
     }
 
     private function stockOf(int $article): int|null

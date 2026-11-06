@@ -129,7 +129,19 @@ class InvoiceRendererTest extends TestCase
 
             self::assertStringContainsString('<th scope="row">'.$number.'</th><td>GS-00001</td>', $html);
             self::assertStringContainsString('<th scope="row">'.$date.'</th>', $html);
+            self::assertStringContainsString('<td>WEB-00042-W1</td>', $html);
         }
+
+        // RK-4: a complaint's correction names the complaint.
+        $GLOBALS['TL_LANG'] = [];
+        require __DIR__.'/../../contao/languages/de/default.php';
+        $complaint = (new DocumentPayloadBuilder())->correctionOf(self::versionTwo(), 'RE-00007', 1790000000, [$line], 'WEB-00042-R1', [], 'complaint');
+        $html = $this->renderer()->html([
+            'id' => 4, 'type' => 'creditNote', 'documentNumber' => 'GS-00002', 'issuedAt' => 1790100000, 'orderLanguage' => 'de',
+            'payload' => json_encode($complaint, JSON_THROW_ON_ERROR),
+        ])['html'];
+        self::assertStringContainsString('<th scope="row">Reklamation</th><td>WEB-00042-R1</td>', $html);
+        self::assertStringNotContainsString('Widerruf', $html);
 
         $GLOBALS['TL_LANG'] = [];
         require __DIR__.'/../../contao/languages/de/default.php';

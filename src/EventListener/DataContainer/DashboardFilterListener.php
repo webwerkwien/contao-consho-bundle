@@ -34,8 +34,9 @@ final class DashboardFilterListener
 {
     /** Filters each module accepts — another value is ignored, not trusted. */
     private const FILTERS = [
-        'consho_order' => ['tl_consho_order', [OpenWorkReader::UNPAID, OpenWorkReader::OVERDUE, OpenWorkReader::TO_DELIVER, OpenWorkReader::COMPLAINT, OpenWorkReader::OVERPAID]],
+        'consho_order' => ['tl_consho_order', [OpenWorkReader::UNPAID, OpenWorkReader::OVERDUE, OpenWorkReader::TO_DELIVER, OpenWorkReader::OVERPAID]],
         'consho_withdrawal' => ['tl_consho_withdrawal', [OpenWorkReader::UNDECIDED, OpenWorkReader::REFUND_OPEN]],
+        'consho_complaint' => ['tl_consho_complaint', [OpenWorkReader::COMPLAINT]],
         'consho_stock' => ['tl_consho_stock', ['low']],
     ];
 
@@ -51,6 +52,7 @@ final class DashboardFilterListener
 
     #[AsCallback(table: 'tl_consho_order', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_withdrawal', target: 'config.onload')]
+    #[AsCallback(table: 'tl_consho_complaint', target: 'config.onload')]
     #[AsCallback(table: 'tl_consho_stock', target: 'config.onload')]
     public function narrow(DataContainer $dc): void
     {

@@ -58,6 +58,29 @@ final class DeliveryNoteIssuerTest extends TestCase
         self::assertStringNotContainsString('unitPrice', (string) $row['payload']);
     }
 
+    public function testEinGewoehnlichesPaketNenntKeineReklamation(): void
+    {
+        $id = $this->issuer($this->allocatorOnce())->issue(11, []);
+
+        $payload = json_decode((string) $this->connection->fetchOne('SELECT payload FROM tl_consho_document WHERE id = ?', [$id]), true);
+        self::assertSame('', $payload['complaint']);
+    }
+
+    /**
+     * RK-5, S5: a replacement delivery's note names the complaint it answers.
+     */
+    public function testEineErsatzlieferungNenntIhreReklamation(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_complaint');
+        $this->connection->insert('tl_consho_complaint', ['id' => 4, 'pid' => 7, 'number' => 'WEB-00081-R1']);
+        $this->connection->update('tl_consho_delivery', ['complaint' => 4], ['id' => 11]);
+
+        $id = $this->issuer($this->allocatorOnce())->issue(11, []);
+
+        $payload = json_decode((string) $this->connection->fetchOne('SELECT payload FROM tl_consho_document WHERE id = ?', [$id]), true);
+        self::assertSame('WEB-00081-R1', $payload['complaint']);
+    }
+
     public function testNachDemLetztenPaketFolgtNichts(): void
     {
         $id = $this->issuer($this->allocatorOnce())->issue(11, []);

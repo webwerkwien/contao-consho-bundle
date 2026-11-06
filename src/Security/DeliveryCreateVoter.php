@@ -13,9 +13,8 @@ use Webwerkwien\ContaoConshoBundle\Order\DeliveryContents;
 
 /**
  * No new delivery for an order no parcel can concern (DeliveryContents::
- * concernsParcels()): withdrawn or cancelled before anything shipped, or
- * without physical goods. Where a parcel already left, a new one stays
- * possible — a replacement may have to follow.
+ * concernsParcels()): withdrawn, cancelled or shipped in full, or without
+ * physical goods. A replacement is created from its complaint (RK-5).
  *
  * Asked while the list draws "Neue Lieferung" and again in
  * DC_Table::create(); the answer is memoised per order for the list.

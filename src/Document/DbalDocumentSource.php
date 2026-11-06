@@ -182,7 +182,7 @@ final class DbalDocumentSource implements DocumentSourceInterface
         }
 
         $first = $this->connection->fetchOne(
-            'SELECT MIN(CASE WHEN shippedAt > 0 THEN shippedAt ELSE reportedAt END) FROM tl_consho_delivery WHERE pid = ? AND reportedAt IS NOT NULL',
+            'SELECT MIN(CASE WHEN shippedAt > 0 THEN shippedAt ELSE reportedAt END) FROM tl_consho_delivery WHERE pid = ? AND reportedAt IS NOT NULL AND complaint = 0',
             [$orderId],
         );
 

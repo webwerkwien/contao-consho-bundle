@@ -28,6 +28,14 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['notify'] = 'Report as shipped and not
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notifyHelp'] = 'On saving: the customer gets the shipping mail with the contents of the parcel, invoice and delivery note are issued depending on the payment method and settings, and the delivery is locked afterwards. Unticked, it stays a draft and is reported later in the list of deliveries.';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notifyDenied'] = 'Not reported: you may not edit the order.';
 
+// RK-5: a replacement delivery for a complaint.
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementFor'] = 'Replacement delivery for complaint %s: no invoice, and it does not count as a delivery of the order. Reporting it takes the goods out of stock.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementCompleteHelp'] = 'Everything still to be replaced for this complaint goes with this parcel. For a partial replacement, untick and enter the quantities; 0 means not in the parcel.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['contentsToReplace'] = 'to replace';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementNothingLeft'] = 'Nothing is left to replace for this complaint.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementInvalid'] = 'The contents were not taken over: each quantity must be a number between 0 and the quantity still to replace.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['notifyReplacementHelp'] = 'On saving: the goods leave stock, the customer gets the replacement mail with the contents of the parcel, a shop with a delivery note number range issues the delivery note, and the delivery is locked afterwards. No invoice. Unticked, it stays a draft.';
+
 $GLOBALS['TL_LANG']['tl_consho_delivery']['new'] = ['New delivery', 'Record a delivery'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['items'] = ['Contents', 'Edit the contents of delivery ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['edit'] = ['Edit', 'Edit delivery ID %s'];
@@ -49,10 +57,16 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['releaseAfterPayment'] = '"%s" will be
 $GLOBALS['TL_LANG']['tl_consho_delivery']['releaseDue'] = '"%s" will be released with the next run.';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['releaseThenPerformed'] = '"Service performed" then appears here at the delivery.';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['locked'] = 'This delivery is reported as shipped and locked: the customer has already had the mail about this parcel.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementLabel'] = 'Replacement for %s';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['reportResult'] = [
     'reported' => 'The delivery of order %s is reported; the customer has had the shipping mail.',
     'reportedNoMail' => 'The delivery of order %s is reported. The shipping mail did not go out — the reason is in the system log.',
+    'reportedReplacement' => 'The replacement delivery of order %s is reported; the customer has received the replacement mail.',
+    'reportedReplacementNoMail' => 'The replacement delivery of order %s is reported. The replacement mail did not go out — the reason is in the system log.',
     'tooMuch' => 'Not reported: these items exceed what is still open: %s.',
+    'tooMuchForComplaint' => 'Not reported: these items exceed what the complaint still has to replace: %s.',
+    'outOfStock' => 'Not reported: the stock does not cover these items, and they cannot be backordered: %s. Nothing was booked out.',
+    'notReplacement' => 'Not reported: the complaint is no longer open as a replacement.',
     'empty' => 'Not reported: the delivery carries no item with a quantity.',
     'alreadyReported' => 'This delivery is already reported.',
     'unknown' => 'Not reported: the delivery no longer exists.',

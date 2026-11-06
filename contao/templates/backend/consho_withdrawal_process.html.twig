@@ -38,8 +38,8 @@
     </div>
 
     {# ── 2. Declaration and dates ─────────────────────────────────── #}
-    <fieldset class="tl_tbox consho-withdrawal-box">
-        <legend>{{ l.declarationLegend|default('Erklärung und Fristen') }}</legend>
+    <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.declarationLegend|default('Erklärung und Fristen') }}</button></legend>
         <div class="consho-withdrawal-columns">
             <table class="tl_show">
                 <tbody>
@@ -71,8 +71,8 @@
 
     {# ── 3. Next step ─────────────────────────────────────────────── #}
     {% if withdrawal.state == 'received' %}
-        <fieldset class="tl_tbox consho-withdrawal-box">
-            <legend>{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.acceptLegend|default('Annehmen') }}</legend>
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.acceptLegend|default('Annehmen') }}</button></legend>
             <form action="{{ action }}" method="post">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 <table class="tl_listing consho-withdrawal-items">
@@ -109,7 +109,7 @@
                     <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                     <div class="widget">
                         <h3><label for="ctrl_reason">{{ l.reason.0|default('Begründung') }}</label></h3>
-                        <textarea name="reason" id="ctrl_reason" class="tl_textarea" rows="5" required></textarea>
+                        <textarea name="reason" id="ctrl_reason" class="tl_textarea" rows="5"></textarea>
                         <p class="tl_help">{{ l.rejectHelp|default('') }}</p>
                     </div>
                     <div class="tl_submit_container consho-withdrawal-actions">
@@ -122,8 +122,8 @@
 
     {# R5: through a provider, the amount is confirmed before anything is booked. #}
     {% if confirm is defined %}
-        <fieldset class="tl_tbox consho-withdrawal-box">
-            <legend>{{ l.refundLegend|default('Erstattung') }}</legend>
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.refundLegend|default('Erstattung') }}</button></legend>
             <form action="{{ action }}" method="post">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 {% for name, value in confirm.inputs %}
@@ -142,8 +142,8 @@
             </form>
         </fieldset>
     {% elseif withdrawal.state == 'accepted' and not withdrawal.refunded %}
-        <fieldset class="tl_tbox consho-withdrawal-box">
-            <legend>{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.returnLegend|default('Rücksendung') }} / {{ l.refundLegend|default('Erstattung') }}</legend>
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.nextLegend|default('Nächster Schritt') }}: {{ l.returnLegend|default('Rücksendung') }} / {{ l.refundLegend|default('Erstattung') }}</button></legend>
             {# One form, two buttons: the return and the refund share the table
                of accepted items, and whoever books the refund usually has just
                recorded the return.
@@ -167,7 +167,7 @@
                             <td class="tl_file_list">{{ row.accepted }}</td>
                             <td class="tl_file_list"><input type="text" inputmode="decimal" name="returned[{{ row.id }}]" id="ctrl_returned_{{ row.id }}" class="tl_text consho-quantity" value="{{ row.returned }}"></td>
                             {#- Block G (G9): only for a line the purchase took out of stock. #}
-                            <td class="tl_file_list">
+                            <td class="tl_file_list consho-toggle">
                                 {% if row.restockable|default(false) %}
                                     <input type="hidden" name="restockShown[{{ row.id }}]" value="1">
                                     <input type="checkbox" name="restock[{{ row.id }}]" id="ctrl_restock_{{ row.id }}" class="tl_checkbox" value="1"{% if row.restock %} checked{% endif %} aria-label="{{ l.colRestock|default('ins Lager') }}: {{ row.name }}">

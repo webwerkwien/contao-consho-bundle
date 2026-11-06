@@ -82,6 +82,18 @@ final class OrderStatusIssueSourceTest extends TestCase
         self::assertSame('WEB-6', $this->only(ConfigurationFinding::StatusContradictsBalance)->context['numbers']);
     }
 
+    /**
+     * RK-5 (spec 3.3): a replacement delivery is no shipment of the order.
+     */
+    public function testVersandtMitNurEinerErsatzlieferung(): void
+    {
+        $this->order(6, self::SHIPPED, paid: ['20']);
+        $this->connection->insert('tl_consho_delivery', ['id' => 6, 'pid' => 6, 'reportedAt' => 1, 'complaint' => 3]);
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 6, 'orderItem' => 60, 'quantity' => '1.0000']);
+
+        self::assertSame('WEB-6', $this->only(ConfigurationFinding::StatusContradictsBalance)->context['numbers']);
+    }
+
     public function testStorniertObwohlVersandt(): void
     {
         $this->order(7, self::CANCELLED, shipped: true);

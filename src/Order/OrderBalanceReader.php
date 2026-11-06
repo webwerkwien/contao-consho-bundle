@@ -55,7 +55,7 @@ final class OrderBalanceReader implements OrderBalanceReaderInterface
             [$status],
         ));
 
-        [$credited, $withdrawn] = (new WithdrawalCredit($this->connection))->of($orderId);
+        [$credited, $withdrawn] = (new OrderCredit($this->connection))->of($orderId);
 
         /*
          * Accepted withdrawals lower the claim (D-3, F7): by the goods' share
@@ -102,7 +102,7 @@ final class OrderBalanceReader implements OrderBalanceReaderInterface
         $delivered = array_map(strval(...), $this->connection->fetchAllKeyValue(
             'SELECT di.orderItem, SUM(di.quantity) FROM tl_consho_delivery_item di
              INNER JOIN tl_consho_delivery d ON d.id = di.pid
-             WHERE d.pid = ? AND d.reportedAt IS NOT NULL
+             WHERE d.pid = ? AND d.reportedAt IS NOT NULL AND d.complaint = 0
              GROUP BY di.orderItem',
             [$orderId],
         ));

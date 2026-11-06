@@ -71,7 +71,7 @@ class OssLedger
                 AND EXISTS (SELECT 1 FROM tl_consho_order_item x WHERE x.pid = o.id AND x.destinationCountry <> \'\' AND x.destinationCountry <> s.country)
                 AND ((o.paymentSettledAt >= ? AND o.paymentSettledAt < ?)
                   OR (o.cancelledAt >= ? AND o.cancelledAt < ?)
-                  OR EXISTS (SELECT 1 FROM tl_consho_delivery d WHERE d.pid = o.id AND d.reportedAt IS NOT NULL
+                  OR EXISTS (SELECT 1 FROM tl_consho_delivery d WHERE d.pid = o.id AND d.reportedAt IS NOT NULL AND d.complaint = 0
                               AND CASE WHEN d.shippedAt > 0 THEN d.shippedAt ELSE d.reportedAt END >= ?
                               AND CASE WHEN d.shippedAt > 0 THEN d.shippedAt ELSE d.reportedAt END < ?))',
             [$shopIds, $from, $until, $from, $until, $from, $until],
@@ -85,10 +85,11 @@ class OssLedger
         );
 
         /*
-         * The corrections of a withdrawal (R): a credit note for a
-         * part, a CANCELLATION for the whole — told apart from the
-         * cancellation of a re-issue (PaymentChange, SubscriptionChargeFallback)
-         * by the withdrawal that names it as its refund document. Read for
+         * The corrections of a withdrawal (R) or a complaint (rescission,
+         * price reduction): a credit note for a part, a CANCELLATION for
+         * the whole — told apart from the cancellation of a re-issue
+         * (PaymentChange, SubscriptionChargeFallback) by the withdrawal or
+         * complaint that names it as its refund document. Read for
          * the orders above too, whenever issued: a credit issued before the
          * supply belongs to the supply's period (F11).
          */
@@ -97,7 +98,8 @@ class OssLedger
             'SELECT d.id, d.pid, d.documentNumber, d.issuedAt, d.payload FROM tl_consho_document d
                JOIN tl_consho_order o ON o.id = d.pid
               WHERE o.shop IN (?) AND d.type IN (?)
-                AND EXISTS (SELECT 1 FROM tl_consho_withdrawal w WHERE w.refundDocument = d.id)
+                AND (EXISTS (SELECT 1 FROM tl_consho_withdrawal w WHERE w.refundDocument = d.id)
+                     OR EXISTS (SELECT 1 FROM tl_consho_complaint c WHERE c.refundDocument = d.id))
                 AND ((d.issuedAt >= ? AND d.issuedAt < ?) OR d.pid IN (?))
               ORDER BY d.issuedAt, d.id',
             [$shopIds, [DocumentType::CreditNote->value, DocumentType::Cancellation->value], $from, $until, [] !== $candidateIds ? $candidateIds : [0]],
@@ -280,7 +282,7 @@ class OssLedger
             $rows = $this->connection->fetchAllAssociative(
                 'SELECT o.id, o.orderNumber, o.shop, o.currency, o.paymentSettledAt, o.cancelledAt,
                         (SELECT MIN(CASE WHEN d.shippedAt > 0 THEN d.shippedAt ELSE d.reportedAt END) FROM tl_consho_delivery d
-                          WHERE d.pid = o.id AND d.reportedAt IS NOT NULL) AS deliveredAt,
+                          WHERE d.pid = o.id AND d.reportedAt IS NOT NULL AND d.complaint = 0) AS deliveredAt,
                         (SELECT MIN(i.documentNumber) FROM tl_consho_document i WHERE i.pid = o.id AND i.type = ?) AS invoice
                    FROM tl_consho_order o WHERE o.id IN (?)',
                 [DocumentType::Invoice->value, $chunk],

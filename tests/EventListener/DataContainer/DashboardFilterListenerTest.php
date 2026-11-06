@@ -91,6 +91,9 @@ final class DashboardFilterListenerTest extends TestCase
         yield 'Filter der Bestellungen bei den Widerrufen' => ['/contao?do=consho_withdrawal&consho_filter=unpaid', 'tl_consho_withdrawal'];
         // From the filtered list into the withdrawals of an order.
         yield 'Kindliste unter der Bestellung' => ['/contao?do=consho_order&table=tl_consho_withdrawal&id=4&consho_filter=unpaid', 'tl_consho_withdrawal'];
+        // Block Reklamation: the complaints are filtered in their own list now.
+        yield 'Reklamationen nicht mehr in der Bestellliste' => ['/contao?do=consho_order&consho_filter=complaint', 'tl_consho_order'];
+        yield 'Reklamationen unter der Bestellung' => ['/contao?do=consho_order&table=tl_consho_complaint&id=4&consho_filter=complaint', 'tl_consho_complaint'];
     }
 
     #[DataProvider('ohneWirkung')]
@@ -111,6 +114,16 @@ final class DashboardFilterListenerTest extends TestCase
 
         self::assertSame([8], $GLOBALS['TL_DCA']['tl_consho_withdrawal']['list']['sorting']['root']);
         self::assertSame([0], $GLOBALS['TL_DCA']['tl_consho_stock']['list']['sorting']['root'], 'kein Artikel knapp');
+    }
+
+    public function testReklamationen(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 21, 'pid' => 4, 'number' => 'WEB-4-R1', 'state' => 'open']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 22, 'pid' => 4, 'number' => 'WEB-4-R2', 'state' => 'resolved']);
+
+        $this->listener('/contao?do=consho_complaint&consho_filter=complaint')->narrow($this->dc('tl_consho_complaint'));
+
+        self::assertSame([21], $GLOBALS['TL_DCA']['tl_consho_complaint']['list']['sorting']['root']);
     }
 
     private function dc(string $table): DataContainer

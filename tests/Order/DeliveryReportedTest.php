@@ -30,6 +30,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodLookupInterface;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
+use Webwerkwien\ContaoConshoBundle\Stock\StockAllocation;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
@@ -54,6 +55,9 @@ final class DeliveryReportedTest extends TestCase
 
     /** @var list<int> */
     private array $archived = [];
+
+    /** @var list<array<string, mixed>> */
+    private array $replacementMails = [];
 
     /** @var list<string> what Contao's Versions was asked, in order */
     private array $versions = [];
@@ -84,6 +88,7 @@ final class DeliveryReportedTest extends TestCase
 
         self::assertSame('reported', $report->outcome);
         self::assertTrue($report->mailSent);
+        self::assertFalse($report->replacement);
         self::assertSame([self::ORDER], $this->issued);
         self::assertSame([OrderEvent::DeliveryReported], $this->advanced);
 
@@ -262,18 +267,118 @@ final class DeliveryReportedTest extends TestCase
     }
 
     /**
+     * RK-5, S4–S6: a replacement delivery goes out without an invoice or a
+     * status change, with its own mail, and resolves the complaint once it
+     * replaces everything complained.
+     */
+    public function testEineErsatzlieferungOhneRechnungMitEigenerMailUndErledigtDieReklamation(): void
+    {
+        $this->shippedAndComplained(['1' => '1']);
+        $this->parcel(2, [1 => '1'], 'Post AT', 'RE1AT', 4);
+
+        $report = $this->reported()->report(2, 200);
+
+        self::assertSame('reported', $report->outcome);
+        self::assertTrue($report->mailSent);
+        self::assertTrue($report->replacement, 'die Meldung nennt die Mail zur Ersatzlieferung');
+        self::assertSame([], $this->issued, 'keine Rechnung');
+        self::assertSame([], $this->advanced, 'kein Statuswechsel');
+        self::assertSame([], $this->mails, 'nicht die Versandmail');
+        self::assertSame([['carrier' => 'Post AT', 'trackingNumber' => 'RE1AT', 'items' => [['quantity' => '1', 'name' => 'Wanderstock']], 'complaint' => 'WEB-00081-R1']], $this->replacementMails);
+
+        $complaint = $this->connection->fetchAssociative('SELECT state, resolvedAt FROM tl_consho_complaint WHERE id = 4');
+        self::assertSame(['resolved', 200], [$complaint['state'], (int) $complaint['resolvedAt']]);
+        self::assertSame(200, (int) $this->connection->fetchOne('SELECT reportedAt FROM tl_consho_delivery WHERE id = 2'));
+    }
+
+    public function testEinTeilersatzLaesstDieReklamationOffen(): void
+    {
+        $this->shippedAndComplained(['1' => '2']);
+        $this->parcel(2, [1 => '1'], complaint: 4);
+
+        self::assertSame('reported', $this->reported()->report(2, 200)->outcome);
+        self::assertSame('inProgress', $this->connection->fetchOne('SELECT state FROM tl_consho_complaint WHERE id = 4'));
+    }
+
+    public function testMehrAlsReklamiertWirdNichtGemeldet(): void
+    {
+        $this->shippedAndComplained(['1' => '1']);
+        $this->parcel(2, [1 => '2'], complaint: 4);
+
+        $report = $this->reported()->report(2, 200);
+
+        self::assertSame('tooMuchForComplaint', $report->outcome);
+        self::assertSame(['Wanderstock'], $report->tooMuch);
+        self::assertNull($this->connection->fetchOne('SELECT reportedAt FROM tl_consho_delivery WHERE id = 2'));
+    }
+
+    public function testOhneAustauschWirdNichtGemeldet(): void
+    {
+        $this->shippedAndComplained(['1' => '1']);
+        $this->connection->update('tl_consho_complaint', ['remedy' => 'rescission'], ['id' => 4]);
+        $this->parcel(2, [1 => '1'], complaint: 4);
+
+        self::assertSame('notReplacement', $this->reported()->report(2, 200)->outcome);
+        self::assertSame([], $this->replacementMails);
+    }
+
+    /**
+     * S4: short stock without backorder refuses the report and rolls back
+     * whatever was booked before.
+     */
+    public function testOhneBestandWirdNichtsGemeldetUndNichtsGebucht(): void
+    {
+        $this->shippedAndComplained(['1' => '1']);
+        $this->parcel(2, [1 => '1'], complaint: 4);
+
+        $stock = $this->createMock(StockAllocation::class);
+        $stock->expects(self::once())->method('bookReplacement')
+            ->willReturnCallback(function (int $orderId, int $deliveryId): array {
+                self::assertSame([self::ORDER, 2], [$orderId, $deliveryId]);
+                $this->connection->update('tl_consho_delivery_item', ['stockBooked' => '1'], ['pid' => 2]);
+
+                return [1];
+            });
+
+        $report = $this->reported(null, $stock)->report(2, 200);
+
+        self::assertSame('outOfStock', $report->outcome);
+        self::assertSame(['Wanderstock'], $report->tooMuch);
+        self::assertNull($this->connection->fetchOne('SELECT reportedAt FROM tl_consho_delivery WHERE id = 2'));
+        self::assertSame(0.0, (float) $this->connection->fetchOne('SELECT stockBooked FROM tl_consho_delivery_item WHERE pid = 2'), 'zurückgerollt');
+        self::assertSame('inProgress', $this->connection->fetchOne('SELECT state FROM tl_consho_complaint WHERE id = 4'));
+    }
+
+    /**
+     * The order fully shipped in delivery 9, and complaint 4 decided as a
+     * replacement for the given quantities.
+     *
+     * @param array<int, string> $complained order item id => quantity
+     */
+    private function shippedAndComplained(array $complained): void
+    {
+        $this->parcel(9, [1 => '2', 2 => '1']);
+        $this->connection->update('tl_consho_delivery', ['reportedAt' => 50, 'lockedAt' => 50], ['id' => 9]);
+        $this->connection->insert('tl_consho_complaint', ['id' => 4, 'pid' => self::ORDER, 'number' => 'WEB-00081-R1', 'remedy' => 'replacement', 'state' => 'inProgress']);
+
+        foreach ($complained as $item => $quantity) {
+            $this->connection->insert('tl_consho_complaint_item', ['pid' => 4, 'orderItem' => $item, 'quantity' => $quantity, 'replacementQuantity' => $quantity]);
+        }
+    }
+
+    /**
      * @param array<int, string> $items
      */
-    private function parcel(int $id, array $items, string $carrier = '', string $tracking = ''): void
+    private function parcel(int $id, array $items, string $carrier = '', string $tracking = '', int $complaint = 0): void
     {
-        $this->connection->insert('tl_consho_delivery', ['id' => $id, 'pid' => self::ORDER, 'carrier' => $carrier, 'trackingNumber' => $tracking]);
+        $this->connection->insert('tl_consho_delivery', ['id' => $id, 'pid' => self::ORDER, 'carrier' => $carrier, 'trackingNumber' => $tracking, 'complaint' => $complaint]);
 
         foreach ($items as $item => $quantity) {
             $this->connection->insert('tl_consho_delivery_item', ['pid' => $id, 'orderItem' => $item, 'quantity' => $quantity]);
         }
     }
 
-    private function reported(DeliveryNoteIssuer|null $notes = null): DeliveryReported
+    private function reported(DeliveryNoteIssuer|null $notes = null, StockAllocation|null $stock = null): DeliveryReported
     {
         $orders = $this->createStub(PaymentChangeRepositoryInterface::class);
         $orders->method('lockOrder')->willReturnCallback(function (int $id): array|null {
@@ -318,6 +423,11 @@ final class DeliveryReportedTest extends TestCase
 
             return true;
         });
+        $mail->method('replacementShipped')->willReturnCallback(function (int $orderId, array $delivery): bool {
+            $this->replacementMails[] = $delivery;
+
+            return true;
+        });
 
         return new DeliveryReported(
             $this->connection,
@@ -336,6 +446,7 @@ final class DeliveryReportedTest extends TestCase
             $this->createStub(UrlGeneratorInterface::class),
             $notes,
             new DeferredArchive($this->connection, static fn () => $archiver),
+            $stock,
         );
     }
 

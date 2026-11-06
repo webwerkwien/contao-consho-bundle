@@ -35,7 +35,7 @@ class StockKeysTest extends TestCase
 
         foreach ([
             'tl_consho_product', 'tl_consho_product_type', 'tl_consho_stock', 'tl_consho_stock_movement', 'tl_consho_key',
-            'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item',
+            'tl_consho_order', 'tl_consho_order_item', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item',
         ] as $table) {
             DcaSchema::create($this->connection, $table);
         }
@@ -85,6 +85,16 @@ class StockKeysTest extends TestCase
         $this->order(7, '2');
         $this->connection->insert('tl_consho_withdrawal', ['id' => 1, 'pid' => 7, 'state' => 'accepted']);
         $this->connection->insert('tl_consho_withdrawal_item', ['pid' => 1, 'orderItem' => 70, 'acceptedQuantity' => '2.0000']);
+
+        self::assertSame('3.0000', $this->availability()->for(1)->available);
+    }
+
+    /** RK-4: a decided rescission before delivery frees the codes too. */
+    public function testEinRuecktrittVorDerAuslieferungGibtFrei(): void
+    {
+        $this->order(7, '2');
+        $this->connection->insert('tl_consho_complaint', ['id' => 1, 'pid' => 7, 'number' => 'WEB-7-R1', 'remedy' => 'rescission', 'decidedAt' => 1]);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 1, 'orderItem' => 70, 'quantity' => '2.0000', 'rescindedQuantity' => '2.0000']);
 
         self::assertSame('3.0000', $this->availability()->for(1)->available);
     }

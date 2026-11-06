@@ -33,7 +33,9 @@ interface DocumentIssuerInterface
      * snapshot for everything else.
      *
      * @param list<array<string, string>> $lines   in the snapshot's item shape
+     * @param string $reference the number of what the correction answers: the withdrawal's or the complaint's
      * @param list<array{label: string, country: string, rate: string, net: string, tax: string, gross: string}> $prepaid what goes back onto single-purpose vouchers, negative (EZ-4)
+     * @param string $about     what the reference numbers: 'withdrawal' or 'complaint' (RefundOccasion)
      */
-    public function correct(int $invoiceId, array $lines, string $withdrawalNumber, array $prepaid = []): int;
+    public function correct(int $invoiceId, array $lines, string $reference, array $prepaid = [], string $about = 'withdrawal'): int;
 }

@@ -190,6 +190,19 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame('tooMuch', $this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW)->key);
     }
 
+    /**
+     * RK-4 (spec 3.4): what a complaint's rescission took back is no longer
+     * the withdrawal's to accept.
+     */
+    public function testEinRuecktrittZaehltMit(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => self::ORDER, 'number' => 'WEB-00077-R1', 'remedy' => 'rescission', 'decidedAt' => 1]);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 5, 'orderItem' => 1, 'quantity' => '1', 'rescindedQuantity' => '1']);
+
+        self::assertSame('tooMuch', $this->processing()->accept(self::WITHDRAWAL, [1 => '2'], self::NOW)->key);
+        self::assertTrue($this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW)->done);
+    }
+
     // ── Reject (F6) ───────────────────────────────────────────────────────
 
     public function testAblehnenBrauchtEineBegruendungUndSchicktSieWoertlich(): void
@@ -369,6 +382,28 @@ final class WithdrawalProcessingTest extends TestCase
         // Booked as proposed: 30 onto the voucher, the rucksack to the method.
         self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '0', self::NOW)->done);
         self::assertTrue(BigDecimal::of('-30')->isEqualTo((string) $this->connection->fetchOne("SELECT SUM(amount) FROM tl_consho_payment WHERE amount < 0 AND reference = 'voucher:1'")));
+    }
+
+    /**
+     * RK-7 (V2): everything withdrawn is a cancellation. The single-purpose
+     * voucher takes back all it paid — 40, though the rucksack is not in its
+     * pot — and the rest goes to the method; the invoice is cancelled, not
+     * corrected.
+     */
+    public function testBeimStornoGehtAllesAufDenEinzweckGutscheinZurueck(): void
+    {
+        $return = $this->einzweckGutscheinBezahlt();
+        $this->connection->update('tl_consho_order_item', ['taxClass' => 4], ['id' => 2]);
+        $this->processing(vouchers: $return)->accept(self::WITHDRAWAL, [1 => '2', 2 => '1'], self::NOW);
+
+        self::assertTrue($this->processing(vouchers: $return)->refund(self::WITHDRAWAL, '5', self::NOW)->done);
+
+        self::assertSame(['cancel'], array_column($this->documentCalls, 0));
+        self::assertTrue(BigDecimal::of('-40')->isEqualTo((string) $this->connection->fetchOne("SELECT SUM(amount) FROM tl_consho_payment WHERE amount < 0 AND reference = 'voucher:1'")));
+        self::assertTrue(BigDecimal::of('-60')->isEqualTo((string) $this->connection->fetchOne("SELECT SUM(amount) FROM tl_consho_payment WHERE amount < 0 AND reference = 'WEB-00077-W1'")));
+        self::assertEquals(50, $this->connection->fetchOne('SELECT balance FROM tl_consho_voucher WHERE id = 1'));
+        // Its tax goes along in full: 40 × 20 / 120.
+        self::assertTrue(BigDecimal::of('-6.67')->isEqualTo((string) $this->connection->fetchOne("SELECT SUM(prepaidTax) FROM tl_consho_payment WHERE amount < 0 AND reference = 'voucher:1'")));
     }
 
     /**
@@ -859,6 +894,37 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertTrue(BigDecimal::of('32.5')->isEqualTo((string) $this->withdrawalRow()['refundAmount']));
     }
 
+    /**
+     * RK-4, L3: a price reduction decided before the withdrawal travels with
+     * the hiking pole going back — half of 12.00 for one of two.
+     */
+    public function testEineFruehereMinderungGehtAnteiligMitZurueck(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => self::ORDER, 'number' => 'WEB-00077-R1', 'remedy' => 'reduction', 'decidedAt' => self::NOW - 100, 'state' => 'inProgress']);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 5, 'orderItem' => 1, 'quantity' => '2', 'reduction' => '12.0000']);
+
+        $this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
+        self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '0', self::NOW)->done);
+
+        self::assertTrue(BigDecimal::of('-24')->isEqualTo((string) $this->connection->fetchOne('SELECT amount FROM tl_consho_payment WHERE amount < 0')));
+    }
+
+    /**
+     * RK-4 (L6): a decided price reduction not yet refunded keeps the
+     * invoice from being cancelled — the grand total would give it back a
+     * second time with its own refund.
+     */
+    public function testEineOffeneMinderungVerhindertDasStorno(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => self::ORDER, 'number' => 'WEB-00077-R1', 'remedy' => 'reduction', 'decidedAt' => self::NOW + 10, 'state' => 'inProgress']);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 5, 'orderItem' => 2, 'quantity' => '1', 'reduction' => '5.0000']);
+        $this->processing()->accept(self::WITHDRAWAL, [1 => '2', 2 => '1'], self::NOW);
+
+        self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '5', self::NOW)->done);
+
+        self::assertSame('correct', $this->documentCalls[0][0]);
+    }
+
     public function testMehrVersandAlsDaIstWirdAbgelehnt(): void
     {
         $this->processing()->accept(self::WITHDRAWAL, [1 => '1'], self::NOW);
@@ -880,6 +946,37 @@ final class WithdrawalProcessingTest extends TestCase
         self::assertSame([['cancel', 14]], $this->documentCalls);
         self::assertTrue(BigDecimal::of('-100')->isEqualTo((string) $this->connection->fetchOne('SELECT amount FROM tl_consho_payment WHERE amount < 0')));
         self::assertTrue($this->balance()->settled());
+    }
+
+    /**
+     * F3: another accepted withdrawal not yet refunded is booked on its own —
+     * this refund does not cancel the invoice in its stead, even when both
+     * together take everything back.
+     */
+    public function testEinOffenerAndererWiderrufVerhindertDasStorno(): void
+    {
+        $this->connection->insert('tl_consho_withdrawal', ['id' => 2, 'pid' => self::ORDER, 'number' => 'WEB-00077-W2', 'state' => 'accepted', 'decidedAt' => self::NOW - 10]);
+        $this->connection->insert('tl_consho_withdrawal_item', ['pid' => 2, 'orderItem' => 2, 'quantity' => '1', 'acceptedQuantity' => '1']);
+        $this->processing()->accept(self::WITHDRAWAL, [1 => '2'], self::NOW);
+
+        self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '5', self::NOW)->done);
+
+        self::assertSame(['correct'], array_column($this->documentCalls, 0));
+        self::assertTrue(BigDecimal::of('-65')->isEqualTo((string) $this->connection->fetchOne('SELECT amount FROM tl_consho_payment WHERE amount < 0')));
+    }
+
+    /**
+     * F3: the same for a complaint's decided rescission not yet refunded.
+     */
+    public function testEinOffenerRuecktrittVerhindertDasStorno(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => self::ORDER, 'number' => 'WEB-00077-R1', 'state' => 'inProgress', 'remedy' => 'rescission', 'decidedAt' => self::NOW - 10]);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 5, 'orderItem' => 2, 'quantity' => '1', 'rescindedQuantity' => '1']);
+        $this->processing()->accept(self::WITHDRAWAL, [1 => '2'], self::NOW);
+
+        self::assertTrue($this->processing()->refund(self::WITHDRAWAL, '5', self::NOW)->done);
+
+        self::assertSame(['correct'], array_column($this->documentCalls, 0));
     }
 
     /**

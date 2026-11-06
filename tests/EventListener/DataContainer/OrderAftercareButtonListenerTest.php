@@ -81,16 +81,19 @@ final class OrderAftercareButtonListenerTest extends TestCase
     {
         $listener = new OrderAftercareButtonListener($this->connection);
 
-        $with = $this->operation('complaints', 'important.svg', 8);
+        $with = $this->operation('complaints', 'bundles/contaoconsho/icons/complaints.svg', 8);
         $listener->complaints($with);
-        self::assertSame('important.svg', $with['icon']);
+        self::assertSame('bundles/contaoconsho/icons/complaints.svg', $with['icon']);
 
-        $without = $this->operation('complaints', 'important.svg', 7);
+        $without = $this->operation('complaints', 'bundles/contaoconsho/icons/complaints.svg', 7);
         $listener->complaints($without);
         self::assertSame(OrderAftercareButtonListener::COMPLAINT_ICON_NONE, $without['icon']);
         self::assertSame('table=tl_consho_complaint', $without['href'], 'die erste Reklamation muss sich anlegen lassen');
         self::assertSame('keine', $without['title']);
-        self::assertFileExists(__DIR__.'/../../../public/icons/important--none.svg');
+        self::assertStringContainsString('consho-operation--create', (string) $without['attributes'], 'grey, but green on hover');
+        self::assertStringNotContainsString('consho-operation--create', (string) $with['attributes']);
+        self::assertFileExists(__DIR__.'/../../../public/icons/complaints--none.svg');
+        self::assertFileExists(__DIR__.'/../../../public/icons/complaints.svg');
     }
 
     public function testEineAbfrageJeTabelleNichtJeZeile(): void

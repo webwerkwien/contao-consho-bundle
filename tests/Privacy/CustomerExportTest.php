@@ -30,7 +30,11 @@ final class CustomerExportTest extends TestCase
         $this->connection->insert('tl_consho_order_item', ['pid' => 7, 'productName' => 'Kräutersalz', 'sku' => 'KS-200', 'lineTotal' => '22.8000']);
         $this->connection->insert('tl_consho_payment', ['pid' => 7, 'amount' => '22.8', 'method' => 'prepayment', 'reference' => 'WEB-7', 'receivedAt' => strtotime('2026-09-21')]);
         $this->connection->insert('tl_consho_withdrawal', ['pid' => 7, 'number' => 'WEB-7-W1', 'name' => 'Erika Muster', 'email' => 'erika@example.org', 'message' => 'Passt nicht', 'receivedAt' => strtotime('2026-09-22')]);
-        $this->connection->insert('tl_consho_complaint', ['pid' => 7, 'note' => 'Deckel kaputt']);
+        $this->connection->insert('tl_consho_order_item', ['id' => 70, 'pid' => 7, 'productName' => 'Salzstreuer', 'lineType' => 'product', 'quantity' => '2.0000']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 17, 'pid' => 7, 'number' => 'WEB-7-R1', 'state' => 'inProgress', 'remedy' => 'replacement', 'note' => 'Deckel kaputt', 'receivedAt' => strtotime('2026-09-23')]);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 17, 'orderItem' => 70, 'quantity' => '1.0000', 'defect' => 'Deckel gesprungen']);
+        $this->connection->insert('tl_consho_delivery', ['id' => 50, 'pid' => 7, 'carrier' => 'Post AT', 'trackingNumber' => 'CA1AT']);
+        $this->connection->insert('tl_consho_delivery', ['id' => 51, 'pid' => 7, 'carrier' => 'Post AT', 'trackingNumber' => 'RE1AT', 'complaint' => 17]);
         $this->connection->insert('tl_consho_document', ['id' => 1, 'pid' => 7, 'type' => 'invoice', 'documentNumber' => 'RE-1', 'issuedAt' => strtotime('2026-09-20 10:01')]);
         $this->connection->insert('tl_consho_document', ['id' => 2, 'pid' => 9, 'type' => 'invoice', 'documentNumber' => 'RE-2']);
 
@@ -78,7 +82,13 @@ final class CustomerExportTest extends TestCase
         self::assertSame('Kräutersalz', $order['items'][0]['productName']);
         self::assertSame('WEB-7', $order['payments'][0]['reference']);
         self::assertSame('Passt nicht', $order['withdrawals'][0]['message']);
-        self::assertSame('Deckel kaputt', $order['complaints'][0]['note']);
+        // Block Reklamation: number, state, remedy and the lines, named by product.
+        $complaint = $order['complaints'][0];
+        self::assertSame(['WEB-7-R1', date(\DATE_ATOM, strtotime('2026-09-23')), 'Deckel kaputt', 'inProgress', 'replacement'], [$complaint['number'], $complaint['receivedAt'], $complaint['note'], $complaint['state'], $complaint['remedy']]);
+        self::assertSame([['productName' => 'Salzstreuer', 'quantity' => 1.0, 'defect' => 'Deckel gesprungen']], array_map(static fn (array $i): array => ['productName' => $i['productName'], 'quantity' => (float) $i['quantity'], 'defect' => $i['defect']], $complaint['items']));
+        self::assertArrayNotHasKey('id', $complaint, 'interne IDs bleiben draußen');
+        // RK-5, S9: a replacement delivery names its complaint, any other none.
+        self::assertSame([['carrier' => 'Post AT', 'trackingNumber' => 'CA1AT'], ['carrier' => 'Post AT', 'trackingNumber' => 'RE1AT', 'complaint' => 'WEB-7-R1']], $order['deliveries']);
         self::assertSame(['type' => 'invoice', 'documentNumber' => 'RE-1', 'issuedAt' => date(\DATE_ATOM, strtotime('2026-09-20 10:01')), 'file' => 'belege/RE-1.pdf'], $order['documents'][0]);
         self::assertArrayNotHasKey('dateOfBirth', $order, 'leere Felder sind keine Auskunft');
 

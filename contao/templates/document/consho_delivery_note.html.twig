@@ -80,6 +80,10 @@
 
 <h1>{{ ('CONSHO.invoice.types.' ~ note.type)|trans({}, 'contao_default') }} {{ note.number }}</h1>
 
+{% if note.complaint %}
+<p class="partial">{{ 'CONSHO.deliveryNote.replacement'|trans([note.complaint], 'contao_default') }}</p>
+{% endif %}
+
 {% if note.partial %}
 <p class="partial">{{ 'CONSHO.deliveryNote.partial'|trans({}, 'contao_default') }}</p>
 {% endif %}

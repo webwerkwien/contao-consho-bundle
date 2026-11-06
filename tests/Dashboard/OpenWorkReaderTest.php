@@ -68,14 +68,29 @@ final class OpenWorkReaderTest extends TestCase
         self::assertSame(1, $work[2]->toDeliver);
     }
 
+    /**
+     * RK-5 (spec 3.3): a replacement delivery does not deliver what is owed —
+     * the preselection must not lose the order.
+     */
+    public function testEineErsatzlieferungLiefertNichts(): void
+    {
+        $this->connection->insert('tl_consho_delivery', ['id' => 30, 'pid' => 3, 'reportedAt' => self::NOW, 'complaint' => 1]);
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 30, 'orderItem' => 3, 'quantity' => '1.0000']);
+
+        self::assertSame(2, $this->reader()->byShop(self::NOW)[1]->toDeliver);
+    }
+
     public function testWiderrufeUndReklamationen(): void
     {
         $this->connection->insert('tl_consho_withdrawal', ['pid' => 3, 'number' => 1, 'state' => 'received', 'receivedAt' => self::NOW - 2 * self::DAY]);
         $this->connection->insert('tl_consho_withdrawal', ['pid' => 4, 'number' => 1, 'state' => 'accepted', 'receivedAt' => self::NOW - 5 * self::DAY]);
         $this->connection->insert('tl_consho_withdrawal', ['pid' => 7, 'number' => 1, 'state' => 'accepted', 'receivedAt' => self::NOW - 9 * self::DAY, 'refundedAt' => self::NOW]);
         $this->connection->insert('tl_consho_withdrawal', ['pid' => 6, 'number' => 1, 'state' => 'rejected', 'receivedAt' => self::NOW - 12 * self::DAY]);
-        $this->connection->insert('tl_consho_complaint', ['pid' => 4, 'receivedAt' => self::NOW]);
-        $this->connection->insert('tl_consho_complaint', ['pid' => 4, 'receivedAt' => self::NOW, 'resolvedAt' => self::NOW]);
+        // Block Reklamation: open and in progress count, by state — not by "Erledigt am".
+        $this->connection->insert('tl_consho_complaint', ['id' => 31, 'pid' => 4, 'number' => 'A-R1', 'receivedAt' => self::NOW, 'state' => 'open']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 32, 'pid' => 4, 'number' => 'A-R2', 'receivedAt' => self::NOW, 'state' => 'inProgress']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 33, 'pid' => 4, 'number' => 'A-R3', 'receivedAt' => self::NOW, 'state' => 'resolved', 'resolvedAt' => self::NOW]);
+        $this->connection->insert('tl_consho_complaint', ['id' => 34, 'pid' => 4, 'number' => 'A-R4', 'receivedAt' => self::NOW, 'state' => 'rejected']);
 
         $work = $this->reader()->byShop(self::NOW);
 
@@ -84,11 +99,11 @@ final class OpenWorkReaderTest extends TestCase
         // Each tile its own deadline — one of them once showed the other's date.
         self::assertSame(WithdrawalSignals::refundDue(self::NOW - 2 * self::DAY), $work[1]->undecidedDue);
         self::assertSame(WithdrawalSignals::refundDue(self::NOW - 5 * self::DAY), $work[1]->refundDue);
-        self::assertSame(1, $work[1]->complaints);
+        self::assertSame(2, $work[1]->complaints, 'open and in progress');
         self::assertTrue($work[2]->isEmpty() === false);
         self::assertSame(0, $work[2]->undecided, 'abgelehnt ist erledigt');
 
-        self::assertSame([4], $this->reader()->ids(OpenWorkReader::COMPLAINT, self::NOW));
+        self::assertSame([31, 32], $this->reader()->ids(OpenWorkReader::COMPLAINT, self::NOW), 'complaint ids, for the list "Reklamationen"');
         self::assertCount(1, $this->reader()->ids(OpenWorkReader::UNDECIDED, self::NOW));
         self::assertCount(1, $this->reader()->ids(OpenWorkReader::REFUND_OPEN, self::NOW));
         self::assertSame([], $this->reader()->ids(OpenWorkReader::UNDECIDED, self::NOW, 2), 'je Shop');

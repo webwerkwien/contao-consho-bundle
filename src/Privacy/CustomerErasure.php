@@ -139,7 +139,13 @@ class CustomerErasure
 
         if ([] !== $orderIds) {
             $this->connection->executeStatement(
-                'UPDATE tl_consho_complaint SET note = NULL, tstamp = ? WHERE pid IN (?)',
+                'UPDATE tl_consho_complaint SET note = NULL, rejectReason = NULL, tstamp = ? WHERE pid IN (?)',
+                [$now, $orderIds],
+                [ParameterType::INTEGER, ArrayParameterType::INTEGER],
+            );
+            // Block Reklamation: what the customer said about the defect.
+            $this->connection->executeStatement(
+                'UPDATE tl_consho_complaint_item SET defect = NULL, tstamp = ? WHERE pid IN (SELECT id FROM tl_consho_complaint WHERE pid IN (?))',
                 [$now, $orderIds],
                 [ParameterType::INTEGER, ArrayParameterType::INTEGER],
             );

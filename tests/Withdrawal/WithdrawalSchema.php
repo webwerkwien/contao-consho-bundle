@@ -27,5 +27,10 @@ final class WithdrawalSchema
         // restock columns.
         DcaSchema::create($connection, 'tl_consho_withdrawal');
         DcaSchema::create($connection, 'tl_consho_withdrawal_item');
+
+        // Since RK-4 a complaint's rescission and price reduction count where
+        // an accepted withdrawal does — the balance reads them too.
+        DcaSchema::create($connection, 'tl_consho_complaint');
+        DcaSchema::create($connection, 'tl_consho_complaint_item');
     }
 }

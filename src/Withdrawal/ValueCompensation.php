@@ -8,6 +8,7 @@ use Doctrine\DBAL\Connection;
 use Symfony\Component\Intl\Currencies;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Order\DiscountShares;
+use Webwerkwien\ContaoConshoBundle\Order\ReductionShares;
 
 /**
  * The value compensation PROPOSED for a withdrawn service (Abo-8, P79).
@@ -19,7 +20,8 @@ use Webwerkwien\ContaoConshoBundle\Order\DiscountShares;
  * and only with the consent of the order (`digitalConsentAt`) and a release.
  *
  * The proposal per line: what the line cost (its gross amount less its part
- * of the order's reductions, H-5) × days used / days of the
+ * of the order's reductions, H-5, and less the share of price reductions of
+ * complaints decided before the withdrawal, RK-7) × days used / days of the
  * period paid with the purchase. Used are the days from the release — or the
  * subscription's start, for a renewal that begins later — to the receipt of
  * the withdrawal, every 24 hours begun counted as a day (not calendar days),
@@ -43,7 +45,7 @@ class ValueCompensation
     public function proposal(int $withdrawalId): array
     {
         $withdrawal = $this->connection->fetchAssociative(
-            'SELECT w.receivedAt, o.id AS orderId, o.digitalConsentAt, o.currency
+            'SELECT w.receivedAt, w.decidedAt, o.id AS orderId, o.digitalConsentAt, o.currency
                FROM tl_consho_withdrawal w
                JOIN tl_consho_order o ON o.id = w.pid
               WHERE w.id = ?',
@@ -70,6 +72,12 @@ class ValueCompensation
         }
 
         $parts = DiscountShares::of($items);
+        // RK-7 (V1): price reductions decided before the withdrawal travel
+        // with the units withdrawn, as in the refund. Not decided yet, every
+        // reduction so far counts.
+        $reductions = new ReductionShares($this->connection);
+        $decidedAt = (int) ($withdrawal['decidedAt'] ?? 0);
+        $at = $decidedAt > 0 ? $decidedAt : \PHP_INT_MAX;
 
         foreach ($this->connection->fetchAllAssociative(
             'SELECT i.id, i.productName, i.quantity, i.lineTotal, wi.acceptedQuantity
@@ -87,6 +95,7 @@ class ValueCompensation
 
             $itemId = (int) $row['id'];
             $gross = isset($items[$itemId]) ? DiscountShares::credit($items[$itemId], $parts[$itemId] ?? [], (string) $row['acceptedQuantity']) : BigDecimal::zero();
+            $gross = BigDecimal::max(BigDecimal::zero(), $gross->minus($reductions->taken($orderId, $itemId, (string) $row['acceptedQuantity'], $at)));
             [$days, $periodDays, $reason] = $consent ? $this->usage($orderId, $itemId, $receivedAt) : [0, 0, 'noConsent'];
 
             $amount = $periodDays > 0

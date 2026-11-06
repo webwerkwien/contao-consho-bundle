@@ -21,11 +21,17 @@ final class DeliveryReportMessages
         $lang = $GLOBALS['TL_LANG']['tl_consho_delivery']['reportResult'] ?? [];
         $number = StringUtil::specialchars($orderNumber);
 
+        // A replacement delivery's mail is the replacement mail (RK-6, A7).
+        $reported = $result->replacement ? 'reportedReplacement' : 'reported';
+
         match ($result->outcome) {
             'reported' => $result->mailSent
-                ? $message->addConfirmation(\sprintf($lang['reported'] ?? '%s', $number))
-                : $message->addInfo(\sprintf($lang['reportedNoMail'] ?? '%s', $number)),
+                ? $message->addConfirmation(\sprintf($lang[$reported] ?? '%s', $number))
+                : $message->addInfo(\sprintf($lang[$reported.'NoMail'] ?? '%s', $number)),
             'tooMuch' => $message->addError(\sprintf($lang['tooMuch'] ?? '%s', StringUtil::specialchars(implode(', ', $result->tooMuch)))),
+            'tooMuchForComplaint' => $message->addError(\sprintf($lang['tooMuchForComplaint'] ?? '%s', StringUtil::specialchars(implode(', ', $result->tooMuch)))),
+            'outOfStock' => $message->addError(\sprintf($lang['outOfStock'] ?? '%s', StringUtil::specialchars(implode(', ', $result->tooMuch)))),
+            'notReplacement' => $message->addError($lang['notReplacement'] ?? 'notReplacement'),
             'empty' => $message->addError($lang['empty'] ?? 'empty'),
             'alreadyReported' => $message->addInfo($lang['alreadyReported'] ?? 'alreadyReported'),
             default => $message->addError($lang['unknown'] ?? 'unknown'),

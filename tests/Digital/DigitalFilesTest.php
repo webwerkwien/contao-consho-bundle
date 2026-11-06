@@ -44,7 +44,7 @@ class DigitalFilesTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         $c = $this->connection;
         $c->executeStatement("CREATE TABLE tl_files (id INTEGER PRIMARY KEY, uuid BLOB, path TEXT NOT NULL DEFAULT '', type TEXT NOT NULL DEFAULT 'file')");
-        foreach (['tl_consho_product', 'tl_consho_order_item', 'tl_consho_order', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_download'] as $table) {
+        foreach (['tl_consho_product', 'tl_consho_order_item', 'tl_consho_order', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item', 'tl_consho_download'] as $table) {
             DcaSchema::create($c, $table);
         }
         // orderNumber is unique in the DCA, as every real order has one.

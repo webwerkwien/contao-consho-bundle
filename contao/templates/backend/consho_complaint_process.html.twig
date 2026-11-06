@@ -1,0 +1,435 @@
+{#
+  "Reklamation entscheiden" (block Reklamation, RK-4, L8). Rendered inside the
+  back end frame by ComplaintBackendController; every form posts back to the
+  same address with Contao's request token and one `consho_action`.
+
+  Parts:
+    1. the head — number, order (linked), state, remedy
+    2. "Reklamation" — what was complained about, per line
+    3. "Entscheidung" — rescission, price reduction, replacement, repair or
+       rejection, until the refund or the first replacement delivery
+    4. "Rücksendung / Erstattung" — once decided; a replacement and a repair
+       have a return and no refund
+    5. "Abschluss" — closed by hand, unless a refund closes it
+
+  The page shares the withdrawal page's styles (consho-withdrawal-*). Each
+  part folds with Contao's toggle-fieldset controller; no input in it is
+  `required`, as the controller only folds a fieldset whose required
+  inputs are filled (the processing checks the reason itself).
+#}
+{% set l = lang %}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+    {# Items change until the decision; the items list locks them after. #}
+    {% if complaint.decidable and not complaint.decided %}
+        <a href="{{ itemsUrl }}" class="header_edit_all">{{ l.itemsEdit|default('Positionen hinzufügen/bearbeiten') }}</a>
+    {% endif %}
+</div>
+
+{# Contao's own HTML; operator input in it is escaped by the controller. #}
+{{ messages|raw }}
+
+<div class="tl_formbody_edit consho-withdrawal-page">
+
+    {# ── 1. Head ───────────────────────────────────────────────────── #}
+    <div class="consho-withdrawal-head">
+        <h2>
+            {{ complaint.number }}
+            <span class="consho-withdrawal-head__order">{{ l.headOrder|default('zur Bestellung') }} <a href="{{ orderUrl }}">{{ complaint.orderNumber }}</a></span>
+        </h2>
+        <p class="consho-withdrawal-head__state">
+            <strong>{{ l.states[complaint.state]|default(complaint.state) }}</strong>{% if complaint.decided %} — {{ l.remedies[complaint.remedy]|default(complaint.remedy) }}, {{ complaint.decidedAt }}{% endif %}
+        </p>
+    </div>
+
+    {# ── 2. The complaint ─────────────────────────────────────────── #}
+    <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+        <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.complaintLegend|default('Reklamation') }}</button></legend>
+        <table class="tl_show">
+            <tbody>
+                <tr><td class="tl_label">{{ l.receivedAt.0|default('Eingegangen am') }}</td><td>{{ complaint.receivedAt }}</td></tr>
+                {% if complaint.note %}<tr><td class="tl_label">{{ l.note.0|default('Notiz') }}</td><td>{{ complaint.note|nl2br }}</td></tr>{% endif %}
+                {% if complaint.rejectReason %}<tr><td class="tl_label">{{ l.rejectReason.0|default('Begründung der Ablehnung') }}</td><td>{{ complaint.rejectReason|nl2br }}</td></tr>{% endif %}
+                {% if complaint.returnReceivedAtText %}<tr><td class="tl_label">{{ l.returnReceivedAt.0|default('Rücksendung erhalten am') }}</td><td>{{ complaint.returnReceivedAtText }}</td></tr>{% endif %}
+                {% if complaint.refunded %}<tr><td class="tl_label">{{ l.refundAmount.0|default('Erstattet') }}</td><td>{{ complaint.refundAmount }} — {{ complaint.refundedAt }}</td></tr>{% endif %}
+                {% if complaint.refundDocument %}<tr><td class="tl_label">{{ l.refundDocumentLabel|default('Beleg') }}</td><td>{{ complaint.refundDocument }}</td></tr>{% endif %}
+            </tbody>
+        </table>
+        {% if rows is not empty %}
+        <table class="tl_listing consho-withdrawal-items consho-items-grid">
+            {{ _self.itemColumns() }}
+            <thead><tr>
+                <th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th>
+                <th class="tl_folder_tlist">{{ l.colComplained|default('reklamiert') }}</th>
+                <th class="tl_folder_tlist">{{ l.colDelivered|default('geliefert') }}</th>
+                <th class="tl_folder_tlist">{{ l.colDefect|default('Mangel') }}</th>
+            </tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr>
+                    <td class="tl_file_list">{{ row.name }}</td>
+                    <td class="tl_file_list">{{ row.quantity }}</td>
+                    {# RK-6, A6: information only, no deadline. #}
+                    <td class="tl_file_list">{% for date in row.delivered %}{{ l.shippedOn|default('versendet') }} {{ date }}{% if not loop.last %}<br>{% endif %}{% else %}{{ l.notDelivered|default('noch nicht versendet') }}{% endfor %}
+                        <a href="{{ deliveriesUrl }}" title="{{ l.deliveriesLink|default('Lieferungen') }}"><img src="/bundles/contaoconsho/icons/deliveries.svg" width="16" height="16" alt="{{ l.deliveriesLink|default('Lieferungen') }}" class="consho-delivery-link"></a></td>
+                    <td class="tl_file_list">{{ row.defect|nl2br }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </fieldset>
+
+    {# ── 3. Decision ──────────────────────────────────────────────── #}
+    {#
+      Before the decision, one form: the tiles choose, the chosen one's inputs
+      show (`:has()`, no script), "Speichern" decides. The remedies need items;
+      rejecting and closing do not — a complaint may be unfounded or settled
+      before anyone names the pieces. After the decision the section only
+      reports it: what follows is carrying it out, in the sections below, and
+      that completion resolves the complaint.
+    #}
+    {% if not complaint.decided %}
+        {% set remedyChoices = complaint.decidable and rows is not empty ? ['rescission', 'reduction', 'replacement', 'repair'] : [] %}
+        {% set endChoices = (complaint.decidable ? ['reject'] : [])|merge(complaint.closable ? ['close'] : []) %}
+    {% else %}
+        {% set remedyChoices = [] %}
+        {% set endChoices = [] %}
+    {% endif %}
+
+    {% if confirm is not defined and (remedyChoices is not empty or endChoices is not empty) %}
+        <fieldset class="tl_tbox consho-withdrawal-box consho-decide" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.decideLegend|default('Abwicklung') }}</button></legend>
+
+            {% if complaint.decidable and rows is empty %}
+                <p class="tl_info">{{ l.itemsMissing|default('') }}</p>
+            {% endif %}
+
+            <form action="{{ action }}" method="post">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+                <fieldset class="consho-remedy-choice" aria-label="{{ l.chooseRemedy|default('Art der Abwicklung wählen') }}">
+                    {% for choice in remedyChoices|merge(endChoices) %}
+                        <input type="radio" name="consho_choice" id="choice_{{ choice }}" value="{{ choice }}">
+                        <label for="choice_{{ choice }}" class="{% if choice == endChoices|first %}consho-remedy-choice__end {% endif %}consho-remedy-choice__{{ choice }}">
+                            <strong>{{ choice == 'reject' ? l.rejectLegend|default('Ablehnen') : (choice == 'close' ? l.closeTile|default('Abschließen') : l.remedies[choice]|default(choice)) }}</strong>
+                            <span>{{ l.remedyTiles[choice]|default('') }}</span>
+                        </label>
+                    {% endfor %}
+                </fieldset>
+                <p class="tl_help consho-remedy-none">{{ l.chooseHint|default('') }}</p>
+
+                {% if 'rescission' in remedyChoices %}
+                    <div class="consho-remedy-panel consho-remedy-panel--rescission">
+                        <table class="tl_listing consho-withdrawal-items">
+                            <thead><tr>
+                                <th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th>
+                                <th class="tl_folder_tlist">{{ l.colMost|default('höchstens') }}</th>
+                                <th class="tl_folder_tlist">{{ l.colRescind|default('zurücknehmen') }}</th>
+                            </tr></thead>
+                            <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td class="tl_file_list"><label for="ctrl_rescinded_{{ row.id }}">{{ row.name }}</label></td>
+                                    <td class="tl_file_list">{{ row.most }}</td>
+                                    <td class="tl_file_list"><input type="text" inputmode="decimal" name="rescinded[{{ row.id }}]" id="ctrl_rescinded_{{ row.id }}" class="tl_text consho-quantity" value=""></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        <p class="tl_help">{{ l.rescissionHelp|default('') }}</p>
+                    </div>
+
+                    <div class="consho-remedy-panel consho-remedy-panel--reduction">
+                        <table class="tl_listing consho-withdrawal-items">
+                            <thead><tr>
+                                <th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th>
+                                <th class="tl_folder_tlist">{{ l.colWorth|default('noch wert') }}</th>
+                                <th class="tl_folder_tlist">{{ l.colReduce|default('mindern um (brutto)') }}</th>
+                            </tr></thead>
+                            <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td class="tl_file_list"><label for="ctrl_reduction_{{ row.id }}">{{ row.name }}</label></td>
+                                    <td class="tl_file_list">{{ row.worth }}</td>
+                                    <td class="tl_file_list"><input type="text" inputmode="decimal" name="reduction[{{ row.id }}]" id="ctrl_reduction_{{ row.id }}" class="tl_text consho-quantity" value=""></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        <p class="tl_help">{{ l.reductionHelp|default('') }}</p>
+                    </div>
+
+                    {# U8: what is sent again is decided here, the complained quantity proposed. #}
+                    <div class="consho-remedy-panel consho-remedy-panel--replacement">
+                        <table class="tl_listing consho-withdrawal-items">
+                            <thead><tr>
+                                <th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th>
+                                <th class="tl_folder_tlist">{{ l.colComplained|default('reklamiert') }}</th>
+                                <th class="tl_folder_tlist">{{ l.colReplace|default('ersetzen') }}</th>
+                            </tr></thead>
+                            <tbody>
+                            {% for row in rows %}
+                                <tr>
+                                    <td class="tl_file_list"><label for="ctrl_replacement_{{ row.id }}">{{ row.name }}</label></td>
+                                    <td class="tl_file_list">{{ row.quantity }}</td>
+                                    <td class="tl_file_list"><input type="text" inputmode="decimal" name="replacement[{{ row.id }}]" id="ctrl_replacement_{{ row.id }}" class="tl_text consho-quantity" value="{{ row.quantityPlain }}"></td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        <p class="tl_help">{{ l.replacementHelp|default('') }}</p>
+                    </div>
+
+                    {# RK-6, A1: no quantities, no money, no document. #}
+                    <div class="consho-remedy-panel consho-remedy-panel--repair">
+                        <p class="tl_help">{{ l.repairHelp|default('') }}</p>
+                    </div>
+                {% endif %}
+
+                {# RK-6, A2/A3: final; the reason goes to the customer verbatim. #}
+                {% if 'reject' in endChoices %}
+                    <div class="consho-remedy-panel consho-remedy-panel--reject widget">
+                        <h3><label for="ctrl_rejectReason">{{ l.rejectReason.0|default('Begründung der Ablehnung') }}</label></h3>
+                        <textarea name="rejectReason" id="ctrl_rejectReason" class="tl_textarea" rows="4"></textarea>
+                        <p class="tl_help">{{ l.rejectReason.1|default('') }}</p>
+                    </div>
+                {% endif %}
+
+                {# RK-6, A4: final, without a mail. #}
+                {% if 'close' in endChoices %}
+                    <div class="consho-remedy-panel consho-remedy-panel--close">
+                        <p class="tl_help">{{ l.closeUndecidedHelp|default('') }}</p>
+                    </div>
+                {% endif %}
+
+                <div class="tl_submit_container">
+                    <button type="submit" name="save" class="tl_submit">{{ 'MSC.save'|trans({}, 'contao_default') }}</button>
+                    <button type="submit" name="saveNclose" class="tl_submit">{{ 'MSC.saveNclose'|trans({}, 'contao_default') }}</button>
+                </div>
+            </form>
+        </fieldset>
+
+    {% elseif complaint.decided and complaint.state != 'rejected' %}
+        {# The decision, reported: no choice, no button. #}
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.decideLegend|default('Abwicklung') }}</button></legend>
+            <table class="tl_show">
+                <tbody>
+                    <tr><td class="tl_label">{{ l.decidedAs|default('Entschieden') }}</td><td>{{ l.remedies[complaint.remedy]|default(complaint.remedy) }}, {{ complaint.decidedAt }}</td></tr>
+                </tbody>
+            </table>
+            {# U10: laid out like the complaint's table above; with a replacement
+               the column "Lieferinformationen" names its deliveries, so they
+               need no section of their own. #}
+            {% if complaint.remedy in ['rescission', 'reduction', 'replacement'] %}
+                <table class="tl_listing consho-withdrawal-items consho-items-grid">
+                    {{ _self.itemColumns() }}
+                    <thead><tr>
+                        <th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th>
+                        <th class="tl_folder_tlist">{{ {rescission: l.colRescinded|default('zurückgenommen'), reduction: l.colReduced|default('gemindert um (brutto)'), replacement: l.colReplaced|default('wird ersetzt')}[complaint.remedy] }}</th>
+                        <th class="tl_folder_tlist">{% if complaint.remedy == 'replacement' %}{{ l.colDelivered|default('Lieferinformationen') }}{% endif %}</th>
+                        <th class="tl_folder_tlist"></th>
+                    </tr></thead>
+                    <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td class="tl_file_list">{{ row.name }}</td>
+                            <td class="tl_file_list">{{ {rescission: row.rescinded, reduction: row.reductionLabel, replacement: row.replaced}[complaint.remedy] }}</td>
+                            <td class="tl_file_list">
+                                {% if complaint.remedy == 'replacement' %}
+                                    {% for delivery in row.replacements %}
+                                        {{ delivery.shippedAt ? l.shippedOn|default('versendet') ~ ' ' ~ delivery.shippedAt : l.replacementDraft|default('Entwurf') }}
+                                        <a href="{{ delivery.url }}" title="{{ l.replacementLegend|default('Ersatzlieferung') }}"><img src="/bundles/contaoconsho/icons/deliveries.svg" width="16" height="16" alt="{{ l.replacementLegend|default('Ersatzlieferung') }}" class="consho-delivery-link"></a>{% if not loop.last %}<br>{% endif %}
+                                    {% else %}
+                                        {{ row.replaced != '0' ? l.notDelivered|default('noch nicht versendet') : '' }}
+                                    {% endfor %}
+                                {% endif %}
+                            </td>
+                            <td class="tl_file_list"></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+            {# RK-5, S2: a further replacement delivery for what a partial one
+               left; never from "Neue Lieferung". #}
+            {% if replacement.creatable %}
+                <form action="{{ action }}" method="post">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <p class="tl_help">{{ l.replacementCreateHelp|default('') }}</p>
+                    <div class="tl_submit_container consho-withdrawal-actions">
+                        <button type="submit" name="consho_action" value="replacementDelivery" class="tl_submit">{{ l.replacementCreate|default('Ersatzlieferung anlegen') }}</button>
+                    </div>
+                </form>
+            {% endif %}
+            {% if complaint.state != 'resolved' %}
+                <p class="tl_help">{{ l.completesWith[complaint.remedy]|default('') }}</p>
+            {% endif %}
+            {# U9: back to the choice while nothing was carried out; a replacement
+               draft goes with it. #}
+            {% if complaint.withdrawable %}
+                <form action="{{ action }}" method="post" class="consho-withdraw-decision">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <button type="submit" name="consho_action" value="withdrawDecision" class="consho-link-button">{{ l.withdrawDecision|default('Entscheidung zurücknehmen') }}</button>
+                </form>
+            {% endif %}
+        </fieldset>
+    {% endif %}
+
+    {# R5: through a provider, the amount is confirmed before anything is booked. #}
+    {% if confirm is defined %}
+        <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+            <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.refundLegend|default('Erstattung') }}</button></legend>
+            <form action="{{ action }}" method="post">
+                <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                {% for name, value in confirm.inputs %}
+                    <input type="hidden" name="{{ name }}" value="{{ value }}">
+                {% endfor %}
+                {% for id in confirm.foreign %}
+                    <input type="hidden" name="foreign[]" value="{{ id }}">
+                {% endfor %}
+                <input type="hidden" name="throughProvider" value="1">
+                <input type="hidden" name="consho_confirmed" value="{{ confirm.amount }}">
+                <p class="tl_info">{% if confirm.recordedLabel %}{{ (l.refundConfirmRecorded|default('%s'))|format(confirm.recordedLabel) }} {% endif %}{{ (l.refundConfirm|default('%s / %s'))|format(confirm.amountLabel, refund.providerMethods) }}{% if confirm.manualLabel %} {{ (l.refundConfirmManual|default('%s'))|format(confirm.manualLabel) }}{% endif %}</p>
+                <div class="tl_submit_container consho-withdrawal-actions">
+                    <button type="submit" name="consho_action" value="refund" class="tl_submit">{{ l.refundConfirmSubmit|default('Jetzt zurückzahlen') }}</button>
+                    <a href="{{ action }}" class="tl_submit">{{ l.refundConfirmCancel|default('Abbrechen') }}</a>
+                </div>
+            </form>
+        </fieldset>
+
+    {# ── 4. Carrying it out: one section per step ─────────────────── #}
+    {% elseif complaint.decided and complaint.state != 'rejected' %}
+        {% set refundOpen = refund.refundable and not complaint.refunded %}
+
+        {# A price reduction keeps the goods with the customer: no return. A
+           replacement takes the defective piece back (RK-5, S7). Goods in for
+           repair go back to the customer, so no stock column (RK-6, A1). A
+           resolved complaint still takes a late return. #}
+        {% if refund.returnable %}
+            {% set restockColumn = complaint.remedy != 'repair' %}
+            <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+                <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.returnLegend|default('Rücksendung') }}</button></legend>
+                <form action="{{ action }}" method="post">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <table class="tl_listing consho-withdrawal-items">
+                        <thead><tr>
+                            <th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th>
+                            <th class="tl_folder_tlist">{{ refund.rescission ? l.colRescinded|default('zurückgenommen') : l.colComplained|default('reklamiert') }}</th>
+                            <th class="tl_folder_tlist">{{ l.colReturned|default('zurückerhalten') }}</th>
+                            {% if restockColumn %}<th class="tl_folder_tlist">{{ l.colRestock|default('ins Lager') }}</th>{% endif %}
+                        </tr></thead>
+                        <tbody>
+                        {% for row in rows|filter(row => row.physical) %}
+                            <tr>
+                                <td class="tl_file_list"><label for="ctrl_returned_{{ row.id }}">{{ row.name }}</label></td>
+                                <td class="tl_file_list">{{ refund.rescission ? row.rescinded : row.quantity }}</td>
+                                <td class="tl_file_list"><input type="text" inputmode="decimal" name="returned[{{ row.id }}]" id="ctrl_returned_{{ row.id }}" class="tl_text consho-quantity" value="{{ row.returned }}"></td>
+                                {#- Block G (G9): only for a line the purchase took out of stock. #}
+                                {% if restockColumn %}
+                                <td class="tl_file_list consho-toggle">
+                                    {% if row.restockable %}
+                                        <input type="hidden" name="restockShown[{{ row.id }}]" value="1">
+                                        <input type="checkbox" name="restock[{{ row.id }}]" id="ctrl_restock_{{ row.id }}" class="tl_checkbox" value="1"{% if row.restock %} checked{% endif %} aria-label="{{ l.colRestock|default('ins Lager') }}: {{ row.name }}">
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% if restockColumn %}<p class="tl_help">{{ l.restockHelp|default('') }}</p>{% endif %}
+                    <div class="widget">
+                        <h3><label for="ctrl_returnReceivedAt">{{ l.returnReceivedAt.0|default('Rücksendung erhalten am') }}</label></h3>
+                        <input type="date" name="returnReceivedAt" id="ctrl_returnReceivedAt" class="tl_text" value="{{ complaint.returnReceivedAt }}">
+                    </div>
+                    <div class="tl_submit_container consho-withdrawal-actions">
+                        <button type="submit" name="consho_action" value="return" class="tl_submit">{{ l.returnSubmit|default('Rücksendung speichern') }}</button>
+                    </div>
+                </form>
+            </fieldset>
+        {% endif %}
+
+        {# The refund resolves a rescission or a reduction. #}
+        {% if refundOpen %}
+            <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+                <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.refundLegend|default('Erstattung') }}</button></legend>
+                {# data-turbo="false": through a provider the answer is the
+                   confirmation (R5), not a redirect, and Turbo drops such an
+                   answer. #}
+                <form action="{{ action }}" method="post" data-turbo="false">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <table class="tl_show consho-withdrawal-sum">
+                        <tbody>
+                            <tr><td class="tl_label">{{ refund.rescission ? (l.refundGoods|default('Ware')) : (l.refundReduction|default('Minderung')) }}</td><td>{{ refund.goods }}</td></tr>
+                            {% if refund.rescission %}
+                                <tr><td class="tl_label"><label for="ctrl_shipping">{{ l.refundShipping.0|default('Versandanteil') }}</label></td><td><input type="text" inputmode="decimal" name="shipping" id="ctrl_shipping" class="tl_text consho-quantity" value="{{ refund.shipping }}"></td></tr>
+                            {% endif %}
+                            {% if refund.vouchers is not null %}
+                                <tr><td class="tl_label">{{ l.refundVouchers.0|default('Mit Gutschein bezahlt') }}</td><td>{{ refund.vouchers }}</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                    {% if refund.rescission %}
+                        <p class="tl_help">{{ (l.shippingHelp|default('%s'))|format(refund.shippingLeft) }}</p>
+                        <p class="tl_help">{{ l.returnCostsOutside|default('') }}</p>
+                    {% endif %}
+                    {% if refund.vouchers is not null %}
+                        <p class="tl_help">{{ l.refundVouchers.1|default('') }}</p>
+                    {% endif %}
+                    {% if refund.outside is not empty %}
+                        <div class="widget">
+                            <h3>{{ l.refundForeign.0|default('Schon beim Zahlungsanbieter zurückgezahlt') }}</h3>
+                            {% for event in refund.outside %}
+                                <input type="checkbox" name="foreign[]" id="ctrl_foreign_{{ event.id }}" class="tl_checkbox" value="{{ event.id }}"{% if event.chosen|default(false) %} checked{% endif %}>
+                                <label for="ctrl_foreign_{{ event.id }}">{{ event.label }}</label><br>
+                            {% endfor %}
+                            <p class="tl_help">{{ l.refundForeign.1|default('') }}</p>
+                        </div>
+                    {% endif %}
+                    {% if refund.provider is not null %}
+                        <div class="widget">
+                            <input type="checkbox" name="throughProvider" id="ctrl_throughProvider" class="tl_checkbox" value="1"{% if refund.outside is empty %} checked{% endif %}>
+                            <label for="ctrl_throughProvider">{{ (l.throughProvider.0|default('%s'))|format(refund.providerMethods) }}</label>
+                            <p class="tl_help">{{ (l.throughProvider.1|default('%s'))|format(refund.provider) }}</p>
+                        </div>
+                    {% endif %}
+                    <div class="tl_submit_container consho-withdrawal-actions">
+                        <button type="submit" name="consho_action" value="refund" class="tl_submit">{{ l.refundSubmit|default('Erstattung buchen') }}</button>
+                    </div>
+                </form>
+            </fieldset>
+        {% endif %}
+
+        {# RK-6, A1/A4: a repair has no delivery and no money; it is done when
+           the operator says so. Final, without a mail. #}
+        {% if complaint.remedy == 'repair' and complaint.closable %}
+            <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
+                <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.repairLegend|default('Verbesserung') }}</button></legend>
+                <form action="{{ action }}" method="post">
+                    <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+                    <p class="tl_help">{{ l.repairDoneHelp|default('') }}</p>
+                    <div class="tl_submit_container consho-withdrawal-actions">
+                        <button type="submit" name="consho_action" value="close" class="tl_submit">{{ l.repairDone|default('Verbesserung erledigt') }}</button>
+                    </div>
+                </form>
+            </fieldset>
+        {% endif %}
+    {% endif %}
+
+
+    {% if complaint.refunded %}
+        <p class="tl_info">{{ l.doneRefunded|default('Erledigt: Erstattung gebucht.') }}</p>
+    {% elseif complaint.state == 'rejected' %}
+        <p class="tl_info">{{ l.doneRejected|default('Diese Reklamation ist abgelehnt.') }}</p>
+    {% elseif complaint.state == 'resolved' or (not complaint.decided and not complaint.decidable) %}
+        <p class="tl_info">{{ l.doneClosed|default('Diese Reklamation ist abgeschlossen.') }}</p>
+    {% endif %}
+</div>
+
+{# U10: the item tables of the complaint and of the decision share their columns. #}
+{% macro itemColumns() %}
+    <colgroup><col class="consho-items-grid__item"><col class="consho-items-grid__quantity"><col class="consho-items-grid__delivery"><col></colgroup>
+{% endmacro %}
+

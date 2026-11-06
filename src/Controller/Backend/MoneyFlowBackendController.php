@@ -286,9 +286,10 @@ final class MoneyFlowBackendController
         $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
         $format = (string) ($GLOBALS['TL_CONFIG']['dateFormat'] ?? 'd.m.Y');
         $withdrawals = $this->openWithdrawals((int) $order['id']);
+        $complaints = $this->openComplaints((int) $order['id']);
         $cancelled = null !== $order['cancelledAt'];
 
-        return array_map(function (array $event) use ($currency, $language, $format, $withdrawals, $cancelled): array {
+        return array_map(function (array $event) use ($currency, $language, $format, $withdrawals, $complaints, $cancelled): array {
             $open = 'open' === $event['state'];
             $refund = 'refund' === $event['kind'];
             $foreign = $refund && $open;
@@ -307,8 +308,8 @@ final class MoneyFlowBackendController
                 'amount' => $this->money->format((string) $event['amount'], $currency, $language),
                 'date' => (int) $event['occurredAt'] > 0 ? date($format, (int) $event['occurredAt']) : '',
                 'resolvedBy' => (string) $event['resolvedBy'],
-                // H2: not while a withdrawal waits for its refund.
-                'canRecord' => $foreign && [] === $withdrawals,
+                // H2: not while a withdrawal or a decided complaint (RK-4) waits for its refund.
+                'canRecord' => $foreign && [] === $withdrawals && [] === $complaints,
                 // H1: each such withdrawal, with this refund ticked there.
                 'withdrawals' => $foreign ? array_map(fn (array $w): array => [
                     'number' => (string) $w['number'],
@@ -319,6 +320,16 @@ final class MoneyFlowBackendController
                         WithdrawalBackendController::FOREIGN => (int) $event['id'],
                     ]),
                 ], $withdrawals) : [],
+                // RK-4: the same for each such complaint.
+                'complaints' => $foreign ? array_map(fn (array $c): array => [
+                    'number' => (string) $c['number'],
+                    'url' => $this->url([
+                        'do' => 'consho_complaint',
+                        'key' => 'processComplaint',
+                        'id' => (int) $c['id'],
+                        WithdrawalBackendController::FOREIGN => (int) $event['id'],
+                    ]),
+                ], $complaints) : [],
                 // H3: "Erfassen" is the cancellation's refund.
                 'cancelled' => $foreign && $cancelled,
                 'rows' => $foreign ? array_map(static fn (array $row): array => [
@@ -414,7 +425,7 @@ final class MoneyFlowBackendController
             // chargeback's row holds the bank's reason, which its event names
             // below as "Grund" — once is enough.
             $eventReason = null !== $event ? (string) $event['reason'] : '';
-            $showsReference = '' !== $m['reference'] && 'foreignRefund' !== $kind && null === $m['withdrawal'] && $m['reference'] !== $eventReason;
+            $showsReference = '' !== $m['reference'] && 'foreignRefund' !== $kind && null === $m['withdrawal'] && null === $m['complaint'] && $m['reference'] !== $eventReason;
 
             if ($showsReference) {
                 $details[] = ('correction' === $kind ? ($lang['reason'] ?? 'Grund').': ' : '').$m['reference'];
@@ -455,6 +466,12 @@ final class MoneyFlowBackendController
                     'number' => $m['withdrawal']['number'],
                     'url' => $this->url(['do' => 'consho_withdrawal', 'key' => 'processWithdrawal', 'id' => $m['withdrawal']['id']]),
                     'document' => $m['withdrawal']['document'] > 0 ? $this->url(['do' => 'consho_order', 'table' => 'tl_consho_document', 'key' => 'invoicePdf', 'id' => $m['withdrawal']['document']]) : '',
+                ],
+                // RK-4: a refund booked by a complaint.
+                'complaint' => null === $m['complaint'] ? null : [
+                    'number' => $m['complaint']['number'],
+                    'url' => $this->url(['do' => 'consho_complaint', 'key' => 'processComplaint', 'id' => $m['complaint']['id']]),
+                    'document' => $m['complaint']['document'] > 0 ? $this->url(['do' => 'consho_order', 'table' => 'tl_consho_document', 'key' => 'invoicePdf', 'id' => $m['complaint']['document']]) : '',
                 ],
                 'actions' => 'payment' === $m['source'] && isset($rows[$m['id']]) ? $this->rowActions($rows[$m['id']], $actions, $payment) : [],
                 // J3: a refund without its payment, and the payments that can take it.
@@ -553,6 +570,22 @@ final class MoneyFlowBackendController
         return $this->connection->fetchAllAssociative(
             "SELECT id, number FROM tl_consho_withdrawal
               WHERE pid = ? AND state IN ('received', 'accepted') AND refundedAt IS NULL
+              ORDER BY id",
+            [$orderId],
+        );
+    }
+
+    /**
+     * The order's decided rescissions and price reductions still to be
+     * refunded (RK-4) — as RefundPayout::recordForeign reads them.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function openComplaints(int $orderId): array
+    {
+        return $this->connection->fetchAllAssociative(
+            "SELECT id, number FROM tl_consho_complaint
+              WHERE pid = ? AND decidedAt IS NOT NULL AND remedy IN ('rescission', 'reduction') AND state <> 'rejected' AND refundedAt IS NULL
               ORDER BY id",
             [$orderId],
         );

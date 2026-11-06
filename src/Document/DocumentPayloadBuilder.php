@@ -340,7 +340,8 @@ final class DocumentPayloadBuilder
      * currency), and the three totals are that summary's sums — so the
      * grand total is exactly the amount refunded, to the cent.
      *
-     * `corrects` names the invoice, `withdrawal` the withdrawal it answers.
+     * `corrects` names the invoice, `withdrawal` or `complaint` (RK-4) what
+     * it answers (the reference).
      *
      * `prepaid` is not the invoice's (EZ-4): only what this refund books back
      * onto single-purpose vouchers, negative — the deduction it takes back.
@@ -351,7 +352,7 @@ final class DocumentPayloadBuilder
      *
      * @return array<string, mixed>
      */
-    public function correctionOf(array $invoice, string $invoiceNumber, int $invoiceIssuedAt, array $lines, string $withdrawalNumber, array $prepaid = []): array
+    public function correctionOf(array $invoice, string $invoiceNumber, int $invoiceIssuedAt, array $lines, string $reference, array $prepaid = [], string $about = 'withdrawal'): array
     {
         $payload = $invoice;
 
@@ -392,7 +393,7 @@ final class DocumentPayloadBuilder
         $payload['payment'] = ['instructions' => '', 'details' => []];
         $payload['delivery'] = null;
         $payload['corrects'] = ['number' => $invoiceNumber, 'issuedAt' => (string) $invoiceIssuedAt];
-        $payload['withdrawal'] = $withdrawalNumber;
+        $payload['complaint' === $about ? 'complaint' : 'withdrawal'] = $reference;
 
         unset($payload['cancels']);
 
@@ -412,6 +413,10 @@ final class DocumentPayloadBuilder
      * `partial` is frozen with the rest: a note printed for the first parcel
      * keeps saying what was still to come then, whatever followed.
      *
+     * `complaint` is the number of the complaint a replacement delivery
+     * answers, empty for every other parcel: the note says what the parcel is
+     * for, since it carries goods the order already counts as delivered.
+     *
      * @param array<string, string>                                          $order
      * @param array{issuer?: array<string, string>, logo?: array{uuid: string, hash: string}|null, notes?: array{footer?: string}} $context
      * @param list<array{productName: string, sku: string, quantity: string}> $lines
@@ -420,7 +425,7 @@ final class DocumentPayloadBuilder
      *
      * @return array<string, mixed>
      */
-    public function deliveryNote(array $order, array $context, array $lines, array $rest, array $shipment): array
+    public function deliveryNote(array $order, array $context, array $lines, array $rest, array $shipment, string $complaint = ''): array
     {
         $capturedOrder = [];
 
@@ -435,6 +440,7 @@ final class DocumentPayloadBuilder
             'rest' => $rest,
             'partial' => [] !== $rest,
             'shipment' => $shipment,
+            'complaint' => $complaint,
             'issuer' => $context['issuer'] ?? [],
             'logo' => $context['logo'] ?? null,
             'notes' => ['footer' => $context['notes']['footer'] ?? '', 'reverseCharge' => ''],

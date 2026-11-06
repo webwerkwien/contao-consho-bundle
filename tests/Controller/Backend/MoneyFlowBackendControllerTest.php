@@ -299,6 +299,27 @@ final class MoneyFlowBackendControllerTest extends TestCase
         self::assertStringContainsString('wartet ein Widerruf', $this->messages[0][1]);
     }
 
+    /**
+     * RK-4: the same while a decided rescission or price reduction waits;
+     * a refund booked by a complaint links to it.
+     */
+    public function testAWaitingComplaintTakesTheRefund(): void
+    {
+        $this->connection->insert('tl_consho_complaint', ['id' => 4, 'pid' => 1, 'number' => 'WEB-1-R1', 'state' => 'inProgress', 'remedy' => 'reduction', 'decidedAt' => 90]);
+        $this->connection->insert('tl_consho_complaint', ['id' => 5, 'pid' => 1, 'number' => 'WEB-1-R2', 'state' => 'open']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 6, 'pid' => 1, 'number' => 'WEB-1-R3', 'state' => 'resolved', 'remedy' => 'rescission', 'decidedAt' => 90, 'refundedAt' => 95, 'refundDocument' => 12]);
+        $this->connection->insert('tl_consho_payment', ['id' => 8, 'pid' => 1, 'amount' => '-10.0000', 'method' => 'refund', 'payoutState' => 'manual', 'reference' => 'WEB-1-R3', 'receivedAt' => 95]);
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=followUps&id=1'))($this->dc());
+
+        self::assertStringContainsString('href="/contao?do=consho_complaint&amp;key=processComplaint&amp;id=4&amp;consho_foreign=2"', $html);
+        self::assertStringContainsString('Zur Reklamation WEB-1-R1', $html);
+        self::assertStringNotContainsString('Zur Reklamation WEB-1-R2', $html, 'nicht entschieden');
+        self::assertStringNotContainsString('In Consho erfassen', $html);
+        self::assertStringContainsString('href="/contao?do=consho_complaint&amp;key=processComplaint&amp;id=6">Reklamation WEB-1-R3</a>', $html);
+        self::assertStringContainsString('key=invoicePdf&amp;id=12', $html);
+    }
+
     public function testAtACancelledOrderRecordingIsTheCancellationsRefund(): void
     {
         $this->connection->update('tl_consho_order', ['cancelledAt' => 100], ['id' => 1]);

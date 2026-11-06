@@ -152,6 +152,74 @@ class StockAllocation
         }
     }
 
+    /**
+     * A replacement delivery's goods out of stock when it is reported (RK-5,
+     * S4), by the purchase click's rule: an article that keeps stock goes
+     * below zero only when it may be sold without stock. What was taken is
+     * kept at the delivery line (stockBooked), so it may come back
+     * (StockReturn). Inside the caller's transaction; on a refusal the caller
+     * rolls back what was booked before it.
+     *
+     * @return list<int> the order items short of stock, empty when all went out
+     */
+    public function bookReplacement(int $orderId, int $deliveryId, int $now): array
+    {
+        $lines = $this->connection->fetchAllAssociative(
+            'SELECT di.id, di.orderItem, di.quantity, i.product FROM tl_consho_delivery_item di
+               JOIN tl_consho_order_item i ON i.id = di.orderItem
+              WHERE di.pid = ? AND di.quantity > 0 ORDER BY di.id',
+            [$deliveryId],
+        );
+
+        $articles = array_values(array_unique(array_map(static fn (array $line): int => (int) $line['product'], $lines)));
+        $availability = [] === $articles ? [] : $this->availability->of($articles, $orderId);
+        $limited = array_values(array_filter($articles, static fn (int $article): bool => null !== ($availability[$article] ?? null)?->available));
+
+        if ([] === $limited) {
+            return [];
+        }
+
+        $stockIds = $this->connection->fetchAllKeyValue(
+            "SELECT article, id FROM tl_consho_stock WHERE article IN (?) AND active = 1 AND source <> 'keys' ORDER BY id FOR UPDATE",
+            [$limited],
+            [ArrayParameterType::INTEGER],
+        );
+
+        $short = [];
+        // The movement names the complaint the replacement belongs to.
+        $complaintId = (int) $this->connection->fetchOne('SELECT complaint FROM tl_consho_delivery WHERE id = ?', [$deliveryId]);
+
+        foreach ($lines as $line) {
+            $article = (int) $line['product'];
+            $state = $availability[$article] ?? null;
+
+            if (null === $state?->available) {
+                continue;
+            }
+
+            $quantity = BigDecimal::of(StockBooking::scaled($line['quantity']));
+            $stockId = $stockIds[$article] ?? null;
+
+            if (null === $stockId) {
+                if (!$state->backorder) {
+                    $short[] = (int) $line['orderItem'];
+                }
+
+                continue;
+            }
+
+            if (null === $this->booking->take((int) $stockId, $quantity, $state->backorder, StockReason::Replacement, $now, $orderId, $complaintId)) {
+                $short[] = (int) $line['orderItem'];
+
+                continue;
+            }
+
+            $this->connection->update('tl_consho_delivery_item', ['stockBooked' => (string) $quantity->toScale(4)], ['id' => (int) $line['id']]);
+        }
+
+        return $short;
+    }
+
     private function invalidateOnStateChange(int $article, BigDecimal $before, BigDecimal $after): void
     {
         if (null === $this->cacheTags && null === $this->soldOut) {

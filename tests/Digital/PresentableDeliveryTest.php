@@ -30,7 +30,7 @@ class PresentableDeliveryTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_product', 'tl_consho_order_item', 'tl_consho_order', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_download', 'tl_consho_key'] as $table) {
+        foreach (['tl_consho_product', 'tl_consho_order_item', 'tl_consho_order', 'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item', 'tl_consho_download', 'tl_consho_key'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 

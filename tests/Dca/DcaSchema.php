@@ -17,8 +17,17 @@ use Doctrine\DBAL\Connection;
  */
 final class DcaSchema
 {
+    /**
+     * A table already there is left as it is: shared schemas (WithdrawalSchema)
+     * bring tables a test may also ask for by name. Both come from the same
+     * DCA, so nothing can differ.
+     */
     public static function create(Connection $connection, string $table): void
     {
+        if ($connection->createSchemaManager()->tablesExist([$table])) {
+            return;
+        }
+
         self::build($connection, $table, self::dca($table));
     }
 

@@ -30,8 +30,10 @@ final class CustomerErasureTest extends TestCase
         $this->order(1, 5, 'erika@example.org', '2015-03-01');   // period ended 2022 → immediately
         $this->order(2, 0, 'Erika@Example.org', '2024-03-01');   // Guest, same address, period running
         $this->order(3, 0, 'fremd@example.org', '2015-03-01');   // someone else
-        $this->connection->insert('tl_consho_complaint', ['pid' => 2, 'note' => 'Frau Muster rief an']);
-        $this->connection->insert('tl_consho_complaint', ['pid' => 3, 'note' => 'fremd']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 30, 'pid' => 2, 'number' => 'WEB-2-R1', 'note' => 'Frau Muster rief an', 'rejectReason' => 'Frau Muster, leider nein']);
+        $this->connection->insert('tl_consho_complaint', ['id' => 31, 'pid' => 3, 'number' => 'WEB-3-R1', 'note' => 'fremd', 'rejectReason' => 'fremd']);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 30, 'defect' => 'Erika sagt: kaputt']);
+        $this->connection->insert('tl_consho_complaint_item', ['pid' => 31, 'defect' => 'fremd']);
 
         $this->connection->insert('tl_consho_cart', ['id' => 10, 'member' => 5, 'checkoutData' => '{}']);
         $this->connection->insert('tl_consho_cart', ['id' => 11, 'member' => 0, 'checkoutData' => json_encode(['billing' => ['email' => 'erika@example.org']])]);
@@ -66,7 +68,8 @@ final class CustomerErasureTest extends TestCase
         self::assertSame(strtotime('2026-09-28'), (int) $this->connection->fetchOne('SELECT erasureRequestedAt FROM tl_consho_order WHERE id = 2'));
 
         // No record: immediately.
-        self::assertNull($this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE pid = 2'));
+        self::assertSame([null, null], $this->connection->fetchNumeric('SELECT note, rejectReason FROM tl_consho_complaint WHERE pid = 2'));
+        self::assertNull($this->connection->fetchOne('SELECT defect FROM tl_consho_complaint_item WHERE pid = 30'));
         self::assertSame([12], array_map('intval', $this->connection->fetchFirstColumn('SELECT id FROM tl_consho_cart ORDER BY id')), 'Konto- und Gastkorb weg, der fremde bleibt');
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cart_item'));
         self::assertSame([21], array_map('intval', $this->connection->fetchFirstColumn('SELECT id FROM tl_opt_in')));
@@ -84,7 +87,11 @@ final class CustomerErasureTest extends TestCase
 
         // Someone else's stays.
         self::assertSame('fremd@example.org', $this->connection->fetchOne('SELECT email FROM tl_consho_order WHERE id = 3'));
-        self::assertSame('fremd', $this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE pid = 3'));
+        self::assertSame(['fremd', 'fremd', 'fremd'], [
+            $this->connection->fetchOne('SELECT note FROM tl_consho_complaint WHERE pid = 3'),
+            $this->connection->fetchOne('SELECT rejectReason FROM tl_consho_complaint WHERE pid = 3'),
+            $this->connection->fetchOne('SELECT defect FROM tl_consho_complaint_item WHERE pid = 31'),
+        ]);
     }
 
     /**

@@ -10,6 +10,7 @@ $GLOBALS['TL_LANG']['MOD']['consho_dashboard'] = ['Dashboard', 'Was offen ist, H
 $GLOBALS['TL_LANG']['MOD']['consho_order'] = ['Bestellungen', 'Bestellungen, Positionen, Zahlungen und Lieferungen.'];
 $GLOBALS['TL_LANG']['MOD']['consho_subscription'] = ['Abos', 'Abos mit den Bedingungen beim Kauf und ihren Perioden.'];
 $GLOBALS['TL_LANG']['MOD']['consho_withdrawal'] = ['Widerrufe', 'Alle Widerrufe mit Stand und Erstattungsfrist.'];
+$GLOBALS['TL_LANG']['MOD']['consho_complaint'] = ['Reklamationen', 'Alle Reklamationen mit Stand und Abwicklung.'];
 $GLOBALS['TL_LANG']['MOD']['consho_voucher'] = ['Wertgutscheine', 'Gutscheine mit Saldo und Bewegungen, Ausstellung von Hand.'];
 $GLOBALS['TL_LANG']['MOD']['consho_stock'] = ['Lagerstand', 'Artikel mit begrenztem Bestand, Einkauf und Einkaufslisten.'];
 $GLOBALS['TL_LANG']['MOD']['consho_customer'] = ['Kunden', 'Mitglieder mit Bestellung, Gäste und die Basisgruppe je Shop.'];

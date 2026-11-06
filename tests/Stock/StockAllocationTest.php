@@ -156,6 +156,46 @@ class StockAllocationTest extends TestCase
         self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_stock_movement'));
     }
 
+    /**
+     * RK-5, S4: a replacement takes its goods out when reported, with the
+     * purchase click's rule, and remembers it at the delivery line. The
+     * movement names the complaint.
+     */
+    public function testDieErsatzlieferungBuchtAbUndMerktEsSichAnDerLieferzeile(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_delivery_item');
+        DcaSchema::create($this->connection, 'tl_consho_delivery');
+        $this->connection->insert('tl_consho_delivery', ['id' => 3, 'pid' => 7, 'complaint' => 12]);
+        $this->line(10, 7, 1, '2');
+        $this->line(11, 7, 2, '1');
+        $this->connection->insert('tl_consho_delivery_item', ['id' => 30, 'pid' => 3, 'orderItem' => 10, 'quantity' => '2.0000']);
+        $this->connection->insert('tl_consho_delivery_item', ['id' => 31, 'pid' => 3, 'orderItem' => 11, 'quantity' => '1.0000']);
+
+        self::assertSame([], $this->allocation()->bookReplacement(7, 3, 1000));
+
+        self::assertSame('3.0000', $this->stock(1));
+        self::assertSame(['2.0000', '0.0000'], array_map(StockBooking::scaled(...), $this->connection->fetchFirstColumn('SELECT stockBooked FROM tl_consho_delivery_item ORDER BY id')));
+        $movement = $this->connection->fetchAssociative('SELECT delta, reason, orderId, complaintId, withdrawalId FROM tl_consho_stock_movement');
+        self::assertIsArray($movement);
+        self::assertSame(['-2.0000', 'replacement', 7, 12, 0], [StockBooking::scaled($movement['delta']), $movement['reason'], (int) $movement['orderId'], (int) $movement['complaintId'], (int) $movement['withdrawalId']]);
+    }
+
+    public function testDieErsatzlieferungOhneBestandNennenDieZeile(): void
+    {
+        DcaSchema::create($this->connection, 'tl_consho_delivery_item');
+        DcaSchema::create($this->connection, 'tl_consho_delivery');
+        $this->setStock(1, '1');
+        $this->line(10, 7, 1, '2');
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 3, 'orderItem' => 10, 'quantity' => '2.0000']);
+
+        self::assertSame([10], $this->allocation()->bookReplacement(7, 3, 1000));
+        self::assertSame('1.0000', $this->stock(1));
+
+        $this->connection->update('tl_consho_product', ['stockBackorder' => 1], ['id' => 1]);
+        self::assertSame([], $this->allocation()->bookReplacement(7, 3, 1001), 'auch ohne Bestand verkaufen');
+        self::assertSame('-1.0000', $this->stock(1));
+    }
+
     public function testVersandzeilenZaehlenNicht(): void
     {
         $this->connection->insert('tl_consho_order_item', ['id' => 10, 'pid' => 7, 'lineType' => 'shipping', 'product' => 1, 'quantity' => '9.0000']);

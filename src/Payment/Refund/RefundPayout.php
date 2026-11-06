@@ -839,7 +839,8 @@ class RefundPayout
      *
      * @return string|null null when recorded, otherwise why not:
      *                     `stateChanged` (resolved meanwhile), `withdrawalOpen`
-     *                     (a withdrawal waits for its refund) or `exceeds`
+     *                     (a withdrawal waits for its refund), `complaintOpen`
+     *                     (a complaint's rescission or reduction does) or `exceeds`
      *                     (more than is left of the payment)
      */
     public function recordForeign(int $eventId, int $now, string $by = ''): string|null
@@ -883,6 +884,18 @@ class RefundPayout
                 $this->connection->commit();
 
                 return 'withdrawalOpen';
+            }
+
+            // RK-4: the same for a decided rescission or price reduction.
+            $complaint = $this->connection->fetchOne(
+                "SELECT id FROM tl_consho_complaint WHERE pid = ? AND decidedAt IS NOT NULL AND remedy IN ('rescission', 'reduction') AND state <> 'rejected' AND refundedAt IS NULL",
+                [(int) $event['pid']],
+            );
+
+            if (false !== $complaint) {
+                $this->connection->commit();
+
+                return 'complaintOpen';
             }
 
             $left = $this->connection->fetchOne(

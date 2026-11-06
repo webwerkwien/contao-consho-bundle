@@ -129,6 +129,9 @@ final class OrderStatusIssueSource implements ConfigurationIssueSource
                         OR st.isCancelled = 1
                         OR o.grandTotal <> (SELECT COALESCE(SUM(p.amount), 0) FROM tl_consho_payment p WHERE p.pid = o.id)
                         OR EXISTS (SELECT 1 FROM tl_consho_withdrawal w WHERE w.pid = o.id AND w.state = 'accepted')
+                        -- RK-4: a decided rescission or price reduction, like an accepted withdrawal.
+                        OR EXISTS (SELECT 1 FROM tl_consho_complaint c WHERE c.pid = o.id AND c.decidedAt IS NOT NULL
+                                     AND c.remedy IN ('rescission', 'reduction') AND c.state <> 'rejected')
                     ))
                     OR ((st.isShipped = 1 OR st.isCompleted = 1) AND EXISTS (
                         SELECT 1 FROM tl_consho_order_item i
@@ -136,11 +139,11 @@ final class OrderStatusIssueSource implements ConfigurationIssueSource
                           AND i.quantity > (
                               SELECT COALESCE(SUM(di.quantity), 0) FROM tl_consho_delivery_item di
                               JOIN tl_consho_delivery d ON d.id = di.pid
-                              WHERE di.orderItem = i.id AND d.reportedAt IS NOT NULL
+                              WHERE di.orderItem = i.id AND d.reportedAt IS NOT NULL AND d.complaint = 0
                           )
                     ))
                     OR (st.isCancelled = 1 AND EXISTS (
-                        SELECT 1 FROM tl_consho_delivery d WHERE d.pid = o.id AND d.reportedAt IS NOT NULL
+                        SELECT 1 FROM tl_consho_delivery d WHERE d.pid = o.id AND d.reportedAt IS NOT NULL AND d.complaint = 0
                     ))
                )
              ORDER BY o.shop, o.id",

@@ -113,9 +113,10 @@ class CustomerExport
             $orders[] = $this->pick($order, self::ORDER_FIELDS) + [
                 'items' => $this->rows('SELECT productName, sku, lineType, quantity, unitPrice, taxRate, lineTotal FROM tl_consho_order_item WHERE pid = ? ORDER BY id', $id),
                 'payments' => $this->rows('SELECT receivedAt, amount, method, reference FROM tl_consho_payment WHERE pid = ? ORDER BY receivedAt, id', $id),
-                'deliveries' => $this->rows('SELECT shippedAt, carrier, trackingNumber, reportedAt FROM tl_consho_delivery WHERE pid = ? ORDER BY id', $id),
+                // RK-5: a replacement delivery names the complaint it answers.
+                'deliveries' => $this->rows('SELECT d.shippedAt, d.carrier, d.trackingNumber, d.reportedAt, c.number AS complaint FROM tl_consho_delivery d LEFT JOIN tl_consho_complaint c ON c.id = d.complaint WHERE d.pid = ? ORDER BY d.id', $id),
                 'withdrawals' => $this->rows('SELECT number, receivedAt, source, name, email, orderReference, scope, part, message, state, decidedAt, reason, returnReceivedAt, refundAmount, refundedAt FROM tl_consho_withdrawal WHERE pid = ? ORDER BY id', $id),
-                'complaints' => $this->rows('SELECT receivedAt, note, resolvedAt FROM tl_consho_complaint WHERE pid = ? ORDER BY id', $id),
+                'complaints' => $this->complaints($id),
                 'paymentAttempts' => $this->rows('SELECT methodType, state, amount, currency, providerReference, createdAt FROM tl_consho_payment_attempt WHERE pid = ? ORDER BY id', $id),
                 // Block H (H-5): the codes redeemed with the order, and whether a cancellation gave them back.
                 // WG-6: the vouchers bought with the order — named by the last
@@ -216,6 +217,36 @@ class CustomerExport
         }
 
         return $entitlements;
+    }
+
+    /**
+     * A complaint with its number, state and remedy, and the lines it
+     * concerns, named by product (block Reklamation).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function complaints(int $orderId): array
+    {
+        $complaints = [];
+
+        foreach ($this->connection->fetchAllAssociative(
+            'SELECT id, number, receivedAt, note, state, remedy, decidedAt, rejectReason, resolvedAt FROM tl_consho_complaint WHERE pid = ? ORDER BY id',
+            [$orderId],
+        ) as $row) {
+            $id = (int) $row['id'];
+            unset($row['id']);
+
+            $complaints[] = $this->clean($row) + [
+                'items' => $this->rows(
+                    'SELECT i.productName, ci.quantity, ci.defect FROM tl_consho_complaint_item ci
+                       LEFT JOIN tl_consho_order_item i ON i.id = ci.orderItem
+                      WHERE ci.pid = ? ORDER BY ci.id',
+                    $id,
+                ),
+            ];
+        }
+
+        return $complaints;
     }
 
     /**

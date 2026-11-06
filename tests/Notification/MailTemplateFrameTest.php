@@ -44,8 +44,10 @@ class MailTemplateFrameTest extends TestCase
 
         // 23 since WA: the confirmation of an unassigned withdrawal; 25 since
         // K1: the two account mails; 26 since R18: a document issued late;
-        // 27 since spec 9: the payment claim after a chargeback.
-        self::assertSame(27, $customer);
+        // 27 since spec 9: the payment claim after a chargeback; 28 since
+        // RK-5: the replacement delivery; 29 since RK-6: the rejected
+        // complaint.
+        self::assertSame(29, $customer);
         self::assertGreaterThan(0, $operator);
     }
 }

@@ -14,7 +14,7 @@ use Brick\Math\RoundingMode;
  * its part of every reduction line in its tax class. ONE place for it, asked
  * by everything that credits a withdrawal — the correction lines and the
  * refund (WithdrawalProcessing), the balance before the refund
- * (WithdrawalCredit) and the value compensation of a service (ValueCompensation).
+ * (OrderCredit) and the value compensation of a service (ValueCompensation).
  * Until H-5 each credited the full `lineTotal`, and a partial withdrawal of an
  * order paid in advance refunded more than the line had cost.
  *

@@ -52,7 +52,7 @@ class DeliveryNoteIssuer
      */
     public function issue(int $deliveryId, array $openGoods): int|null
     {
-        $delivery = $this->connection->fetchAssociative('SELECT pid, shippedAt, carrier, trackingNumber FROM tl_consho_delivery WHERE id = ?', [$deliveryId]);
+        $delivery = $this->connection->fetchAssociative('SELECT pid, shippedAt, carrier, trackingNumber, complaint FROM tl_consho_delivery WHERE id = ?', [$deliveryId]);
 
         if (false === $delivery) {
             return null;
@@ -98,6 +98,7 @@ class DeliveryNoteIssuer
                 'carrier' => (string) $delivery['carrier'],
                 'trackingNumber' => (string) $delivery['trackingNumber'],
             ],
+            $this->complaintNumber((int) $delivery['complaint']),
         );
 
         // Checked first, numbered last (DocumentIssuer): a note that is not
@@ -107,6 +108,18 @@ class DeliveryNoteIssuer
         $this->connection->update('tl_consho_document', ['delivery' => $deliveryId], ['id' => $documentId]);
 
         return $documentId;
+    }
+
+    /**
+     * The complaint a replacement delivery answers, empty for any other parcel.
+     */
+    private function complaintNumber(int $complaintId): string
+    {
+        if ($complaintId < 1) {
+            return '';
+        }
+
+        return (string) $this->connection->fetchOne('SELECT number FROM tl_consho_complaint WHERE id = ?', [$complaintId]);
     }
 
     private function issuesDeliveryNotes(int $shopId): bool

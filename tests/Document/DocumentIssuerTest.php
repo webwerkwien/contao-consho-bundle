@@ -227,6 +227,32 @@ class DocumentIssuerTest extends TestCase
         self::assertSame(['company' => 'Damals GmbH'], $captured['issuer']);
     }
 
+    /**
+     * RK-4: a complaint's correction names the complaint, not a withdrawal.
+     */
+    public function testDieKorrekturEinerReklamationNenntDieReklamation(): void
+    {
+        $repository = $this->createMock(DocumentRepositoryInterface::class);
+        $repository->method('findDocumentRow')->willReturn($this->invoiceRow());
+
+        $captured = [];
+        $repository->method('insert')->willReturnCallback(static function (int $o, int $s, DocumentType $t, string $n, int $i, int $r, array $payload) use (&$captured): int {
+            $captured = $payload;
+
+            return 44;
+        });
+
+        $allocator = $this->createStub(NumberAllocatorInterface::class);
+        $allocator->method('next')->willReturn('RK-00001');
+
+        (new DocumentIssuer($repository, $allocator, new DocumentPayloadBuilder(), $this->createStub(DocumentSourceInterface::class)))->correct(42, [
+            ['productName' => 'Wanderstock', 'sku' => 'WS', 'quantity' => '1', 'unitPrice' => '-5.0000', 'taxRate' => '20.0000', 'taxAmount' => '-1.0000', 'lineTotal' => '-6.0000', 'priceSource' => 'list', 'lineType' => 'product'],
+        ], 'WEB-1-R1', [], 'complaint');
+
+        self::assertSame('WEB-1-R1', $captured['complaint']);
+        self::assertArrayNotHasKey('withdrawal', $captured);
+    }
+
     public function testEineKorrekturOhneZeilenWirdAbgelehnt(): void
     {
         $repository = $this->createStub(DocumentRepositoryInterface::class);

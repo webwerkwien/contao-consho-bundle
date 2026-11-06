@@ -56,6 +56,7 @@ final class DeliveryNoteView
             'trackingNumber' => (string) ($shipment['trackingNumber'] ?? ''),
             'shippingMethod' => (string) ($order['shippingMethodTitle'] ?? ''),
             'partial' => true === ($payload['partial'] ?? false),
+            'complaint' => \is_string($payload['complaint'] ?? null) ? $payload['complaint'] : '',
             'issuer' => $this->filled([
                 trim(($issuer['company'] ?? '').' '.($issuer['legalForm'] ?? '')),
                 $issuer['street'] ?? '',

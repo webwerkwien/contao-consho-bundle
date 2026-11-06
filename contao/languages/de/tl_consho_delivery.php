@@ -28,6 +28,14 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['notify'] = 'Als versandt melden und K
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notifyHelp'] = 'Beim Speichern: Der Kunde bekommt die Versandmail mit dem Inhalt des Pakets, je nach Zahlungsart und Einstellung entstehen Rechnung und Lieferschein, und die Lieferung ist danach gesperrt. Ohne Haken bleibt sie ein Entwurf und wird später in der Liste der Lieferungen gemeldet.';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notifyDenied'] = 'Nicht gemeldet: Dafür fehlt die Berechtigung, die Bestellung zu bearbeiten.';
 
+// RK-5: a replacement delivery for a complaint.
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementFor'] = 'Ersatzlieferung zu Reklamation %s: ohne Rechnung, sie zählt nicht als Lieferung der Bestellung. Beim Melden geht die Ware aus dem Lager.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementCompleteHelp'] = 'Alles, was zu dieser Reklamation noch zu ersetzen ist, geht mit diesem Paket. Für einen Teilersatz den Haken entfernen und die Mengen angeben; 0 heißt: nicht im Paket.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['contentsToReplace'] = 'zu ersetzen';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementNothingLeft'] = 'Zu dieser Reklamation ist nichts mehr zu ersetzen.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementInvalid'] = 'Der Inhalt ist nicht übernommen: Jede Menge muss eine Zahl zwischen 0 und der noch zu ersetzenden Menge sein.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['notifyReplacementHelp'] = 'Beim Speichern: Die Ware geht aus dem Lager, der Kunde bekommt die Mail zur Ersatzlieferung mit dem Inhalt des Pakets, mit einem Nummernkreis „Lieferscheinnummer“ entsteht der Lieferschein, und die Lieferung ist danach gesperrt. Keine Rechnung. Ohne Haken bleibt sie ein Entwurf.';
+
 $GLOBALS['TL_LANG']['tl_consho_delivery']['new'] = ['Neue Lieferung', 'Lieferung erfassen'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['items'] = ['Inhalt', 'Inhalt der Lieferung ID %s bearbeiten'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['edit'] = ['Bearbeiten', 'Lieferung ID %s bearbeiten'];
@@ -49,10 +57,16 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['releaseAfterPayment'] = '„%s“ wir
 $GLOBALS['TL_LANG']['tl_consho_delivery']['releaseDue'] = '„%s“ wird mit dem nächsten Lauf freigeschaltet.';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['releaseThenPerformed'] = 'Danach steht hier an der Lieferung „Leistung erbracht“.';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['locked'] = 'Diese Lieferung ist als versandt gemeldet und gesperrt: Der Kunde hat die Mail über dieses Paket bereits erhalten.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['replacementLabel'] = 'Ersatz zu %s';
 $GLOBALS['TL_LANG']['tl_consho_delivery']['reportResult'] = [
     'reported' => 'Die Lieferung zur Bestellung %s ist gemeldet, der Kunde hat die Versandmail bekommen.',
     'reportedNoMail' => 'Die Lieferung zur Bestellung %s ist gemeldet. Die Versandmail ging nicht hinaus — den Grund nennt das Systemlog.',
+    'reportedReplacement' => 'Die Ersatzlieferung zur Bestellung %s ist gemeldet, der Kunde hat die Mail zur Ersatzlieferung bekommen.',
+    'reportedReplacementNoMail' => 'Die Ersatzlieferung zur Bestellung %s ist gemeldet. Die Mail zur Ersatzlieferung ging nicht hinaus — den Grund nennt das Systemlog.',
     'tooMuch' => 'Nicht gemeldet: Diese Positionen übersteigen, was noch offen ist: %s.',
+    'tooMuchForComplaint' => 'Nicht gemeldet: Diese Positionen übersteigen, was die Reklamation noch zu ersetzen hat: %s.',
+    'outOfStock' => 'Nicht gemeldet: Für diese Positionen reicht der Bestand nicht, und sie sind nicht nachbestellbar: %s. Es wurde nichts ausgebucht.',
+    'notReplacement' => 'Nicht gemeldet: Die Reklamation ist nicht mehr als Ersatz offen.',
     'empty' => 'Nicht gemeldet: Die Lieferung enthält keine Position mit einer Menge.',
     'alreadyReported' => 'Diese Lieferung ist bereits gemeldet.',
     'unknown' => 'Nicht gemeldet: Die Lieferung ist nicht mehr da.',

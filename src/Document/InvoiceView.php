@@ -162,13 +162,14 @@ final class InvoiceView
                 'number' => (string) ($payload['cancels']['number'] ?? ''),
                 'date' => $this->date((int) ($payload['cancels']['issuedAt'] ?? 0), $locale),
             ] : null,
-            // The invoice a correction refers to, and the withdrawal it
-            // answers (D-3); null / '' on every other document.
+            // The invoice a correction refers to, and the withdrawal (D-3)
+            // or complaint (RK-4) it answers; null / '' on every other document.
             'corrects' => \is_array($payload['corrects'] ?? null) ? [
                 'number' => (string) ($payload['corrects']['number'] ?? ''),
                 'date' => $this->date((int) ($payload['corrects']['issuedAt'] ?? 0), $locale),
             ] : null,
             'withdrawal' => \is_string($payload['withdrawal'] ?? null) ? $payload['withdrawal'] : '',
+            'complaint' => \is_string($payload['complaint'] ?? null) ? $payload['complaint'] : '',
             // A follow-up order's subscription and service period
             // (formatVersion 7, Abo-4); '' on every other document.
             'subscription' => (string) ($payload['subscription']['number'] ?? ''),

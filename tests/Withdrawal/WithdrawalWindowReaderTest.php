@@ -57,6 +57,19 @@ final class WithdrawalWindowReaderTest extends TestCase
         self::assertSame($this->at('2026-10-24 23:59:59'), $this->reader()->of(self::ORDER)?->closesAt);
     }
 
+    /**
+     * RK-5 (spec 3.3): whether a replacement starts the period anew is not
+     * established; the window stays with the original shipment.
+     */
+    public function testEineErsatzlieferungSchiebtDasFensterNicht(): void
+    {
+        $this->deliver(1, '2026-10-01 10:00', '2026-10-03 09:00', '2');
+        $this->deliver(2, '2026-10-20 10:00', '2026-10-20 10:00', '1');
+        $this->connection->update('tl_consho_delivery', ['complaint' => 9], ['id' => 2]);
+
+        self::assertSame($this->at('2026-10-24 23:59:59'), $this->reader()->of(self::ORDER)?->closesAt);
+    }
+
     public function testEineNichtGemeldeteLieferungZaehltNicht(): void
     {
         $this->deliver(1, '2026-10-01 10:00', '2026-10-01 11:00', '1');
