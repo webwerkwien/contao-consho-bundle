@@ -168,6 +168,18 @@ a.consho-operation--create:is(:hover, :focus-visible) img {
 .consho-signal--kind-voucher { --consho-icon: url("icons/kind-voucher.svg"); }
 .consho-signal--kind-mixed { --consho-icon: url("icons/kind-mixed.svg"); }
 
+/* What a delivery is: the lorry of the "Lieferungen" button, or the cracked
+ * glass of the "Reklamationen" button for a replacement. */
+.consho-signal--kind-delivery { --consho-icon: url("icons/deliveries.svg"); }
+.consho-signal--kind-replacement { --consho-icon: url("icons/complaint.svg"); }
+
+/* What a charge line of the order is: the lorry for shipping, the card for a
+ * payment fee, the percent sign for a discount, whether by payment or not. */
+.consho-signal--kind-shipping { --consho-icon: url("icons/deliveries.svg"); }
+.consho-signal--kind-paymentFee { --consho-icon: url("icons/line-payment.svg"); }
+.consho-signal--kind-paymentDiscount,
+.consho-signal--kind-discount { --consho-icon: url("icons/line-discount.svg"); }
+
 .consho-signal--open { background-color: var(--gray, #747476); }
 .consho-signal--progress { background-color: var(--orange, #e67300); }
 .consho-signal--attention { background-color: var(--red, #c7241f); }
@@ -261,7 +273,7 @@ fieldset.consho-translation-panel > legend {
 }
 
 /*
- * ── "Widerruf bearbeiten" (D-3, F12) ──────────────────────────────────────
+ * ── "Widerruf entscheiden" (D-3, F12) ─────────────────────────────────────
  *
  * Head with the list's three icons, two columns for declaration and
  * deadlines, the buttons side by side. Colours and fonts stay Contao's:
@@ -325,15 +337,6 @@ fieldset.consho-translation-panel > legend {
     padding: 10px 0 0;
 }
 
-.consho-withdrawal-reject {
-    margin-top: 15px;
-}
-
-.consho-withdrawal-reject > summary {
-    cursor: pointer;
-    color: var(--red, #c7241f);
-}
-
 .consho-overdue {
     color: var(--red, #c7241f);
 }
@@ -349,9 +352,9 @@ fieldset.consho-translation-panel > legend {
 }
 
 /*
- * "Reklamation entscheiden": the remedies as tiles. A tile is the label of a
- * radio button outside any form; choosing it shows that remedy's form below
- * (`:has()`, no script). Nothing chosen: only the hint.
+ * "Reklamation entscheiden" and "Widerruf entscheiden": the decision as
+ * tiles. A tile is the label of a radio button; choosing it shows that
+ * choice's inputs below (`:has()`, no script). Nothing chosen: only the hint.
  */
 .consho-remedy-choice {
     display: flex;
@@ -461,7 +464,8 @@ fieldset.consho-translation-panel > legend {
 .consho-decide:has(#choice_replacement:checked) .consho-remedy-panel--replacement,
 .consho-decide:has(#choice_repair:checked) .consho-remedy-panel--repair,
 .consho-decide:has(#choice_reject:checked) .consho-remedy-panel--reject,
-.consho-decide:has(#choice_close:checked) .consho-remedy-panel--close {
+.consho-decide:has(#choice_close:checked) .consho-remedy-panel--close,
+.consho-decide:has(#choice_accept:checked) .consho-remedy-panel--accept {
     display: block;
 }
 

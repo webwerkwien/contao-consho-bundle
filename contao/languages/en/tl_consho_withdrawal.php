@@ -2,7 +2,7 @@
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['number'] = ['Withdrawal number', 'Derived from the order number.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['receivedAt'] = ['Received', 'Moment of receipt by the server clock — as stated in the confirmation.'];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['source'] = ['Channel', 'Through the order page (link from the mail) or the withdrawal form.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['source'] = ['Channel', 'Through the order page (link from the mail), the withdrawal form, or recorded by hand (e-mail, letter, phone).'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['name'] = ['Name', 'As given or confirmed by the customer.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['orderReference'] = ['Order number given', 'As the customer typed it into the withdrawal form — even where it matched no order.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'] = ['Received after the window', 'Received after "last shipment + period + grace". The window counts from shipping, the period from receipt — whether the withdrawal was in time is your decision.'];
@@ -10,7 +10,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['email'] = ['E-mail', 'The address t
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scope'] = ['Scope', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['part'] = ['Part withdrawn', 'In the customer\'s words.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['message'] = ['Message', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['confirmationSentAt'] = ['Confirmation sent', 'Empty: the confirmation of receipt did not go out — the system log names the reason. The withdrawal stands regardless.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['confirmationSentAt'] = ['Confirmation sent', 'Empty: the confirmation of receipt did not go out — the system log names the reason — or it was not wanted when the withdrawal was recorded by hand. The withdrawal stands regardless.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['state'] = ['State', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['states'] = ['received' => 'received', 'accepted' => 'accepted', 'rejected' => 'rejected'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['decidedAt'] = ['Decided', ''];
@@ -20,11 +20,10 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundShipping'] = ['Delivery costs
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['valueCompensation'] = ['Value compensation', 'Kept back for a service (§ 357a(2) BGB): proposed at acceptance, set with the refund.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundAmount'] = ['Refunded', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundedAt'] = ['Refunded on', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['process'] = ['Process', 'Process withdrawal ID %s: accept or reject, return, refund'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['process'] = ['Process', 'Decide withdrawal ID %s, record the return and book the refund'];
 
-// The page "Process withdrawal" (D-3).
+// The page "Decide withdrawal" (D-3).
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['back'] = 'Back';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['labelDue'] = 'refund due by %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['pid'] = ['Order', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['signalsColumn'] = 'Status';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['customerColumn'] = 'Customer';
@@ -51,10 +50,9 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['signals'] = [
         'na' => 'Refund: none',
     ],
 ];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['labelRefunded'] = 'refunded on %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['pageTitle'] = 'Withdrawal %s from order %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['headOrder'] = 'from order';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['declarationLegend'] = 'Declaration and dates';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['declarationLegend'] = 'Withdrawal';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['nextLegend'] = 'Next step';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['doneRejected'] = 'Rejected — the customer received the reason by mail.';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['doneRefunded'] = 'Settled — the refund is booked, the customer received the document by mail.';
@@ -62,7 +60,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['datesLegend'] = 'Dates';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['windowClosesAt'] = 'End of window';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['windowOpen'] = 'delivery outstanding';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundDueAt'] = 'Refund due by';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['datesHelp'] = 'Note: the end of the window is last shipment + period + delivery allowance — an estimate, since the period starts when the goods are received. A withdrawal after it is still taken and marked "received after the window"; whether it was in time is for you to judge. The refund is usually due within 14 days (see e.g. § 357 Abs. 1 BGB; § 14 Abs. 1 FAGG: from receipt of the declaration).';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['datesHelp'] = 'Note: the end of the window is last shipment + period + delivery allowance — an estimate, since the period starts when the goods are received. A withdrawal after it is still taken and marked "received after the window".';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['acceptLegend'] = 'Accept';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colItem'] = 'Item';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colOrdered'] = 'ordered';
@@ -72,17 +70,30 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colAccept'] = 'accept';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colAccepted'] = 'accepted';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colReturned'] = 'returned';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['acceptHelp'] = 'Prefilled with what the customer named; for "whole order" with everything outstanding, for a part in free text with nothing — read the text above. The declaration itself stays unchanged.';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['acceptSubmit'] = 'Accept';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['rejectLegend'] = 'Reject';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['rejectHelp'] = 'Sent to the customer verbatim by e-mail.';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['rejectSubmit'] = 'Reject and notify the customer';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['decideLegend'] = 'Decision';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['decideTiles'] = ['accept' => 'goods back, money back', 'reject' => 'with a reason to the customer'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['chooseDecision'] = 'Choose the decision';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['chooseHint'] = 'Choose the decision';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['decidedAs'] = 'Decided';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['completesWith'] = 'The withdrawal is settled with the refund. The return can be recorded before or after it.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['colDelivered'] = 'Delivery information';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['shippedOn'] = 'shipped';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['notDelivered'] = 'not shipped yet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['releasedOn'] = 'released';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['notReleased'] = 'not released yet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['issuedOn'] = 'issued';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['notIssued'] = 'not issued yet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['deliveriesLink'] = 'Deliveries of the order';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['deliveredGap'] = ['same' => 'on the day of receipt', 'oneBefore' => '1 day before receipt', 'before' => '%d days before receipt', 'oneAfter' => '1 day after receipt', 'after' => '%d days after receipt'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['returnLegend'] = 'Return';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['returnSubmit'] = 'Save return';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundLegend'] = 'Refund';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['retentionHint'] = 'The goods are not recorded as returned yet. You may withhold the refund until they are back or the customer proves they were sent — unless you offered to collect them (§ 357 Abs. 4 BGB, § 14 Abs. 3 FAGG). You do not have to.';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['processWithdrawal'] = ['Process withdrawal', 'Process withdrawal'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['retentionHint'] = 'The goods are not recorded as returned yet.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['processWithdrawal'] = ['Decide withdrawal', 'Decide withdrawal'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundGoods'] = 'Goods';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['shippingHelp'] = 'Delivery costs not yet refunded: %s. Proposed for a withdrawal of the whole order, otherwise 0 — § 357 Abs. 2 BGB and § 14 FAGG say nothing about a partial withdrawal. Extra costs of a delivery dearer than the cheapest standard delivery need not be refunded.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['shippingHelp'] = 'Delivery costs not yet refunded: %s. Proposed for a withdrawal of the whole order, otherwise 0.';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundSubmit'] = 'Book refund';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundDocumentLabel'] = 'Document';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['subscriptionLabel'] = 'Subscription';
@@ -103,6 +114,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['compensationReasons'] = [
 ];
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
+    'choiceMissing' => 'Please choose Accept or Reject first.',
     'accepted' => 'Withdrawal %s accepted.',
     'rejected' => 'Withdrawal %s rejected, the customer has been notified.',
     'rejectedNoMail' => 'Withdrawal %s rejected. The mail to the customer did not go out — the system log names the reason.',
@@ -135,6 +147,12 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
     // WA: "Dismiss without an order".
     'dismissed' => 'Withdrawal %s dismissed without an order. The customer was not notified.',
     'dismissReasonMissing' => 'Please give a reason — it stays internal.',
+    // "Record withdrawal".
+    'captured' => 'Withdrawal %s recorded. No confirmation of receipt was sent.',
+    'capturedConfirmed' => 'Withdrawal %s recorded, the confirmation of receipt went to %s.',
+    'capturedNotConfirmed' => 'Withdrawal %s recorded. The confirmation of receipt did not go out — the system log names the reason.',
+    'captureChanged' => 'Nothing recorded: a withdrawal was added to order %s since the summary was shown. Please check the list whether it is already recorded.',
+    'captureAnonymized' => 'No withdrawal can be recorded for order %s: the customer data has been anonymised after the retention period.',
 ];
 
 // WA: a withdrawal without an order, and the late receipt.
@@ -151,7 +169,38 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissSubmit'] = 'Dismiss';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissedLegend'] = 'Dismissed without an order';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindowHint'] = 'Received after the end of the withdrawal window. The window counts from shipping, the period from receipt — whether the withdrawal was in time is your decision.';
 
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'] = ['orderPage' => 'Order page', 'form' => 'Withdrawal form'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'] = ['orderPage' => 'Order page', 'form' => 'Withdrawal form', 'email' => 'E-mail', 'letter' => 'Letter', 'oral' => 'Phone/in person', 'other' => 'Other'];
+
+// "Record withdrawal": a withdrawal that came in outside the shop.
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['capture'] = ['Record withdrawal', 'Record a withdrawal received by e-mail, letter or phone'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureTitle'] = 'Record withdrawal';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureHelp'] = 'For a withdrawal that did not come through the shop but by e-mail, letter, phone or in person. It is stored like a withdrawal from the shop and then accepted or rejected on "Decide withdrawal". Once stored, it cannot be changed.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReceivedAtHelp'] = 'When the declaration was received, not when you record it — for a letter, the day it arrived.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureItems'] = 'Items (for "single items")';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureColQuantity'] = 'withdrawn';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureWhole'] = 'Subscription: whole only (%s)';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureNoGoods'] = 'No item is open for a withdrawal any more. You can still record the declaration — as the whole order or as a part in words.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['capturePartHelp'] = 'For "part (free text)": which part, in the customer\'s words.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureMessage'] = ['Declaration verbatim', 'What the customer wrote or said — the text of the e-mail, for instance. For a call: who, when, what.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureConfirm'] = ['Send the confirmation of receipt to %s', 'The same mail as for a withdrawal from the shop, with the moment of receipt entered. Unticked, nothing is sent.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureConfirmTo'] = 'will be sent to %s';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureConfirmNone'] = 'will not be sent';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReview'] = 'Continue to review';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReviewLegend'] = 'Review and record';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReviewHelp'] = 'Please check the details. Once recorded, the withdrawal cannot be changed — a mistake is corrected by a rejection with a reason and a new record.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureRecord'] = 'Record withdrawal';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureEdit'] = 'Change';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureClosedHint'] = 'Through the shop this order could not be withdrawn from — for instance without a withdrawal period, cancelled before shipping or with released digital content. The withdrawal is recorded all the same; whether it holds is your decision.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureErrors'] = [
+    'receivedAt' => 'Please enter the date and time of receipt.',
+    'future' => 'The receipt cannot lie in the future.',
+    'beforeOrder' => 'The receipt cannot lie before the order.',
+    'source' => 'Please choose how the withdrawal was received.',
+    'name' => 'Please enter the name.',
+    'part' => 'Please describe the part withdrawn.',
+    'items' => 'Please enter at least one quantity — at most what is not yet withdrawn; a subscription only whole.',
+    'whole' => 'A subscription can only be withdrawn whole: %s. Please enter the full open quantity or leave the field empty.',
+];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scopes'] = ['all' => 'whole order', 'items' => 'single items', 'part' => 'part (free text)'];
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['withdrawal_legend'] = 'Declaration';
@@ -161,12 +210,6 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['state_legend'] = 'Handling';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['items'] = ['Items', 'Items of withdrawal ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['show'] = ['Details', 'Show details of withdrawal ID %s'];
 
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['orderItem'] = ['Item', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['quantity'] = ['Quantity declared', '0 on an item the operator added when accepting.'];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['acceptedQuantity'] = ['Accepted', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['returnedQuantity'] = ['Returned', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['item_legend'] = 'Item';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['show'] = ['Details', 'Show details of item ID %s'];
 
 // Block G (G9).
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colRestock'] = 'back into stock';

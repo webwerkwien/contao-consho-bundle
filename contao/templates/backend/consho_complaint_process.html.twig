@@ -70,7 +70,7 @@
                     <td class="tl_file_list">{{ row.name }}</td>
                     <td class="tl_file_list">{{ row.quantity }}</td>
                     {# RK-6, A6: information only, no deadline. #}
-                    <td class="tl_file_list">{% for date in row.delivered %}{{ l.shippedOn|default('versendet') }} {{ date }}{% if not loop.last %}<br>{% endif %}{% else %}{{ l.notDelivered|default('noch nicht versendet') }}{% endfor %}
+                    <td class="tl_file_list">{% for date in row.delivered %}{{ row.deliveryWords.done }} {{ date }}{% if not loop.last %}<br>{% endif %}{% else %}{{ row.deliveryWords.pending }}{% endfor %}
                         <a href="{{ deliveriesUrl }}" title="{{ l.deliveriesLink|default('Lieferungen') }}"><img src="/bundles/contaoconsho/icons/deliveries.svg" width="16" height="16" alt="{{ l.deliveriesLink|default('Lieferungen') }}" class="consho-delivery-link"></a></td>
                     <td class="tl_file_list">{{ row.defect|nl2br }}</td>
                 </tr>
@@ -277,11 +277,13 @@
         </fieldset>
     {% endif %}
 
-    {# R5: through a provider, the amount is confirmed before anything is booked. #}
+    {# R5: through a provider, the amount is confirmed before anything is booked.
+       data-turbo="false": if the amount changed in between, the answer is this
+       confirmation again, without a redirect — Turbo would drop it. #}
     {% if confirm is defined %}
         <fieldset class="tl_tbox consho-withdrawal-box" data-controller="contao--toggle-fieldset" data-contao--toggle-fieldset-collapsed-class="collapsed">
             <legend><button type="button" data-action="contao--toggle-fieldset#toggle">{{ l.refundLegend|default('Erstattung') }}</button></legend>
-            <form action="{{ action }}" method="post">
+            <form action="{{ action }}" method="post" data-turbo="false">
                 <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
                 {% for name, value in confirm.inputs %}
                     <input type="hidden" name="{{ name }}" value="{{ value }}">
@@ -332,6 +334,7 @@
                                     {% if row.restockable %}
                                         <input type="hidden" name="restockShown[{{ row.id }}]" value="1">
                                         <input type="checkbox" name="restock[{{ row.id }}]" id="ctrl_restock_{{ row.id }}" class="tl_checkbox" value="1"{% if row.restock %} checked{% endif %} aria-label="{{ l.colRestock|default('ins Lager') }}: {{ row.name }}">
+                                    {% else %}–
                                     {% endif %}
                                 </td>
                                 {% endif %}

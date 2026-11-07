@@ -10,10 +10,12 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Document\DeferredArchive;
 use Webwerkwien\ContaoConshoBundle\Document\DeliveryNoteIssuer;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentType;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
@@ -41,6 +43,8 @@ use Webwerkwien\ContaoConshoBundle\Stock\StockAllocation;
  *  6. after the commit: archive, and the mail "Versendet" with this parcel's
  *     items and the invoice if it was issued now (Z4) — not the delivery
  *     note, which travels in the parcel
+ *  7. notifiedAt once the mail left; NULL after a report says it failed
+ *     (DeliveryNotSentIssueSource), 0 that none was due
  *
  * A replacement delivery for a complaint takes its own way from step 1 on,
  * see reportReplacement().
@@ -72,6 +76,9 @@ class DeliveryReported
         // RK-5, S4: a replacement delivery's goods leave the stock when it is
         // reported. Optional for tests that do not look at it.
         private readonly StockAllocation|null $stock = null,
+        // The invoice for "Benachrichtigung erneut senden". Optional for
+        // tests that do not look at it.
+        private readonly DocumentRepositoryInterface|null $documentRows = null,
     ) {
     }
 
@@ -183,27 +190,180 @@ class DeliveryReported
         }
 
         if (!$mail) {
+            // No mail of its own is due: 0, not the NULL that means "failed".
+            $this->markNotified($deliveryId, 0, $order);
+
             return DeliveryReport::reported(false, $nested ? $invoiceId : null);
         }
 
+        $sent = $this->sendShipped($order, $delivery, $items, $invoiceId, null !== $after && $after->deliverySettled());
+
+        if ($sent) {
+            $this->markNotified($deliveryId, $now, $order);
+        }
+
+        // Every "reported" hands a nested caller its invoice — whichever branch
+        // it leaves by (Abo-4).
+        return DeliveryReport::reported($sent, $nested ? $invoiceId : null);
+    }
+
+    /**
+     * "Benachrichtigung erneut senden": the mail of a reported parcel once
+     * more — the same mail as at the report, as the confirmation's "Erneut
+     * senden" sends the same confirmation. Changes nothing but notifiedAt.
+     *
+     * The parcel whose first mail carried the invoice carries it again
+     * (resentInvoice()): if that mail failed, the customer never got it.
+     * Whether the order is complete is read as it stands now. A
+     * replacement goes with its own mail, without an attachment.
+     *
+     * @return bool|null null where there is nothing to send — not reported, or
+     *                   an electronic release, which has its own mail;
+     *                   otherwise whether the mail left
+     */
+    public function resendNotification(int $deliveryId, int $now): bool|null
+    {
+        $delivery = $this->connection->fetchAssociative('SELECT * FROM tl_consho_delivery WHERE id = ?', [$deliveryId]);
+        $order = false === $delivery ? false : $this->connection->fetchAssociative('SELECT * FROM tl_consho_order WHERE id = ?', [(int) $delivery['pid']]);
+
+        if (false === $delivery || false === $order || null === $delivery['reportedAt'] || !self::isParcel($this->connection, $deliveryId)) {
+            return null;
+        }
+
+        $orderId = (int) $order['id'];
+        $items = $this->itemsOf($deliveryId);
+
+        if ((int) ($delivery['complaint'] ?? 0) > 0) {
+            $sent = $this->sendReplacement($order, $delivery, $items, (string) $this->connection->fetchOne('SELECT number FROM tl_consho_complaint WHERE id = ?', [(int) $delivery['complaint']]));
+        } else {
+            $invoiceId = $this->resentInvoice($order, $deliveryId);
+            $sent = $this->sendShipped($order, $delivery, $items, $invoiceId, true === $this->balances->of($orderId)?->deliverySettled());
+        }
+
+        if ($sent) {
+            $this->markNotified($deliveryId, $now, $order);
+        }
+
+        return $sent;
+    }
+
+    /**
+     * The invoice a resent mail carries: the one the first mail carried. The
+     * report issues it with the first parcel of the order (report()), so a
+     * later parcel's mail had none and gets none. A cancelled invoice is not
+     * sent again — the cancellation replaced it.
+     *
+     * @param array<string, mixed> $order
+     */
+    private function resentInvoice(array $order, int $deliveryId): int|null
+    {
+        $orderId = (int) $order['id'];
+
+        if (!$this->issuesOnShipment((int) $order['paymentMethod'])) {
+            return null;
+        }
+
+        $first = $this->connection->fetchOne(
+            'SELECT id FROM tl_consho_delivery WHERE pid = ? AND complaint = 0 AND reportedAt IS NOT NULL ORDER BY reportedAt, id LIMIT 1',
+            [$orderId],
+        );
+
+        if ((int) $first !== $deliveryId) {
+            return null;
+        }
+
+        $invoiceId = $this->documentRows?->findIdByOrderAndType($orderId, DocumentType::Invoice);
+
+        if (null === $invoiceId || false !== $this->connection->fetchOne('SELECT 1 FROM tl_consho_document WHERE type = ? AND relatedDocument = ?', [DocumentType::Cancellation->value, $invoiceId])) {
+            return null;
+        }
+
+        return $invoiceId;
+    }
+
+    /**
+     * Whether a delivery is a parcel — physical goods in it — and not an
+     * electronic release, whose notice is the release mail.
+     */
+    public static function isParcel(Connection $connection, int $deliveryId): bool
+    {
+        // ProductKind::stored(): no or an unknown kind counts as physical.
+        foreach ($connection->fetchFirstColumn(
+            'SELECT i.kind FROM tl_consho_delivery_item di
+              INNER JOIN tl_consho_order_item i ON i.id = di.orderItem
+              WHERE di.pid = ?',
+            [$deliveryId],
+        ) as $kind) {
+            if (ProductKind::stored((string) $kind)->isPhysical()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $order
+     * @param array<string, mixed> $delivery
+     * @param array<int, string>   $items
+     */
+    private function sendShipped(array $order, array $delivery, array $items, int|null $invoiceId, bool $complete): bool
+    {
+        $orderId = (int) $order['id'];
         $viewUrl = $this->links->forMail($order);
 
         if (null === $viewUrl) {
             $this->logger->warning(\sprintf('The "shipped" mail of order %s was not sent: the shop has no order page.', $order['orderNumber'] ?? $orderId));
 
-            return DeliveryReport::reported(false, $nested ? $invoiceId : null);
+            return false;
         }
 
-        $sent = $this->mail->shipped($orderId, [
+        return $this->mail->shipped($orderId, [
             'carrier' => (string) $delivery['carrier'],
             'trackingNumber' => (string) $delivery['trackingNumber'],
             'items' => $this->mailItems($orderId, $items, (string) ($order['language'] ?? '')),
-            'complete' => null !== $after && $after->deliverySettled(),
+            'complete' => $complete,
         ], $invoiceId, $viewUrl);
+    }
 
-        // Every "reported" hands a nested caller its invoice — whichever branch
-        // it leaves by (Abo-4).
-        return DeliveryReport::reported($sent, $nested ? $invoiceId : null);
+    /**
+     * @param array<string, mixed> $order
+     * @param array<string, mixed> $delivery
+     * @param array<int, string>   $items
+     */
+    private function sendReplacement(array $order, array $delivery, array $items, string $complaintNumber): bool
+    {
+        $orderId = (int) $order['id'];
+        $viewUrl = $this->links->forMail($order);
+
+        if (null === $viewUrl) {
+            $this->logger->warning(\sprintf('The "replacement shipped" mail of order %s was not sent: the shop has no order page.', $order['orderNumber'] ?? $orderId));
+
+            return false;
+        }
+
+        return $this->mail->replacementShipped($orderId, [
+            'carrier' => (string) $delivery['carrier'],
+            'trackingNumber' => (string) $delivery['trackingNumber'],
+            'items' => $this->mailItems($orderId, $items, (string) ($order['language'] ?? '')),
+            'complaint' => $complaintNumber,
+        ], $viewUrl);
+    }
+
+    /**
+     * Sent, and only the record of it failed: its own message, as at the
+     * confirmation — "not sent" would send the operator to "erneut senden",
+     * and the customer would have it twice.
+     *
+     * @param array<string, mixed> $order
+     */
+    private function markNotified(int $deliveryId, int $at, array $order): void
+    {
+        try {
+            $this->connection->update('tl_consho_delivery', ['notifiedAt' => $at], ['id' => $deliveryId]);
+        } catch (\Throwable $e) {
+            $this->logger->error(\sprintf('The shipping notice of a delivery of order %s was sent, but the time could not be recorded — do not resend it: %s', (string) ($order['orderNumber'] ?? ''), $e->getMessage()), ['exception' => $e]);
+        }
     }
 
     /**
@@ -281,20 +441,11 @@ class DeliveryReported
             $this->archive?->after($deliveryNoteId);
         }
 
-        $viewUrl = $this->links->forMail($order);
+        $sent = $this->sendReplacement($order, $delivery, $items, (string) $complaint['number']);
 
-        if (null === $viewUrl) {
-            $this->logger->warning(\sprintf('The "replacement shipped" mail of order %s was not sent: the shop has no order page.', $order['orderNumber'] ?? $orderId));
-
-            return DeliveryReport::reportedReplacement(false);
+        if ($sent) {
+            $this->markNotified($deliveryId, $now, $order);
         }
-
-        $sent = $this->mail->replacementShipped($orderId, [
-            'carrier' => (string) $delivery['carrier'],
-            'trackingNumber' => (string) $delivery['trackingNumber'],
-            'items' => $this->mailItems($orderId, $items, (string) ($order['language'] ?? '')),
-            'complaint' => (string) $complaint['number'],
-        ], $viewUrl);
 
         return DeliveryReport::reportedReplacement($sent);
     }

@@ -35,7 +35,7 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\ProcessingResult;
  * price reduction, replacement (RK-5) or repair, reject, record the return,
  * book the refund, close (RK-6).
  *
- * Built like "Widerruf bearbeiten" (WithdrawalBackendController): GET renders
+ * Built like "Widerruf entscheiden" (WithdrawalBackendController): GET renders
  * inside the back end frame, POST acts, reports through Message and redirects
  * to the same page. Every action changes the order's balance, so the order's
  * UpdateAction guards the page. Operator input that reaches a message is
@@ -242,6 +242,7 @@ final class ComplaintBackendController
                 'defect' => (string) ($item['defect'] ?? ''),
                 // RK-6, A6 (R9): when it was delivered, and how long before the complaint.
                 'delivered' => array_map(fn (int $day): string => $this->deliveredLabel($day, $received, $language), $delivered[$rowId] ?? []),
+                'deliveryWords' => ComplaintDeliveryDates::words((string) ($item['kind'] ?? ''), $GLOBALS['TL_LANG']['tl_consho_complaint'] ?? []),
                 'most' => $this->money->quantity($line['quantity'], $language),
                 'worth' => $this->money->format($line['worth'], $currency, $language),
                 'rescinded' => (string) BigDecimal::of((string) $item['rescindedQuantity'])->strippedOfTrailingZeros(),
@@ -421,20 +422,7 @@ final class ComplaintBackendController
     private function deliveredLabel(int $day, int $received, string $language): string
     {
         $date = $this->day($day, $language);
-
-        if ($received < 1) {
-            return $date;
-        }
-
-        $days = ComplaintDeliveryDates::daysBefore($day, $received);
-        $gap = $GLOBALS['TL_LANG']['tl_consho_complaint']['deliveredGap'] ?? [];
-        $text = match (true) {
-            0 === $days => (string) ($gap['same'] ?? ''),
-            1 === $days => (string) ($gap['oneBefore'] ?? ''),
-            $days > 1 => \sprintf((string) ($gap['before'] ?? '%d'), $days),
-            -1 === $days => (string) ($gap['oneAfter'] ?? ''),
-            default => \sprintf((string) ($gap['after'] ?? '%d'), -$days),
-        };
+        $text = ComplaintDeliveryDates::gap($day, $received, $GLOBALS['TL_LANG']['tl_consho_complaint']['deliveredGap'] ?? []);
 
         return '' === $text ? $date : $date.', '.$text;
     }

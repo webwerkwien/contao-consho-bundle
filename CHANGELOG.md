@@ -5,6 +5,61 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.7.0] – 2026-11-07
+
+### Added
+
+- **"Benachrichtigung erneut senden" at a delivery.** Every reported parcel offers the customer's mail about it once
+  more — the same mail as at the report: the parcel that first carried the invoice carries it again, unless the
+  invoice has been cancelled since; a replacement delivery with its own mail. Not on an electronic release, whose
+  notice is the release mail. Needs the permission to edit the order. Whether the mail left is now recorded per delivery; a reported delivery whose mail
+  did not leave raises a warning, as an order confirmation does, until it is sent again. Not on an order whose
+  customer data has been anonymised. Deliveries reported before this version count as notified. Run
+  `contao:migrate`.
+- **"Widerruf erfassen" at an order's withdrawals.** A withdrawal received by e-mail, letter, phone or otherwise is
+  recorded by hand: date of receipt, the way it came in, name, scope (whole order, single items with quantities, or
+  a part described in words) and the declaration's text. A subscription line can only be withdrawn whole, and the
+  form says so for that line. A summary is shown before anything is stored; afterwards
+  the withdrawal opens for processing and cannot be changed. It is recorded even where the shop would refuse a
+  withdrawal of its own — after the window or for an excluded order — with a hint on the summary. The customer's
+  acknowledgement of receipt is optional (default on); the operator copy is not sent. If a withdrawal was added to
+  the order since the summary was shown — a second click on it, or a withdrawal through the shop — nothing is
+  recorded and the list of withdrawals opens. Needs the permission to edit the order; not on an order whose customer
+  data has been anonymised. The withdrawal's "Weg" offers the new ways E-Mail, Brief, Telefon/persönlich and
+  Sonstiges.
+
+### Changed
+
+- **An order's withdrawals and their items in columns:** status, number, received, way, scope, refund due and
+  refunded; the items with declared, accepted, returned and restocked quantities.
+- **"Widerruf bearbeiten" is now "Widerruf entscheiden", laid out like "Reklamation entscheiden".** The section
+  "Widerruf" lists the items with their declared quantity and when they were shipped, relative to the receipt of
+  the declaration. Accepting and rejecting are tiles saved with "Speichern" or "Speichern und schließen"; once
+  accepted, the section "Entscheidung" reports the accepted quantities. Return and refund are separate sections,
+  and a return can still be recorded after the refund. The return and the hint that the goods are not back yet
+  only concern lines that were shipped; the hint states just that, without a statement on holding back the refund.
+  The hints on the deadlines and on the refunded shipping share describe the page's figures only, without legal
+  references.
+- **"Lieferinformationen" on "Widerruf entscheiden" and "Reklamation entscheiden" use the word of the line's kind:**
+  goods are "versendet", digital content and services "freigeschaltet", vouchers "ausgegeben".
+- **"ins Lager" on a return shows "–"** for a line the purchase did not take out of stock, on both decision pages.
+- **An order's deliveries in columns:** kind, shipping date, carrier, tracking number and notification. The kind is
+  an icon — the lorry for a delivery of the order, the cracked glass for a replacement, which links to its
+  complaint. The notification column shows when the customer was told, "nicht versendet" in red where the mail
+  failed, or "noch nicht gemeldet" for a draft. The contents button has the blue child-records icon. The field
+  "Versendet am" is now called "Versanddatum". "Info" of a delivery names and formats when it was reported,
+  notified and locked, and names the complaint; "Info" of a delivery item names what was taken out of stock. A
+  delivery's item list has "Details" on each item.
+- **Charge lines in an order's item list show an icon instead of a word:** the lorry for shipping, a card for the
+  payment fee, a percent sign for discounts — named in the icon's title like the product kinds.
+
+### Fixed
+
+- "Neue Lieferung" stood on every order's delivery list, also where nothing is left to ship, and did nothing when
+  clicked. It now appears only where a delivery can be created.
+- Confirming a refund through the payment method on "Widerruf entscheiden" or "Reklamation entscheiden" did nothing
+  visible if the amount had changed since the confirmation was shown; the new confirmation now appears.
+
 ## [0.6.0] – 2026-11-06
 
 ### Added

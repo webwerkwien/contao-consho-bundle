@@ -121,8 +121,12 @@ $conshoBackendModules = [
                 'tl_consho_entitlement',
             ],
 
-            // D-3: the page "Widerruf bearbeiten" — decide, return, refund.
+            // D-3: the page "Widerruf entscheiden" — decide, return, refund.
             'processWithdrawal' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\WithdrawalBackendController::class, '__invoke'],
+
+            // "Widerruf erfassen": a withdrawal that came in by mail, letter
+            // or phone, recorded at the order (id = the order).
+            'captureWithdrawal' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\WithdrawalCaptureBackendController::class, '__invoke'],
 
             // RK-4: the page "Reklamation entscheiden" — decide, return, refund.
             'processComplaint' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\ComplaintBackendController::class, '__invoke'],
@@ -157,6 +161,9 @@ $conshoBackendModules = [
 
             // "Als versandt melden" at a delivery (D-1).
             'reportDelivery' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DeliveryReportBackendController::class, 'report'],
+
+            // "Benachrichtigung erneut senden" at a reported delivery.
+            'resendDeliveryNotification' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\DeliveryNotificationBackendController::class, 'resend'],
 
             // "Leistung erbracht" at a service line (Dienstleistung, DL3).
             'servicePerformed' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\ServicePerformedBackendController::class, 'report'],

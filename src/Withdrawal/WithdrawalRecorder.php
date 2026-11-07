@@ -78,6 +78,28 @@ final class WithdrawalRecorder
 
     public function record(WithdrawalDeclaration $declaration, int $now): WithdrawalResult
     {
+        return $this->store($declaration, $now, true, true);
+    }
+
+    /**
+     * A withdrawal that reached the operator another way — by mail, letter,
+     * phone — and is recorded in the back end.
+     *
+     * Received when it ARRIVED, which the operator states; not refused where
+     * the shop's own function would be (period 0, cancelled before shipping,
+     * released content): a declaration that came in is recorded, and the
+     * operator rejects it with a reason if it does not hold. The confirmation
+     * of receipt is the operator's choice — the duty to send it at once is
+     * tied to the shop's withdrawal function — and the operator gets no copy
+     * of what they typed themselves.
+     */
+    public function recordByHand(WithdrawalDeclaration $declaration, int $receivedAt, bool $confirm): WithdrawalResult
+    {
+        return $this->store($declaration, $receivedAt, false, $confirm);
+    }
+
+    private function store(WithdrawalDeclaration $declaration, int $now, bool $fromShop, bool $confirm): WithdrawalResult
+    {
         $order = $this->connection->fetchAssociative(
             'SELECT id, shop, orderNumber, email, language FROM tl_consho_order WHERE id = ?',
             [$declaration->orderId],
@@ -90,7 +112,7 @@ final class WithdrawalRecorder
         $window = $this->windows->of($declaration->orderId);
         $late = null !== $window && $window->isLateAt($now);
 
-        if (!$late && !$window?->isOpenAt($now)) {
+        if ($fromShop && !$late && !$window?->isOpenAt($now)) {
             return new WithdrawalResult(WithdrawalOutcome::Closed);
         }
 
@@ -126,6 +148,10 @@ final class WithdrawalRecorder
             throw $e;
         }
 
+        if (!$confirm) {
+            return new WithdrawalResult(WithdrawalOutcome::Recorded, $id, $number, $now, false, $late);
+        }
+
         $viewUrl = $this->links->forMail($order);
 
         $confirmed = $this->mail->withdrawalReceived($declaration->orderId, [
@@ -142,7 +168,7 @@ final class WithdrawalRecorder
             ),
             'part' => trim($declaration->part),
             'message' => trim($declaration->message),
-        ], $viewUrl ?? '');
+        ], $viewUrl ?? '', $fromShop);
 
         if ($confirmed) {
             $this->connection->update('tl_consho_withdrawal', ['confirmationSentAt' => time()], ['id' => $id]);

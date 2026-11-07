@@ -40,7 +40,7 @@ final class WithdrawalRecorderTest extends TestCase
 
     private Connection $connection;
 
-    /** @var list<array{orderId: int, withdrawal: array<string, mixed>, viewUrl: string}> */
+    /** @var list<array{orderId: int, withdrawal: array<string, mixed>, viewUrl: string, operatorCopy: bool}> */
     private array $mails = [];
 
     /** @var list<array{shopId: int, email: string, language: string, withdrawal: array<string, mixed>}> */
@@ -268,6 +268,56 @@ final class WithdrawalRecorderTest extends TestCase
     }
 
     /**
+     * Recorded by hand (by mail, letter, phone): with the moment the operator
+     * states, the way it came, and stored even where the shop's own function
+     * would refuse — the operator decides. No mail unless asked for.
+     */
+    public function testVonHandErfasstAuchOhneWiderrufsfunktionUndOhneMail(): void
+    {
+        $this->connection->update('tl_consho_shop', ['withdrawalDays' => 0], ['id' => 1]);
+        $receivedAt = self::NOW - 2 * 86400;
+
+        $result = $this->recorder()->recordByHand(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::Letter, 'Erika Muster', [2 => '1'], '', 'Brief vom 5.'), $receivedAt, false);
+
+        self::assertSame(WithdrawalOutcome::Recorded, $result->outcome);
+        self::assertSame('WEB-00073-W1', $result->number);
+        self::assertFalse($result->confirmed);
+        self::assertSame([], $this->mails);
+
+        $row = $this->connection->fetchAssociative('SELECT * FROM tl_consho_withdrawal');
+
+        self::assertIsArray($row);
+        self::assertSame($receivedAt, (int) $row['receivedAt']);
+        self::assertSame('letter', $row['source']);
+        self::assertSame('items', $row['scope']);
+        self::assertSame('Brief vom 5.', $row['message']);
+        self::assertNull($row['confirmationSentAt']);
+        self::assertSame(['2' => '1'], array_map(strval(...), $this->connection->fetchAllKeyValue('SELECT orderItem, quantity + 0 FROM tl_consho_withdrawal_item')));
+    }
+
+    public function testVonHandErfasstMitBestaetigungOhneBetreiberkopie(): void
+    {
+        $this->shipEverything(self::NOW - 40 * 86400);
+
+        $result = $this->recorder()->recordByHand(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::Email, 'E'), self::NOW - 3600, true);
+
+        self::assertTrue($result->confirmed);
+        self::assertTrue($result->afterWindow, 'gemessen am Eingang, nicht am Erfassen');
+        self::assertCount(1, $this->mails);
+        self::assertFalse($this->mails[0]['operatorCopy']);
+        self::assertSame(self::NOW - 3600, $this->mails[0]['withdrawal']['receivedAt']);
+        self::assertNotNull($this->connection->fetchOne('SELECT confirmationSentAt FROM tl_consho_withdrawal'));
+    }
+
+    public function testVonHandErfasstNieMehrAlsUebrig(): void
+    {
+        $result = $this->recorder()->recordByHand(new WithdrawalDeclaration(self::ORDER, WithdrawalSource::Oral, 'E', [2 => '2']), self::NOW, false);
+
+        self::assertSame(WithdrawalOutcome::InvalidItems, $result->outcome);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
+    }
+
+    /**
      * WA, A1–A3: If no order matches, it is stored anyway — without an order,
      * with the shop, the order number typed in and the address entered; the
      * confirmation goes to that address.
@@ -411,8 +461,8 @@ final class WithdrawalRecorderTest extends TestCase
     private function recorder(RateLimiterFactory|null $perShop = null, RateLimiterFactory|null $perAddress = null, LoggerInterface|null $logger = null): WithdrawalRecorder
     {
         $mail = $this->createMock(OrderEventMail::class);
-        $mail->method('withdrawalReceived')->willReturnCallback(function (int $orderId, array $withdrawal, string $viewUrl): bool {
-            $this->mails[] = ['orderId' => $orderId, 'withdrawal' => $withdrawal, 'viewUrl' => $viewUrl];
+        $mail->method('withdrawalReceived')->willReturnCallback(function (int $orderId, array $withdrawal, string $viewUrl, bool $operatorCopy = true): bool {
+            $this->mails[] = ['orderId' => $orderId, 'withdrawal' => $withdrawal, 'viewUrl' => $viewUrl, 'operatorCopy' => $operatorCopy];
 
             return $this->mailWorks;
         });

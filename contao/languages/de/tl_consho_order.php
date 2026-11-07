@@ -244,4 +244,5 @@ $GLOBALS['TL_LANG']['tl_consho_order']['servicePeriodUntil'] = ['Leistungszeitra
 $GLOBALS['TL_LANG']['tl_consho_order']['subscription'] = ['Folgebestellung zum Abo', 'Leer bei einem Kauf. Gesetzt, wenn die Bestellung eine Periode eines Abos abrechnet.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['businessCustomer'] = ['Geschäftskunde', 'Beim Kauf als Unternehmer gezählt: Netto-Kundengruppe oder geprüfte UID. Einem Geschäftskunden wird die Zustimmung nicht abverlangt.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['entitlements'] = ['Berechtigungen', 'Berechtigungen aus den digitalen Positionen der Bestellung ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_order']['captureWithdrawal'] = ['Widerruf erfassen', 'Widerruf erfassen'];
 $GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Ein Teil der Kunden- und Adressangaben ist schreibgeschützt: Die Lieferadresse steht auf einer erfassten Lieferung oder einem Lieferschein, Kunde und Rechnungsadresse auf einer Rechnung. Eine Rechnung wird mit einer Rechnungskorrektur berichtigt, nicht hier.';

@@ -22,19 +22,26 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
     ],
 
     'list' => [
+        /*
+         * A column list like the complaints, not the parent view, which
+         * Contao draws without columns; with the ptable it still shows only
+         * this order's deliveries, and "Neue Lieferung" still creates one
+         * under it. The order is named in the headline.
+         */
         'sorting' => [
-            'mode' => 4,
+            'mode' => 1,
             // Tie-break: shippedAt has second resolution, so the order would otherwise be
             // whatever MySQL finds cheapest. id is autoincrement and never ties.
             'fields' => ['shippedAt', 'id'],
             'panelLayout' => 'limit',
-            'headerFields' => ['orderNumber', 'lastname'],
             'defaultSearchField' => 'trackingNumber',
         ],
-        'label' => ['fields' => ['shippedAt', 'trackingNumber'], 'format' => '%s — %s'],
+        // Cells from DeliveryListener::deliveryLabel(); `kind` is virtual.
+        'label' => ['fields' => ['kind', 'shippedAt', 'carrier', 'trackingNumber', 'notification'], 'showColumns' => true],
         'operations' => [
             // `primary` keeps the jump in the row — see tl_consho_product.
-            'items' => ['href' => 'table=tl_consho_delivery_item', 'icon' => 'header.svg', 'primary' => true],
+            // Contao's child-records icon in blue, as at a complaint.
+            'items' => ['href' => 'table=tl_consho_delivery_item', 'icon' => 'bundles/contaoconsho/icons/items.svg', 'primary' => true],
 
             // D-1. POST like "Erneut senden": it mails the customer. Hidden
             // once reported (DeliveryListener).
@@ -43,6 +50,11 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
             // dev#2: the parcel's delivery note, shown only where there is one
             // (DeliveryListener).
             'deliveryNote' => ['href' => 'key=deliveryNotePdf', 'icon' => 'theme_export.svg', 'primary' => true],
+
+            // The customer's mail about the parcel once more, like "Bestätigung
+            // erneut senden" at the order: POST, on a reported parcel only
+            // (DeliveryListener).
+            'resendNotification' => ['href' => 'key=resendDeliveryNotification', 'icon' => 'resend.svg', 'method' => 'POST', 'primary' => true],
             'edit',
             '!delete',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
@@ -66,7 +78,10 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
         'tstamp' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
         // The complaint a replacement delivery belongs to (block Reklamation,
         // 3.3); 0 for every ordinary delivery.
-        'complaint' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
+        'complaint' => [
+            'label' => &$GLOBALS['TL_LANG']['tl_consho_delivery']['complaint'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
+        ],
         'shippedAt' => [
             'inputType' => 'text',
             'exclude' => true,
@@ -94,12 +109,42 @@ $GLOBALS['TL_DCA']['tl_consho_delivery'] = [
          * deliveries count in the balance (OrderBalanceReader). Not in the
          * palette — written by the action, never typed.
          */
-        'reportedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false]],
+        'reportedAt' => [
+            // rgxp: "Info" shows the moment, not the timestamp.
+            'label' => &$GLOBALS['TL_LANG']['tl_consho_delivery']['reportedAt'],
+            'eval' => ['rgxp' => 'datim'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false],
+        ],
+
+        /*
+         * When the customer's mail about this parcel left — at the report or
+         * from "Benachrichtigung erneut senden". NULL on a reported delivery
+         * means it failed (DeliveryNotSentIssueSource); 0 that none was
+         * recorded: an electronic release, whose notice is the release mail,
+         * or a delivery reported before the field (DeliveryNotifiedMigration).
+         */
+        'notifiedAt' => [
+            'label' => &$GLOBALS['TL_LANG']['tl_consho_delivery']['notifiedAt'],
+            'eval' => ['rgxp' => 'datim'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false],
+        ],
+
+        // The list's first column: an ordinary delivery or a replacement.
+        'kind' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_delivery']['kind']],
+
+        // The list's last column, drawn from reportedAt and notifiedAt
+        // (DeliveryListener::notification()). Its own name, so that "Info"
+        // keeps "Gemeldet am" for reportedAt.
+        'notification' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_delivery']['notification']],
 
         // Set with reportedAt (D-1, A2): a reported delivery and its items
         // are read-only, and neither can be deleted — the mail about this
         // parcel is out.
-        'lockedAt' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false]],
+        'lockedAt' => [
+            'label' => &$GLOBALS['TL_LANG']['tl_consho_delivery']['lockedAt'],
+            'eval' => ['rgxp' => 'datim'],
+            'sql' => ['type' => 'integer', 'unsigned' => true, 'notnull' => false],
+        ],
 
         /*
          * No columns: what is in the parcel lives in tl_consho_delivery_item,

@@ -243,4 +243,5 @@ $GLOBALS['TL_LANG']['tl_consho_order']['servicePeriodUntil'] = ['Service period 
 $GLOBALS['TL_LANG']['tl_consho_order']['subscription'] = ['Follow-up order of subscription', 'Empty for a purchase. Set when the order bills a period of a subscription.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['businessCustomer'] = ['Business customer', 'Counted as a business at the purchase: net price group or verified VAT ID. No consent is asked of a business customer.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['entitlements'] = ['Entitlements', 'Entitlements from the digital lines of order ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_order']['captureWithdrawal'] = ['Record withdrawal', 'Record withdrawal'];
 $GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Some customer and address details are read-only: the delivery address is on a recorded delivery or a delivery note, the customer and billing address on an invoice. An invoice is corrected by an invoice correction, not here.';

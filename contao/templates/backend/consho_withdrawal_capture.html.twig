@@ -1,0 +1,150 @@
+{#
+  "Widerruf erfassen", rendered by WithdrawalCaptureBackendController: a
+  withdrawal that came in by mail, letter or phone.
+
+  Two steps, both posting to the same address with Contao's request token:
+    form    — the declaration; "Weiter zur Prüfung" (consho_action=review)
+    review  — the same values as a summary and as hidden fields;
+              "Widerruf erfassen" (record) stores it, "Ändern" (edit) goes back
+
+  ⚠️ Long hints carry `tl_help` only, never `tl_tip` (see the process page).
+#}
+{% set l = lang %}
+{% set e = l.captureErrors|default({}) %}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ l.back|default('Zurück') }}</a>
+</div>
+
+{{ messages|raw }}
+
+<div class="tl_formbody_edit consho-withdrawal-page">
+
+    <div class="consho-withdrawal-head">
+        <h2>{{ l.captureTitle|default('Widerruf erfassen') }} <span class="consho-withdrawal-head__order">{{ l.headOrder|default('zur Bestellung') }} {{ order.number }}</span></h2>
+    </div>
+
+    {# data-turbo="false": the summary and a form with errors answer the POST
+       directly instead of with a redirect, and Turbo drops such an answer. #}
+    <form action="{{ action }}" method="post" data-turbo="false">
+        <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+
+    {% if step == 'review' %}
+        {# ── Review: what will be stored, unchangeable afterwards ── #}
+        <input type="hidden" name="latest" value="{{ latest }}">
+        <input type="hidden" name="receivedAt" value="{{ input.receivedAt }}">
+        <input type="hidden" name="source" value="{{ input.source }}">
+        <input type="hidden" name="name" value="{{ input.name }}">
+        <input type="hidden" name="scope" value="{{ input.scope }}">
+        {% for id, quantity in input.items %}<input type="hidden" name="items[{{ id }}]" value="{{ quantity }}">{% endfor %}
+        <input type="hidden" name="part" value="{{ input.part }}">
+        <input type="hidden" name="message" value="{{ input.message }}">
+        {% if input.confirm %}<input type="hidden" name="confirm" value="1">{% endif %}
+
+        <fieldset class="tl_tbox consho-withdrawal-box">
+            <legend>{{ l.captureReviewLegend|default('Prüfen und erfassen') }}</legend>
+            <table class="tl_show">
+                <tbody>
+                    <tr><td class="tl_label">{{ l.receivedAt.0|default('Eingegangen am') }}</td><td>{{ summary.receivedAt }} ({{ l.sources[input.source]|default(input.source) }})</td></tr>
+                    <tr><td class="tl_label">{{ l.name.0|default('Name') }}</td><td>{{ input.name }}</td></tr>
+                    <tr><td class="tl_label">{{ l.scope.0|default('Umfang') }}</td><td>{{ l.scopes[input.scope]|default(input.scope) }}</td></tr>
+                    {% if input.scope == 'items' %}
+                        <tr><td class="tl_label">{{ l.colItem|default('Position') }}</td><td>{% for item in summary.items %}{{ item.quantity }} × {{ item.name }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td></tr>
+                    {% endif %}
+                    {% if input.scope == 'part' %}<tr><td class="tl_label">{{ l.part.0|default('Teil') }}</td><td>{{ input.part|nl2br }}</td></tr>{% endif %}
+                    {% if input.message %}<tr><td class="tl_label">{{ l.message.0|default('Nachricht') }}</td><td>{{ input.message|nl2br }}</td></tr>{% endif %}
+                    <tr><td class="tl_label">{{ l.confirmation_legend|default('Eingangsbestätigung') }}</td><td>{% if input.confirm %}{{ l.captureConfirmTo|default('an %s')|format(order.email) }}{% else %}{{ l.captureConfirmNone|default('keine') }}{% endif %}</td></tr>
+                </tbody>
+            </table>
+            {% if summary.closed %}<p class="tl_help consho-overdue">{{ l.captureClosedHint|default('') }}</p>{% endif %}
+            {% if summary.late %}<p class="tl_help consho-overdue">{{ l.afterWindowHint|default('') }}</p>{% endif %}
+            <p class="tl_help">{{ l.captureReviewHelp|default('') }}</p>
+        </fieldset>
+
+        <div class="tl_submit_container">
+            <button type="submit" name="consho_action" value="record" class="tl_submit">{{ l.captureRecord|default('Widerruf erfassen') }}</button>
+            <button type="submit" name="consho_action" value="edit" class="tl_submit">{{ l.captureEdit|default('Ändern') }}</button>
+        </div>
+
+    {% else %}
+        {# ── Form ── #}
+        <fieldset class="tl_tbox consho-withdrawal-box">
+            <legend>{{ l.withdrawal_legend|default('Erklärung') }}</legend>
+            <p class="tl_help">{{ l.captureHelp|default('') }}</p>
+
+            <div class="widget w50">
+                <h3><label for="consho-capture-received">{{ l.receivedAt.0|default('Eingegangen am') }}</label></h3>
+                <input type="datetime-local" name="receivedAt" id="consho-capture-received" class="tl_text" value="{{ input.receivedAt }}" required>
+                {% if errors.receivedAt is defined %}<p class="tl_error">{{ errors.receivedAt }}</p>{% endif %}
+                <p class="tl_help">{{ l.captureReceivedAtHelp|default('') }}</p>
+            </div>
+
+            <div class="widget w50">
+                <h3><label for="consho-capture-source">{{ l.source.0|default('Weg') }}</label></h3>
+                <select name="source" id="consho-capture-source" class="tl_select">
+                    {% for source in sources %}<option value="{{ source }}"{% if source == input.source %} selected{% endif %}>{{ l.sources[source]|default(source) }}</option>{% endfor %}
+                </select>
+                {% if errors.source is defined %}<p class="tl_error">{{ errors.source }}</p>{% endif %}
+            </div>
+
+            <div class="widget w50 clr">
+                <h3><label for="consho-capture-name">{{ l.name.0|default('Name') }}</label></h3>
+                <input type="text" name="name" id="consho-capture-name" class="tl_text" value="{{ input.name }}" required maxlength="255">
+                {% if errors.name is defined %}<p class="tl_error">{{ errors.name }}</p>{% endif %}
+            </div>
+
+            <div class="widget clr">
+                <h3>{{ l.scope.0|default('Umfang') }}</h3>
+                {% for scope in ['all', 'items', 'part'] %}
+                    <label class="consho-capture-scope"><input type="radio" name="scope" value="{{ scope }}"{% if scope == input.scope %} checked{% endif %}> {{ l.scopes[scope]|default(scope) }}</label>
+                {% endfor %}
+            </div>
+
+            <div class="widget clr">
+                <h3>{{ l.captureItems|default('Positionen (bei „einzelne Positionen“)') }}</h3>
+                {% if goods is empty %}
+                    <p class="tl_help">{{ l.captureNoGoods|default('') }}</p>
+                {% else %}
+                    <table class="tl_listing">
+                        <thead><tr><th class="tl_folder_tlist">{{ l.colItem|default('Position') }}</th><th class="tl_folder_tlist">{{ l.colLeft|default('noch nicht widerrufen') }}</th><th class="tl_folder_tlist">{{ l.captureColQuantity|default('widerrufen') }}</th></tr></thead>
+                        <tbody>
+                        {% for good in goods %}
+                            <tr>
+                                <td class="tl_file_list">{{ good.name }}</td>
+                                <td class="tl_file_list">{{ good.left }}</td>
+                                <td class="tl_file_list"><input type="text" inputmode="decimal" name="items[{{ good.id }}]" aria-label="{{ good.name }}" class="tl_text" style="max-width:8em" value="{{ good.quantity }}" placeholder="0"{% if good.whole %} title="{{ l.captureWhole|default('nur ganz')|format(good.left) }}"{% endif %}></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+                {% if errors.items is defined %}<p class="tl_error">{{ errors.items }}</p>{% endif %}
+            </div>
+
+            <div class="widget clr">
+                <h3><label for="consho-capture-part">{{ l.part.0|default('Teil') }}</label></h3>
+                <textarea name="part" id="consho-capture-part" class="tl_textarea" rows="3">{{ input.part }}</textarea>
+                {% if errors.part is defined %}<p class="tl_error">{{ errors.part }}</p>{% endif %}
+                <p class="tl_help">{{ l.capturePartHelp|default('') }}</p>
+            </div>
+
+            <div class="widget clr">
+                <h3><label for="consho-capture-message">{{ l.captureMessage.0|default('Erklärung im Wortlaut') }}</label></h3>
+                <textarea name="message" id="consho-capture-message" class="tl_textarea" rows="6">{{ input.message }}</textarea>
+                <p class="tl_help">{{ l.captureMessage.1|default('') }}</p>
+            </div>
+
+            <div class="widget clr">
+                <div class="tl_checkbox_single_container">
+                    <input type="checkbox" name="confirm" id="consho-capture-confirm" class="tl_checkbox" value="1"{% if input.confirm %} checked{% endif %}>
+                    <label for="consho-capture-confirm">{{ l.captureConfirm.0|default('Eingangsbestätigung senden')|format(order.email) }}</label>
+                </div>
+                <p class="tl_help">{{ l.captureConfirm.1|default('') }}</p>
+            </div>
+        </fieldset>
+
+        <div class="tl_submit_container">
+            <button type="submit" name="consho_action" value="review" class="tl_submit">{{ l.captureReview|default('Weiter zur Prüfung') }}</button>
+        </div>
+    {% endif %}
+    </form>
+</div>

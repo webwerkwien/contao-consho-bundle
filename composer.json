@@ -64,7 +64,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "0.5.x-dev"
+            "dev-main": "0.6.x-dev"
         },
         "contao-manager-plugin": "Webwerkwien\\ContaoConshoBundle\\ContaoManager\\Plugin"
     },

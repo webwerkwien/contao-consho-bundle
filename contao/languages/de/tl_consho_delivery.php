@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-$GLOBALS['TL_LANG']['tl_consho_delivery']['shippedAt'] = ['Versendet am', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['shippedAt'] = ['Versanddatum', ''];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['carrier'] = ['Versanddienst', 'z. B. Post AT, DPD, GLS.'];
 $GLOBALS['TL_LANG']['tl_consho_delivery']['trackingNumber'] = ['Sendungsnummer', ''];
 
@@ -45,7 +45,22 @@ $GLOBALS['TL_LANG']['tl_consho_delivery']['report'] = ['Als versandt melden', 'L
 $GLOBALS['TL_LANG']['tl_consho_delivery']['deliveryNote'] = ['Lieferschein', 'Lieferschein der Lieferung ID %s als PDF öffnen'];
 
 $GLOBALS['TL_LANG']['tl_consho_delivery']['notReported'] = 'noch nicht gemeldet';
-$GLOBALS['TL_LANG']['tl_consho_delivery']['reportedOn'] = 'gemeldet am %s';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['notNotified'] = 'nicht versendet';
+
+$GLOBALS['TL_LANG']['tl_consho_delivery']['resendNotification'] = ['Benachrichtigung erneut senden', 'Die Mail zur Lieferung ID %s noch einmal an den Kunden senden'];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['resendNotificationSent'] = 'Die Benachrichtigung zur Lieferung der Bestellung %s ging erneut an %s.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['resendNotificationFailed'] = 'Die Benachrichtigung zur Lieferung der Bestellung %s konnte nicht gesendet werden. Den Grund nennt das Systemlog.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['resendNotificationAnonymized'] = 'Die Benachrichtigung zur Lieferung der Bestellung %s wurde nicht gesendet: Die Kundendaten sind nach Ablauf der Aufbewahrungsfrist anonymisiert.';
+$GLOBALS['TL_LANG']['tl_consho_delivery']['resendNotificationNothing'] = 'Zu dieser Lieferung der Bestellung %s gibt es keine Benachrichtigung: Sie ist noch nicht gemeldet oder eine elektronische Freischaltung mit eigener Mail.';
+
+// Column headings and the kind icon of the list.
+$GLOBALS['TL_LANG']['tl_consho_delivery']['kind'] = ['Art', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['notification'] = ['Benachrichtigung', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['reportedAt'] = ['Gemeldet am', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['notifiedAt'] = ['Benachrichtigt am', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['lockedAt'] = ['Gesperrt seit', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['complaint'] = ['Reklamation (ID)', ''];
+$GLOBALS['TL_LANG']['tl_consho_delivery']['kindDelivery'] = 'Lieferung';
 
 // Services in the delivery list (DeliveryServiceListener).
 $GLOBALS['TL_LANG']['tl_consho_delivery']['servicePerformed'] = 'Leistung erbracht';

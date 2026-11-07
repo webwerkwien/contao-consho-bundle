@@ -679,9 +679,11 @@ class OrderEventMail
      *
      * @param array{number: string, receivedAt: int, source: string, name: string, email: string, scope: string, items: list<array{quantity: string, name: string}>, part: string, message: string} $withdrawal
      *
+     * @param bool $operatorCopy false for a withdrawal the operator recorded by hand
+     *
      * @return bool whether the customer's mail left
      */
-    public function withdrawalReceived(int $orderId, array $withdrawal, string $viewUrl): bool
+    public function withdrawalReceived(int $orderId, array $withdrawal, string $viewUrl, bool $operatorCopy = true): bool
     {
         try {
             [$order, $shop, $transport, $from, $payload] = $this->prepare($orderId, null);
@@ -705,9 +707,11 @@ class OrderEventMail
             'viewUrl' => $viewUrl,
         ], [], $transport, $from);
 
-        $this->toOperator('withdrawal', $order, $shop, self::WITHDRAWAL_OPERATOR_TEMPLATE, $payload, [
-            'withdrawal' => $for($shop['fallbackLanguage']),
-        ], [], $transport, $from);
+        if ($operatorCopy) {
+            $this->toOperator('withdrawal', $order, $shop, self::WITHDRAWAL_OPERATOR_TEMPLATE, $payload, [
+                'withdrawal' => $for($shop['fallbackLanguage']),
+            ], [], $transport, $from);
+        }
 
         return $sent;
     }

@@ -3,7 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Withdrawal;
 
 /**
- * What an action on the page "Widerruf bearbeiten" came to: a key of
+ * What an action on the page "Widerruf entscheiden" came to: a key of
  * $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] and its parameters.
  *
  * Amounts and quantities stay plain decimals here ("11.25"); `$kinds` says

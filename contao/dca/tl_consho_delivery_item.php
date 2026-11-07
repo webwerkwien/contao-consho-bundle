@@ -29,6 +29,9 @@ $GLOBALS['TL_DCA']['tl_consho_delivery_item'] = [
         'operations' => [
             'edit',
             '!delete',
+            // As on the delivery list: a reported item is read-only, so
+            // "Details" is the only way to look at it.
+            'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],
         ],
     ],
 
@@ -38,6 +41,9 @@ $GLOBALS['TL_DCA']['tl_consho_delivery_item'] = [
         'id' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'autoincrement' => true]],
         'pid' => [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
+            // The delivery list's first field is the virtual `kind`; without
+            // it "Info" would query that as a column (ParentLabelIsAColumnTest).
+            'foreignKey' => 'tl_consho_delivery.shippedAt',
             'relation' => ['type' => 'belongsTo', 'load' => 'lazy', 'table' => 'tl_consho_delivery'],
         ],
         'tstamp' => ['sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0]],
@@ -59,6 +65,7 @@ $GLOBALS['TL_DCA']['tl_consho_delivery_item'] = [
         // reported. Raises the cap for goods coming back (StockReturn); 0 for
         // ordinary deliveries, whose goods the purchase click booked.
         'stockBooked' => [
+            'label' => &$GLOBALS['TL_LANG']['tl_consho_delivery_item']['stockBooked'],
             'sql' => ['type' => 'decimal', 'precision' => 10, 'scale' => 4, 'default' => '0.0000'],
         ],
     ],

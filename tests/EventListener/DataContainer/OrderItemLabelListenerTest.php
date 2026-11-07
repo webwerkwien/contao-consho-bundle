@@ -52,12 +52,35 @@ class OrderItemLabelListenerTest extends TestCase
         self::assertSame('', $columns[6]);
     }
 
-    public function testDieVersandzeileNenntIhreArt(): void
+    public function testDieVersandzeileZeigtIhrSymbol(): void
     {
         $columns = $this->listener()(['pid' => 4, 'lineType' => 'shipping', 'kind' => '', 'productName' => 'Paket', 'quantity' => '1.0000', 'unitPrice' => '4.9000', 'taxRate' => '20.0000', 'lineTotal' => '4.9000'], '');
 
-        self::assertSame('Versand', $columns[0]);
+        self::assertSame('<span class="consho-signal consho-signal--kind consho-signal--kind-shipping" title="Versand"></span>', $columns[0]);
         self::assertSame('', $columns[6]);
+    }
+
+    /**
+     * Every charge line type has an icon in the stylesheet, and the file it
+     * names exists — a class without a rule would be an empty cell.
+     */
+    public function testJedeZuschlagsartHatEinSymbol(): void
+    {
+        $css = (string) file_get_contents(__DIR__.'/../../../public/backend.css');
+
+        foreach (array_keys($GLOBALS['TL_LANG']['tl_consho_order_item']['lineTypes']) as $type) {
+            $cell = $this->listener()(['pid' => 4, 'lineType' => $type, 'kind' => '', 'productName' => 'x', 'quantity' => '1', 'unitPrice' => '1', 'taxRate' => '20', 'lineTotal' => '1'], '')[0];
+
+            self::assertStringContainsString('consho-signal--kind-'.$type.'"', $cell, $type);
+            self::assertSame(1, preg_match('/\.consho-signal--kind-'.$type.'\b[^{]*\{ --consho-icon: url\("icons\/([\w-]+\.svg)"\)/', $css, $match), $type.': keine Regel');
+            self::assertFileExists(__DIR__.'/../../../public/icons/'.($match[1] ?? ''), $type);
+        }
+    }
+
+    /** An unknown charge type stays in words. */
+    public function testEineUnbekannteZuschlagsartBleibtText(): void
+    {
+        self::assertSame('neu', $this->listener()(['pid' => 4, 'lineType' => 'neu', 'kind' => '', 'productName' => 'x', 'quantity' => '1', 'unitPrice' => '1', 'taxRate' => '20', 'lineTotal' => '1'], '')[0]);
     }
 
     /**

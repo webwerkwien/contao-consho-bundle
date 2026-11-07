@@ -57,7 +57,20 @@ final class WithdrawalListListenerTest extends TestCase
         $this->listener('consho_order')->flatInModule('tl_consho_withdrawal');
 
         self::assertSame('tl_consho_order', $GLOBALS['TL_DCA']['tl_consho_withdrawal']['config']['ptable']);
-        self::assertSame(4, $GLOBALS['TL_DCA']['tl_consho_withdrawal']['list']['sorting']['mode']);
+        self::assertSame(['signals', 'number', 'receivedAt', 'source', 'scope', 'refundDue', 'amount'], $GLOBALS['TL_DCA']['tl_consho_withdrawal']['list']['label']['fields']);
+    }
+
+    /**
+     * Under the order: columns without order and customer — the headline
+     * names the order. Way and scope in words, not as stored keys.
+     */
+    public function testUnterDerBestellungSpaltenOhneBestellungUndKunde(): void
+    {
+        $cells = $this->listener('consho_order')->label(['id' => 9, 'number' => 'WEB-00077-W1', 'pid' => 7, 'state' => 'received', 'receivedAt' => strtotime('2026-09-21 16:13'), 'refundedAt' => null, 'refundAmount' => null, 'source' => 'form', 'scope' => 'items', 'afterWindow' => 1]);
+
+        self::assertCount(\count($GLOBALS['TL_DCA']['tl_consho_withdrawal']['list']['label']['fields']), $cells);
+        self::assertStringStartsWith('WEB-00077-W1 <span class="tl_gray"', $cells[1], 'nach Fensterende an der Nummer');
+        self::assertSame(['21.09.2026 16:13', 'Widerrufsformular', 'einzelne Positionen', '<strong>05.10.2026</strong>', ''], \array_slice($cells, 2));
     }
 
     public function testAndereTabellenBleibenUnberuehrt(): void
@@ -68,16 +81,6 @@ final class WithdrawalListListenerTest extends TestCase
 
         self::assertSame('x', $GLOBALS['TL_DCA']['tl_other']['config']['ptable']);
         unset($GLOBALS['TL_DCA']['tl_other']);
-    }
-
-    public function testDasLabelNenntBestellungStandUndFaelligkeit(): void
-    {
-        $received = strtotime('2026-09-21 16:13');
-
-        $label = $this->listener('consho_withdrawal')->label(['number' => 'WEB-00077-W1', 'pid' => 7, 'receivedAt' => $received, 'state' => 'accepted', 'refundedAt' => null]);
-
-        self::assertStringContainsString('WEB-00077-W1 — WEB-00077 — 21.09.2026 16:13 — angenommen', $label);
-        self::assertStringContainsString('Erstattung fällig bis 05.10.2026', $label);
     }
 
     /**
@@ -100,7 +103,6 @@ final class WithdrawalListListenerTest extends TestCase
 
         $cells = $listener->label($row);
 
-        self::assertIsArray($cells);
         self::assertCount(7, $cells, 'eine Zelle je Spalte');
         self::assertStringContainsString('consho-signal--undo consho-signal--done', $cells[0]);
         self::assertStringContainsString('consho-signal--copy consho-signal--done', $cells[0], 'alles zurück');
@@ -116,7 +118,6 @@ final class WithdrawalListListenerTest extends TestCase
 
         $cells = $listener->label(['id' => 9, 'number' => 'W', 'pid' => 7, 'state' => 'received', 'receivedAt' => strtotime('2026-01-01 10:00'), 'refundedAt' => null, 'refundAmount' => null, 'name' => '']);
 
-        self::assertIsArray($cells);
         self::assertStringContainsString('consho-signal--undo consho-signal--attention', $cells[0]);
         self::assertSame('<strong>15.01.2026</strong>', $cells[5]);
     }
@@ -127,33 +128,25 @@ final class WithdrawalListListenerTest extends TestCase
      */
     public function testNichtZugeordnetUndNachFensterende(): void
     {
-        // Under the order first: flatInModule switches to columns globally.
-        $line = $this->listener('consho_order')->label(['number' => 'W-00009', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'received', 'refundedAt' => null, 'afterWindow' => 1]);
-
-        self::assertIsString($line);
-        self::assertStringEndsWith(' — '.$GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'][0], $line);
-
         $listener = $this->listener('consho_withdrawal');
         $listener->flatInModule('tl_consho_withdrawal');
 
         $cells = $listener->label(['id' => 9, 'number' => 'W-00009', 'pid' => 0, 'state' => 'received', 'receivedAt' => 1_790_000_000, 'refundedAt' => null, 'refundAmount' => null, 'name' => 'E', 'afterWindow' => 0]);
 
-        self::assertIsArray($cells);
         self::assertSame('<em>nicht zugeordnet</em>', $cells[2]);
 
         $late = $listener->label(['id' => 9, 'number' => 'W-00009', 'pid' => 7, 'state' => 'received', 'receivedAt' => 1_790_000_000, 'refundedAt' => null, 'refundAmount' => null, 'name' => 'E', 'afterWindow' => 1]);
 
-        self::assertIsArray($late);
         self::assertStringStartsWith('WEB-00077 <span class="tl_gray"', $late[2]);
         self::assertStringContainsString($GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'][0], $late[2]);
     }
 
     public function testErstattetOderAbgelehntOhneFaelligkeit(): void
     {
-        $listener = $this->listener('consho_withdrawal');
+        $listener = $this->listener('consho_order');
 
-        self::assertStringContainsString('erstattet am', $listener->label(['number' => 'W', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'accepted', 'refundedAt' => 1_790_100_000]));
-        self::assertStringNotContainsString('fällig', $listener->label(['number' => 'W', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'rejected', 'refundedAt' => null]));
+        self::assertSame('', $listener->label(['number' => 'W', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'accepted', 'refundedAt' => 1_790_100_000])[5]);
+        self::assertSame('', $listener->label(['number' => 'W', 'pid' => 7, 'receivedAt' => 1_790_000_000, 'state' => 'rejected', 'refundedAt' => null])[5]);
     }
 
     private function listener(string $module): WithdrawalListListener

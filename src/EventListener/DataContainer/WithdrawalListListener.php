@@ -16,15 +16,16 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
  *
  * ── One table, two lists ──────────────────────────────────────────────────
  *
- * Under an order the table is a child list (mode 4). In the module
- * `consho_withdrawal` it is listed flat over all orders, newest first, with a
- * filter by state — the same records and the same page to process them, not a
- * second table that could say something different. The switch happens when
- * the DCA is loaded, by module, before DC_Table reads the configuration.
+ * Under an order the table is a column list of that order's withdrawals. In
+ * the module `consho_withdrawal` it is listed flat over all orders, newest
+ * first, with a filter by state and columns for order and customer — the same
+ * records and the same page to process them, not a second table that could
+ * say something different. The switch happens when the DCA is loaded, by
+ * module, before DC_Table reads the configuration.
  *
- * ── The label says what is due ────────────────────────────────────────────
+ * ── The columns say what is due ───────────────────────────────────────────
  *
- * Number, order, receipt, state — and, while a withdrawal is not rejected
+ * State as signals, number, receipt — and, while a withdrawal is not rejected
  * and not refunded, the day the refund is due (receipt + 14 days, § 357
  * Abs. 1 BGB, § 14 Abs. 1 FAGG). That day is why the list exists.
  */
@@ -76,30 +77,32 @@ class WithdrawalListListener
     }
 
     /**
-     * One cell per column in the menu item (F12), one line under the order.
+     * One cell per field of `list.label.fields` — in the menu item (F12) with
+     * order and customer, under the order without them.
      *
-     * ⚠️ With showColumns an ARRAY — Contao throws a string away there and
-     * falls back to its own values (see OrderLabelListener). Under the order
-     * (mode 4, no columns) the one-line label stays.
+     * ⚠️ An ARRAY — with showColumns Contao throws a string away and falls
+     * back to its own values (see OrderLabelListener).
      *
-     * @return string|list<string>
+     * @param array<string, mixed> $row
+     *
+     * @return list<string>
      */
     #[AsCallback(table: 'tl_consho_withdrawal', target: 'list.label.label')]
-    public function label(array $row): string|array
+    public function label(array $row): array
     {
-        if ($GLOBALS['TL_DCA']['tl_consho_withdrawal']['list']['label']['showColumns'] ?? false) {
-            return $this->columns($row);
-        }
+        /** @var list<string> $fields */
+        $fields = $GLOBALS['TL_DCA']['tl_consho_withdrawal']['list']['label']['fields'] ?? [];
+        $cells = $this->cells($row, \in_array('pid', $fields, true));
 
-        return $this->line($row);
+        return array_map(static fn (string $field): string => $cells[$field] ?? '', $fields);
     }
 
     /**
      * @param array<string, mixed> $row
      *
-     * @return list<string>
+     * @return array<string, string>
      */
-    private function columns(array $row): array
+    private function cells(array $row, bool $orderColumn): array
     {
         $order = $this->connection->fetchAssociative('SELECT orderNumber, currency FROM tl_consho_order WHERE id = ?', [(int) ($row['pid'] ?? 0)]);
         $received = (int) ($row['receivedAt'] ?? 0);
@@ -130,58 +133,33 @@ class WithdrawalListListener
         $orderCell = false === $order
             ? '<em>'.StringUtil::specialchars((string) ($lang['unassigned'] ?? 'nicht zugeordnet')).'</em>'
             : StringUtil::specialchars((string) $order['orderNumber']);
+        $numberCell = StringUtil::specialchars((string) ($row['number'] ?? ''));
 
+        // WA, B3: in the order column, where the operator looks for the
+        // order; under the order, which has none, at the number.
         if ((bool) ($row['afterWindow'] ?? false)) {
-            $orderCell .= ' <span class="tl_gray" title="'.StringUtil::specialchars((string) ($lang['afterWindow'][1] ?? '')).'">('.StringUtil::specialchars((string) ($lang['afterWindow'][0] ?? 'nach Fensterende')).')</span>';
+            $late = ' <span class="tl_gray" title="'.StringUtil::specialchars((string) ($lang['afterWindow'][1] ?? '')).'">('.StringUtil::specialchars((string) ($lang['afterWindow'][0] ?? 'nach Fensterende')).')</span>';
+
+            if ($orderColumn) {
+                $orderCell .= $late;
+            } else {
+                $numberCell .= $late;
+            }
         }
+
+        $source = (string) ($row['source'] ?? '');
+        $scope = (string) ($row['scope'] ?? 'all');
 
         return [
-            WithdrawalSignals::html($this->signals->of($row, time())),
-            StringUtil::specialchars((string) ($row['number'] ?? '')),
-            $orderCell,
-            StringUtil::specialchars((string) ($row['name'] ?? '')),
-            StringUtil::specialchars(BackendDate::withTime($received)),
-            $dueCell,
-            $amount,
+            'signals' => WithdrawalSignals::html($this->signals->of($row, time())),
+            'number' => $numberCell,
+            'pid' => $orderCell,
+            'customer' => StringUtil::specialchars((string) ($row['name'] ?? '')),
+            'receivedAt' => StringUtil::specialchars(BackendDate::withTime($received)),
+            'source' => StringUtil::specialchars((string) ($lang['sources'][$source] ?? $source)),
+            'scope' => StringUtil::specialchars((string) ($lang['scopes'][$scope] ?? $scope)),
+            'refundDue' => $dueCell,
+            'amount' => $amount,
         ];
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     */
-    private function line(array $row): string
-    {
-        $lang = $GLOBALS['TL_LANG']['tl_consho_withdrawal'] ?? [];
-        $received = (int) ($row['receivedAt'] ?? 0);
-        $state = (string) ($row['state'] ?? 'received');
-
-        $parts = [
-            StringUtil::specialchars((string) ($row['number'] ?? '')),
-            StringUtil::specialchars(BackendDate::withTime($received)),
-            StringUtil::specialchars((string) ($lang['states'][$state] ?? $state)),
-        ];
-
-        if (null !== ($row['refundedAt'] ?? null)) {
-            $parts[] = \sprintf((string) ($lang['labelRefunded'] ?? 'erstattet am %s'), StringUtil::specialchars(BackendDate::format((int) $row['refundedAt'])));
-        } elseif ('rejected' !== $state) {
-            $due = WithdrawalSignals::refundDue($received);
-            $text = \sprintf((string) ($lang['labelDue'] ?? 'Erstattung fällig bis %s'), StringUtil::specialchars(BackendDate::format($due)));
-
-            // Past due and not refunded: said, not only coloured.
-            $parts[] = $due < time() ? '<strong>'.$text.'</strong>' : $text;
-        }
-
-        $order = $this->connection->fetchOne('SELECT orderNumber FROM tl_consho_order WHERE id = ?', [(int) ($row['pid'] ?? 0)]);
-
-        if (\is_string($order) && '' !== $order) {
-            array_splice($parts, 1, 0, [StringUtil::specialchars($order)]);
-        }
-
-        // WA, B3.
-        if ((bool) ($row['afterWindow'] ?? false)) {
-            $parts[] = StringUtil::specialchars((string) ($lang['afterWindow'][0] ?? 'nach Fensterende eingegangen'));
-        }
-
-        return implode(' — ', $parts);
     }
 }

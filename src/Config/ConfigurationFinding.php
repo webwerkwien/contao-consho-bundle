@@ -73,6 +73,9 @@ enum ConfigurationFinding: string
     case ConfirmationNotSent = 'confirmationNotSent';
     case OperatorAddressIsSender = 'operatorAddressIsSender';
 
+    // A reported delivery whose mail to the customer did not leave.
+    case DeliveryNotSent = 'deliveryNotSent';
+
     // C-11: CONSHO_TEST_PAYMENT is set.
     case TestPaymentActive = 'testPaymentActive';
 
@@ -326,7 +329,7 @@ enum ConfigurationFinding: string
             self::ManufacturerEmailMissing, self::ManufacturerEuResponsibleMissing => ['consho_manufacturer'],
             self::StockLow => ['consho_stock'],
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
-            self::InvoiceArchiveFailed, self::ExternalInvoiceFailed, self::ConfirmationNotSent, self::AnonymizationDue,
+            self::InvoiceArchiveFailed, self::ExternalInvoiceFailed, self::ConfirmationNotSent, self::DeliveryNotSent, self::AnonymizationDue,
             self::StatusContradictsBalance, self::InvoiceOverdue, self::PrepaymentUnpaid,
             self::RefundPayoutFailed, self::RefundPayoutStuck, self::PaymentChargedBack, self::RefundOutsideConsho, self::ChargebackReversedAfterPayment, self::OrderOverpaid, self::RefundWithoutPayment, self::PaymentHeld => ['consho_order'],
             // The tax report is order data; the switch "Steuer im
@@ -637,6 +640,11 @@ enum ConfigurationFinding: string
              */
             self::ConfirmationNotSent => true,
             self::OperatorAddressIsSender => false,
+
+            // The customer does not know the parcel is on its way, and where
+            // the invoice comes with the shipment, has none — like a
+            // confirmation that did not go out.
+            self::DeliveryNotSent => true,
 
             /*
              * C-11 (spec 11.3): the test provider confirms payments without

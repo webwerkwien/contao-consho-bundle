@@ -11,12 +11,14 @@ use Contao\Message;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bridge\Twig\Extension\TranslationExtension;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
+use Webwerkwien\ContaoConshoBundle\Complaint\ComplaintDeliveryDates;
 use Webwerkwien\ContaoConshoBundle\Controller\Backend\WithdrawalBackendController;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
@@ -48,7 +50,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\Refund\RefundResult;
 use Webwerkwien\ContaoConshoBundle\Tests\Payment\FakeRefundingHandler;
 
 /**
- * The page "Widerruf bearbeiten" (edit withdrawal, D-3) — with the real
+ * The page "Widerruf entscheiden" (decide withdrawal, D-3) — with the real
  * template (strict_variables) and the real service on SQLite.
  */
 final class WithdrawalBackendControllerTest extends TestCase
@@ -117,7 +119,13 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertStringContainsString('WEB-00077-W1', $html);
         self::assertStringContainsString('zur Bestellung <a href="/contao?do=consho_order&amp;act=edit&amp;id=7">WEB-00077</a>', $html);
         self::assertStringContainsString('consho-signal--undo', $html);
-        self::assertStringContainsString('Ablehnen …</summary>', $html, 'Ablehnen hinter einem Aufklappfeld');
+        // W2: the decision as tiles, like "Reklamation entscheiden"; rejecting stands apart.
+        self::assertStringContainsString('<input type="radio" name="consho_choice" id="choice_accept" value="accept">', $html);
+        self::assertStringContainsString('class="consho-remedy-choice__end consho-remedy-choice__reject"', $html);
+        self::assertStringContainsString('name="saveNclose"', $html);
+        // W1: the items with their delivery information — none shipped yet.
+        self::assertStringContainsString('noch nicht versendet', $html);
+        self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_delivery&amp;id=7"', $html);
         self::assertStringNotContainsString('tl_tip', $html, 'lange Hinweise werden nicht abgeschnitten');
         self::assertStringContainsString('Test &lt;b&gt;', $html, 'Kundeneingabe maskiert');
         self::assertStringContainsString('name="accepted[1]"', $html);
@@ -130,6 +138,8 @@ final class WithdrawalBackendControllerTest extends TestCase
 
     public function testAnnehmenUndDanachDieErstattung(): void
     {
+        $this->shipped();
+
         $location = $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'accept', 'accepted' => [1 => '1']]))($this->dc()));
 
         // Back to the same page (POST, redirect, GET).
@@ -142,6 +152,61 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertStringContainsString('noch nicht als zurückerhalten erfasst', $html);
         self::assertStringContainsString('name="returned[', $html);
         self::assertStringNotContainsString('name="accepted[', $html);
+        // W3: the decision reported, nothing to choose any more.
+        self::assertStringContainsString('<td class="tl_label">Entschieden</td><td>angenommen, ', $html);
+        self::assertStringNotContainsString('consho_choice', $html);
+        // W4: return and refund are separate forms.
+        self::assertSame(2, substr_count($html, 'name="consho_action"'));
+        self::assertSame(1, substr_count($html, 'data-turbo="false"'), 'only the refund answers without a redirect');
+    }
+
+    public function testOhneVersandKeineRuecksendung(): void
+    {
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['consho_action' => 'accept', 'accepted' => [1 => '1']]))($this->dc()));
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
+
+        self::assertStringContainsString('Erstattung buchen', $html);
+        self::assertStringNotContainsString('name="returned[', $html, 'nothing shipped, nothing comes back');
+        self::assertStringNotContainsString('noch nicht als zurückerhalten erfasst', $html);
+    }
+
+    public function testDieKachelEntscheidetMitDenSpeicherknoepfen(): void
+    {
+        $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['save' => '', 'accepted' => [1 => '1']]))($this->dc()));
+
+        self::assertSame([['addError', 'Bitte wählen Sie zuerst Annehmen oder Ablehnen.']], $this->messages);
+        self::assertSame('received', $this->connection->fetchOne('SELECT state FROM tl_consho_withdrawal WHERE id = 1'));
+
+        // "Speichern und schließen" goes back where the page was opened from.
+        $this->messages = [];
+        $location = $this->redirectOf(fn () => $this->controller(Request::create('/contao?key=processWithdrawal&id=1', 'POST', ['saveNclose' => '', 'consho_choice' => 'accept', 'accepted' => [1 => '1']]))($this->dc()));
+
+        self::assertSame('/contao?do=consho_order', $location);
+        self::assertSame([['addConfirmation', 'Widerruf WEB-00077-W1 angenommen.']], $this->messages);
+        self::assertSame('accepted', $this->connection->fetchOne('SELECT state FROM tl_consho_withdrawal WHERE id = 1'));
+    }
+
+    public function testDieTabelleNenntDenVersandVorDemEingang(): void
+    {
+        $this->shipped();
+
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
+
+        self::assertStringContainsString('versendet 19.09.2026, 2 Tage vor Eingang', $html);
+        self::assertStringNotContainsString('noch nicht versendet', $html);
+    }
+
+    public function testEineLeistungWirdFreigeschaltetNichtVersendet(): void
+    {
+        $this->connection->update('tl_consho_order_item', ['kind' => 'service'], ['id' => 1]);
+
+        self::assertStringContainsString('noch nicht freigeschaltet', $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc()));
+
+        $this->shipped();
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'))($this->dc());
+
+        self::assertStringContainsString('freigeschaltet 19.09.2026, 2 Tage vor Eingang', $html);
+        self::assertStringNotContainsString('versendet', $html);
     }
 
     /**
@@ -364,6 +429,7 @@ final class WithdrawalBackendControllerTest extends TestCase
      */
     public function testBestaetigteErstattungWirdGebucht(): void
     {
+        $this->shipped();
         $card = new FakeRefundingHandler();
         $card->refund = RefundResult::done('re_1');
         $payouts = $this->payouts($card);
@@ -374,6 +440,13 @@ final class WithdrawalBackendControllerTest extends TestCase
         self::assertSame('addConfirmation', $this->messages[1][0] ?? null);
         self::assertCount(1, $card->refunds);
         self::assertSame('8.9000', $card->refunds[0]->amount);
+
+        // W5: refunded, the return can still be recorded; the refund is done.
+        $html = $this->controller(Request::create('/contao?key=processWithdrawal&id=1'), payouts: $payouts)($this->dc());
+
+        self::assertStringContainsString('name="returned[', $html);
+        self::assertStringNotContainsString('Erstattung buchen', $html);
+        self::assertStringContainsString('Erledigt — die Erstattung ist gebucht', $html);
     }
 
     /**
@@ -443,6 +516,13 @@ final class WithdrawalBackendControllerTest extends TestCase
         }
 
         self::fail('Es wurde nicht zurückgeleitet.');
+    }
+
+    /** The salt as reported shipped two days before the declaration. */
+    private function shipped(): void
+    {
+        $this->connection->insert('tl_consho_delivery', ['id' => 5, 'pid' => 7, 'shippedAt' => self::RECEIVED - 2 * 86_400, 'reportedAt' => self::RECEIVED - 2 * 86_400]);
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 5, 'orderItem' => 1, 'quantity' => '2']);
     }
 
     /**
@@ -518,6 +598,8 @@ final class WithdrawalBackendControllerTest extends TestCase
         $loader->addPath(__DIR__.'/../../../contao/templates', 'Contao');
         $twig = new Environment($loader, ['strict_variables' => true]);
         $twig->addGlobal('contao', ['request_token' => 'tok']);
+        // Contao's save buttons; without a catalogue the key stands for the text.
+        $twig->addExtension(new TranslationExtension());
 
         $router = $this->createStub(UrlGeneratorInterface::class);
         $router->method('generate')->willReturnCallback(static fn (string $name, array $p): string => '/contao?'.http_build_query($p));
@@ -535,6 +617,7 @@ final class WithdrawalBackendControllerTest extends TestCase
             $router,
             new ValueCompensation($this->connection),
             new WithdrawalAssignment($this->connection, new WithdrawalWindowReader($this->connection, $balances)),
+            new ComplaintDeliveryDates($this->connection),
         );
     }
 

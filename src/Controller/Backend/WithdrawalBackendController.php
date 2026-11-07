@@ -21,6 +21,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Twig\Environment;
+use Webwerkwien\ContaoConshoBundle\Complaint\ComplaintDeliveryDates;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\ProcessingResult;
@@ -31,9 +32,10 @@ use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalSignals;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalWindowReader;
 
 /**
- * The page "Widerruf bearbeiten" (D-3, spec 6.3): the declaration as it
+ * The page "Widerruf entscheiden" (D-3, spec 6.3): the declaration as it
  * arrived, the dates that matter, and the operator's actions — accept or
- * reject, record the return, book the refund.
+ * reject, record the return, book the refund. Laid out like "Reklamation
+ * entscheiden": the decision as tiles, then one section per step.
  *
  * A page of its own rather than an editable mask: the declaration must never
  * change (it is the proof of the confirmation of receipt), and a DC_Table mask
@@ -71,6 +73,7 @@ final class WithdrawalBackendController
         private readonly UrlGeneratorInterface $router,
         private readonly ValueCompensation $compensations,
         private readonly WithdrawalAssignment $assignment,
+        private readonly ComplaintDeliveryDates $deliveryDates,
     ) {
     }
 
@@ -101,12 +104,23 @@ final class WithdrawalBackendController
         if (null !== $request && $request->isMethod('POST')) {
             $post = $request->request;
             $now = time();
+            $action = $post->getString('consho_action');
+            $close = false;
 
-            $result = match ($post->getString('consho_action')) {
+            // The decision form: one tile, saved with Contao's own buttons —
+            // as on "Reklamation entscheiden".
+            if ('' === $action && ($post->has('save') || $post->has('saveNclose'))) {
+                $choice = $post->getString('consho_choice');
+                $action = \in_array($choice, ['accept', 'reject'], true) ? $choice : 'choiceMissing';
+                $close = $post->has('saveNclose');
+            }
+
+            $result = match ($action) {
                 'accept' => $this->processing->accept($id, self::strings($post->all('accepted')), $now),
                 'reject' => $this->processing->reject($id, $post->getString('reason'), $now),
                 'return' => $this->processing->recordReturn($id, self::date($post->getString('returnReceivedAt')), self::strings($post->all('returned')), $now, self::restock($post->all('restockShown'), $post->all('restock')), $this->userId()),
                 'refund' => $this->processing->refund($id, $post->getString('shipping'), $now, $post->has('compensation') ? $post->getString('compensation') : null, $post->has('throughProvider'), $post->has('consho_confirmed') ? $post->getString('consho_confirmed') : null, self::ids($post->all()['foreign'] ?? []), $this->userName()),
+                'choiceMissing' => ProcessingResult::refused('choiceMissing'),
                 default => ProcessingResult::refused('unknown'),
             };
 
@@ -146,7 +160,7 @@ final class WithdrawalBackendController
             $message = $this->framework->getAdapter(Message::class);
             $result->done ? $message->addConfirmation($text) : $message->addError($text);
 
-            throw new RedirectResponseException($request->getUri());
+            throw new RedirectResponseException($close && $result->done ? $this->framework->getAdapter(System::class)->getReferer() : $request->getUri());
         }
 
         return $this->twig->render(self::TEMPLATE, [
@@ -194,7 +208,7 @@ final class WithdrawalBackendController
      * A withdrawal from the form that matched no order (WA, A4). Whoever may
      * open the list "Widerrufe" sees it — there is no order yet whose rights
      * could decide; assigning it is an update of the order it goes to, the
-     * same check as every action on the page "Widerruf bearbeiten".
+     * same check as every action on the page "Widerruf entscheiden".
      *
      * @param array<string, mixed> $withdrawal
      */
@@ -297,8 +311,9 @@ final class WithdrawalBackendController
 
         $goods = [];
         $names = [];
+        $delivered = $this->deliveryDates->forOrder($orderId);
 
-        foreach ($this->connection->fetchAllAssociative('SELECT id, productName, quantity, lineType FROM tl_consho_order_item WHERE pid = ? ORDER BY id', [$orderId]) as $row) {
+        foreach ($this->connection->fetchAllAssociative('SELECT id, productName, quantity, lineType, kind FROM tl_consho_order_item WHERE pid = ? ORDER BY id', [$orderId]) as $row) {
             $names[(int) $row['id']] = (string) $row['productName'];
 
             if (!OrderLineType::stored((string) $row['lineType'])->isGoods()) {
@@ -324,6 +339,10 @@ final class WithdrawalBackendController
                 'declared' => isset($declared[$itemId]) ? $this->money->quantity($declared[$itemId], $language) : '',
                 'left' => $this->money->quantity((string) BigDecimal::max(BigDecimal::zero(), $left), $language),
                 'proposed' => (string) BigDecimal::of($proposed)->strippedOfTrailingZeros(),
+                // When it was shipped, and how long before the declaration —
+                // the window runs from receipt, so the operator weighs it.
+                'delivered' => array_map(fn (int $day): string => $this->deliveredLabel($day, (int) $withdrawal['receivedAt'], $language), $delivered[$itemId] ?? []),
+                'deliveryWords' => ComplaintDeliveryDates::words((string) ($row['kind'] ?? ''), $GLOBALS['TL_LANG']['tl_consho_withdrawal'] ?? []),
             ];
         }
 
@@ -335,6 +354,9 @@ final class WithdrawalBackendController
             // Block G (G9): only a line the purchase took out of stock can go back.
             'restockable' => BigDecimal::of((string) ($item['stockBooked'] ?? '0'))->isPositive(),
             'restock' => (bool) ($item['restock'] ?? true),
+            // Only what left the shop can come back: no return for a line
+            // never shipped (a withdrawal before shipping ends in a cancellation).
+            'shipped' => isset($delivered[(int) $item['orderItem']]),
         ], array_values(array_filter($items, static fn (array $item): bool => BigDecimal::of((string) $item['acceptedQuantity'])->isPositive())));
 
         $window = $this->windows->of($orderId);
@@ -404,6 +426,8 @@ final class WithdrawalBackendController
             ],
             'signals' => WithdrawalSignals::html($signals),
             'orderUrl' => $this->router->generate('contao_backend', ['do' => 'consho_order', 'act' => 'edit', 'id' => $orderId]),
+            // Where the dates of the column "Lieferinformationen" come from.
+            'deliveriesUrl' => $this->router->generate('contao_backend', ['do' => 'consho_order', 'table' => 'tl_consho_delivery', 'id' => $orderId]),
             'subscriptions' => $subscriptions,
             'goods' => $goods,
             'rows' => $rows,
@@ -412,12 +436,16 @@ final class WithdrawalBackendController
                 'shipping' => null === $withdrawal['refundShipping'] ? '0' : (string) BigDecimal::of((string) $withdrawal['refundShipping'])->toScale(2),
                 'shippingLeft' => $this->money->format($proposal['shippingLeft'], $currency, $language),
                 'returned' => null !== $withdrawal['returnReceivedAt'],
-                // DL4 (Abo-8): only goods come back — the hint on
-                // holding back the refund only where a physical line is accepted.
+                // DL4 (Abo-8): only goods come back — the hint that the
+                // goods are not back yet only where a physical line is
+                // accepted that was shipped; unshipped, nothing is to come back.
                 'physical' => false !== $this->connection->fetchOne(
                     "SELECT 1 FROM tl_consho_withdrawal_item wi
                        JOIN tl_consho_order_item i ON i.id = wi.orderItem
-                      WHERE wi.pid = ? AND wi.acceptedQuantity > 0 AND i.kind = 'physical' LIMIT 1",
+                      WHERE wi.pid = ? AND wi.acceptedQuantity > 0 AND i.kind = 'physical'
+                        AND EXISTS (SELECT 1 FROM tl_consho_delivery_item di JOIN tl_consho_delivery d ON d.id = di.pid
+                                     WHERE di.orderItem = wi.orderItem AND d.reportedAt IS NOT NULL AND d.complaint = 0)
+                      LIMIT 1",
                     [$withdrawalId],
                 ),
                 // Shown where a service is withdrawn or an amount is set.
@@ -528,6 +556,17 @@ final class WithdrawalBackendController
     private function moment(int $timestamp, string $language): string
     {
         return (string) (new \IntlDateFormatter(str_replace('-', '_', $language), \IntlDateFormatter::MEDIUM, \IntlDateFormatter::SHORT, date_default_timezone_get()))->format($timestamp);
+    }
+
+    /**
+     * "03.11.2026, 2 Tage vor Eingang", as on "Reklamation entscheiden".
+     */
+    private function deliveredLabel(int $day, int $received, string $language): string
+    {
+        $date = $this->day($day, $language);
+        $text = ComplaintDeliveryDates::gap($day, $received, $GLOBALS['TL_LANG']['tl_consho_withdrawal']['deliveredGap'] ?? []);
+
+        return '' === $text ? $date : $date.', '.$text;
     }
 
     private function day(int $timestamp, string $language): string

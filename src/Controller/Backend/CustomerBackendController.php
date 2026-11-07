@@ -225,7 +225,7 @@ final class CustomerBackendController
     }
 
     /**
-     * Like the page "Widerruf bearbeiten" — one date format across Consho's
+     * Like the page "Widerruf entscheiden" — one date format across Consho's
      * own back end pages.
      */
     private function date(int $timestamp): string

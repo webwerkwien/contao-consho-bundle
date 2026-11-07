@@ -4,15 +4,14 @@ namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 
 use Contao\CoreBundle\DataContainer\DataContainerOperation;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
-use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\DataContainer;
 use Contao\Date;
-use Contao\Image;
 use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Order\DeliveryContents;
+use Webwerkwien\ContaoConshoBundle\Order\DeliveryReported;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineType;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
@@ -25,8 +24,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  *  - An item offers only the GOODS of its own order. Until D-1 the field
  *    listed every line of every order, shipping lines included, through a
  *    foreignKey.
- *  - The list says whether a delivery is reported; the report button goes
- *    once it is. A replacement delivery names its complaint (RK-5).
+ *  - The list is a column list: kind, shipped, carrier, tracking number,
+ *    reported. The report button goes once a delivery is reported. A
+ *    replacement delivery links to its complaint (RK-5).
  */
 class DeliveryListener
 {
@@ -39,8 +39,7 @@ class DeliveryListener
         DeliveryContents|null $contents = null,
         // "Leistung erbracht" at the row of an electronic delivery.
         private readonly DeliveryServiceListener|null $services = null,
-        // RK-5, S8: the icon and the link of a replacement delivery.
-        private readonly ContaoFramework|null $framework = null,
+        // RK-5, S8: the link of a replacement delivery to its complaint.
         private readonly UrlGeneratorInterface|null $router = null,
     ) {
         $this->contents = $contents ?? new DeliveryContents($connection, $balances);
@@ -74,6 +73,26 @@ class DeliveryListener
         }
     }
 
+    /**
+     * "Benachrichtigung erneut senden" on every reported parcel, sent or not
+     * — a customer can lose a mail, as at the order confirmation. Not on an
+     * electronic release: its notice is the release mail. Not on an
+     * anonymised order: there is no address left to send to.
+     */
+    #[AsCallback(table: 'tl_consho_delivery', target: 'list.operations.resendNotification.button')]
+    public function resendNotificationButton(DataContainerOperation $operation): void
+    {
+        $record = $operation->getRecord();
+
+        if (
+            null === ($record['reportedAt'] ?? null)
+            || !DeliveryReported::isParcel($this->connection, (int) ($record['id'] ?? 0))
+            || false !== $this->connection->fetchOne('SELECT 1 FROM tl_consho_order WHERE id = ? AND anonymizedAt IS NOT NULL', [(int) ($record['pid'] ?? 0)])
+        ) {
+            $operation->hide();
+        }
+    }
+
     #[AsCallback(table: 'tl_consho_delivery', target: 'list.operations.deliveryNote.button')]
     public function deliveryNoteButton(DataContainerOperation $operation): void
     {
@@ -85,54 +104,82 @@ class DeliveryListener
     }
 
     /**
+     * One cell per field in `list.label.fields`: kind, shipped, carrier,
+     * tracking number, reported. The services rendered with the parcel
+     * ("Leistung erbracht") follow the reported cell.
+     *
+     * ⚠️ An ARRAY — with showColumns Contao throws a string away.
+     *
      * @param array<string, mixed> $row
+     *
+     * @return list<string>
      */
     #[AsCallback(table: 'tl_consho_delivery', target: 'list.label.label')]
-    public function deliveryLabel(array $row): string
+    public function deliveryLabel(array $row): array
     {
         $shippedAt = (int) ($row['shippedAt'] ?? 0);
-        $parts = [$shippedAt > 0 ? Date::parse(Date::getNumericDateFormat(), $shippedAt) : ''];
 
-        if ('' !== (string) ($row['trackingNumber'] ?? '')) {
-            $parts[] = StringUtil::specialchars((string) $row['trackingNumber']);
-        }
-
-        $reportedAt = $row['reportedAt'] ?? null;
-        $lang = $GLOBALS['TL_LANG']['tl_consho_delivery'];
-        $parts[] = $this->replacementMarker($row);
-        $parts[] = null === $reportedAt
-            ? '<span class="tl_gray">'.($lang['notReported'] ?? 'not reported').'</span>'
-            : \sprintf($lang['reportedOn'] ?? '%s', Date::parse(Date::getNumericDatimFormat(), (int) $reportedAt));
-
-        return implode(' — ', array_filter($parts, static fn (string $p): bool => '' !== $p))
-            .($this->services?->rowSuffix((int) ($row['id'] ?? 0)) ?? '');
+        return [
+            $this->replacementMarker($row),
+            $shippedAt > 0 ? Date::parse(Date::getNumericDateFormat(), $shippedAt) : '',
+            StringUtil::specialchars((string) ($row['carrier'] ?? '')),
+            StringUtil::specialchars((string) ($row['trackingNumber'] ?? '')),
+            $this->notification($row).($this->services?->rowSuffix((int) ($row['id'] ?? 0)) ?? ''),
+        ];
     }
 
     /**
-     * RK-5, S8: a replacement delivery says which complaint it answers, with
-     * a link to the complaint's page — it is not a delivery of the order.
+     * The column "Benachrichtigung": when the mail about the parcel left; red
+     * where it failed; for a delivery without a recorded mail (0: before the
+     * field, or an electronic release) the moment it was reported.
+     *
+     * @param array<string, mixed> $row
+     */
+    public function notification(array $row): string
+    {
+        $lang = $GLOBALS['TL_LANG']['tl_consho_delivery'] ?? [];
+        $reportedAt = $row['reportedAt'] ?? null;
+        $notifiedAt = $row['notifiedAt'] ?? null;
+
+        if (null === $reportedAt) {
+            return '<span class="tl_gray">'.($lang['notReported'] ?? 'not reported').'</span>';
+        }
+
+        if (null === $notifiedAt) {
+            return '<span class="consho-overdue">'.($lang['notNotified'] ?? 'not sent').'</span>';
+        }
+
+        return Date::parse(Date::getNumericDatimFormat(), (int) $notifiedAt > 0 ? (int) $notifiedAt : (int) $reportedAt);
+    }
+
+    /**
+     * The kind column: the lorry of the "Lieferungen" button for a delivery
+     * of the order, the cracked glass of the "Reklamationen" button for a
+     * replacement (RK-5, S8). A replacement links to its complaint's page and
+     * names the complaint in the title — it is not a delivery of the order.
      *
      * @param array<string, mixed> $row
      */
     public function replacementMarker(array $row): string
     {
+        $lang = $GLOBALS['TL_LANG']['tl_consho_delivery'] ?? [];
         $complaintId = (int) ($row['complaint'] ?? 0);
 
         if ($complaintId < 1) {
-            return '';
+            return \sprintf('<span class="consho-signal consho-signal--kind consho-signal--kind-delivery" title="%s"></span>', StringUtil::specialchars((string) ($lang['kindDelivery'] ?? 'Delivery')));
         }
 
         $number = (string) $this->connection->fetchOne('SELECT number FROM tl_consho_complaint WHERE id = ?', [$complaintId]);
-        $label = StringUtil::specialchars(\sprintf((string) ($GLOBALS['TL_LANG']['tl_consho_delivery']['replacementLabel'] ?? '%s'), $number));
-        $icon = null === $this->framework ? '' : (string) $this->framework->getAdapter(Image::class)->getHtml('sync.svg', $label).' ';
+        $label = StringUtil::specialchars(\sprintf((string) ($lang['replacementLabel'] ?? '%s'), $number));
+        $icon = \sprintf('<span class="consho-signal consho-signal--kind consho-signal--kind-replacement" title="%s"></span>', $label);
 
         if (null === $this->router) {
-            return $icon.$label;
+            return $icon;
         }
 
         $url = $this->router->generate('contao_backend', ['do' => 'consho_order', 'table' => 'tl_consho_complaint', 'key' => 'processComplaint', 'id' => $complaintId, 'pid' => (int) ($row['pid'] ?? 0)]);
 
-        return $icon.'<a href="'.StringUtil::specialchars($url).'">'.$label.'</a>';
+        return '<a href="'.StringUtil::specialchars($url).'" title="'.$label.'">'.$icon.'</a>';
     }
 
     /**

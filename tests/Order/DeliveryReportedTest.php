@@ -15,6 +15,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DeferredArchive;
 use Webwerkwien\ContaoConshoBundle\Document\DeliveryNoteIssuer;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuerInterface;
+use Webwerkwien\ContaoConshoBundle\Document\DocumentRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentTrigger;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
@@ -62,6 +63,9 @@ final class DeliveryReportedTest extends TestCase
     /** @var list<string> what Contao's Versions was asked, in order */
     private array $versions = [];
 
+    /** Whether the stubbed mails leave. */
+    private bool $mailLeaves = true;
+
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
@@ -73,6 +77,7 @@ final class DeliveryReportedTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_order_item');
         DcaSchema::create($this->connection, 'tl_consho_delivery');
         DcaSchema::create($this->connection, 'tl_consho_delivery_item');
+        DcaSchema::create($this->connection, 'tl_consho_document');
 
         $this->connection->insert('tl_consho_order', ['id' => self::ORDER, 'shop' => 1, 'orderNumber' => 'WEB-00081', 'grandTotal' => '60', 'paymentMethod' => 3]);
         $this->connection->insert('tl_consho_order_item', ['id' => 1, 'pid' => self::ORDER, 'productName' => 'Wanderstock', 'quantity' => '2']);
@@ -130,6 +135,136 @@ final class DeliveryReportedTest extends TestCase
         // caller archives after HIS commit.
         self::assertSame([], $this->archived);
         self::assertSame(55, $report->toArchive);
+
+        // No mail due: 0, not the NULL that would raise DeliveryNotSent.
+        self::assertSame('0', (string) $this->connection->fetchOne('SELECT notifiedAt FROM tl_consho_delivery WHERE id = 1'));
+    }
+
+    /**
+     * notifiedAt says whether the customer was told: the time when the mail
+     * left, NULL when it did not (DeliveryNotSent).
+     */
+    public function testDieMeldungHaeltFestObDieMailHinausging(): void
+    {
+        $this->parcel(1, [1 => '1']);
+        $this->reported()->report(1, 100);
+
+        $this->mailLeaves = false;
+        $this->parcel(2, [1 => '1']);
+        $this->reported()->report(2, 200);
+
+        self::assertSame(100, (int) $this->connection->fetchOne('SELECT notifiedAt FROM tl_consho_delivery WHERE id = 1'));
+        self::assertNull($this->connection->fetchOne('SELECT notifiedAt FROM tl_consho_delivery WHERE id = 2'));
+    }
+
+    /**
+     * "Benachrichtigung erneut senden": the same mail as at the report, with
+     * the invoice a shipment issues — the first mail failed, so the customer
+     * never got it. Nothing else changes.
+     */
+    public function testErneutSendenSchicktDieselbeMailMitRechnung(): void
+    {
+        $this->parcel(1, [1 => '2', 2 => '1'], 'Post AT', 'CA1AT');
+        $this->mailLeaves = false;
+        $this->reported()->report(1, 100);
+
+        $this->mailLeaves = true;
+        $sent = $this->reported()->resendNotification(1, 300);
+
+        self::assertTrue($sent);
+        self::assertCount(2, $this->mails);
+        [$delivery, $invoiceId] = $this->mails[1];
+        self::assertSame(55, $invoiceId);
+        self::assertSame('CA1AT', $delivery['trackingNumber']);
+        self::assertSame([['quantity' => '2', 'name' => 'Wanderstock'], ['quantity' => '1', 'name' => 'Rucksack']], $delivery['items']);
+        self::assertTrue($delivery['complete']);
+        self::assertSame([self::ORDER], $this->issued, 'keine zweite Rechnung');
+        self::assertSame([OrderEvent::DeliveryReported], $this->advanced, 'kein zweiter Statuswechsel');
+
+        $row = $this->connection->fetchAssociative('SELECT reportedAt, notifiedAt FROM tl_consho_delivery WHERE id = 1');
+        self::assertSame([100, 300], [(int) $row['reportedAt'], (int) $row['notifiedAt']]);
+    }
+
+    public function testErneutSendenOhneRechnungBeiVorkasse(): void
+    {
+        $this->trigger = DocumentTrigger::OnOrder;
+        $this->parcel(1, [1 => '2']);
+        $this->connection->update('tl_consho_delivery', ['reportedAt' => 100], ['id' => 1]);
+        $this->issued = [self::ORDER];
+
+        $this->reported()->resendNotification(1, 300);
+
+        self::assertNull($this->mails[0][1], 'die Rechnung kam mit der Bestellung, nicht mit dem Paket');
+    }
+
+    /**
+     * The invoice came with the first parcel; the second parcel's mail had
+     * none, and its resent mail has none either.
+     */
+    public function testErneutSendenDerZweitenSendungOhneRechnung(): void
+    {
+        $this->parcel(1, [1 => '2']);
+        $this->reported()->report(1, 100);
+        $this->parcel(2, [2 => '1']);
+        $this->reported()->report(2, 200);
+
+        $this->reported()->resendNotification(2, 300);
+        $this->reported()->resendNotification(1, 300);
+
+        self::assertNull($this->mails[2][1], 'zweite Sendung');
+        self::assertSame(55, $this->mails[3][1], 'erste Sendung');
+    }
+
+    /** A cancelled invoice is not sent again — the cancellation replaced it. */
+    public function testErneutSendenOhneStornierteRechnung(): void
+    {
+        $this->parcel(1, [1 => '2']);
+        $this->reported()->report(1, 100);
+        $this->connection->insert('tl_consho_document', ['pid' => self::ORDER, 'type' => 'cancellation', 'relatedDocument' => 55]);
+
+        $this->reported()->resendNotification(1, 300);
+
+        self::assertNull($this->mails[1][1]);
+    }
+
+    public function testErneutSendenScheitertUndBleibtOffen(): void
+    {
+        $this->parcel(1, [1 => '2']);
+        $this->mailLeaves = false;
+        $this->reported()->report(1, 100);
+
+        self::assertFalse($this->reported()->resendNotification(1, 300));
+        self::assertNull($this->connection->fetchOne('SELECT notifiedAt FROM tl_consho_delivery WHERE id = 1'));
+    }
+
+    /**
+     * Nothing to send: a draft, or an electronic release, whose notice is the
+     * release mail.
+     */
+    public function testErneutSendenNurFuerEinGemeldetesPaket(): void
+    {
+        $this->parcel(1, [1 => '2']);
+        self::assertNull($this->reported()->resendNotification(1, 300), 'Entwurf');
+
+        $this->connection->insert('tl_consho_order_item', ['id' => 5, 'pid' => self::ORDER, 'productName' => 'E-Book', 'quantity' => '1', 'kind' => 'digital']);
+        $this->parcel(2, [5 => '1']);
+        $this->connection->update('tl_consho_delivery', ['reportedAt' => 100, 'notifiedAt' => 0], ['id' => 2]);
+        self::assertNull($this->reported()->resendNotification(2, 300), 'Freischaltung');
+
+        self::assertSame([], $this->mails);
+    }
+
+    public function testErneutSendenEinerErsatzlieferungMitIhrerMail(): void
+    {
+        $this->shippedAndComplained(['1' => '1']);
+        $this->parcel(2, [1 => '1'], 'Post AT', 'RE1AT', 4);
+        $this->reported()->report(2, 200);
+
+        self::assertTrue($this->reported()->resendNotification(2, 300));
+        self::assertCount(2, $this->replacementMails);
+        self::assertSame($this->replacementMails[0], $this->replacementMails[1]);
+        self::assertSame([], $this->mails, 'nicht die Versandmail');
+        self::assertSame(300, (int) $this->connection->fetchOne('SELECT notifiedAt FROM tl_consho_delivery WHERE id = 2'));
     }
 
     /**
@@ -421,13 +556,17 @@ final class DeliveryReportedTest extends TestCase
         $mail->method('shipped')->willReturnCallback(function (int $orderId, array $delivery, int|null $invoiceId): bool {
             $this->mails[] = [$delivery, $invoiceId];
 
-            return true;
+            return $this->mailLeaves;
         });
         $mail->method('replacementShipped')->willReturnCallback(function (int $orderId, array $delivery): bool {
             $this->replacementMails[] = $delivery;
 
-            return true;
+            return $this->mailLeaves;
         });
+
+        // The invoice the report issued, as the repository finds it.
+        $documentRows = $this->createStub(DocumentRepositoryInterface::class);
+        $documentRows->method('findIdByOrderAndType')->willReturnCallback(fn (): int|null => [] === $this->issued ? null : 55);
 
         return new DeliveryReported(
             $this->connection,
@@ -447,6 +586,7 @@ final class DeliveryReportedTest extends TestCase
             $notes,
             new DeferredArchive($this->connection, static fn () => $archiver),
             $stock,
+            $documentRows,
         );
     }
 

@@ -2,7 +2,7 @@
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['number'] = ['Widerrufsnummer', 'Aus der Bestellnummer abgeleitet.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['receivedAt'] = ['Eingegangen am', 'Zeitpunkt des Eingangs nach der Uhr des Servers — so steht er in der Eingangsbestätigung.'];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['source'] = ['Weg', 'Über die Bestellseite (Link aus der Mail) oder über das Widerrufsformular.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['source'] = ['Weg', 'Über die Bestellseite (Link aus der Mail), über das Widerrufsformular oder von Hand erfasst (E-Mail, Brief, Telefon).'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['name'] = ['Name', 'Wie vom Kunden angegeben oder bestätigt.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['orderReference'] = ['Angegebene Bestellnummer', 'So, wie der Kunde sie im Widerrufsformular eingetippt hat — auch wenn sie zu keiner Bestellung passte.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindow'] = ['Nach Fensterende eingegangen', 'Eingegangen nach „letzter Versand + Frist + Puffer". Das Fenster rechnet ab Versand, die Frist ab Erhalt — ob der Widerruf rechtzeitig war, entscheiden Sie.'];
@@ -10,7 +10,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['email'] = ['E-Mail', 'Die Adresse f
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scope'] = ['Umfang', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['part'] = ['Widerrufener Teil', 'In den Worten des Kunden.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['message'] = ['Nachricht', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['confirmationSentAt'] = ['Bestätigung versandt am', 'Leer: Die Eingangsbestätigung ging nicht hinaus — den Grund nennt das Systemlog. Der Widerruf gilt trotzdem.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['confirmationSentAt'] = ['Bestätigung versandt am', 'Leer: Die Eingangsbestätigung ging nicht hinaus — den Grund nennt das Systemlog — oder sie war beim Erfassen von Hand nicht gewünscht. Der Widerruf gilt trotzdem.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['state'] = ['Stand', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['states'] = ['received' => 'eingegangen', 'accepted' => 'angenommen', 'rejected' => 'abgelehnt'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['decidedAt'] = ['Entschieden am', ''];
@@ -20,11 +20,10 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundShipping'] = ['Erstatteter Ve
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['valueCompensation'] = ['Wertersatz', 'Für eine Dienstleistung einbehalten (§ 357a Abs. 2 BGB): vorgeschlagen bei der Annahme, festgelegt mit der Erstattung.'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundAmount'] = ['Erstattet', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundedAt'] = ['Erstattet am', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['process'] = ['Bearbeiten', 'Widerruf ID %s bearbeiten: annehmen oder ablehnen, Rücksendung, Erstattung'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['process'] = ['Bearbeiten', 'Widerruf ID %s entscheiden, Rücksendung und Erstattung buchen'];
 
-// The page "Widerruf bearbeiten" (D-3).
+// The page "Widerruf entscheiden" (D-3).
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['back'] = 'Zurück';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['labelDue'] = 'Erstattung fällig bis %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['pid'] = ['Bestellung', ''];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['signalsColumn'] = 'Status';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['customerColumn'] = 'Kunde';
@@ -51,10 +50,9 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['signals'] = [
         'na' => 'Rückzahlung: keine',
     ],
 ];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['labelRefunded'] = 'erstattet am %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['pageTitle'] = 'Widerruf %s zur Bestellung %s';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['headOrder'] = 'zur Bestellung';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['declarationLegend'] = 'Erklärung und Fristen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['declarationLegend'] = 'Widerruf';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['nextLegend'] = 'Nächster Schritt';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['doneRejected'] = 'Abgelehnt — der Kunde hat die Begründung per Mail erhalten.';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['doneRefunded'] = 'Erledigt — die Erstattung ist gebucht, der Kunde hat den Beleg per Mail erhalten.';
@@ -62,7 +60,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['datesLegend'] = 'Fristen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['windowClosesAt'] = 'Fensterende';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['windowOpen'] = 'offene Lieferung';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundDueAt'] = 'Erstattung fällig bis';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['datesHelp'] = 'Hinweis: Das Fensterende ist letzter Versand + Frist + Zustellpuffer – eine Schätzung, denn die Frist beginnt mit dem Erhalt der Ware. Ein Widerruf danach wird trotzdem entgegengenommen und als „nach Fensterende eingegangen“ markiert; ob er rechtzeitig war, beurteilen Sie. Die Erstattung ist zumeist binnen 14 Tagen fällig (siehe z. B. § 357 Abs. 1 BGB; § 14 Abs. 1 FAGG: ab Zugang der Erklärung).';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['datesHelp'] = 'Hinweis: Das Fensterende ist letzter Versand + Frist + Zustellpuffer – eine Schätzung, denn die Frist beginnt mit dem Erhalt der Ware. Ein Widerruf danach wird trotzdem entgegengenommen und als „nach Fensterende eingegangen“ markiert.';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['acceptLegend'] = 'Annehmen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colItem'] = 'Position';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colOrdered'] = 'bestellt';
@@ -72,17 +70,30 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colAccept'] = 'annehmen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colAccepted'] = 'angenommen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colReturned'] = 'zurückerhalten';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['acceptHelp'] = 'Vorbelegt mit dem, was der Kunde genannt hat; bei „ganze Bestellung" mit allem Offenen, bei einem Teil als Freitext mit nichts — dann den Text oben lesen. Die Erklärung selbst bleibt unverändert.';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['acceptSubmit'] = 'Annehmen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['rejectLegend'] = 'Ablehnen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['rejectHelp'] = 'Geht wörtlich per Mail an den Kunden.';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['rejectSubmit'] = 'Ablehnen und Kunden benachrichtigen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['decideLegend'] = 'Entscheidung';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['decideTiles'] = ['accept' => 'Ware zurück, Geld zurück', 'reject' => 'mit Begründung an den Kunden'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['chooseDecision'] = 'Entscheidung wählen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['chooseHint'] = 'Entscheidung wählen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['decidedAs'] = 'Entschieden';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['completesWith'] = 'Erledigt ist der Widerruf mit der Erstattung. Die Rücksendung lässt sich davor oder danach erfassen.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['colDelivered'] = 'Lieferinformationen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['shippedOn'] = 'versendet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['notDelivered'] = 'noch nicht versendet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['releasedOn'] = 'freigeschaltet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['notReleased'] = 'noch nicht freigeschaltet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['issuedOn'] = 'ausgegeben';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['notIssued'] = 'noch nicht ausgegeben';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['deliveriesLink'] = 'Lieferungen der Bestellung';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['deliveredGap'] = ['same' => 'am Tag des Eingangs', 'oneBefore' => '1 Tag vor Eingang', 'before' => '%d Tage vor Eingang', 'oneAfter' => '1 Tag nach Eingang', 'after' => '%d Tage nach Eingang'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['returnLegend'] = 'Rücksendung';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['returnSubmit'] = 'Rücksendung speichern';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundLegend'] = 'Erstattung';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['retentionHint'] = 'Die Ware ist noch nicht als zurückerhalten erfasst. Sie dürfen die Erstattung zurückhalten, bis sie zurück ist oder der Kunde die Absendung nachweist — außer, Sie haben angeboten, die Ware abzuholen (§ 357 Abs. 4 BGB, § 14 Abs. 3 FAGG). Sie müssen es nicht.';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['processWithdrawal'] = ['Widerruf bearbeiten', 'Widerruf bearbeiten'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['retentionHint'] = 'Die Ware ist noch nicht als zurückerhalten erfasst.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['processWithdrawal'] = ['Widerruf entscheiden', 'Widerruf entscheiden'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundGoods'] = 'Ware';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['shippingHelp'] = 'Noch nicht erstattete Versandkosten: %s. Bei einem Widerruf der ganzen Bestellung vorgeschlagen, sonst 0 — zum Teilwiderruf sagen § 357 Abs. 2 BGB und § 14 FAGG nichts. Mehrkosten einer teureren als der günstigsten Standardlieferung müssen nicht erstattet werden.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['shippingHelp'] = 'Noch nicht erstattete Versandkosten: %s. Bei einem Widerruf der ganzen Bestellung vorgeschlagen, sonst 0.';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundSubmit'] = 'Erstattung buchen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['refundDocumentLabel'] = 'Beleg';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['subscriptionLabel'] = 'Abo';
@@ -104,6 +115,7 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['compensationReasons'] = [
 ];
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
+    'choiceMissing' => 'Bitte wählen Sie zuerst Annehmen oder Ablehnen.',
     'accepted' => 'Widerruf %s angenommen.',
     'rejected' => 'Widerruf %s abgelehnt, der Kunde ist benachrichtigt.',
     'rejectedNoMail' => 'Widerruf %s abgelehnt. Die Mail an den Kunden ging nicht hinaus — den Grund nennt das Systemlog.',
@@ -136,6 +148,12 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['result'] = [
     // WA: "Ohne Bestellung abweisen".
     'dismissed' => 'Widerruf %s ohne Bestellung abgewiesen. Der Kunde wurde nicht benachrichtigt.',
     'dismissReasonMissing' => 'Bitte geben Sie eine Begründung an — sie bleibt intern.',
+    // "Widerruf erfassen".
+    'captured' => 'Widerruf %s erfasst. Eine Eingangsbestätigung wurde nicht versandt.',
+    'capturedConfirmed' => 'Widerruf %s erfasst, die Eingangsbestätigung ging an %s.',
+    'capturedNotConfirmed' => 'Widerruf %s erfasst. Die Eingangsbestätigung ging nicht hinaus — den Grund nennt das Systemlog.',
+    'captureChanged' => 'Nichts erfasst: Seit der Prüfung ist zu Bestellung %s ein Widerruf hinzugekommen. Bitte sehen Sie in der Liste nach, ob er schon erfasst ist.',
+    'captureAnonymized' => 'Zu Bestellung %s lässt sich kein Widerruf erfassen: Die Kundendaten sind nach Ablauf der Aufbewahrungsfrist anonymisiert.',
 ];
 
 // WA: a withdrawal without an order, and the late receipt.
@@ -152,7 +170,38 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissSubmit'] = 'Abweisen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['dismissedLegend'] = 'Ohne Bestellung abgewiesen';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['afterWindowHint'] = 'Nach dem Ende des Widerrufsfensters eingegangen. Das Fenster rechnet ab Versand, die Frist ab Erhalt — ob der Widerruf rechtzeitig war, entscheiden Sie.';
 
-$GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'] = ['orderPage' => 'Bestellseite', 'form' => 'Widerrufsformular'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'] = ['orderPage' => 'Bestellseite', 'form' => 'Widerrufsformular', 'email' => 'E-Mail', 'letter' => 'Brief', 'oral' => 'Telefon/persönlich', 'other' => 'Sonstiges'];
+
+// "Widerruf erfassen": a withdrawal that came in outside the shop.
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['capture'] = ['Widerruf erfassen', 'Einen Widerruf erfassen, der per E-Mail, Brief oder Telefon eingegangen ist'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureTitle'] = 'Widerruf erfassen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureHelp'] = 'Für einen Widerruf, der nicht über den Shop kam, sondern per E-Mail, Brief, Telefon oder persönlich. Er wird wie ein Widerruf aus dem Shop gespeichert und danach auf „Widerruf entscheiden“ angenommen oder abgelehnt. Gespeichert lässt er sich nicht mehr ändern.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReceivedAtHelp'] = 'Wann die Erklärung eingegangen ist, nicht wann Sie sie erfassen — bei einem Brief der Tag des Zugangs.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureItems'] = 'Positionen (bei „einzelne Positionen“)';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureColQuantity'] = 'widerrufen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureWhole'] = 'Abo: nur ganz (%s)';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureNoGoods'] = 'Keine Position ist mehr offen für einen Widerruf. Erfassen können Sie die Erklärung trotzdem — als ganze Bestellung oder als Teil in Worten.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['capturePartHelp'] = 'Bei „Teil (Freitext)“: welcher Teil, in den Worten des Kunden.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureMessage'] = ['Erklärung im Wortlaut', 'Was der Kunde geschrieben oder gesagt hat — etwa den Text der E-Mail. Bei einem Anruf: wer, wann, was.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureConfirm'] = ['Eingangsbestätigung an %s senden', 'Dieselbe Mail wie bei einem Widerruf aus dem Shop, mit dem eingegebenen Eingangszeitpunkt. Ohne Haken wird nichts versandt.'];
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureConfirmTo'] = 'wird an %s gesendet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureConfirmNone'] = 'wird nicht gesendet';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReview'] = 'Weiter zur Prüfung';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReviewLegend'] = 'Prüfen und erfassen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureReviewHelp'] = 'Bitte prüfen Sie die Angaben. Nach dem Erfassen lässt sich der Widerruf nicht mehr ändern — ein Fehler wird mit einer Ablehnung samt Begründung und einer neuen Erfassung berichtigt.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureRecord'] = 'Widerruf erfassen';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureEdit'] = 'Ändern';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureClosedHint'] = 'Über den Shop wäre diese Bestellung nicht widerrufbar — etwa ohne Widerrufsfrist, storniert ohne Versand oder mit freigegebenen digitalen Inhalten. Der Widerruf wird trotzdem erfasst; ob er gilt, entscheiden Sie.';
+$GLOBALS['TL_LANG']['tl_consho_withdrawal']['captureErrors'] = [
+    'receivedAt' => 'Bitte geben Sie Datum und Uhrzeit des Eingangs an.',
+    'future' => 'Der Eingang kann nicht in der Zukunft liegen.',
+    'beforeOrder' => 'Der Eingang kann nicht vor der Bestellung liegen.',
+    'source' => 'Bitte wählen Sie, wie der Widerruf eingegangen ist.',
+    'name' => 'Bitte geben Sie den Namen an.',
+    'part' => 'Bitte beschreiben Sie den widerrufenen Teil.',
+    'items' => 'Bitte geben Sie mindestens eine Menge an — höchstens, was noch nicht widerrufen ist; ein Abo nur ganz.',
+    'whole' => 'Ein Abo lässt sich nur ganz widerrufen: %s. Bitte die volle offene Menge eintragen oder das Feld leer lassen.',
+];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['scopes'] = ['all' => 'ganze Bestellung', 'items' => 'einzelne Positionen', 'part' => 'Teil (Freitext)'];
 
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['withdrawal_legend'] = 'Erklärung';
@@ -162,12 +211,6 @@ $GLOBALS['TL_LANG']['tl_consho_withdrawal']['state_legend'] = 'Bearbeitung';
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['items'] = ['Positionen', 'Positionen des Widerrufs ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['show'] = ['Details', 'Details des Widerrufs ID %s anzeigen'];
 
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['orderItem'] = ['Position', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['quantity'] = ['Menge laut Erklärung', '0 bei einer Position, die der Betreiber beim Annehmen ergänzt hat.'];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['acceptedQuantity'] = ['Angenommen', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['returnedQuantity'] = ['Zurückerhalten', ''];
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['item_legend'] = 'Position';
-$GLOBALS['TL_LANG']['tl_consho_withdrawal_item']['show'] = ['Details', 'Details der Position ID %s anzeigen'];
 
 // Block G (G9).
 $GLOBALS['TL_LANG']['tl_consho_withdrawal']['colRestock'] = 'ins Lager';

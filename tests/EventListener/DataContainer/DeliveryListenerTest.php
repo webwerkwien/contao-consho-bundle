@@ -2,6 +2,7 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Tests\EventListener\DataContainer;
 
+use Contao\CoreBundle\DataContainer\DataContainerOperation;
 use Contao\DataContainer;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
@@ -136,8 +137,73 @@ final class DeliveryListenerTest extends TestCase
             router: $router,
         );
 
-        self::assertSame('<a href="/contao?do=consho_order&amp;key=processComplaint&amp;id=4">Ersatz zu WEB-7-R1</a>', $listener->replacementMarker(['id' => 2, 'pid' => 7, 'complaint' => 4]));
-        self::assertSame('', $listener->replacementMarker(['id' => 1, 'pid' => 7, 'complaint' => 0]));
+        self::assertSame(
+            '<a href="/contao?do=consho_order&amp;key=processComplaint&amp;id=4" title="Ersatz zu WEB-7-R1"><span class="consho-signal consho-signal--kind consho-signal--kind-replacement" title="Ersatz zu WEB-7-R1"></span></a>',
+            $listener->replacementMarker(['id' => 2, 'pid' => 7, 'complaint' => 4]),
+        );
+        self::assertStringContainsString('consho-signal--kind-delivery', $listener->replacementMarker(['id' => 1, 'pid' => 7, 'complaint' => 0]));
+    }
+
+    /**
+     * The list in columns: kind, shipped, carrier, tracking number, reported
+     * — one cell per field of `list.label.fields`, or Contao shifts them.
+     */
+    public function testDieListeHatEineZelleJeSpalte(): void
+    {
+        $GLOBALS['TL_LANG']['tl_consho_delivery']['notReported'] = 'noch nicht gemeldet';
+        require __DIR__.'/../../../contao/dca/tl_consho_delivery.php';
+
+        $cells = $this->listener()->deliveryLabel(['id' => 1, 'pid' => 7, 'complaint' => 0, 'shippedAt' => 0, 'carrier' => 'Post <AT>', 'trackingNumber' => 'RR1', 'reportedAt' => null]);
+
+        self::assertCount(\count($GLOBALS['TL_DCA']['tl_consho_delivery']['list']['label']['fields']), $cells);
+        self::assertStringContainsString('consho-signal--kind-delivery', $cells[0]);
+        self::assertSame(['', 'Post &lt;AT&gt;', 'RR1'], \array_slice($cells, 1, 3));
+        self::assertStringContainsString('noch nicht gemeldet', $cells[4]);
+    }
+
+    /**
+     * "Benachrichtigung": red where the mail failed. The dated cases go
+     * through Contao's Date and are seen in the back end.
+     */
+    public function testDieBenachrichtigungZeigtEineGescheiterteMailRot(): void
+    {
+        $GLOBALS['TL_LANG']['tl_consho_delivery']['notNotified'] = 'nicht versendet';
+
+        self::assertSame('<span class="consho-overdue">nicht versendet</span>', $this->listener()->notification(['reportedAt' => 100, 'notifiedAt' => null]));
+    }
+
+    /**
+     * "Benachrichtigung erneut senden": on a reported parcel, not on a draft
+     * and not where the order is anonymised (no address left).
+     */
+    public function testErneutSendenNurBeiEinemGemeldetenPaketMitAdresse(): void
+    {
+        $this->connection->insert('tl_consho_delivery', ['id' => 40, 'pid' => 7, 'reportedAt' => 100]);
+        $this->connection->insert('tl_consho_delivery_item', ['pid' => 40, 'orderItem' => 1, 'quantity' => '1']);
+
+        self::assertFalse($this->resendHidden(['id' => 40, 'pid' => 7, 'reportedAt' => 100]));
+        self::assertTrue($this->resendHidden(['id' => 40, 'pid' => 7, 'reportedAt' => null]));
+
+        $this->connection->update('tl_consho_order', ['anonymizedAt' => 1], ['id' => 7]);
+
+        self::assertTrue($this->resendHidden(['id' => 40, 'pid' => 7, 'reportedAt' => 100]));
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function resendHidden(array $record): bool
+    {
+        $hidden = false;
+        $operation = $this->createMock(DataContainerOperation::class);
+        $operation->method('getRecord')->willReturn($record);
+        $operation->method('hide')->willReturnCallback(static function () use (&$hidden): void {
+            $hidden = true;
+        });
+
+        $this->listener()->resendNotificationButton($operation);
+
+        return $hidden;
     }
 
     private function listener(): DeliveryListener

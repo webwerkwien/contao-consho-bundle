@@ -3,9 +3,11 @@
 /*
  * A withdrawal as the customer declared it (D-2, § 356a BGB, § 13a FAGG).
  *
- * The record is the proof of receipt: when it arrived (server clock), what it
- * said, and whether the confirmation went out. It is written by the order page
- * and by the withdrawal form, never typed in the back end.
+ * The record is the proof of receipt: when it arrived, what it said, and
+ * whether the confirmation went out. It is written by the order page and by
+ * the withdrawal form (server clock), or recorded once on the page "Widerruf
+ * erfassen" for a declaration that came in by mail, letter or phone
+ * (WithdrawalCaptureBackendController) — never edited in a mask.
  *
  * ⚠️ Never editable in the mask: notEditable, notDeletable, notCopyable,
  * notSortable and closed, like the frozen legal texts. The handling (D-3:
@@ -42,14 +44,29 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
     ],
 
     'list' => [
+        /*
+         * Under an order: a column list like the complaints and deliveries,
+         * not the parent view, which Contao draws without columns. With the
+         * ptable it still shows only this order's withdrawals; the order is
+         * named in the headline, so it needs no column. In the menu item
+         * "Widerrufe" WithdrawalListListener lists them flat over all orders.
+         *
+         * `defaultSearchField` also names the record in the headline
+         * ("WEB-00117-W1" instead of "Widerruf ID 1").
+         */
         'sorting' => [
-            'mode' => 4,
+            'mode' => 1,
             'fields' => ['receivedAt', 'id'],
             'panelLayout' => 'limit',
-            'headerFields' => ['orderNumber', 'lastname'],
             'defaultSearchField' => 'number',
         ],
-        'label' => ['fields' => ['number', 'receivedAt', 'scope', 'state'], 'format' => '%s — %s — %s — %s'],
+        // Cells from WithdrawalListListener; `signals`, `refundDue` and `amount` are virtual.
+        'label' => ['fields' => ['signals', 'number', 'receivedAt', 'source', 'scope', 'refundDue', 'amount'], 'showColumns' => true],
+        'global_operations' => [
+            // A withdrawal by mail, letter or phone, on a page of its own —
+            // the table stays closed. URL and visibility: WithdrawalCaptureButtonListener.
+            'capture' => ['icon' => 'new.svg', 'primary' => true],
+        ],
         'operations' => [
             // D-3: the operator's page — decide, return, refund.
             'process' => ['href' => 'key=processWithdrawal', 'icon' => 'edit.svg', 'primary' => true],
@@ -114,10 +131,12 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
 
-        // `orderPage` | `form` — through the token link or the withdrawal form.
+        // `orderPage` | `form` — through the token link or the withdrawal
+        // form; `email` | `letter` | `oral` | `other` — recorded by hand in
+        // the back end (WithdrawalSource).
         'source' => [
             'inputType' => 'select',
-            'options' => ['orderPage', 'form'],
+            'options' => ['orderPage', 'form', 'email', 'letter', 'oral', 'other'],
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_withdrawal']['sources'],
             // disabled, not readonly: a browser ignores readonly on a select or checkbox.
             'eval' => ['disabled' => true, 'tl_class' => 'w50'],
@@ -179,7 +198,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal'] = [
         ],
 
         // `received`, `accepted`, `rejected` (D-3, WithdrawalState). Changed
-        // only by the actions on the page "Widerruf bearbeiten".
+        // only by the actions on the page "Widerruf entscheiden".
         'state' => [
             'inputType' => 'select',
             'options' => ['received', 'accepted', 'rejected'],

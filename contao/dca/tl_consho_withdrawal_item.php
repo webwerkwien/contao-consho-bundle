@@ -20,8 +20,10 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal_item'] = [
     ],
 
     'list' => [
-        'sorting' => ['mode' => 4, 'fields' => ['id'], 'panelLayout' => 'limit', 'headerFields' => ['number', 'receivedAt']],
-        'label' => ['fields' => ['quantity', 'orderItem', 'acceptedQuantity', 'returnedQuantity'], 'format' => '%s × %s (%s / %s)'],
+        // A column list, as at a complaint's items; the withdrawal is named in
+        // the headline. Cells from WithdrawalItemListener.
+        'sorting' => ['mode' => 1, 'fields' => ['id'], 'panelLayout' => 'limit'],
+        'label' => ['fields' => ['orderItem', 'quantity', 'acceptedQuantity', 'returnedQuantity', 'restockedQuantity'], 'showColumns' => true, 'showFirstOrderBy' => false],
         'operations' => ['show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true]],
     ],
 
@@ -72,7 +74,7 @@ $GLOBALS['TL_DCA']['tl_consho_withdrawal_item'] = [
 
         /*
          * Block G (G9): whether the returned goods go back into stock — the
-         * operator's tick on "Widerruf bearbeiten", on by default (damaged
+         * operator's tick on "Widerruf entscheiden", on by default (damaged
          * goods do not) — and how much went back so far. A corrected return
          * books the difference against this (StockReturn).
          */

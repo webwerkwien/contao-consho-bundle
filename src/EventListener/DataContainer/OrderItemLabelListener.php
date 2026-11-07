@@ -29,6 +29,9 @@ use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
  */
 class OrderItemLabelListener
 {
+    /** The charge line types with an icon in backend.css. */
+    private const CHARGE_ICONS = ['shipping', 'paymentFee', 'paymentDiscount', 'discount'];
+
     /** @var array<int, string> order id => currency, for this request */
     private array $currencies = [];
 
@@ -59,14 +62,15 @@ class OrderItemLabelListener
             $kindLabel = (string) ($lang['lineTypes'][$lineType] ?? $lineType);
         }
 
-        // A product line shows the icon of the order list's kind column
-        // (backend.css), named in its title. A charge line has no icon, so
-        // its type stays in words ("Versand").
-        $kindColumn = null === $kind
+        // A product line shows the icon of the order list's kind column, a
+        // charge line one of its type (backend.css) — both named in the
+        // title. A type without an icon stays in words.
+        $iconKey = null !== $kind ? $kind->value : (\in_array($lineType, self::CHARGE_ICONS, true) ? $lineType : null);
+        $kindColumn = null === $iconKey
             ? StringUtil::specialchars($kindLabel)
             : \sprintf(
                 '<span class="consho-signal consho-signal--kind consho-signal--kind-%s" title="%s"></span>',
-                $kind->value,
+                $iconKey,
                 StringUtil::specialchars($kindLabel),
             );
 
