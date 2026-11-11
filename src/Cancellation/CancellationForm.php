@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\Exception\ExpiredSignedUriException;
 use Symfony\Component\HttpFoundation\Exception\SignedUriException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\UriSigner;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
 
 /**
@@ -57,6 +58,7 @@ class CancellationForm
         private readonly SubscriptionCalendar $calendar,
         #[Autowire(service: 'consho.cancellation_signer')]
         private readonly UriSigner $signer,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -81,7 +83,7 @@ class CancellationForm
     }
 
     /**
-     * Records it, or says what is wrong: `missing`, `reasonMissing`,
+     * Records it, or says what is wrong: `insertTag`, `missing`, `reasonMissing`,
      * `dateInvalid`, `ended`, `alreadyEnding` — the last two with the result,
      * for the date the subscription ends.
      *
@@ -91,6 +93,11 @@ class CancellationForm
      */
     public function declare(array $input, int $subscriptionId, CancellationSource $source, int $now): array
     {
+        // Every field of the declaration, from either way in (InsertTagGuard).
+        if ($this->insertTags->refuses('cancellation', $input)) {
+            return ['insertTag', null];
+        }
+
         $kind = CancellationKind::tryFrom($input['kind']);
 
         if (null === $kind || '' === $input['name']) {

@@ -326,6 +326,21 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
+     * An order from before the insert tag guard may hold a tag; the mail
+     * shows it as typed. That output is the protection, the guard the second
+     * line (InsertTagGuard).
+     */
+    public function testEinInsertTagImNamenErscheintWoertlich(): void
+    {
+        $this->source->order['lastname'] = 'Muster {{date}}';
+
+        self::assertTrue($this->confirmation()->send(7, 1, 'https://shop.test/o', 1_758_800_000));
+
+        self::assertStringContainsString('Guten Tag Erika Muster {{date}},', (string) $this->transport->sent[0]->getHtmlBody());
+        self::assertStringContainsString('Muster {{date}}', (string) $this->transport->sent[0]->getTextBody());
+    }
+
+    /**
      * Contao fills contao_default with vsprintf. A key that is missing appears
      * as a key — none may stand in either of the two languages.
      */

@@ -13,6 +13,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\OrderPageWithdrawal;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalDeclaration;
@@ -77,6 +78,7 @@ class WithdrawalController extends AbstractContentElementController
         private readonly WithdrawalRecorder $recorder,
         #[Autowire(service: 'consho.rate_limit.withdrawal_form')]
         private readonly RateLimiterFactoryInterface $limiter,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -126,6 +128,12 @@ class WithdrawalController extends AbstractContentElementController
     {
         if (!$this->limiter->create('ip-'.($request->getClientIp() ?? 'unknown'))->consume()->isAccepted()) {
             return 'tooMany';
+        }
+
+        // After the limiter, so a refused attempt counts like any other. The
+        // form comes back with what was typed, to be corrected (InsertTagGuard).
+        if ($this->insertTags->refuses('withdrawal', $input)) {
+            return 'insertTag';
         }
 
         if ('' === $input['orderNumber'] || '' === $input['email'] || '' === $input['name']) {

@@ -319,6 +319,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cart'] = [
         'too_many_codes' => 'Zu viele ungültige Codes. Bitte versuchen Sie es in einer Viertelstunde erneut.',
         'voucher_unknown' => 'Diesen Gutscheincode kennen wir nicht. Bitte prüfen Sie die Eingabe.',
         'too_many_vouchers' => 'Mehr Gutscheine lassen sich in einem Einkauf nicht einlösen.',
+        'insert_tag' => 'Doppelte geschweifte Klammern sind in einem Rabattcode nicht erlaubt. Bitte entfernen Sie sie.',
         'too_many_baskets' => 'Gerade werden zu viele Warenkörbe angelegt. Bitte versuchen Sie es in einer Viertelstunde erneut.',
     ],
 ];
@@ -441,6 +442,8 @@ $GLOBALS['TL_LANG']['CONSHO']['checkout'] = [
         'dateOfBirthMissing' => 'Für diese Versandart brauchen wir Ihr Geburtsdatum.',
         'tooYoung' => 'Für die Artikel in diesem Warenkorb sind Sie noch nicht alt genug.',
         'stockShort' => 'Ein Artikel im Warenkorb ist nicht in der gewünschten Menge lieferbar. Bitte passen Sie die Menge im Warenkorb an.',
+        'insertTagInAddress' => 'Doppelte geschweifte Klammern sind in Adresse und UID-Nummer nicht erlaubt. Bitte entfernen Sie sie.',
+        'insertTagInPhone' => 'Doppelte geschweifte Klammern sind in der Telefonnummer nicht erlaubt. Bitte entfernen Sie sie.',
     ],
 ];
 
@@ -987,6 +990,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['linkRequest'] = [
     'requested' => 'Wenn die Angaben zu einer Bestellung passen, ist ein neuer Link an deren E-Mail-Adresse unterwegs. Sehen Sie auch im Spam-Ordner nach.',
     'tooMany' => 'Sie haben gerade schon mehrmals einen Link angefordert. Bitte versuchen Sie es später noch einmal.',
     'missing' => 'Bitte geben Sie Bestellnummer und E-Mail-Adresse an.',
+    'insertTag' => 'Doppelte geschweifte Klammern sind in diesem Formular nicht erlaubt. Bitte entfernen Sie sie.',
 ];
 $GLOBALS['TL_LANG']['CONSHO']['orderPage']['gate'] = [
     'text' => 'Ihre Bestellung %s ist bereit. Mit dem Klick bestätigen Sie zugleich Ihre E-Mail-Adresse.',
@@ -1033,6 +1037,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['notice'] = [
     'withdrawInvalid' => 'Die Angaben zu den Artikeln passen nicht zur Bestellung. Bitte prüfen Sie die Mengen.',
     'withdrawNothingSelected' => 'Bitte geben Sie bei mindestens einem Artikel eine Menge an oder wählen Sie die ganze Bestellung.',
     'withdrawNameMissing' => 'Bitte geben Sie Ihren Namen an.',
+    'withdrawInsertTag' => 'Doppelte geschweifte Klammern sind in diesem Formular nicht erlaubt. Bitte entfernen Sie sie.',
     // K1: one sentence for a new account and an existing one (K1-5).
     'accountRequested' => 'Wir haben Ihnen eine E-Mail an die Adresse dieser Bestellung geschickt. Darin steht, wie es weitergeht. Sehen Sie auch im Spam-Ordner nach.',
     'accountTooMany' => 'Sie haben das gerade schon mehrmals angefordert. Bitte versuchen Sie es später noch einmal.',
@@ -1079,6 +1084,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'tooMany' => 'Zu viele Versuche. Bitte versuchen Sie es in einer Viertelstunde erneut.',
     'missing' => 'Bitte füllen Sie Bestellnummer, E-Mail-Adresse und Name aus.',
     'emailInvalid' => 'Bitte geben Sie eine gültige E-Mail-Adresse an — an sie geht die Eingangsbestätigung.',
+    'insertTag' => 'Doppelte geschweifte Klammern sind in diesem Formular nicht erlaubt. Bitte entfernen Sie sie.',
     // WA: one answer for every case — no number (its shape told whether
     // the order was found) and no "not sent" (only the path without an
     // order has a mail limit).
@@ -1153,6 +1159,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cancellation'] = [
         'tooMany' => 'Zu viele Versuche. Bitte versuchen Sie es in einer Viertelstunde erneut.',
         'alreadyEnding' => 'Dieses Abo ist bereits gekündigt und endet am %s.',
         'ended' => 'Dieses Abo ist bereits beendet.',
+        'insertTag' => 'Doppelte geschweifte Klammern sind in diesem Formular nicht erlaubt. Bitte entfernen Sie sie.',
     ],
 ];
 // Online payment (C-11). The page only says what it can prove.

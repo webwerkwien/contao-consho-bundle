@@ -20,6 +20,7 @@ use Webwerkwien\ContaoConshoBundle\Payment\PaymentContext;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentHandlers;
 use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethodRepositoryInterface;
 use Webwerkwien\ContaoConshoBundle\Pricing\GrossCalculator;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Shipping\ArticleShippingDataInterface;
 use Webwerkwien\ContaoConshoBundle\Shipping\ShippingCapabilities;
 use Webwerkwien\ContaoConshoBundle\Shipping\ShippingContext;
@@ -190,6 +191,18 @@ final class CheckoutCalculator
             $problems[] = CheckoutProblem::AddressIncomplete;
         }
 
+        // Checked on what is stored, not only when it is typed: the problem
+        // then stops the buy click as well, whichever way the value came in
+        // (InsertTagGuard). An unused delivery address is stored empty
+        // (CheckoutData::withShipping()).
+        if ([] !== InsertTagGuard::fieldsWith([
+            $data->vatId,
+            ...array_values(get_object_vars($data->billing)),
+            ...array_values(get_object_vars($data->shipping)),
+        ])) {
+            $problems[] = CheckoutProblem::InsertTagInAddress;
+        }
+
         if ('' !== $country && [] !== $deliveryCountries && !\in_array($country, $deliveryCountries, true)) {
             $problems[] = CheckoutProblem::DeliveryCountryNotServed;
         }
@@ -337,6 +350,13 @@ final class CheckoutCalculator
             // The carrier needs the recipient's phone (E-6, V6).
             if (true === $capabilities?->needsPhone && '' === trim($data->shippingPhone)) {
                 $problems[] = CheckoutProblem::PhoneMissing;
+            }
+
+            // InsertTagGuard. Only where the field is shown and the phone is
+            // taken into the order: a visitor who typed a tag and then chose
+            // a method without a phone has no field left to correct it in.
+            if (true === $capabilities?->needsPhone && InsertTagGuard::contains($data->shippingPhone)) {
+                $problems[] = CheckoutProblem::InsertTagInPhone;
             }
         }
 

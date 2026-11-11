@@ -6,6 +6,7 @@ use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\DataContainer;
 use Contao\Message;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Tax\ShopVatId;
 
@@ -74,7 +75,8 @@ class TaxAtDestinationListener
             $this->framework->getAdapter(Message::class)->addConfirmation(\sprintf(
                 (string) ($lang['taxAtDestinationShared'] ?? '%s: %s'),
                 (string) ($lang[$value ? 'taxAtDestinationOn' : 'taxAtDestinationOff'] ?? ($value ? 'on' : 'off')),
-                implode(', ', $changed),
+                // Messages are HTML; a title written past the mask is not encoded.
+                implode(', ', array_map(StringUtil::specialchars(...), $changed)),
             ));
         }
 

@@ -16,6 +16,7 @@ use Webwerkwien\ContaoConshoBundle\Notification\MailRenderer;
 use Webwerkwien\ContaoConshoBundle\Notification\MailText;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderConfirmationSourceInterface;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 
 /**
  * "Neuen Link anfordern" on the order page (D-6, T4).
@@ -60,6 +61,7 @@ class OrderLinkRequest
         private readonly LoggerInterface $logger = new NullLogger(),
         // GARAN part 2 (L3): logo and sender in the customer's mail. Optional for the tests.
         private readonly MailFrames|null $frames = null,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -70,6 +72,12 @@ class OrderLinkRequest
 
         if ('' === $orderNumber || '' === $email) {
             return OrderLinkOutcome::Missing;
+        }
+
+        // Before the limiters, like Missing: a refused form sends nothing and
+        // asks nothing of the database.
+        if ($this->insertTags->refuses('order link request', ['number' => $orderNumber, 'email' => $email])) {
+            return OrderLinkOutcome::InsertTag;
         }
 
         // Both limiters consume on every request: `&&` would skip the second

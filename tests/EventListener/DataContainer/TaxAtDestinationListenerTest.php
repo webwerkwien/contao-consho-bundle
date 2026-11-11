@@ -60,6 +60,18 @@ class TaxAtDestinationListenerTest extends TestCase
         self::assertSame(['auch aus: Berlin'], $this->messages);
     }
 
+    /**
+     * A title written past the mask is not encoded; the message is HTML.
+     */
+    public function testDerTitelErscheintMaskiertInDerMeldung(): void
+    {
+        $this->shop(1, 'Wien', 'ATU12345678', true);
+        $this->shop(2, '<b>Berlin</b>', 'ATU12345678', false);
+
+        self::assertSame(['<b>Berlin</b>'], $this->listener()->spread(1, 1_700_000_000));
+        self::assertSame(['auch an: &lt;b&gt;Berlin&lt;/b&gt;'], $this->messages);
+    }
+
     public function testOhneEigeneUidStehtDerShopFuerSich(): void
     {
         $this->shop(1, 'Wien', '', true);

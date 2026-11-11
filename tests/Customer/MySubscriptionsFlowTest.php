@@ -290,6 +290,16 @@ final class MySubscriptionsFlowTest extends TestCase
         self::assertSame(1, $view['subscription']);
     }
 
+    /** The declaration from "Meine Abos" is checked as well (InsertTagGuard). */
+    public function testEinInsertTagBleibtAufDerBestaetigungsseite(): void
+    {
+        $view = $this->view($this->confirm(1, ['consho_cancellation_name' => 'Test {{env::host}}']));
+
+        self::assertTrue($view['form']);
+        self::assertSame('insertTag', $view['error']);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cancellation'));
+    }
+
     public function testNurBekannteHinweise(): void
     {
         self::assertSame('', $this->view(Request::create(self::HERE.'?consho_my_subscriptions=<b>frei</b>'))['notice']);

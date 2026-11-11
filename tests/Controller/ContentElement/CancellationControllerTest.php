@@ -192,6 +192,10 @@ final class CancellationControllerTest extends TestCase
         yield 'außerordentlich ohne Grund' => [$found + ['consho_cancellation_name' => 'E', 'consho_cancellation_kind' => 'extraordinary'], 'reasonMissing'];
         yield 'kein Datum' => [$found + ['consho_cancellation_name' => 'E', 'consho_cancellation_date' => '31.12.2027'], 'dateInvalid'];
         yield 'erfundene Art' => [$found + ['consho_cancellation_name' => 'E', 'consho_cancellation_kind' => 'sofort'], 'missing'];
+        // InsertTagGuard: every field, the identification as well as the declaration.
+        yield 'Insert-Tag im Namen' => [$found + ['consho_cancellation_name' => 'Test {{env::host}}'], 'insertTag'];
+        yield 'Insert-Tag im Grund' => [$found + ['consho_cancellation_name' => 'E', 'consho_cancellation_kind' => 'extraordinary', 'consho_cancellation_reason' => '{{date}}'], 'insertTag'];
+        yield 'Insert-Tag in der Abonummer' => [['consho_cancellation_subscriptionNumber' => 'WEB-{{date}}', 'consho_cancellation_email' => 'neu@example.org', 'consho_cancellation_name' => 'E'], 'insertTag'];
     }
 
     /**

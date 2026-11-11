@@ -8,6 +8,7 @@ use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\CoreBundle\Security\DataContainer\ReadAction;
 use Contao\DataContainer;
 use Contao\Message;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
@@ -122,6 +123,9 @@ final class DocumentBackendController
     private function warn(bool $archiveProblem, bool $logoMissing, string $name): void
     {
         $message = $this->framework->getAdapter(Message::class);
+
+        // Messages are HTML; the number carries the prefix of its range.
+        $name = StringUtil::specialchars($name);
 
         if ($archiveProblem) {
             $message->addError(\sprintf($GLOBALS['TL_LANG']['tl_consho_document']['archiveProblem'] ?? '%s', $name));

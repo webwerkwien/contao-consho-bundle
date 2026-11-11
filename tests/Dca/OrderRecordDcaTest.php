@@ -23,6 +23,7 @@ class OrderRecordDcaTest extends TestCase
         require __DIR__.'/../../contao/dca/tl_consho_order_item.php';
         require __DIR__.'/../../contao/dca/tl_consho_order_legal.php';
         require __DIR__.'/../../contao/dca/tl_consho_payment_attempt.php';
+        require __DIR__.'/../../contao/dca/tl_consho_delivery_item.php';
     }
 
     protected function tearDown(): void
@@ -71,6 +72,26 @@ class OrderRecordDcaTest extends TestCase
         // MethodInUseVoter; restoring it from tl_undo afterwards resurrects a
         // reference to a method that may be gone by then.
         self::assertTrue($GLOBALS['TL_DCA']['tl_consho_order']['config']['notDeletable']);
+    }
+
+    /**
+     * "Neu" saved a bare order: no number, no lines (they cannot be created),
+     * no amounts, no confirmation — and undeletable. Orders come from the
+     * checkout until there is a real way to record one by hand.
+     */
+    public function testBestellungenEntstehenNurImCheckout(): void
+    {
+        self::assertTrue($GLOBALS['TL_DCA']['tl_consho_order']['config']['notCreatable']);
+    }
+
+    /**
+     * A delivery's items are sorted by id, and Contao heads every group with
+     * the value of the first sorting field — a lone "58" above each item.
+     */
+    public function testLieferpositionenOhneGruppenzeile(): void
+    {
+        self::assertSame(['id'], $GLOBALS['TL_DCA']['tl_consho_delivery_item']['list']['sorting']['fields']);
+        self::assertTrue($GLOBALS['TL_DCA']['tl_consho_delivery_item']['list']['sorting']['disableGrouping'] ?? false);
     }
 
     /**

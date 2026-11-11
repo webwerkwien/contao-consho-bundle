@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\DataContainer;
+use Contao\StringUtil;
 use Webwerkwien\ContaoConshoBundle\Order\NumberRangeChange;
 
 /**
@@ -38,15 +39,16 @@ final class NumberRangeListener
         $range = [...$dc->getCurrentRecord() ?? [], ...$values];
         $highest = $this->change->collision((int) ($range['pid'] ?? 0), (string) ($range['type'] ?? ''), (string) ($range['prefix'] ?? ''), (int) ($range['current'] ?? 0));
 
+        // The messages are shown as HTML in the mask; the prefix is free text.
         if (null !== $highest) {
-            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['issued'] ?? 'Number %s has already been issued.', $highest));
+            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['issued'] ?? 'Number %s has already been issued.', StringUtil::specialchars($highest)));
         }
 
         $prefix = (string) ($range['prefix'] ?? '');
         $shared = $this->change->sharedPrefix((int) ($range['pid'] ?? 0), (int) ($range['id'] ?? $dc->id), (string) ($range['type'] ?? ''), $prefix);
 
         if (null !== $shared) {
-            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['shared'] ?? 'The prefix "%s" is already used by the number range for %s.', $prefix, $GLOBALS['TL_LANG']['tl_consho_number_range']['types'][$shared] ?? $shared));
+            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_number_range']['errors']['shared'] ?? 'The prefix "%s" is already used by the number range for %s.', StringUtil::specialchars($prefix), $GLOBALS['TL_LANG']['tl_consho_number_range']['types'][$shared] ?? $shared));
         }
 
         return $values;

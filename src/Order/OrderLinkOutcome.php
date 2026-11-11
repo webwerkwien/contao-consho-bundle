@@ -12,4 +12,7 @@ enum OrderLinkOutcome: string
     case Requested = 'requested';
     case TooMany = 'tooMany';
     case Missing = 'missing';
+
+    // An insert tag in a field (InsertTagGuard).
+    case InsertTag = 'insertTag';
 }

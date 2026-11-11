@@ -314,6 +314,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cart'] = [
         'too_many_codes' => 'Too many invalid codes. Please try again in a quarter of an hour.',
         'voucher_unknown' => 'We do not know this voucher code. Please check what you typed.',
         'too_many_vouchers' => 'No more vouchers can be redeemed in one purchase.',
+        'insert_tag' => 'Double curly brackets are not allowed in a discount code. Please remove them.',
         'too_many_baskets' => 'Too many baskets are being created right now. Please try again in a quarter of an hour.',
     ],
 ];
@@ -436,6 +437,8 @@ $GLOBALS['TL_LANG']['CONSHO']['checkout'] = [
         'dateOfBirthMissing' => 'This shipping method needs your date of birth.',
         'tooYoung' => 'You are not yet old enough for the articles in this basket.',
         'stockShort' => 'An article in your basket is not available in the quantity you chose. Please adjust it in your basket.',
+        'insertTagInAddress' => 'Double curly brackets are not allowed in the address and the VAT ID. Please remove them.',
+        'insertTagInPhone' => 'Double curly brackets are not allowed in the phone number. Please remove them.',
     ],
 ];
 
@@ -956,6 +959,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['linkRequest'] = [
     'requested' => 'If the details match an order, a new link is on its way to its e-mail address. Please also check your spam folder.',
     'tooMany' => 'You have just requested a link several times. Please try again later.',
     'missing' => 'Please enter the order number and the e-mail address.',
+    'insertTag' => 'Double curly brackets are not allowed in this form. Please remove them.',
 ];
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['subject'] = 'Your link to order %s';
 $GLOBALS['TL_LANG']['CONSHO']['mail']['orderLink']['intro'] = 'You requested a new link to your order %s. It shows the state of the order and your documents.';
@@ -1019,6 +1023,7 @@ $GLOBALS['TL_LANG']['CONSHO']['orderPage']['notice'] = [
     'withdrawInvalid' => 'The items given do not match the order. Please check the quantities.',
     'withdrawNothingSelected' => 'Please enter a quantity for at least one item, or choose the whole order.',
     'withdrawNameMissing' => 'Please enter your name.',
+    'withdrawInsertTag' => 'Double curly brackets are not allowed in this form. Please remove them.',
     // K1: one sentence for a new account and an existing one (K1-5).
     'accountRequested' => 'We have sent an e-mail to the address of this order. It says how to continue. Please also check your spam folder.',
     'accountTooMany' => 'You have requested this several times just now. Please try again later.',
@@ -1065,6 +1070,7 @@ $GLOBALS['TL_LANG']['CONSHO']['withdrawal'] = [
     'tooMany' => 'Too many attempts. Please try again in a quarter of an hour.',
     'missing' => 'Please fill in order number, e-mail address and name.',
     'emailInvalid' => 'Please enter a valid e-mail address — the confirmation of receipt goes there.',
+    'insertTag' => 'Double curly brackets are not allowed in this form. Please remove them.',
     // WA: one answer for every case — no number (its shape told
     // whether the order was found) and no "not sent" (only the path without
     // an order has a mail limit).
@@ -1139,6 +1145,7 @@ $GLOBALS['TL_LANG']['CONSHO']['cancellation'] = [
         'tooMany' => 'Too many attempts. Please try again in a quarter of an hour.',
         'alreadyEnding' => 'This subscription has already been cancelled and ends on %s.',
         'ended' => 'This subscription has already ended.',
+        'insertTag' => 'Double curly brackets are not allowed in this form. Please remove them.',
     ],
 ];
 // Online payment (C-11). The page says only what it can prove.

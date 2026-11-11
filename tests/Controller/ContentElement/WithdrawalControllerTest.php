@@ -181,6 +181,24 @@ final class WithdrawalControllerTest extends TestCase
         self::assertSame('missing', $this->submit(['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => '', 'consho_withdrawal_name' => 'E'])['error']);
     }
 
+    /**
+     * Refused in every field, the message included, and the form keeps what
+     * was typed so it can be corrected (InsertTagGuard).
+     */
+    public function testEinInsertTagWirdAbgelehntUndNichtsGespeichert(): void
+    {
+        $found = ['consho_withdrawal_orderNumber' => 'WEB-00073', 'consho_withdrawal_email' => 'kunde@example.org', 'consho_withdrawal_name' => 'Erika Muster'];
+
+        foreach (['consho_withdrawal_name' => 'Test {{env::host}}', 'consho_withdrawal_message' => '{{date}}', 'consho_withdrawal_part' => 'Teil }}'] as $field => $value) {
+            $data = $this->submit([$field => $value] + $found);
+
+            self::assertSame('insertTag', $data['error'], $field);
+            self::assertSame($value, $data['input'][substr($field, \strlen('consho_withdrawal_'))], $field);
+        }
+
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_withdrawal'));
+    }
+
     /** The confirmation now goes to the address entered — it has to be one. */
     public function testUngueltigeAdresse(): void
     {

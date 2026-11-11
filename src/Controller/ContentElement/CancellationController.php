@@ -15,6 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationForm;
 use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationSource;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 
 /**
@@ -49,6 +50,7 @@ class CancellationController extends AbstractContentElementController
         private readonly CancellationForm $form,
         #[Autowire(service: 'consho.rate_limit.cancellation_form')]
         private readonly RateLimiterFactoryInterface $limiter,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -104,6 +106,12 @@ class CancellationController extends AbstractContentElementController
     {
         if (!$this->limiter->create('ip-'.($request->getClientIp() ?? 'unknown'))->consume()->isAccepted()) {
             return ['tooMany', ''];
+        }
+
+        // Before the lookup, so the number and address are covered too;
+        // CancellationForm::declare() checks the declaration for "Meine Abos".
+        if ($this->insertTags->refuses('cancellation', $input)) {
+            return ['insertTag', ''];
         }
 
         if ('' === $input['subscriptionNumber'] || '' === $input['email']) {

@@ -183,6 +183,19 @@ class InvoiceRendererTest extends TestCase
         self::assertStringNotContainsString('UID-Nr.:', $html);
     }
 
+    /**
+     * An order from before the insert tag guard may hold a tag; the invoice
+     * shows it as typed. That output is the protection, the guard the second
+     * line (InsertTagGuard).
+     */
+    public function testEinInsertTagImNamenErscheintWoertlich(): void
+    {
+        $payload = self::versionOne();
+        $payload['order']['lastname'] = 'Example {{date}}';
+
+        self::assertStringContainsString('Eva Example {{date}}', $this->renderer()->html($this->document($payload))['html']);
+    }
+
     public function testFassungZweiZeigtAbsenderBankUndFusszeile(): void
     {
         $html = $this->renderer()->html($this->document(self::versionTwo()))['html'];

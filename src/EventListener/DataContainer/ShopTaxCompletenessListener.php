@@ -6,6 +6,7 @@ use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\DataContainer;
 use Contao\Message;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Model\ShopModel;
 use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
@@ -58,7 +59,8 @@ class ShopTaxCompletenessListener
 
         foreach ($incomplete as $country => $taxClassIds) {
             $classes = array_map(
-                static fn (int $id): string => $classTitles[$id] ?? (string) $id,
+                // Messages are HTML; a title written past the mask is not encoded.
+                static fn (int $id): string => StringUtil::specialchars((string) ($classTitles[$id] ?? $id)),
                 $taxClassIds,
             );
 

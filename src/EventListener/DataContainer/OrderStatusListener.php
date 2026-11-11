@@ -6,6 +6,7 @@ use Brick\Math\BigDecimal;
 use Contao\BackendUser;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\DataContainer;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
 use Webwerkwien\ContaoConshoBundle\Order\CancellationInvoice;
@@ -92,7 +93,7 @@ class OrderStatusListener
         if (null !== $refusal) {
             throw new \RuntimeException(\sprintf(
                 $GLOBALS['TL_LANG']['tl_consho_order']['statusRefused'] ?? '%s: %s',
-                $flags->title,
+                StringUtil::specialchars($flags->title),
                 $GLOBALS['TL_LANG']['tl_consho_order']['cancelInvoiceRefused'][$refusal->value] ?? $refusal->value,
             ));
         }
@@ -107,9 +108,11 @@ class OrderStatusListener
             $unmet,
         );
 
+        // The message is shown as HTML at the field; titles and product names
+        // written past the mask are not encoded.
         throw new \RuntimeException(\sprintf(
             $GLOBALS['TL_LANG']['tl_consho_order']['statusRefused'] ?? '%s: %s',
-            $flags->title,
+            StringUtil::specialchars($flags->title),
             implode('; ', $reasons),
         ));
     }
@@ -171,7 +174,7 @@ class OrderStatusListener
         $parts = [];
 
         foreach ($balance->openGoods as $itemId => $quantity) {
-            $parts[] = \sprintf('%s × %s', $this->money->quantity($quantity, $language), (string) ($names[$itemId] ?? '#'.$itemId));
+            $parts[] = \sprintf('%s × %s', $this->money->quantity($quantity, $language), StringUtil::specialchars((string) ($names[$itemId] ?? '#'.$itemId)));
         }
 
         return implode(', ', $parts);

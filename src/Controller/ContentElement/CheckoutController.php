@@ -62,6 +62,7 @@ use Webwerkwien\ContaoConshoBundle\Order\TotalDisagreesWithCheckout;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
 use Webwerkwien\ContaoConshoBundle\Pricing\PriceAudienceResolver;
 use Webwerkwien\ContaoConshoBundle\Pricing\PriceNotFound;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Shipping\ShippingCountryCoverage;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLineTerms;
@@ -164,6 +165,7 @@ class CheckoutController extends AbstractContentElementController
         private readonly DurabilityLabelImages|null $durability = null,
         // The VIES result kept on the member, reused for the same VAT ID.
         private readonly MemberVatId|null $memberVatIds = null,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -584,6 +586,11 @@ class CheckoutController extends AbstractContentElementController
 
         $phone = mb_substr(trim((string) preg_replace('/[\x00-\x1F\x7F]/u', '', $request->request->getString('consho_shipping_phone'))), 0, 64);
 
+        // As typed, like an address with an insert tag (addressOf()).
+        if (InsertTagGuard::contains($phone)) {
+            return $data->withShippingPhone($phone);
+        }
+
         return $data->withShippingPhone('' === $phone ? '' : $this->phones->normalize($phone, $data->deliveryCountry()));
     }
 
@@ -606,6 +613,10 @@ class CheckoutController extends AbstractContentElementController
     {
         $block = CheckoutBlock::tryFrom($request->request->getString('consho_checkout_block'));
         $data = $this->repository->checkoutDataOf($cart->id);
+
+        // Logged here, where it is typed; refused by the calculator, which
+        // reads what is stored (CheckoutProblem::InsertTagIn…).
+        $this->insertTags->refuses('checkout', $request->request->all());
 
         $data = match ($block) {
             CheckoutBlock::Address => $this->applyAddress($request, $data, $shopVatId, $shopCountry),
@@ -646,7 +657,8 @@ class CheckoutController extends AbstractContentElementController
             $data = $data->withVatCheck(null);
         }
 
-        if ('' !== $data->vatId && null === $data->vatCheck) {
+        // An ID with an insert tag is refused anyway; VIES is not asked.
+        if ('' !== $data->vatId && null === $data->vatCheck && !InsertTagGuard::contains($data->vatId)) {
             $data = $data->withVatCheck($this->checkVatId($data, $shopVatId, $shopCountry, $recheck));
         }
 
@@ -740,6 +752,14 @@ class CheckoutController extends AbstractContentElementController
         }
 
         $values['country'] = strtoupper($values['country']);
+
+        // Kept as typed: normalising would reduce a phone number with an
+        // insert tag to its digits, and the tag would vanish unseen. Stored
+        // like this, CheckoutProblem::InsertTagInAddress names it and holds
+        // the order (InsertTagGuard).
+        if ([] !== InsertTagGuard::fieldsWith($values)) {
+            return new Address(...$values);
+        }
 
         return $this->addresses->normalize(new Address(...$values));
     }

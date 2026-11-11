@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\Cart;
 
 use Webwerkwien\ContaoConshoBundle\Cart\Discount\CartDiscounts;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherCode;
 use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
 
@@ -18,6 +19,10 @@ use Webwerkwien\ContaoConshoBundle\Voucher\VoucherWallet;
  * A voucher code (WG8, E3) is kept only when it is one: a wrong one is
  * answered with a notice and counted, so the basket never carries a guess.
  * One brake for both fields — two would double the guesses.
+ *
+ * A discount code with an insert tag in it is not kept (InsertTagGuard): the
+ * basket shows a kept code back to the visitor. It is no guess either, so it
+ * is not counted. A voucher code is never kept as typed and needs no check.
  */
 final class CodeEntry
 {
@@ -32,6 +37,7 @@ final class CodeEntry
         private readonly CartDiscounts $discounts,
         private readonly CodeAttemptLimit $attempts,
         private readonly VoucherWallet $vouchers,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -41,6 +47,12 @@ final class CodeEntry
     public function submit(int $cartId, string $code, string $ip, int $now): void
     {
         $code = trim($code);
+
+        if ($this->insertTags->refuses('basket code', ['discount_code' => $code])) {
+            $this->repository->setNotice($cartId, CartNotice::InsertTag);
+
+            return;
+        }
 
         if ('' !== $code && $this->attempts->blocked($ip, $cartId)) {
             $this->repository->setNotice($cartId, CartNotice::TooManyCodes);

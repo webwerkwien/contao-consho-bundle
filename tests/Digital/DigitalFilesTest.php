@@ -208,6 +208,25 @@ class DigitalFilesTest extends TestCase
         $listener->refusePublicFile(self::PUBLIC);
     }
 
+    /**
+     * The message is shown at the field as HTML; the folder name is whatever
+     * an editor typed. `&` and `'` stand in for markup a Windows file system
+     * would not take as a name.
+     */
+    public function testDieAblehnungZeigtDenOrdnernamenMaskiert(): void
+    {
+        (new Filesystem())->dumpFile($this->dir.'/files/R&D\'s/plan.pdf', '%PDF');
+        (new Filesystem())->dumpFile($this->dir.'/files/R&D\'s/.public', '');
+        $uuid = str_repeat("\x07", 16);
+        $this->connection->insert('tl_files', ['uuid' => $uuid, 'path' => 'files/R&D\'s/plan.pdf']);
+
+        $listener = new DigitalDeliveryListener(new DeliveryHandlers(new \Symfony\Component\DependencyInjection\ServiceLocator([])), $this->connection, new ArchiveFolderProtector($this->dir));
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('files/R&amp;D&apos;s');
+        $listener->refusePublicFile($uuid);
+    }
+
     private function files(): DigitalFiles
     {
         return new DigitalFiles($this->connection, new ArchiveFolderProtector($this->dir), $this->dir);

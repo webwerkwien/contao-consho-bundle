@@ -6,6 +6,7 @@ use Contao\Automator;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\Message;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -49,17 +50,19 @@ class ArchiveFolderListener
             return $value;
         }
 
+        // Both messages are shown as HTML, and a folder name is whatever an
+        // editor typed in the file manager.
         try {
             $protected = $this->protector->protect($path);
         } catch (ArchiveFolderIsPublic $e) {
-            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_shop']['archiveFolderParentPublic'] ?? '%s', $e->publicFolder), 0, $e);
+            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_shop']['archiveFolderParentPublic'] ?? '%s', StringUtil::specialchars($e->publicFolder)), 0, $e);
         }
 
         if ($protected) {
             $this->framework->createInstance(Automator::class)->generateSymlinks();
             $this->logger->info(\sprintf('Folder "%s" has been protected (invoice archive)', $path));
 
-            $this->framework->getAdapter(Message::class)->addConfirmation(\sprintf($GLOBALS['TL_LANG']['tl_consho_shop']['archiveFolderProtected'] ?? '%s', $path));
+            $this->framework->getAdapter(Message::class)->addConfirmation(\sprintf($GLOBALS['TL_LANG']['tl_consho_shop']['archiveFolderProtected'] ?? '%s', StringUtil::specialchars($path)));
         }
 
         return $value;

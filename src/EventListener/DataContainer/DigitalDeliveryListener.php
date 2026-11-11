@@ -3,6 +3,7 @@
 namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Symfony\Component\Filesystem\Path;
 use Webwerkwien\ContaoConshoBundle\Digital\DeliveryHandlers;
@@ -39,8 +40,10 @@ class DigitalDeliveryListener
         $path = $this->connection->fetchOne('SELECT path FROM tl_files WHERE uuid = ?', [$value]);
         $public = false === $path ? null : $this->folders->publicFolderOf(Path::getDirectory((string) $path));
 
+        // The message is shown at the field as HTML, and a folder name is
+        // whatever an editor typed in the file manager.
         if (null !== $public) {
-            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_product']['digitalFilePublic'] ?? 'Public folder: %s', $public));
+            throw new \RuntimeException(\sprintf($GLOBALS['TL_LANG']['tl_consho_product']['digitalFilePublic'] ?? 'Public folder: %s', StringUtil::specialchars($public)));
         }
 
         return $value;

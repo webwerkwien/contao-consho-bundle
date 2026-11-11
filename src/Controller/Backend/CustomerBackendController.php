@@ -8,6 +8,7 @@ use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\CoreBundle\Security\DataContainer\UpdateAction;
 use Contao\Message;
+use Contao\StringUtil;
 use Doctrine\DBAL\Connection;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
@@ -177,14 +178,17 @@ final class CustomerBackendController
 
         $result = $this->erasure->erase($shopId, $key, time()) ?? throw new NotFoundHttpException();
 
+        // Messages are HTML; an order number carries the prefix of its range.
+        $escape = static fn (string $number): string => StringUtil::specialchars($number);
+
         if ([] !== $result['anonymized']) {
-            $message->addConfirmation(\sprintf((string) ($lang['erasedNow'] ?? '%s'), implode(', ', $result['anonymized'])));
+            $message->addConfirmation(\sprintf((string) ($lang['erasedNow'] ?? '%s'), implode(', ', array_map($escape, $result['anonymized']))));
         }
 
         $pending = array_map(
             fn (array $order): string => null === $order['end']
-                ? \sprintf((string) ($lang['pendingNoPeriod'] ?? '%s'), $order['number'])
-                : \sprintf((string) ($lang['pendingUntil'] ?? '%s (%s)'), $order['number'], $this->date($order['end'])),
+                ? \sprintf((string) ($lang['pendingNoPeriod'] ?? '%s'), $escape($order['number']))
+                : \sprintf((string) ($lang['pendingUntil'] ?? '%s (%s)'), $escape($order['number']), $this->date($order['end'])),
             $result['pending'],
         );
 
@@ -193,7 +197,7 @@ final class CustomerBackendController
         }
 
         if ([] !== $result['running']) {
-            $message->addInfo(\sprintf((string) ($lang['erasedRunning'] ?? '%s'), implode(', ', $result['running'])));
+            $message->addInfo(\sprintf((string) ($lang['erasedRunning'] ?? '%s'), implode(', ', array_map($escape, $result['running']))));
         }
 
         $message->addInfo((string) ($lang['erasedAround'] ?? ''));

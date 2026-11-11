@@ -162,6 +162,78 @@ class CheckoutCalculatorTest extends TestCase
         self::assertTrue($state->has(CheckoutProblem::AddressIncomplete));
     }
 
+    /**
+     * An insert tag is refused in every field of the address step, the VAT
+     * ID included, and the problem holds the buy click too (InsertTagGuard).
+     */
+    public function testEinInsertTagInDerAdresseHaeltDenCheckoutAn(): void
+    {
+        $billing = $this->vollstaendig()->billing;
+
+        foreach ([
+            'Rechnungsadresse' => $this->vollstaendig()->withBilling($billing->with(['company' => 'Firma {{date}}'])),
+            'Lieferadresse' => $this->vollstaendig()->withShipping($billing->with(['lastname' => 'Test {{env::host}}']), true),
+            'UID-Nummer' => $this->vollstaendig()->withVatId('ATU{{date}}'),
+        ] as $where => $data) {
+            $state = $this->calculate($data);
+
+            self::assertTrue($state->has(CheckoutProblem::InsertTagInAddress), $where);
+            self::assertSame(CheckoutBlock::Address, $state->blockedAt(), $where);
+            self::assertFalse($state->isReady(), $where);
+        }
+
+        // Single braces are ordinary text.
+        self::assertTrue($this->calculate($this->vollstaendig()->withBilling($billing->with(['company' => 'Firma {Holding}'])))->isReady());
+    }
+
+    public function testEinInsertTagInDerTelefonnummerFuehrtZumVersand(): void
+    {
+        $avis = [new ShippingMethod(1, 'avis', 'Paket mit Avis', ShippingTaxMode::Fixed, 1, [])];
+        $state = $this->calculate($this->vollstaendig()->withShippingPhone('{{date}}'), shipping: $avis, shippingTypes: [$this->versandMitTelefon()]);
+
+        self::assertTrue($state->has(CheckoutProblem::InsertTagInPhone));
+        self::assertSame(CheckoutBlock::Shipping, $state->blockedAt());
+    }
+
+    /**
+     * The field is shown only for a method that needs a phone, and only then
+     * is the phone taken into the order. Typed with a tag, then another
+     * method chosen: no field to correct it in, so no problem either.
+     */
+    public function testOhneTelefonImVersandStoertEinAlterTagNicht(): void
+    {
+        $state = $this->calculate($this->vollstaendig()->withShippingPhone('{{date}}'));
+
+        self::assertFalse($state->needsPhone);
+        self::assertFalse($state->has(CheckoutProblem::InsertTagInPhone));
+        self::assertTrue($state->isReady());
+    }
+
+    private function versandMitTelefon(): ShippingMethodTypeInterface
+    {
+        return new class implements ShippingMethodTypeInterface {
+            public static function getType(): string
+            {
+                return 'avis';
+            }
+
+            public function isAvailable(ShippingContext $context, array $config): bool
+            {
+                return true;
+            }
+
+            public function calculate(ShippingContext $context, array $config): ShippingQuote
+            {
+                return new ShippingQuote('5.0000');
+            }
+
+            public function capabilities(array $config): ShippingCapabilities
+            {
+                return new ShippingCapabilities(0, false, false, true);
+            }
+        };
+    }
+
     public function testEinNichtBelieferbaresLandWirdGemeldet(): void
     {
         $state = $this->calculate(
@@ -871,27 +943,7 @@ class CheckoutCalculatorTest extends TestCase
      */
     public function testDasTelefonNurWennDieVersandartEsBraucht(): void
     {
-        $telefon = new class implements ShippingMethodTypeInterface {
-            public static function getType(): string
-            {
-                return 'avis';
-            }
-
-            public function isAvailable(ShippingContext $context, array $config): bool
-            {
-                return true;
-            }
-
-            public function calculate(ShippingContext $context, array $config): ShippingQuote
-            {
-                return new ShippingQuote('5.0000');
-            }
-
-            public function capabilities(array $config): ShippingCapabilities
-            {
-                return new ShippingCapabilities(0, false, false, true);
-            }
-        };
+        $telefon = $this->versandMitTelefon();
         $avis = [new ShippingMethod(1, 'avis', 'Paket mit Avis', ShippingTaxMode::Fixed, 1, [])];
 
         $state = $this->calculate($this->vollstaendig(), shipping: $avis, shippingTypes: [$telefon]);

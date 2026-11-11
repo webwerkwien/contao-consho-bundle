@@ -5,6 +5,25 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.7.1] – 2026-11-11
+
+### Changed
+
+- **The order list has no "Neu" any more.** Orders come from the checkout; a record created there had no number,
+  no lines and no amounts, and could not be deleted.
+- A delivery's item list no longer heads each item with its ID.
+
+### Security
+
+- **Customer input with an insert tag is refused.** Every field of the checkout, the discount code in the basket,
+  the withdrawal forms, the cancellation forms and "Neuen Link anfordern" rejects `{{` and `}}` with a message;
+  nothing is stripped, and the customer can correct the input. The delivery phone is checked only where the
+  shipping method asks for it. Each refusal is written to the system log with the form and the field names, not
+  the input. Single braces stay allowed.
+- Names and titles in the messages of the back end are now escaped: folder names (public folder refused for a
+  digital file, invoice archive folder protected or refused), shop and tax class titles, order status titles and
+  product names when a status is refused, number range prefixes, document and order numbers.
+
 ## [0.7.0] – 2026-11-07
 
 ### Added

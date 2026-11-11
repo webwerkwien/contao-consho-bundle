@@ -88,6 +88,32 @@ class ArchiveFolderListenerTest extends TestCase
     }
 
     /**
+     * Both messages are shown as HTML; a folder name is whatever an editor
+     * typed in the file manager. `&` and `'` stand in for markup, which a
+     * Windows file system would not take as a name.
+     */
+    public function testDerOrdnernameErscheintMaskiertInDenMeldungen(): void
+    {
+        $uuid = 'b0b4c1e2-9a7b-11ef-8d4f-0242ac120098';
+        (new Filesystem())->mkdir($this->root.'/files/R&D\'s/rechnungen');
+        $this->connection->insert('tl_files', ['uuid' => StringUtil::uuidToBin($uuid), 'type' => 'folder', 'path' => 'files/R&D\'s/rechnungen']);
+
+        touch($this->root.'/files/R&D\'s/rechnungen/.public');
+
+        $message = $this->createMock(Adapter::class);
+        $message->expects(self::once())->method('__call')->with('addConfirmation', ['gesperrt: files/R&amp;D&apos;s/rechnungen']);
+
+        $this->listener($this->createMock(Automator::class), $message)(StringUtil::uuidToBin($uuid));
+
+        touch($this->root.'/files/R&D\'s/.public');
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('öffentlich: files/R&amp;D&apos;s');
+
+        $this->listener($this->createMock(Automator::class))(StringUtil::uuidToBin($uuid));
+    }
+
+    /**
      * @param Adapter<Message>|null $message
      */
     private function listener(Automator $automator, Adapter|null $message = null, LoggerInterface|null $logger = null): ArchiveFolderListener

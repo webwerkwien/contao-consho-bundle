@@ -43,6 +43,9 @@ enum CartNotice: string
     // holds as many vouchers as it takes. Basket row only, like the one above.
     case VoucherUnknown = 'voucher_unknown';
     case TooManyVouchers = 'too_many_vouchers';
+    // A discount code with an insert tag in it (InsertTagGuard): not kept.
+    // Basket row only, like the ones above.
+    case InsertTag = 'insert_tag';
     // Too many new guest baskets from one IP (AddToCartController). A refusal
     // on the address like the ones above it; the visitor can try again later.
     case TooManyBaskets = 'too_many_baskets';
@@ -65,7 +68,7 @@ enum CartNotice: string
     {
         $notice = \is_string($value) ? self::tryFrom($value) : null;
 
-        return \in_array($notice, [self::Added, self::TooManyCodes, self::VoucherUnknown, self::TooManyVouchers], true) ? null : $notice;
+        return \in_array($notice, [self::Added, self::TooManyCodes, self::VoucherUnknown, self::TooManyVouchers, self::InsertTag], true) ? null : $notice;
     }
 
     // 'other_shop' is gone since C-3b: a basket is now looked up within its

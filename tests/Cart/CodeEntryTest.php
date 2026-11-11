@@ -87,6 +87,29 @@ class CodeEntryTest extends TestCase
         self::assertSame(CartNotice::TooManyCodes, $this->carts->takeNotice(1));
     }
 
+    /**
+     * A code with an insert tag is not kept, nor counted as a guess: the code
+     * kept before stays, and the basket says why.
+     */
+    public function testEinCodeMitInsertTagWirdNichtGemerkt(): void
+    {
+        $this->entry()->submit(1, 'HERBST', '10.0.0.1', self::NOW);
+
+        foreach (['{{date}}', 'A}}', '{{env::host}}'] as $typed) {
+            $this->entry()->submit(1, $typed, '10.0.0.1', self::NOW);
+
+            self::assertSame(CartNotice::InsertTag, $this->carts->takeNotice(1));
+        }
+
+        self::assertSame('HERBST', $this->carts->discountCodeOf(1));
+
+        // Three refusals, and still no brake.
+        $this->entry()->submit(1, 'A1', '10.0.0.1', self::NOW);
+
+        self::assertSame('A1', $this->carts->discountCodeOf(1));
+        self::assertNull($this->carts->takeNotice(1));
+    }
+
     public function testEntfernenWirdNieGebremst(): void
     {
         foreach (['A1', 'A2', 'A3'] as $guess) {

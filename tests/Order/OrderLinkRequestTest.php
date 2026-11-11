@@ -99,6 +99,12 @@ final class OrderLinkRequestTest extends TestCase
     public function testOhneAngabenNichts(): void
     {
         self::assertSame(OrderLinkOutcome::Missing, $this->service()->request(1, 'WEB-00054', ' ', '10.0.0.1'));
+    }
+
+    public function testEinInsertTagWirdAbgelehnt(): void
+    {
+        self::assertSame(OrderLinkOutcome::InsertTag, $this->service()->request(1, 'WEB-{{date}}', 'kunde@example.org', '10.0.0.1'));
+        self::assertSame(OrderLinkOutcome::InsertTag, $this->service()->request(1, 'WEB-00054', '}}@example.org', '10.0.0.1'));
         self::assertSame([], $this->transport->sent);
     }
 

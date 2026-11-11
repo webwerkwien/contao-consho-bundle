@@ -109,7 +109,7 @@ class OrderController extends AbstractContentElementController
     private const NOTICES = [
         'changed', 'notOpen', 'statusLocks', 'alreadyChanged', 'methodUnavailable', 'confirmMissing', 'paymentFailed', 'afterWithdrawal', 'overdue',
         // D-2
-        'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing',
+        'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing', 'withdrawInsertTag',
         // K1
         'accountRequested', 'accountTooMany', 'accountUnavailable',
     ];

@@ -27,6 +27,15 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
         'notCopyable' => true,
 
         /*
+         * Orders come from the checkout. "Neu" saved a bare record: no order
+         * number, no lines (tl_consho_order_item is notCreatable), no amounts,
+         * no confirmation or legal texts — and, being notDeletable, it stayed.
+         * Recording an order taken by phone needs a page of its own that
+         * prices, numbers and confirms it like the checkout does.
+         */
+        'notCreatable' => true,
+
+        /*
          * Orders are not deletable (C-7).
          *
          * Two reasons, and the second is the one that is easy to miss. An order

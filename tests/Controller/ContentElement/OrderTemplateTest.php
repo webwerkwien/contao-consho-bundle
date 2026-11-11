@@ -173,7 +173,7 @@ class OrderTemplateTest extends TestCase
         // Block R: the explanation and notice where Consho mails no invoice.
         $keys[] = 'CONSHO.orderPage.change.explanationElsewhere';
 
-        foreach (['changed', 'changedElsewhere', 'notOpen', 'statusLocks', 'alreadyChanged', 'methodUnavailable', 'confirmMissing', 'paymentFailed', 'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing', 'afterWithdrawal'] as $notice) {
+        foreach (['changed', 'changedElsewhere', 'notOpen', 'statusLocks', 'alreadyChanged', 'methodUnavailable', 'confirmMissing', 'paymentFailed', 'withdrawn', 'withdrawnUnconfirmed', 'withdrawClosed', 'withdrawInvalid', 'withdrawNothingSelected', 'withdrawNameMissing', 'withdrawInsertTag', 'afterWithdrawal'] as $notice) {
             $keys[] = 'CONSHO.orderPage.notice.'.$notice;
         }
 

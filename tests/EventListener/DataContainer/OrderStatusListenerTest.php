@@ -113,6 +113,21 @@ final class OrderStatusListenerTest extends TestCase
     }
 
     /**
+     * The refusal is shown as HTML at the field; a status title and a product
+     * name written past the mask are not encoded.
+     */
+    public function testTitelUndProduktnameErscheinenMaskiert(): void
+    {
+        $this->connection->update('tl_consho_order_status', ['title' => 'Fertig <i>'], ['id' => self::COMPLETED]);
+        $this->connection->update('tl_consho_order_item', ['productName' => 'Stock & <b>Hut</b>'], ['id' => 1]);
+        $this->connection->insert('tl_consho_payment', ['pid' => self::ORDER, 'amount' => '100.0000']);
+
+        $this->expectExceptionMessage('„Fertig &lt;i&gt;" kann nicht gesetzt werden: nicht als versandt gemeldet: 2 × Stock &amp; &lt;b&gt;Hut&lt;/b&gt;.');
+
+        $this->listener()->save(self::COMPLETED, $this->dc());
+    }
+
+    /**
      * The case: cancelled, never shipped, money back — closable.
      *
      * Along the real path: save the status, then onsubmit. With the

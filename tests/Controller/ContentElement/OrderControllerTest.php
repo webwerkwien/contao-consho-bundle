@@ -797,6 +797,9 @@ class OrderControllerTest extends TestCase
     {
         yield 'Artikel ohne Menge' => [['consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'items', 'consho_withdraw_quantity' => [1 => '0']], 'withdrawNothingSelected'];
         yield 'ohne Namen' => [['consho_withdraw_name' => ' ', 'consho_withdraw_scope' => 'all'], 'withdrawNameMissing'];
+        // InsertTagGuard: both free-text fields.
+        yield 'Insert-Tag im Namen' => [['consho_withdraw_name' => 'Test {{env::host}}', 'consho_withdraw_scope' => 'all'], 'withdrawInsertTag'];
+        yield 'Insert-Tag in der Nachricht' => [['consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'all', 'consho_withdraw_message' => '{{date}}'], 'withdrawInsertTag'];
         yield 'mehr als bestellt' => [['consho_withdraw_name' => 'E', 'consho_withdraw_scope' => 'items', 'consho_withdraw_quantity' => [1 => '5']], 'withdrawInvalid'];
 
         // D-2: nested, this was a 500.

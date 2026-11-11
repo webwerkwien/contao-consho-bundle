@@ -6,6 +6,7 @@ use Brick\Math\BigDecimal;
 use Brick\Math\Exception\MathException;
 use Symfony\Component\HttpFoundation\InputBag;
 use Webwerkwien\ContaoConshoBundle\Pricing\MoneyFormatter;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 
 /**
  * The withdrawal function on the order page (D-2, spec 6.1, W1): what the page
@@ -37,6 +38,7 @@ class OrderPageWithdrawal
         private readonly DbalWithdrawalRepository $withdrawals,
         private readonly WithdrawalRecorder $recorder,
         private readonly MoneyFormatter $money,
+        private readonly InsertTagGuard $insertTags = new InsertTagGuard(),
     ) {
     }
 
@@ -123,6 +125,12 @@ class OrderPageWithdrawal
     public function declare(int $orderId, InputBag $post, int $now): array
     {
         $name = trim($post->getString('consho_withdraw_name'));
+
+        // The two free-text fields (InsertTagGuard). The quantities are
+        // numbers and refused below if they are anything else.
+        if ($this->insertTags->refuses('order page withdrawal', ['name' => $name, 'message' => $post->getString('consho_withdraw_message')])) {
+            return ['notice' => 'withdrawInsertTag', 'form' => true];
+        }
 
         if ('' === $name) {
             return ['notice' => 'withdrawNameMissing', 'form' => true];

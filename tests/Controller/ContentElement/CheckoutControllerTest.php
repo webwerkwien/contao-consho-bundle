@@ -86,6 +86,7 @@ use Webwerkwien\ContaoConshoBundle\Tax\TaxResolver;
 use Webwerkwien\ContaoConshoBundle\Tests\Cart\CartSchema;
 use Webwerkwien\ContaoConshoBundle\Tests\Checkout\MemberSchema;
 use Webwerkwien\ContaoConshoBundle\Translation\ShopLanguages;
+use Webwerkwien\ContaoConshoBundle\Security\InsertTagGuard;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
@@ -160,6 +161,9 @@ class CheckoutControllerTest extends TestCase
     private bool $germanRate = false;
 
     private ShippingCountryCoverage|null $coverage = null;
+
+    // A guard with a logger double, where a test asks what was logged.
+    private InsertTagGuard|null $insertTags = null;
 
     // Block GARAN: null — no label, as before.
     private DurabilityLabelImages|null $durability = null;
@@ -308,6 +312,58 @@ class CheckoutControllerTest extends TestCase
         self::assertSame('Muster', $data->billing->lastname);
         self::assertSame('AT', $data->billing->country, 'Das Land wird in Großbuchstaben normalisiert.');
         self::assertSame('eva@example.org', $data->billing->email, 'AddressNormalizer war beteiligt.');
+    }
+
+    /**
+     * Normalising would reduce the phone to its digits and the tag would
+     * vanish unseen; kept as typed, the calculator refuses it with a message
+     * (InsertTagGuard).
+     */
+    public function testEineAdresseMitInsertTagBleibtWieEingegeben(): void
+    {
+        $this->post([
+            'consho_checkout_block' => 'address',
+            'billing_lastname' => 'Muster',
+            'billing_phone' => '0664 {{date}}',
+            'billing_country' => 'at',
+            'billing_email' => 'Eva@Example.ORG',
+        ]);
+
+        $billing = $this->repository->checkoutDataOf($this->cartId)->billing;
+
+        self::assertSame('0664 {{date}}', $billing->phone);
+        self::assertSame('Eva@Example.ORG', $billing->email);
+
+        $this->post(['consho_checkout_block' => 'shipping', 'consho_shipping_phone' => '0664 {{date}}']);
+
+        self::assertSame('0664 {{date}}', $this->repository->checkoutDataOf($this->cartId)->shippingPhone);
+    }
+
+    /**
+     * The attempt reaches the system log with the field names, and a VAT ID
+     * with a tag is not sent to VIES: it would be refused anyway, and every
+     * query counts against the limit there.
+     */
+    public function testEinInsertTagWirdProtokolliertUndNichtBeiViesGeprueft(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')->with(self::identicalTo(
+            'Insert tag in customer input refused (form "checkout", fields consho_vat_id)',
+        ));
+        $this->insertTags = new InsertTagGuard($logger);
+
+        $this->post([
+            'consho_checkout_block' => 'address',
+            'billing_lastname' => 'Muster',
+            'billing_street' => 'Hauptstr. 1',
+            'billing_postal' => '1100',
+            'billing_city' => 'Wien',
+            'billing_country' => 'AT',
+            'billing_email' => 'eva@example.org',
+            'consho_vat_id' => 'ATU12345678{{date}}',
+        ]);
+
+        self::assertSame([], $this->vatIdSpy->seen);
     }
 
     /**
@@ -1815,6 +1871,7 @@ class CheckoutControllerTest extends TestCase
             renewals: $this->renewals(),
             durability: $this->durability,
             memberVatIds: new MemberVatId($this->cartConnection, $this->vatIds()),
+            insertTags: $this->insertTags ?? new InsertTagGuard(),
         );
 
         $container = new Container();

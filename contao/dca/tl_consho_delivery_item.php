@@ -22,6 +22,9 @@ $GLOBALS['TL_DCA']['tl_consho_delivery_item'] = [
         'sorting' => [
             'mode' => 4,
             'fields' => ['id'],
+            // Sorted by id for a stable order only; grouped, every item had
+            // its own id above it as a header.
+            'disableGrouping' => true,
             'panelLayout' => 'limit',
             'headerFields' => ['shippedAt', 'trackingNumber'],
         ],

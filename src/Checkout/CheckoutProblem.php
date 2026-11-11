@@ -36,15 +36,20 @@ enum CheckoutProblem: string
     // Block G (G5): a line asks more than is in stock. Fixed in the basket.
     case StockShort = 'stockShort';
 
+    // An insert tag typed into a field (InsertTagGuard): refused, not stripped.
+    case InsertTagInAddress = 'insertTagInAddress';
+    case InsertTagInPhone = 'insertTagInPhone';
+
     public function step(): CheckoutBlock
     {
         return match ($this) {
             self::BasketEmpty, self::UnpricedLine, self::StockShort => CheckoutBlock::Address,
             // Address: a VAT ID entered there is what makes a business.
             self::AddressIncomplete, self::DeliveryCountryNotServed,
-            self::VatIdInvalid, self::VatServiceUnavailable => CheckoutBlock::Address,
+            self::VatIdInvalid, self::VatServiceUnavailable, self::InsertTagInAddress => CheckoutBlock::Address,
             self::NoShippingMethod, self::ShippingMethodGone,
-            self::AgeNotVerifiable, self::DateOfBirthMissing, self::TooYoung, self::PhoneMissing => CheckoutBlock::Shipping,
+            self::AgeNotVerifiable, self::DateOfBirthMissing, self::TooYoung, self::PhoneMissing,
+            self::InsertTagInPhone => CheckoutBlock::Shipping,
             self::NoPaymentMethod, self::PaymentMethodGone => CheckoutBlock::Payment,
         };
     }
