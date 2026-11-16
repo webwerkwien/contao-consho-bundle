@@ -43,7 +43,7 @@ class SubscriptionMandates
     public function linesOf(int $orderId): array
     {
         $rows = $this->connection->fetchAllAssociative(
-            'SELECT s.subscriptionNumber, s.billingInterval, s.termLength, s.termUnit, i.productName, i.lineTotal
+            'SELECT s.subscriptionNumber, s.billingInterval, s.termLength, s.termUnit, s.nextBillingAt, i.productName, i.lineTotal
                FROM tl_consho_subscription s
                LEFT JOIN tl_consho_order_item i ON i.id = s.orderItem
               WHERE (s.firstOrder = ? OR s.id = (SELECT subscription FROM tl_consho_order WHERE id = ?)) AND s.state <> ?
@@ -58,6 +58,7 @@ class SubscriptionMandates
             (string) BigDecimal::of((string) ($row['lineTotal'] ?? '0'))->toScale(4, RoundingMode::HalfUp),
             (int) $row['billingInterval'],
             SubscriptionRuleValidator::termMonths((int) $row['termLength'], (string) $row['termUnit']),
+            (int) $row['nextBillingAt'],
         ), $rows);
     }
 

@@ -33,8 +33,8 @@ final class SubscriptionMandatesTest extends TestCase
         $c->insert('tl_consho_order_item', ['id' => 1, 'pid' => 90, 'productName' => 'Mitgliedschaft', 'lineTotal' => '1.2000']);
         $c->insert('tl_consho_order_item', ['id' => 2, 'pid' => 90, 'productName' => 'Jahreslizenz', 'lineTotal' => '120.0000']);
 
-        $c->insert('tl_consho_subscription', ['id' => 1, 'subscriptionNumber' => 'WEB-00090-1', 'firstOrder' => 90, 'orderItem' => 1, 'billingInterval' => 1, 'termLength' => 1, 'termUnit' => 'year', 'state' => 'active']);
-        $c->insert('tl_consho_subscription', ['id' => 2, 'subscriptionNumber' => 'WEB-00090-2', 'firstOrder' => 90, 'orderItem' => 2, 'billingInterval' => 0, 'termLength' => 2, 'termUnit' => 'year', 'state' => 'active']);
+        $c->insert('tl_consho_subscription', ['id' => 1, 'subscriptionNumber' => 'WEB-00090-1', 'firstOrder' => 90, 'orderItem' => 1, 'billingInterval' => 1, 'termLength' => 1, 'termUnit' => 'year', 'state' => 'active', 'nextBillingAt' => 1798761600]);
+        $c->insert('tl_consho_subscription', ['id' => 2, 'subscriptionNumber' => 'WEB-00090-2', 'firstOrder' => 90, 'orderItem' => 2, 'billingInterval' => 0, 'termLength' => 2, 'termUnit' => 'year', 'state' => 'active', 'nextBillingAt' => 1830297600]);
         // A subscription of another order.
         $c->insert('tl_consho_subscription', ['id' => 3, 'subscriptionNumber' => 'WEB-00092-1', 'firstOrder' => 92, 'orderItem' => 0, 'state' => 'active']);
     }
@@ -44,8 +44,8 @@ final class SubscriptionMandatesTest extends TestCase
         $lines = (new SubscriptionMandates($this->connection))->linesOf(90);
 
         self::assertSame(
-            [['WEB-00090-1', 'Mitgliedschaft', '1.2000', 1, 12], ['WEB-00090-2', 'Jahreslizenz', '120.0000', 0, 24]],
-            array_map(static fn ($l): array => [$l->subscriptionNumber, $l->name, $l->amount, $l->intervalMonths, $l->termMonths], $lines),
+            [['WEB-00090-1', 'Mitgliedschaft', '1.2000', 1, 12, 1798761600], ['WEB-00090-2', 'Jahreslizenz', '120.0000', 0, 24, 1830297600]],
+            array_map(static fn ($l): array => [$l->subscriptionNumber, $l->name, $l->amount, $l->intervalMonths, $l->termMonths, $l->nextBillingAt], $lines),
         );
         self::assertSame([], (new SubscriptionMandates($this->connection))->linesOf(999), 'eine Bestellung ohne Abo');
     }

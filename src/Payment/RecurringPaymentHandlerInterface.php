@@ -27,7 +27,10 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
  * (P94), outside any transaction: a provider call cannot be rolled back. The
  * attempt is opened by the core, with a notify URL, as for start().
  *
- *  - paid: the money is in; the core records it like a notification
+ *  - paid: the money is in; the core records it like a notification. A
+ *    provider whose notifications name another object than the payment
+ *    passes that as `for`: it stays on the attempt, the reference on the
+ *    payment
  *  - pending: the provider answers later through the notify URL (SEPA takes
  *    days); after 7 days without an answer the order goes "on account" (P96)
  *  - failed: the order goes "on account" at once (P95); the mandate stays,

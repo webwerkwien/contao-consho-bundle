@@ -240,7 +240,7 @@ class SubscriptionCharger
             // See NotificationProcessor: only a live attempt is a charge.
             $charged = AttemptState::Open === $locked->state || AttemptState::Pending === $locked->state;
             $this->attempts->recordPayment($locked, $result->amount, $result->reference, $methodTitle, $now);
-            $this->attempts->setState($locked->id, AttemptState::Succeeded, $now, $result->reference);
+            $this->attempts->setState($locked->id, AttemptState::Succeeded, $now, '' === $result->for ? $result->reference : $result->for);
             $this->connection->commit();
         } catch (UniqueConstraintViolationException) {
             $this->connection->rollBack();

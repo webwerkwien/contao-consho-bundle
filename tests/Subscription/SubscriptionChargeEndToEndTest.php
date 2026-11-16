@@ -196,6 +196,20 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
+     * ZP-6 (ZV8): a provider whose notifications name another object than
+     * the payment (PayPal: the order, the capture) keeps both apart.
+     */
+    public function testBezahltMitEigenerKennungFuerDenVersuch(): void
+    {
+        $this->card->charge = ChargeResult::paid('8.33', 'CAPTURE-1', 'ORDER-1');
+
+        $orderId = $this->billingRun()->run($this->at('2026-02-28 11:00'))[0]->orderId;
+
+        self::assertSame('ORDER-1', $this->connection->fetchOne('SELECT providerReference FROM tl_consho_payment_attempt WHERE pid = ?', [$orderId]));
+        self::assertSame('CAPTURE-1', $this->connection->fetchOne('SELECT reference FROM tl_consho_payment WHERE pid = ?', [$orderId]));
+    }
+
+    /**
      * P95: failed → immediately "on invoice", without a fee, invoice and
      * mail as before; the mandate stays.
      */

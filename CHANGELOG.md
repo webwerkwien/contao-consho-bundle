@@ -5,6 +5,15 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.7.2] – 2026-11-16
+
+### Added
+
+- Subscription lines passed to payment modules carry the date of the first follow-up billing
+  (`SubscriptionLineView::$nextBillingAt`).
+- `ChargeResult::paid()` takes an optional reference for the attempt, for providers whose notifications name another
+  object than the payment.
+
 ## [0.7.1] – 2026-11-11
 
 ### Changed

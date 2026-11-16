@@ -15,10 +15,16 @@ final class ChargeResult
         public readonly string $amount = '',
         public readonly string $reference = '',
         public readonly string $reason = '',
+        public readonly string $for = '',
     ) {
     }
 
-    public static function paid(string $amount, string $reference): self
+    /**
+     * @param string $reference the payment's, as refunds need it
+     * @param string $for       what the provider's later notifications name,
+     *                          kept on the attempt; '': the reference
+     */
+    public static function paid(string $amount, string $reference, string $for = ''): self
     {
         $scaled = BigDecimal::of($amount)->toScale(4, RoundingMode::HalfUp);
 
@@ -26,7 +32,7 @@ final class ChargeResult
             throw new \InvalidArgumentException(\sprintf('A payment received is positive, got "%s".', $amount));
         }
 
-        return new self(ChargeOutcome::Paid, (string) $scaled, $reference);
+        return new self(ChargeOutcome::Paid, (string) $scaled, $reference, '', trim($for));
     }
 
     /**
