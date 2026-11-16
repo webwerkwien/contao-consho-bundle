@@ -16,6 +16,7 @@ final class ChargeResult
         public readonly string $reference = '',
         public readonly string $reason = '',
         public readonly string $for = '',
+        public readonly bool $mandateGone = false,
     ) {
     }
 
@@ -51,10 +52,16 @@ final class ChargeResult
     }
 
     /**
-     * @param string $reason for the log, never shown to the customer
+     * @param string $reason      for the log, never shown to the customer
+     * @param bool   $mandateGone the provider confirmed the mandate itself no
+     *                            longer exists — the customer cancelled it
+     *                            there. The core drops it, and later periods
+     *                            go "on account" without a charge. Only for
+     *                            that confirmation: a refusal that may pass
+     *                            (no funds, a switch at the merchant) keeps it.
      */
-    public static function failed(string $reason = ''): self
+    public static function failed(string $reason = '', bool $mandateGone = false): self
     {
-        return new self(ChargeOutcome::Failed, '', '', $reason);
+        return new self(ChargeOutcome::Failed, '', '', $reason, '', $mandateGone);
     }
 }

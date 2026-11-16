@@ -40,7 +40,8 @@ use Webwerkwien\ContaoConshoBundle\Payment\RecurringPaymentHandlerInterface;
  *     trigger and "Rechnung zum Abo" in its charged version (P97)
  *     pending: the attempt waits for the notification (P96 after 7 days),
  *     and the customer is told a charge has started (E7)
- *     failed: the order goes "on account" (P95)
+ *     failed: the order goes "on account" (P95); a mandate the provider
+ *     reports gone is dropped with it
  *     thrown: the outcome is unknown — waits like pending, without the mail
  *
  * Never throws: the order stands, and what fails here is logged — the cron
@@ -212,7 +213,7 @@ class SubscriptionCharger
         match ($result->outcome) {
             ChargeOutcome::Paid => $this->paid($attempt, $result, $method->title, $now),
             ChargeOutcome::Pending => $this->pending($attemptId, $orderId, $result, $now),
-            ChargeOutcome::Failed => $this->failed($attempt, $result, $view->orderNumber, $now),
+            ChargeOutcome::Failed => $this->failed($attempt, $result, $view->orderNumber, $mandate, $now),
         };
 
         return $result->outcome;
@@ -276,10 +277,32 @@ class SubscriptionCharger
         $this->fallback->announcePending($orderId);
     }
 
-    private function failed(PaymentAttempt $attempt, ChargeResult $result, string $orderNumber, int $now): void
+    /**
+     * P95, and where the provider confirms the mandate is gone, the mandate
+     * goes too — each later period would only fail the same way.
+     */
+    private function failed(PaymentAttempt $attempt, ChargeResult $result, string $orderNumber, string $mandate, int $now): void
     {
         $this->attempts->setState($attempt->id, AttemptState::Failed, $now);
         $this->logger->warning(\sprintf('Charging follow-up order %s failed%s.', $orderNumber, '' === $result->reason ? '' : ': '.rtrim($result->reason, '.')));
+
+        // The order first: a failure dropping the mandate must not leave it waiting.
         $this->fallback->toInvoice($attempt->orderId, $now);
+
+        if (!$result->mandateGone) {
+            return;
+        }
+
+        try {
+            $numbers = $this->mandates->drop($mandate, $attempt->methodId, $now);
+        } catch (\Throwable $e) {
+            $this->logger->error(\sprintf('Follow-up order %s: the mandate its payment method reports gone could not be dropped: %s', $orderNumber, $e->getMessage()), ['exception' => $e]);
+
+            return;
+        }
+
+        foreach ($numbers as $number) {
+            $this->logger->warning(\sprintf('Subscription %s: the payment method reports its mandate gone at the provider; follow-up orders go "on account".', $number));
+        }
     }
 }

@@ -86,4 +86,30 @@ class SubscriptionMandates
             [$mandate, $methodId, $now, $orderId, $orderId],
         );
     }
+
+    /**
+     * Drops a mandate the provider no longer holds, on every subscription
+     * that keeps it with this method. Matched by its value: a new mandate
+     * taken since, by a payment in the browser, stays.
+     *
+     * @return list<string> the subscription numbers that lost it
+     */
+    public function drop(string $mandate, int $methodId, int $now): array
+    {
+        if ('' === $mandate) {
+            return [];
+        }
+
+        $numbers = array_map('strval', $this->connection->fetchFirstColumn(
+            'SELECT subscriptionNumber FROM tl_consho_subscription WHERE mandate = ? AND mandateMethod = ? ORDER BY id',
+            [$mandate, $methodId],
+        ));
+
+        $this->connection->executeStatement(
+            'UPDATE tl_consho_subscription SET mandate = ?, mandateMethod = ?, tstamp = ? WHERE mandate = ? AND mandateMethod = ?',
+            ['', 0, $now, $mandate, $methodId],
+        );
+
+        return $numbers;
+    }
 }

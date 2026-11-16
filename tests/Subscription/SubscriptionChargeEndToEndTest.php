@@ -243,6 +243,44 @@ final class SubscriptionChargeEndToEndTest extends TestCase
     }
 
     /**
+     * The provider says the mandate itself is gone — the customer cancelled
+     * it there: the order goes "on account" as in P95, and the mandate is
+     * dropped, so the next period is billed "on account" without a charge
+     * that can only fail again.
+     */
+    public function testEinBeimAnbieterGeloeschtesMandatWirdVerworfen(): void
+    {
+        $this->card->charge = ChargeResult::failed('Vereinbarung gekündigt', mandateGone: true);
+
+        $orderId = $this->billingRun()->run($this->at('2026-02-28 11:00'))[0]->orderId;
+
+        self::assertSame(6, (int) $this->order($orderId)['paymentMethod']);
+        self::assertSame(['', 0], [$this->subscription()['mandate'], (int) $this->subscription()['mandateMethod']], 'das Mandat ist verworfen');
+        self::assertContains('Charging follow-up order WEB-00091 failed: Vereinbarung gekündigt.', $this->log->getArrayCopy());
+        self::assertContains('Subscription WEB-00090-1: the payment method reports its mandate gone at the provider; follow-up orders go "on account".', $this->log->getArrayCopy());
+
+        $next = $this->billingRun()->run($this->at('2026-03-31 11:00'));
+        self::assertSame(6, (int) $this->order($next[0]->orderId)['paymentMethod'], 'gleich auf Rechnung');
+        self::assertCount(1, $this->card->charges, 'kein zweiter Versuch');
+    }
+
+    /**
+     * The order goes "on account" before the mandate is dropped: a database
+     * error there must not leave it waiting with its method.
+     */
+    public function testEinFehlerBeimVerwerfenHaeltDieBestellungNichtAuf(): void
+    {
+        $this->card->charge = ChargeResult::failed('Vereinbarung gekündigt', mandateGone: true);
+        $mandates = $this->createMock(SubscriptionMandates::class);
+        $mandates->method('drop')->willThrowException(new \RuntimeException('Datenbank weg'));
+
+        $orderId = $this->billingRun($mandates)->run($this->at('2026-02-28 11:00'))[0]->orderId;
+
+        self::assertSame(6, (int) $this->order($orderId)['paymentMethod'], 'auf Rechnung trotz Fehler');
+        self::assertContains('Follow-up order WEB-00091: the mandate its payment method reports gone could not be dropped: Datenbank weg', $this->log->getArrayCopy());
+    }
+
+    /**
      * A module that throws has not said the charge failed: a timeout may
      * come after the provider took the money. The order stays with its
      * method, the attempt waits for the notification without a mail, and
@@ -511,12 +549,12 @@ final class SubscriptionChargeEndToEndTest extends TestCase
 
     // ── Building blocks ─────────────────────────────────────────────────────
 
-    private function billingRun(): SubscriptionBillingRun
+    private function billingRun(?SubscriptionMandates $mandates = null): SubscriptionBillingRun
     {
-        return new SubscriptionBillingRun($this->connection, $this->biller(), $this->links(), $this->mail(), $this->logger(), $this->charger());
+        return new SubscriptionBillingRun($this->connection, $this->biller(), $this->links(), $this->mail(), $this->logger(), $this->charger($mandates));
     }
 
-    private function charger(): SubscriptionCharger
+    private function charger(?SubscriptionMandates $mandates = null): SubscriptionCharger
     {
         $router = $this->createStub(UrlGeneratorInterface::class);
         $router->method('generate')->willReturnCallback(static fn (string $name, array $p): string => 'https://shop.test/'.$name.'/'.$p['token']);
@@ -528,7 +566,7 @@ final class SubscriptionChargeEndToEndTest extends TestCase
             $this->handlers(),
             new DbalPaymentAttemptRepository($this->connection),
             $router,
-            new SubscriptionMandates($this->connection),
+            $mandates ?? new SubscriptionMandates($this->connection),
             $this->paymentRecorded(),
             $this->fallback(),
             $this->logger(),

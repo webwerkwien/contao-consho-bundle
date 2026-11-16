@@ -78,6 +78,30 @@ final class SubscriptionMandatesTest extends TestCase
     }
 
     /**
+     * Dropped by value and method: the same token at another method, and a
+     * new mandate taken since, both stay.
+     */
+    public function testVerworfenWirdNurDasGenannteMandatDieserZahlungsart(): void
+    {
+        $mandates = new SubscriptionMandates($this->connection);
+        $mandates->record(90, 7, 'tok_1', 500);
+        $mandates->record(92, 8, 'tok_1', 500);
+        $this->connection->update('tl_consho_subscription', ['mandate' => 'tok_2'], ['id' => 2]);
+
+        self::assertSame(['WEB-00090-1'], $mandates->drop('tok_1', 7, 700));
+        self::assertSame(
+            [['1', '', 0, 700], ['2', 'tok_2', 7, 500], ['3', 'tok_1', 8, 500]],
+            array_map(
+                static fn (array $r): array => [(string) $r['id'], $r['mandate'], (int) $r['mandateMethod'], (int) $r['tstamp']],
+                $this->connection->fetchAllAssociative('SELECT id, mandate, mandateMethod, tstamp FROM tl_consho_subscription ORDER BY id'),
+            ),
+        );
+        $this->connection->update('tl_consho_subscription', ['mandate' => ''], ['id' => 2]);
+        self::assertSame([], $mandates->drop('', 7, 800), 'ohne Mandat nichts');
+        self::assertSame(500, (int) $this->connection->fetchOne('SELECT tstamp FROM tl_consho_subscription WHERE id = 2'), 'ein leeres Mandat trifft keine Zeile');
+    }
+
+    /**
      * Truncated, a mandate charges nothing — so not at all, and said so.
      */
     public function testEinZuLangesMandatWirdVerweigertNichtGekuerzt(): void

@@ -34,7 +34,10 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
  *  - pending: the provider answers later through the notify URL (SEPA takes
  *    days); after 7 days without an answer the order goes "on account" (P96)
  *  - failed: the order goes "on account" at once (P95); the mandate stays,
- *    the next period is charged again
+ *    the next period is charged again — unless the module confirmed with the
+ *    provider that the mandate itself is gone (`failed(…, mandateGone:
+ *    true)`): then the core drops it, and later periods go "on account"
+ *    without a charge
  *
  * Answer `failed` only when the provider refused. A charge that throws
  * leaves the outcome unknown — no answer, a server error, a timeout after

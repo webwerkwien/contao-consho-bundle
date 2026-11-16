@@ -5,6 +5,16 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [Unreleased]
+
+## [0.7.3] – 2026-11-16
+
+### Added
+
+- `ChargeResult::failed()` takes `mandateGone`: a payment module that confirmed with the provider that the customer
+  cancelled the mandate there reports it, and the core drops the mandate. Later periods of the subscription go
+  "on account" without a charge that could only fail again. Any other failed charge keeps the mandate, as before.
+
 ## [0.7.2] – 2026-11-16
 
 ### Added

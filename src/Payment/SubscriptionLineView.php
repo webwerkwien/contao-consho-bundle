@@ -4,15 +4,15 @@ namespace Webwerkwien\ContaoConshoBundle\Payment;
 
 /**
  * One subscription an order sets up, as a payment handler needs it at the
- * first purchase (Abo-4b, P93): Klarna wants a `subscription` object per
- * line, PayPal the payment plan, before the provider keeps the method.
+ * first purchase (Abo-4b, P93): many providers want the terms of the
+ * subscription described before they keep the method.
  *
  * The amount is the gross of the purchase line — the price of one period,
  * frozen with the contract (A9). A later change of the tax rate moves the
  * follow-up orders, not this figure.
  *
- * PayPal's plan starts on `nextBillingAt`: the first purchase is paid as a
- * product, the plan bills from the first follow-up on.
+ * `nextBillingAt` is where a provider's own schedule starts: the first
+ * purchase is paid as a product, follow-ups are billed from then on.
  */
 final class SubscriptionLineView
 {
