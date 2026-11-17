@@ -7,6 +7,17 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.7.4] – 2026-11-17
+
+### Fixed
+
+- "Balance and all money movements" of an order: the operations of a payment (refund, edit, delete, details) showed
+  two tooltips at once. The explanation is now the icon's alt text, as in Contao's lists, and the link carries no
+  title of its own.
+- A subscription price can be created outside the back end mask, e.g. through Consho Connect's `consho:price:create`.
+  The choice of subscription rules found the product only through a stored price row, so a new row was offered no
+  rule and refused.
+
 ## [0.7.3] – 2026-11-16
 
 ### Added

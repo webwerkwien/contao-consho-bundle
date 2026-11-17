@@ -91,6 +91,24 @@ class PriceSubscriptionRuleListenerTest extends TestCase
         self::assertSame('5', $this->listener()->refuseNotOffered('5', $this->dc(10)));
     }
 
+    /**
+     * A row not yet stored has no id, only the record it will become — the
+     * case of a price created outside the mask, which checks the options
+     * before the insert. Its product comes from the record's pid.
+     */
+    public function testANewRowFindsItsProductThroughThePid(): void
+    {
+        $dc = $this->newRow(['pid' => 1]);
+
+        self::assertSame([5 => 'Monatsabo'], $this->listener()->options($dc));
+        self::assertSame('5', $this->listener()->refuseNotOffered('5', $dc));
+    }
+
+    public function testANewRowWithoutAPidOffersNothing(): void
+    {
+        self::assertSame([], $this->listener()->options($this->newRow([])));
+    }
+
     public function testDieZeileNenntIhreRegel(): void
     {
         $listener = $this->listener();
@@ -136,6 +154,18 @@ class PriceSubscriptionRuleListenerTest extends TestCase
     {
         $dc = $this->createMock(DataContainer::class);
         $dc->method('__get')->willReturnCallback(static fn (string $key): mixed => 'id' === $key ? $id : null);
+
+        return $dc;
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function newRow(array $record): DataContainer
+    {
+        $dc = $this->createMock(DataContainer::class);
+        $dc->method('__get')->willReturnCallback(static fn (string $key): mixed => 'id' === $key ? 0 : null);
+        $dc->method('getCurrentRecord')->willReturn([] === $record ? null : $record);
 
         return $dc;
     }

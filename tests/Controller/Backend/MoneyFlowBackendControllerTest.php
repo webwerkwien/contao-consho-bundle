@@ -7,6 +7,7 @@ use Contao\CoreBundle\Framework\Adapter;
 use Contao\CoreBundle\Framework\ContaoFramework;
 use Contao\CoreBundle\Security\ContaoCorePermissions;
 use Contao\DataContainer;
+use Contao\Image;
 use Contao\Message;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
@@ -166,6 +167,24 @@ final class MoneyFlowBackendControllerTest extends TestCase
         self::assertStringNotContainsString('act=delete&amp;id=5"', $html, 'locked');
         self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=show&amp;id=5"', $html, 'details also when locked');
         self::assertStringContainsString('href="/contao?do=consho_order&amp;table=tl_consho_payment&amp;act=show&amp;id=9"', $html);
+    }
+
+    /**
+     * One tooltip per operation, as in Contao's lists: the explanation is the
+     * icon's alt text, which Contao's tooltip shows. A title on the link as
+     * well stayed there as the browser's own tooltip, next to Contao's.
+     */
+    public function testAnOperationHasOneTooltip(): void
+    {
+        $this->connection->insert('tl_consho_payment', ['id' => 9, 'pid' => 1, 'amount' => '20.0000', 'method' => 'Überweisung', 'receivedAt' => 200]);
+        $GLOBALS['TL_LANG']['tl_consho_payment']['refundPayment'] = ['Erstatten', 'Zahlung ID %s ganz oder teilweise zurückzahlen'];
+        $GLOBALS['TL_LANG']['tl_consho_payment']['delete'] = ['Löschen', 'Zahlung ID %s löschen'];
+
+        $html = $this->controller(Request::create('/contao?do=consho_order&key=moneyFlows&id=1'))($this->dc());
+
+        self::assertStringContainsString('key=refundPayment&amp;id=5"><img src="undo.svg" alt="Zahlung ID 5 ganz oder teilweise zurückzahlen"></a>', $html);
+        self::assertMatchesRegularExpression('#<button type="submit" data-confirm="[^"]*"[^>]*><img src="delete.svg" alt="Zahlung ID 9 löschen"></button>#u', $html);
+        self::assertDoesNotMatchRegularExpression('#<(a|button) [^>]*title=#', substr($html, (int) strpos($html, 'Bewegungen')));
     }
 
     /**
@@ -406,9 +425,15 @@ final class MoneyFlowBackendControllerTest extends TestCase
         });
         $system = $this->createMock(Adapter::class);
         $system->method('__call')->willReturn('/contao?do=consho_order');
+        $image = $this->createMock(Adapter::class);
+        $image->method('__call')->willReturnCallback(static fn (string $name, array $args): string => \sprintf('<img src="%s" alt="%s">', $args[0], htmlspecialchars((string) $args[1])));
 
         $framework = $this->createMock(ContaoFramework::class);
-        $framework->method('getAdapter')->willReturnCallback(static fn (string $class): Adapter => Message::class === $class ? $message : $system);
+        $framework->method('getAdapter')->willReturnCallback(static fn (string $class): Adapter => match ($class) {
+            Message::class => $message,
+            Image::class => $image,
+            default => $system,
+        });
 
         $loader = new FilesystemLoader();
         $loader->addPath(__DIR__.'/../../../contao/templates', 'Contao');

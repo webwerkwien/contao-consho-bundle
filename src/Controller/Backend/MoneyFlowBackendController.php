@@ -536,14 +536,18 @@ final class MoneyFlowBackendController
 
         return array_map(function (string $operation) use ($payment, $id, $image): array {
             $label = (string) ($payment[$operation][0] ?? $operation);
+            $title = \sprintf((string) ($payment[$operation][1] ?? '%s'), $id);
             $act = \in_array($operation, ['edit', 'delete', 'show'], true);
 
             return [
                 'label' => $label,
-                'title' => \sprintf((string) ($payment[$operation][1] ?? '%s'), $id),
+                'title' => $title,
                 // The icon the payment list shows for it (tl_consho_payment), so
-                // both pages offer the same operation the same way.
-                'icon' => (string) $image->getHtml(self::ICONS[$operation] ?? 'edit.svg', $label),
+                // both pages offer the same operation the same way. As in
+                // Contao's operations, the explanation is the icon's alt text:
+                // Contao's tooltip shows it, and a title on the link besides
+                // would stay as the browser's own second tooltip.
+                'icon' => (string) $image->getHtml(self::ICONS[$operation] ?? 'edit.svg', $title),
                 'url' => $this->url(['do' => 'consho_order', 'table' => 'tl_consho_payment', $act ? 'act' : 'key' => $operation, 'id' => $id]),
                 'method' => 'delete' === $operation ? 'DELETE' : 'GET',
                 'confirm' => 'delete' === $operation ? \sprintf((string) ($GLOBALS['TL_LANG']['MSC']['deleteConfirm'] ?? '%s'), $id) : '',

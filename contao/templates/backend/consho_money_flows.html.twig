@@ -83,13 +83,14 @@
                             <td class="tl_right_nowrap" style="width:1%; vertical-align:top; white-space:nowrap">
                                 {% for a in m.actions %}
                                     {% if a.method == 'GET' %}
-                                        <a href="{{ a.url }}" title="{{ a.title }}">{{ a.icon ? a.icon|raw : a.label }}</a>
+                                        {# The icon's alt text carries the explanation (Contao's tooltip); a title only without icon. #}
+                                        <a href="{{ a.url }}"{% if not a.icon %} title="{{ a.title }}"{% endif %}>{{ a.icon ? a.icon|raw : a.label }}</a>
                                     {% else %}
                                         {# As Contao's list draws an operation with a method: a form, the token in its body. #}
                                         <form action="{{ a.url }}" method="post" style="display:inline">
                                             <input type="hidden" name="_method" value="{{ a.method }}">
                                             <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
-                                            <button type="submit" title="{{ a.title }}" data-confirm="{{ a.confirm }}" onclick="if(this.dataset.confirm&amp;&amp;!confirm(this.dataset.confirm))return false" style="background:none; border:0; padding:0; cursor:pointer">{{ a.icon ? a.icon|raw : a.label }}</button>
+                                            <button type="submit"{% if not a.icon %} title="{{ a.title }}"{% endif %} data-confirm="{{ a.confirm }}" onclick="if(this.dataset.confirm&amp;&amp;!confirm(this.dataset.confirm))return false" style="background:none; border:0; padding:0; cursor:pointer">{{ a.icon ? a.icon|raw : a.label }}</button>
                                         </form>
                                     {% endif %}
                                 {% endfor %}

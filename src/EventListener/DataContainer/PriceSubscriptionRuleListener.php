@@ -102,7 +102,10 @@ final class PriceSubscriptionRuleListener
     }
 
     /**
-     * The price row's article: `pid` of the row being edited.
+     * The price row's article: `pid` of the row being edited, or of the record
+     * a row not stored yet will become. A write outside the mask checks the
+     * options before the insert, with id 0 and the new record — without this,
+     * no subscription price could be created there.
      */
     private function articleOf(DataContainer|null $dc): int
     {
@@ -110,7 +113,7 @@ final class PriceSubscriptionRuleListener
         $id = null === $dc ? 0 : (int) $dc->id;
 
         if ($id < 1) {
-            return 0;
+            return null === $dc ? 0 : (int) ($dc->getCurrentRecord()['pid'] ?? 0);
         }
 
         return (int) $this->connection->fetchOne('SELECT pid FROM tl_consho_price WHERE id = ?', [$id]);
