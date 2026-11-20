@@ -25,6 +25,9 @@
 <p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.operator.decide'|trans({}, 'contao_default') }}</strong></p>
 {% else %}
 <p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.endsAt'|trans([cancellation.effectiveAt], 'contao_default') }}</strong></p>
+{% if cancellation.priceChange %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.priceChange'|trans({}, 'contao_default') }}</p>
+{% endif %}
 {% endif %}
 
 </td></tr>

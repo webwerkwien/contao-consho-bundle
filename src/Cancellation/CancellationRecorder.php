@@ -33,6 +33,19 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
  * An extraordinary cancellation changes nothing yet: it waits for the
  * operator (P57, CancellationDecision).
  *
+ * A subscription with a known end takes a further ordinary cancellation only
+ * where it ends earlier — then the end moves forward; otherwise the outcome
+ * is AlreadyEnding.
+ *
+ * The operator's own cancellation (Abo-9, P128) is ordinary, ends exactly at
+ * the date he chose and keeps his reason; the customer gets
+ * OrderEventMail::cancellationByOperator() instead of a confirmation of
+ * receipt.
+ *
+ * A price offer declined or let lapse (Abo-10, `priceChange`) ends exactly at
+ * the offer's effective day, too. Declined, the customer gets the usual
+ * confirmation; lapsed, the offer's own mail says it (recordWithin()).
+ *
  * ── The number ───────────────────────────────────────────────────────────
  *
  * The subscription number and a count, "SHOP-00001-1-K1" (P59). Counted under
@@ -69,6 +82,15 @@ class CancellationRecorder
             throw $e;
         }
 
+        return $this->confirmRecorded($declaration, $result);
+    }
+
+    /**
+     * The confirmation of a cancellation recorded with recordWithin(), after
+     * the caller's commit — what record() does after its own.
+     */
+    public function confirmRecorded(CancellationDeclaration $declaration, CancellationResult $result): CancellationResult
+    {
         if (CancellationOutcome::Recorded !== $result->outcome || null === $result->id) {
             return $result;
         }
@@ -95,6 +117,20 @@ class CancellationRecorder
         );
     }
 
+    /**
+     * The record alone, inside the caller's transaction and without a mail:
+     * a price offer that lapsed (Abo-10, P122) ends the subscription in the
+     * same commit as the offer, and its own mail tells the customer.
+     */
+    public function recordWithin(CancellationDeclaration $declaration, int $now): CancellationResult
+    {
+        if (0 === $this->connection->getTransactionNestingLevel()) {
+            throw new \LogicException('recordWithin() needs the caller\'s transaction.');
+        }
+
+        return $this->recordLocked($declaration, $now);
+    }
+
     private function recordLocked(CancellationDeclaration $declaration, int $now): CancellationResult
     {
         $subscription = $this->lock->lock($declaration->subscriptionId);
@@ -111,12 +147,45 @@ class CancellationRecorder
         }
 
         $ordinary = CancellationKind::Ordinary === $declaration->kind;
+        $operator = CancellationSource::Operator === $declaration->source;
+        // A price offer declined, or let lapse by a consumer (Abo-10, P121,
+        // P122): ordinary, at the offer's effective day.
+        $priceChange = CancellationSource::PriceChange === $declaration->source;
 
-        if ($ordinary && $endsAt > 0) {
+        // A known end stands, unless the customer's own ordinary cancellation
+        // ends the contract earlier: an end set by someone else — the
+        // operator's, with his longer notice (Abo-9) — must not leave him
+        // paying periods his cancellation would have spared. Then it is
+        // recorded and moves the end forward, as an accepted extraordinary
+        // one does (CancellationDecision). The same for a declined price: the
+        // periods after the effective day would be at the price he declined.
+        // Not once renewed: the successor starts at the known end (P68), an
+        // earlier end would leave a gap. Not for the same day either — a date
+        // read as midnight would move the end by hours and spare nothing.
+        if ($ordinary && $endsAt > 0 && ($operator || (int) ($subscription['renewedBy'] ?? 0) > 0 || !$this->term->endsEarlier(
+            $priceChange ? (int) $declaration->requestedAt : $this->term->ordinary($subscription, $now, $declaration->requestedAt)->effectiveAt,
+            $endsAt,
+        ))) {
             return new CancellationResult(CancellationOutcome::AlreadyEnding, subscriptionNumber: $subscriptionNumber, effectiveAt: $endsAt);
         }
 
-        $date = $ordinary ? $this->term->ordinary($subscription, $now, $declaration->requestedAt) : null;
+        // The operator's date is the end itself (Abo-9, P128): his notice is
+        // a matter of his terms, not of the customer's earliest end.
+        if ($operator && (!$ordinary || null === $declaration->requestedAt || $declaration->requestedAt <= $now)) {
+            throw new \InvalidArgumentException('The operator cancels ordinarily, at a date after now.');
+        }
+
+        // The effective day is the end itself; it may have come already where
+        // the notice is nil and the answer period ran out on that very day.
+        if ($priceChange && (!$ordinary || null === $declaration->requestedAt || $declaration->requestedAt <= 0)) {
+            throw new \InvalidArgumentException('A price change cancels ordinarily, at the effective day of the offer.');
+        }
+
+        $date = match (true) {
+            !$ordinary => null,
+            $operator, $priceChange => new CancellationDate((int) $declaration->requestedAt, false, (int) $declaration->requestedAt),
+            default => $this->term->ordinary($subscription, $now, $declaration->requestedAt),
+        };
         $count = (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cancellation WHERE pid = ?', [$declaration->subscriptionId]);
         $number = \sprintf('%s-K%d', $subscriptionNumber, $count + 1);
         $email = (string) ($this->contact->latestOrder($declaration->subscriptionId)['email'] ?? '');
@@ -128,7 +197,7 @@ class CancellationRecorder
             'receivedAt' => $now,
             'source' => $declaration->source->value,
             'kind' => $declaration->kind->value,
-            'reason' => $ordinary || '' === trim($declaration->reason) ? null : trim($declaration->reason),
+            'reason' => ($ordinary && !$operator) || '' === trim($declaration->reason) ? null : trim($declaration->reason),
             'name' => trim($declaration->name),
             'email' => $email,
             'requestedAt' => $declaration->requestedAt,
@@ -172,6 +241,17 @@ class CancellationRecorder
                 [$declaration->subscriptionId],
             );
 
+            if (CancellationSource::Operator === $declaration->source) {
+                return $this->mail->cancellationByOperator((int) $order['id'], [
+                    'number' => (string) $result->number,
+                    'subscription' => (string) $result->subscriptionNumber,
+                    'product' => $product,
+                    'effectiveAt' => (int) $result->effectiveAt,
+                    'reason' => trim($declaration->reason),
+                    'renewalHint' => $declaration->renewalHint,
+                ], $this->links->forMail($order) ?? '');
+            }
+
             return $this->mail->cancellationReceived((int) $order['id'], [
                 'number' => $result->number,
                 'subscription' => $result->subscriptionNumber,
@@ -185,6 +265,7 @@ class CancellationRecorder
                 'effectiveAt' => $result->effectiveAt,
                 'earliestApplied' => $result->earliestApplied,
                 'earliestAt' => $result->earliestAt,
+                'priceChange' => CancellationSource::PriceChange === $declaration->source,
             ], $this->links->forMail($order) ?? '');
         } catch (\Throwable $e) {
             $this->logger->error(\sprintf('The confirmation of cancellation %s could not be sent: %s', $result->number, $e->getMessage()), ['exception' => $e]);

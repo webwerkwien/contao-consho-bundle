@@ -84,6 +84,40 @@ final class SubscriptionCalendar
         return false === $date || $date->format('Y-m-d') !== $day ? null : $date->getTimestamp();
     }
 
+    /**
+     * The last second of the day $at falls on — a deadline named as a day
+     * runs to its end (Abo-10, P118).
+     */
+    public function endOfDay(int $at): int
+    {
+        $zone = new \DateTimeZone($this->timezone ?? date_default_timezone_get());
+
+        return (new \DateTimeImmutable('@'.$at))->setTimezone($zone)->setTime(0, 0)->modify('+1 day')->getTimestamp() - 1;
+    }
+
+    /**
+     * The last moment a notice of $noticeDays calendar days reaches $endsAt in
+     * time. Mails and terms name the deadline as a day, so it runs to the end
+     * of that day in the installation's zone, not to the time of day the
+     * subscription started — but never past $endsAt itself (a notice of zero
+     * days). One rule for the cancellation (Abo-7, P54) and the answer to a
+     * price offer (Abo-10, P118, P138).
+     */
+    public function noticeDeadline(int $endsAt, int $noticeDays): int
+    {
+        return min($this->endOfDay($this->addDays($endsAt, -$noticeDays)), $endsAt - 1);
+    }
+
+    /**
+     * 00:00 of the day $at falls on.
+     */
+    public function dayStart(int $at): int
+    {
+        $zone = new \DateTimeZone($this->timezone ?? date_default_timezone_get());
+
+        return (new \DateTimeImmutable('@'.$at))->setTimezone($zone)->setTime(0, 0)->getTimestamp();
+    }
+
     public function sameDay(int $a, int $b): bool
     {
         $zone = new \DateTimeZone($this->timezone ?? date_default_timezone_get());

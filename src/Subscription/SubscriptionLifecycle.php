@@ -59,7 +59,7 @@ class SubscriptionLifecycle
                 (string) $row['subscriptionNumber'],
                 $renewal,
                 $termEndsAt,
-                $this->calendar->addDays($termEndsAt, -(int) $row['noticeDays']),
+                $this->calendar->noticeDeadline($termEndsAt, (int) $row['noticeDays']),
                 // A rule from before variant A: it ends (openEnded()).
                 RenewalKind::Indefinite === $renewal && 1 !== (int) $row['billingInterval'],
             );

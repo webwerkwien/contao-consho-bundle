@@ -18,7 +18,9 @@
                   requestedAt ('' = earliest possible), effectiveAt ('' for an
                   extraordinary one), earliestApplied, earliestAt (formatted),
                   laterThanEarliest: the end lies after the earliest possible
-                  one — periods beginning before it are billed in full (S1)}
+                  one — periods beginning before it are billed in full (S1),
+                  priceChange: it follows from a price offer not agreed to
+                  (Abo-10)}
     viewUrl       the order page, with a token; '' where the shop has none
 #}
 {% block subject %}{{ 'CONSHO.mail.cancellation.subject'|trans([cancellation.subscription], 'contao_default') }}{% endblock %}
@@ -42,6 +44,9 @@
 <p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.pending'|trans({}, 'contao_default') }}</p>
 {% else %}
 <p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.endsAt'|trans([cancellation.effectiveAt], 'contao_default') }}</strong></p>
+{% if cancellation.priceChange %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.priceChange'|trans({}, 'contao_default') }}</p>
+{% endif %}
 {% if cancellation.earliestApplied %}
 <p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellation.earliestApplied'|trans({}, 'contao_default') }}</p>
 {% endif %}

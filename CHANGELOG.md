@@ -5,7 +5,72 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
-## [Unreleased]
+## [0.8.0] – 2026-11-20
+
+### Before updating
+
+- Run the database update: new table `tl_consho_subscription_price`, new shop field `subscriptionOperatorDays`.
+- Price offers compare each running subscription with the plan's **current** net price. A subscription bought
+  before an earlier price change therefore gets an offer, too, once its lead time is reached. Check the prices of
+  plans with running subscriptions before the next subscription run.
+- What a customer's silence means is set by the core (a business customer agrees, a consumer's subscription ends);
+  agree it in your own terms. Consho sets no legal texts.
+
+### Added
+
+- **Subscriptions: "Cancel" by the operator.** A new row button opens a page that ends the subscription ordinarily
+  at the end of a paid stretch: the end of the minimum term, of a further round, or a period boundary in the
+  open-ended phase; nothing is refunded pro rata. The earliest date that keeps the shop's lead time is preselected; a
+  closer date needs a confirmation. The reason is required and quoted in the customer's e-mail, which also points to
+  "Renew licence" while the plan is still on offer to that customer; the operator gets a copy. The cancellation is
+  recorded with the source "Operator (back end)". The button is greyed out where the end is already known.
+- **Shop configuration: "Operator lead time (days)"** (`subscriptionOperatorDays`, default 56) for the operator's
+  cancellation.
+- **Finding `cancellationNotConfirmed`** (warning): cancellations from any source whose confirmation did not go out,
+  while they are not yet effective.
+- **Subscriptions: price offers.** When the net price of a plan changes, every running subscription on it with a
+  renewal ahead gets an offer before the renewal, once the lead time is reached (the larger of the shop's operator
+  lead time and the customer's notice plus 14 days). The effective day is the end of the minimum term, or a period
+  boundary in the open-ended phase; subscriptions that end get none. A change counts only after rounding to the
+  currency's minor digits.
+  - **Decrease:** applied on the effective day without asking; the customer gets an e-mail.
+  - **Increase:** an offer with old and new amount per period (as on the bill and in the conditions text: gross at the
+    current rate, a business customer taxed at home included; net only where no tax is charged), effective day and
+    answer deadline (the effective day minus the customer's notice, to the end of that day), answered under "My
+    subscriptions" with "Agree" or
+    "Decline". An offer counts only once its e-mail went out; a failed e-mail takes it back and the next run tries
+    again. A reminder goes seven days before the deadline, once per deadline.
+  - **No answer by the deadline:** a business customer's silence counts as agreement, a consumer's subscription ends
+    on the effective day. Declining ends it on the effective day as well — an ordinary cancellation with the source
+    "Price offer" and the usual confirmation, which (like the operator's copy) says that the new price was not
+    agreed to.
+  - **Agreed:** the first period from the effective day is billed at the new price; the order line, the invoice, a
+    charge via the mandate and the conditions text of the subscription carry it from then on. The order line has the
+    new price source `agreed` (reverse charge and "not taxable" still take precedence).
+  - A pause moves the effective day and the deadline with it; an offer whose subscription ends before it is void.
+  - The operator gets a copy of the offer, the answer and the lapse.
+  - New table `tl_consho_subscription_price`, shown read-only as "Price offers" under the subscription; new mail
+    templates `consho_subscription_price` and `consho_subscription_price_operator`; `consho:subscription:run` reports
+    offers, reminders, lapses and void offers.
+- The reminder before the end of a minimum term names an agreed new price as the amount, and an open price offer with
+  its deadline.
+- **Findings `priceOffersOpen`** (note, with each deadline) and **`priceAgreementNotConfirmed`** (warning: an agreed
+  price whose confirmation did not go out, until the new price applies), and **`subscriptionsPageMissing`** (warning:
+  a published start point of a shop with subscriptions that can get a price offer names no published "My
+  subscriptions" page, so no price offer can go out; offer and reminder are not sent to an unpublished page either).
+- The subscription list has a column "Price offer until"; the subscription history lists price offers; the customer
+  export carries every price offer with amounts, days and answer.
+
+### Changed
+
+- **The notice period of an ordinary cancellation runs to the end of the day** the reminder names as "cancellable
+  until": a cancellation received any time that day keeps the notice, no longer only until the time of day the
+  subscription started. It never runs past the end itself (a notice of zero days). The same rule applies to the answer
+  deadline of a price offer.
+- **A subscription with a known end still takes the customer's ordinary cancellation if it ends earlier:** it is
+  recorded and the end moves forward. Before, every further cancellation was answered with "already cancelled". This
+  matters after a cancellation by the operator, whose lead time is usually longer than the customer's notice.
+- The customer export no longer names the back end user of a cancellation by the operator.
 
 ## [0.7.5] – 2026-11-20
 

@@ -27,7 +27,8 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderLineDraft;
  *  1. the subscription row, locked and read again — two runs at once must
  *     not both find the period due;
  *  2. the follow-up order through OrderFactory, with a FROZEN line: the net,
- *     licences, class and terms of the purchase (A9), name and item number of
+ *     licences, class and terms of the purchase (A9) — or of an accepted
+ *     price offer from its effective day (Abo-10, P120) —, name and item number of
  *     the first order line; the billing address of the ACCOUNT where complete
  *     (P74), else, like delivery address, language and VAT ID, of the LAST
  *     order of the subscription (P29); "on account" (P24) — or the method of
@@ -74,6 +75,9 @@ class SubscriptionBiller
         // member's own (MemberVatId). No group: the run happens without a
         // visit, the groups come with the next save of the VAT ID.
         private readonly MemberVatId|null $memberVatIds = null,
+        // An accepted price offer, taken on with the first period from its
+        // effective day (Abo-10, P120). Optional like the above.
+        private readonly SubscriptionAgreedPrice|null $prices = null,
     ) {
     }
 
@@ -224,6 +228,10 @@ class SubscriptionBiller
 
         [$reverseCharge, $vatCheck] = $this->reverseCharge($subscription, $last, (string) $shop['vatId']);
 
+        // Abo-10 (P120): an agreed price from its effective day on — the
+        // frozen one until then (A9).
+        $agreed = $this->prices?->due($subscription, $periodFrom, $language);
+
         $orderId = $this->orders->create(
             new OrderDraft(
                 shopId: (int) $subscription['shop'],
@@ -264,18 +272,24 @@ class SubscriptionBiller
             [OrderLineDraft::frozen(
                 (int) $subscription['product'],
                 (string) $subscription['quantity'],
-                (string) $subscription['unitNet'],
+                $agreed['unitNet'] ?? (string) $subscription['unitNet'],
                 (int) $subscription['taxClass'],
                 (int) $subscription['rule'],
-                (string) $subscription['terms'],
+                $agreed['terms'] ?? (string) $subscription['terms'],
                 false === $firstLine ? '' : (string) $firstLine['productName'],
                 false === $firstLine ? '' : (string) $firstLine['sku'],
                 (string) $subscription['kind'],
+                null !== $agreed,
             )],
             $now,
         );
 
         $this->reportDelivered($orderId, $now);
+
+        // Non-null only where $this->prices answered.
+        if (null !== $agreed) {
+            $this->prices->apply($subscription, $agreed, $periodFrom, $now);
+        }
 
         $this->connection->update('tl_consho_subscription', [
             'tstamp' => $now,

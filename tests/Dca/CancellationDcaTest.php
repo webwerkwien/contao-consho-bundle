@@ -33,6 +33,24 @@ class CancellationDcaTest extends TestCase
         }
     }
 
+    /**
+     * Abo-9: every source the recorder writes is an option of the field, and
+     * has a label in both languages — otherwise the mask shows "unknown
+     * option".
+     */
+    public function testJedeQuelleIstEineOptionMitBezeichnung(): void
+    {
+        $values = array_map(static fn (\Webwerkwien\ContaoConshoBundle\Cancellation\CancellationSource $source): string => $source->value, \Webwerkwien\ContaoConshoBundle\Cancellation\CancellationSource::cases());
+
+        self::assertContains('operator', $values);
+        self::assertSame($values, $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields']['source']['options']);
+
+        foreach (['de', 'en'] as $language) {
+            require __DIR__.'/../../contao/languages/'.$language.'/tl_consho_cancellation.php';
+            self::assertSame($values, array_keys($GLOBALS['TL_LANG']['tl_consho_cancellation']['sources']), $language);
+        }
+    }
+
     public function testDieErklaerungIstNurLesbar(): void
     {
         $fields = $GLOBALS['TL_DCA']['tl_consho_cancellation']['fields'];

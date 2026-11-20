@@ -36,6 +36,7 @@ final class SubscriptionHistoryBackendControllerTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_subscription');
         DcaSchema::create($this->connection, 'tl_consho_cancellation');
         DcaSchema::create($this->connection, 'tl_consho_subscription_pause');
+        DcaSchema::create($this->connection, 'tl_consho_subscription_price');
 
         $this->connection->insert('tl_consho_subscription', ['id' => 1, 'subscriptionNumber' => 'WEB-00096-1']);
         $this->connection->insert('tl_consho_subscription', ['id' => 2, 'subscriptionNumber' => 'WEB-00097-1']);
@@ -44,6 +45,7 @@ final class SubscriptionHistoryBackendControllerTest extends TestCase
         require __DIR__.'/../../../contao/languages/de/tl_consho_subscription.php';
         require __DIR__.'/../../../contao/languages/de/tl_consho_cancellation.php';
         require __DIR__.'/../../../contao/languages/de/tl_consho_subscription_pause.php';
+        require __DIR__.'/../../../contao/languages/de/tl_consho_subscription_price.php';
     }
 
     protected function tearDown(): void
@@ -92,7 +94,30 @@ final class SubscriptionHistoryBackendControllerTest extends TestCase
 
     public function testOhneEintraegeEinHinweis(): void
     {
-        self::assertStringContainsString('keine Kündigung und keine Pause', $this->controller()($this->dc()));
+        self::assertStringContainsString('keine Kündigung, keine Pause und kein Preisangebot', $this->controller()($this->dc()));
+    }
+
+    /**
+     * Abo-10 (P130): price offers among the rest, only to show.
+     */
+    public function testPreisangeboteImVerlauf(): void
+    {
+        $this->cancellation(11, strtotime('2026-09-01 10:00'), ['number' => 'K-0001']);
+        $this->connection->insert('tl_consho_subscription_price', [
+            'id' => 31, 'pid' => 1, 'createdAt' => strtotime('2026-10-01 08:00'), 'effectiveAt' => strtotime('2027-01-31'), 'deadlineAt' => strtotime('2027-01-17'),
+            'oldUnitNet' => '10.0000', 'newUnitNet' => '12.5000', 'currency' => 'EUR', 'state' => 'accepted', 'answeredBy' => 'account', 'appliedAt' => strtotime('2027-01-31'),
+        ]);
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 32, 'pid' => 2, 'createdAt' => 5, 'effectiveAt' => 5, 'oldUnitNet' => '1.0000', 'newUnitNet' => '99.0000', 'currency' => 'EUR']);
+
+        $html = html_entity_decode($this->controller()($this->dc()));
+
+        self::assertStringContainsString('Preisangebot', $html);
+        self::assertMatchesRegularExpression('/10,00\s€ → 12,50\s€/u', $html);
+        self::assertStringContainsString('gültig ab 31. Januar 2027 · Antwort bis 17. Januar 2027', $html);
+        self::assertStringContainsString('angenommen · Kunde („Meine Abos") · übernommen am 31. Januar 2027', $html);
+        self::assertStringNotContainsString('99,00', $html);
+        self::assertLessThan(strpos($html, 'K-0001'), strpos($html, 'Preisangebot'), 'newest first');
+        self::assertStringContainsString('table=tl_consho_subscription_price&act=show&id=31', $html);
     }
 
     /**

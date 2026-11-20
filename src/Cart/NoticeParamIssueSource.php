@@ -88,12 +88,14 @@ final class NoticeParamIssueSource implements ConfigurationIssueSource
         CancellationForm::HASH_PARAM,
         CancellationForm::EXPIRES_PARAM,
         // "Meine Abos": the order page of the purchase, the cancellation, the
-        // notice — and the pause (Abo pausieren, P101); stripped, the link
-        // shows the list again instead of the choice.
+        // notice — and the pause (Abo pausieren, P101) and the price offer
+        // (Abo-10, the mail's button leads there); stripped, the link shows
+        // the list again instead of the choice.
         MySubscriptionsFlow::OPEN_PARAM,
         MySubscriptionsFlow::CANCEL_PARAM,
         MySubscriptionsFlow::NOTICE_PARAM,
         MySubscriptionsFlow::PAUSE_PARAM,
+        MySubscriptionsFlow::PRICE_OFFER_PARAM,
     ];
 
     /**

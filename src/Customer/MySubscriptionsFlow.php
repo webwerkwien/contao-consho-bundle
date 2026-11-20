@@ -15,6 +15,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\RenewalKind;
 use Webwerkwien\ContaoConshoBundle\Subscription\RenewalOffer;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPauseRefused;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOffers;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRenewal;
 use Webwerkwien\ContaoConshoBundle\Token\TokenGenerator;
 use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
@@ -43,6 +45,9 @@ use Webwerkwien\ContaoConshoBundle\Token\TokenPurpose;
  *    lock), mails "Pause bestätigt" and comes back with a notice. The link
  *    only where a pause can be chosen.
  *  - POST `consho_withdraw_pause=<id>` (P107): an announced pause taken back.
+ *  - `consho_price_offer=<id>` (Abo-10, P119): the page to answer a price
+ *    offer, old and new amount; POST `consho_price_offer_action` accept or
+ *    decline — final. Declined, on to the cancellation's result page.
  */
 class MySubscriptionsFlow
 {
@@ -58,7 +63,9 @@ class MySubscriptionsFlow
 
     public const WITHDRAW_PAUSE_PARAM = 'consho_withdraw_pause';
 
-    public const NOTICES = ['notFound', 'noOrderPage', 'renewalUnavailable', 'paused', 'pauseWithdrawn', 'pauseUnavailable'];
+    public const PRICE_OFFER_PARAM = 'consho_price_offer';
+
+    public const NOTICES = ['notFound', 'noOrderPage', 'renewalUnavailable', 'paused', 'pauseWithdrawn', 'pauseUnavailable', 'priceAccepted', 'priceAcceptedUnmailed', 'priceOfferUnavailable'];
 
     public function __construct(
         private readonly Connection $connection,
@@ -71,6 +78,8 @@ class MySubscriptionsFlow
         // Abo pausieren: optional for the tests before it; the container wires both.
         private readonly SubscriptionPause|null $pauses = null,
         private readonly PauseConfirmation|null $confirmation = null,
+        // Abo-10: optional for the tests before it; the container wires it.
+        private readonly SubscriptionPriceOfferRun|null $prices = null,
     ) {
     }
 
@@ -87,7 +96,13 @@ class MySubscriptionsFlow
             return ['view' => null];
         }
 
-        $view = ['result' => null, 'form' => false, 'input' => CancellationForm::read(new Request()), 'error' => null, 'until' => '', 'contract' => '', 'subscription' => 0, 'earliest' => '', 'notice' => '', 'subscriptions' => [], 'pause' => null];
+        $view = ['result' => null, 'form' => false, 'input' => CancellationForm::read(new Request()), 'error' => null, 'until' => '', 'contract' => '', 'subscription' => 0, 'earliest' => '', 'notice' => '', 'subscriptions' => [], 'pause' => null, 'priceOffer' => null];
+
+        $answer = $request->isMethod('POST') ? $request->request->getString('consho_price_offer_action') : '';
+
+        if (\in_array($answer, ['accept', 'decline'], true)) {
+            return ['redirect' => $this->answer($request, $shopId, $memberId, 'accept' === $answer, $memberName, $here, $now)];
+        }
 
         if ($request->isMethod('POST') && $request->request->has(self::RENEW_PARAM)) {
             return ['redirect' => $this->renew($shopId, $memberId, $request->request->getInt(self::RENEW_PARAM), $language, $here, $now, $renewalContext)];
@@ -160,6 +175,28 @@ class MySubscriptionsFlow
                     'months' => $months,
                     'until' => CancellationForm::day($this->pauses->untilFor($subscription, $months), $language),
                 ], $options),
+                'back' => $here,
+            ]]];
+        }
+
+        $priceOffer = $request->query->getInt(self::PRICE_OFFER_PARAM);
+
+        if ($priceOffer > 0) {
+            $subscription = $this->owned($shopId, $memberId, $priceOffer);
+            $offer = null === $subscription ? null : $this->pendingOffer((int) $subscription['id']);
+
+            if (null === $subscription || null === $offer || null === $this->prices || !SubscriptionPriceOffers::answerable($offer, $now)) {
+                return ['redirect' => $here.'?'.http_build_query([self::NOTICE_PARAM => null === $subscription ? 'notFound' : 'priceOfferUnavailable'])];
+            }
+
+            return ['view' => [...$view, 'priceOffer' => [
+                'contract' => self::contract($subscription),
+                'subscription' => (int) $subscription['id'],
+                'offer' => (int) $offer['id'],
+                'effectiveAt' => CancellationForm::day((int) $offer['effectiveAt'], $language),
+                'deadlineAt' => CancellationForm::day((int) $offer['deadlineAt'], $language),
+                'business' => (bool) $subscription['businessCustomer'],
+                ...$this->prices->amounts($subscription, (string) $offer['oldUnitNet'], (string) $offer['newUnitNet'], $language),
                 'back' => $here,
             ]]];
         }
@@ -282,7 +319,71 @@ class MySubscriptionsFlow
             'pauseAnnounced' => SubscriptionPause::announced($row, $now) ? CancellationForm::day((int) $row['pauseFrom'], $language) : '',
             'pauseWithdrawable' => SubscriptionPause::withdrawable($row, $now),
             'pauseUrl' => null !== $this->pauses && [] !== $this->pauses->options($row, $now) ? $here.'?'.http_build_query([self::PAUSE_PARAM => $row['id']]) : '',
+            // Abo-10 (P119): an offer to answer, with its deadline; or one
+            // agreed, with its day.
+            ...$this->priceOfferLine($row, $language, $here, $now),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     *
+     * @return array{priceOfferUrl: string, priceOfferDeadline: string, priceAgreed: string}
+     */
+    private function priceOfferLine(array $row, string $language, string $here, int $now): array
+    {
+        $offer = null === $this->prices ? null : $this->pendingOffer((int) $row['id']);
+        $open = null !== $offer && SubscriptionPriceOffers::answerable($offer, $now);
+        $agreed = null !== $offer && 'accepted' === $offer['state'];
+
+        return [
+            'priceOfferUrl' => $open ? $here.'?'.http_build_query([self::PRICE_OFFER_PARAM => $row['id']]) : '',
+            'priceOfferDeadline' => $open ? CancellationForm::day((int) $offer['deadlineAt'], $language) : '',
+            'priceAgreed' => $agreed ? CancellationForm::day((int) $offer['effectiveAt'], $language) : '',
+        ];
+    }
+
+    /**
+     * The subscription's offer not settled yet: open, or agreed and not yet
+     * billed — its mail out.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function pendingOffer(int $subscriptionId): array|null
+    {
+        $offer = $this->connection->fetchAssociative(
+            // Only one whose mail went out counts (P135).
+            "SELECT * FROM tl_consho_subscription_price WHERE pid = ? AND mailSentAt > 0 AND (state = 'open' OR (state = 'accepted' AND appliedAt = 0)) ORDER BY id DESC LIMIT 1",
+            [$subscriptionId],
+        );
+
+        return false === $offer ? null : $offer;
+    }
+
+    /**
+     * "Zustimmen" or "Ablehnen" (P119), asked again under the lock. A refusal
+     * is a cancellation: on to its signed result page (§ 312k Abs. 3), as
+     * after "Verträge hier kündigen".
+     */
+    private function answer(Request $request, int $shopId, int $memberId, bool $accept, string $memberName, string $here, int $now): string
+    {
+        $subscription = $this->owned($shopId, $memberId, $request->request->getInt(self::PRICE_OFFER_PARAM));
+
+        if (null === $subscription) {
+            return $here.'?'.http_build_query([self::NOTICE_PARAM => 'notFound']);
+        }
+
+        $answered = $this->prices?->answer($request->request->getInt('consho_price_offer_id'), (int) $subscription['id'], $accept, trim($memberName), $now);
+
+        if (null === $answered) {
+            return $here.'?'.http_build_query([self::NOTICE_PARAM => 'priceOfferUnavailable']);
+        }
+
+        if ($answered->accepted || null === $answered->cancellation?->id) {
+            return $here.'?'.http_build_query([self::NOTICE_PARAM => $answered->mailed ? 'priceAccepted' : 'priceAcceptedUnmailed']);
+        }
+
+        return $this->form->resultUrl($request, $answered->cancellation->id, $now);
     }
 
     /**

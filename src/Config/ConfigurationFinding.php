@@ -175,6 +175,20 @@ enum ConfigurationFinding: string
     // E10: a decision on a cancellation whose mail did not leave.
     case DecisionNotSent = 'decisionNotSent';
 
+    // Abo-9 (P129): a cancellation whose confirmation did not leave, from
+    // any source, while it is not yet effective.
+    case CancellationNotConfirmed = 'cancellationNotConfirmed';
+
+    // Abo-10 (P129): price offers waiting for the customer's answer.
+    case PriceOffersOpen = 'priceOffersOpen';
+
+    // Abo-10 (P129): an accepted price offer whose confirmation did not leave.
+    case PriceAgreementNotConfirmed = 'priceAgreementNotConfirmed';
+
+    // Abo-10 (P119): a start point of a shop with running subscriptions
+    // without "Meine Abos" — no price offer can go out.
+    case SubscriptionsPageMissing = 'subscriptionsPageMissing';
+
     // Abo-Nachlese (P74): a subscription customer names another
     // country in the account; follow-up invoices keep the previous address.
     case SubscriptionCountryChanged = 'subscriptionCountryChanged';
@@ -335,7 +349,8 @@ enum ConfigurationFinding: string
             // The tax report is order data; the switch "Steuer im
             // Bestimmungsland" sits at the shop.
             self::OssThresholdNear, self::OssThresholdReached => ['consho_order', 'consho_shop'],
-            self::SubscriptionsSuspended, self::CancellationsWaiting, self::DecisionNotSent, self::SubscriptionCountryChanged, self::SubscriptionVatIdInvalid => ['consho_subscription'],
+            self::SubscriptionsSuspended, self::CancellationsWaiting, self::DecisionNotSent, self::CancellationNotConfirmed, self::SubscriptionCountryChanged, self::SubscriptionVatIdInvalid,
+            self::PriceOffersOpen, self::PriceAgreementNotConfirmed => ['consho_subscription'],
             self::MandateMethodUnavailable => ['consho_subscription', 'consho_payment'],
             self::NetGroupVatIdLost => ['member'],
             self::RootWithoutCurrency, self::RootCurrencyNotSold, self::CurrencyMissing => ['page', 'consho_shop'],
@@ -343,7 +358,8 @@ enum ConfigurationFinding: string
             self::OrderPageMissing, self::PrivacyPageMissing, self::WarrantyNoticeMissing,
             self::WarrantyNoticeFileMissing, self::WithdrawalFunctionMissing, self::WithdrawalFunctionAdvised,
             self::ShippingCostsPageMissing, self::StartPointWithoutDomain, self::StartPointForwardsToProductPage, self::CancellationPageMissing,
-            self::CustomerPageLocksOut, self::OrderPageProtected, self::LoginPageMissing, self::AccountPasswordPageMissing => ['page'],
+            self::CustomerPageLocksOut, self::OrderPageProtected, self::LoginPageMissing, self::AccountPasswordPageMissing,
+            self::SubscriptionsPageMissing => ['page'],
             // The registration is a front end module of a theme.
             self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests => ['themes'],
             self::PinnedProductMissing, self::MiniCartMissing, self::CheckoutElementMissing, self::CartElementMissing,
@@ -822,6 +838,22 @@ enum ConfigurationFinding: string
             // E10: the customer does not know how the cancellation ended —
             // like a confirmation that did not go out.
             self::DecisionNotSent => true,
+
+            // Abo-9 (P129): the customer has no confirmation of the
+            // cancellation — the operator tells them by hand.
+            self::CancellationNotConfirmed => true,
+
+            // Abo-10 (P129): the customer answers, or the deadline settles
+            // it (P122) — worth knowing, nothing to do.
+            self::PriceOffersOpen => false,
+
+            // The customer has nothing that shows the agreement to the new
+            // price — the operator confirms it by hand.
+            self::PriceAgreementNotConfirmed => true,
+
+            // No price offer can go out: the subscriptions run on at their
+            // old price without anyone noticing.
+            self::SubscriptionsPageMissing => true,
 
             // Invoices go to an address the customer has left —
             // a warning.

@@ -47,6 +47,7 @@ final class SubscriptionPauseBackendControllerTest extends TestCase
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
         DcaSchema::create($this->connection, 'tl_consho_subscription');
         DcaSchema::create($this->connection, 'tl_consho_subscription_pause');
+        DcaSchema::create($this->connection, 'tl_consho_subscription_price');
 
         $now = time();
         $this->connection->insert('tl_consho_subscription', [

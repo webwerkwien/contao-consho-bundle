@@ -9,6 +9,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCharger;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycleRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
 
 /**
  * Everything a subscription does by itself, every hour, beside
@@ -16,6 +17,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
  *
  *  0. pauses that begin or end (Abo pausieren, P106) — first, so a
  *     subscription back from its pause is billed in this very run
+ *  0b. price offers whose lead time is reached (Abo-10) — before the
+ *     reminders, which name an open offer
  *  1. reminders before the end of a term (Abo-6)
  *  2. billing of the periods that have begun (Abo-4) — a transition waits
  *     until the term is billed to its end, so this comes first
@@ -45,6 +48,9 @@ class SubscriptionCron
         private readonly SubscriptionCharger $charger,
         private readonly SubscriptionChargeFallback $fallback,
         private readonly SubscriptionPause $pauses,
+        // Abo-10: required, like the charger — an offer the cron skipped in
+        // silence would leave a changed price unannounced.
+        private readonly SubscriptionPriceOfferRun $prices,
         private readonly \Closure|null $clock = null,
     ) {
     }
@@ -54,6 +60,8 @@ class SubscriptionCron
         $now = null !== $this->clock ? ($this->clock)() : time();
 
         $this->pauses->run($now);
+        // Before the reminder, which names an open offer (P119).
+        $this->prices->run($now);
         $this->lifecycle->remind($now);
         $this->run->run($now);
         $this->lifecycle->transition($now);

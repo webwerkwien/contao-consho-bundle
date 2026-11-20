@@ -1024,11 +1024,16 @@ final class OrderEventMailTest extends TestCase
             self::assertTrue($this->mail()->subscriptionReminder(7, $reminder + ['chargeMethod' => null, 'chargeTaxed' => false], 'https://shop.test/x'));
             self::assertTrue($this->mail()->subscriptionReminder(7, ['kind' => 'indefinite', 'chargeMonths' => 1, 'chargeMethod' => null] + $reminder, 'https://shop.test/x'));
             self::assertTrue($this->mail()->subscriptionReminder(7, ['kind' => 'ends'] + $reminder, 'https://shop.test/x'));
+            // Abo-10 (P119): an open price offer, with its deadline.
+            self::assertTrue($this->mail()->subscriptionReminder(7, $reminder + ['priceOfferDeadline' => (new \DateTimeImmutable('2026-12-03 10:15'))->getTimestamp()], 'https://shop.test/x'));
         } finally {
             date_default_timezone_set($zone);
         }
 
         $html = array_map(static fn ($mail): string => html_entity_decode(strip_tags((string) $mail->getHtmlBody())), $this->transport->sent);
+
+        self::assertStringContainsString('Für Ihr Abo liegt ein Preisangebot vor. Bitte antworten Sie bis zum 3. Dezember 2026 unter „Meine Abos“', $html[4]);
+        self::assertStringNotContainsString('Preisangebot', $html[0]);
 
         self::assertStringContainsString('Ab dem 31. Januar 2027 berechnen wir 238,80', $html[0]);
         self::assertStringContainsString('/ Jahr, inkl. USt. nach dem derzeitigen Steuersatz.', $html[0]);
@@ -1111,6 +1116,21 @@ final class OrderEventMailTest extends TestCase
         self::assertStringContainsString('noch voll berechnet', $html);
     }
 
+    /**
+     * Abo-10: a cancellation from a price offer not agreed to says why it
+     * ends — to the customer and in the operator's copy. Any other does not.
+     */
+    public function testKuendigungAusPreisangebotNenntDenAnlass(): void
+    {
+        self::assertTrue($this->mail()->cancellationReceived(7, $this->cancellation(['priceChange' => true]), ''));
+        self::assertTrue($this->mail()->cancellationReceived(7, $this->cancellation(), ''));
+
+        self::assertStringContainsString('Dem neuen Preis, der für dieses Abo angeboten wurde, wurde nicht zugestimmt', (string) $this->transport->sent[0]->getHtmlBody());
+        self::assertStringContainsString('Dem neuen Preis, der für dieses Abo angeboten wurde, wurde nicht zugestimmt', (string) $this->transport->sent[1]->getHtmlBody());
+        self::assertStringNotContainsString('Dem neuen Preis', (string) $this->transport->sent[2]->getHtmlBody());
+        self::assertStringNotContainsString('Dem neuen Preis', (string) $this->transport->sent[3]->getHtmlBody());
+    }
+
     public function testAusserordentlicheKuendigungOhneEndeMitGrund(): void
     {
         self::assertTrue($this->mail()->cancellationReceived(7, $this->cancellation([
@@ -1157,6 +1177,123 @@ final class OrderEventMailTest extends TestCase
         self::assertStringNotContainsString('CONSHO.', (string) $rejected->getHtmlBody());
     }
 
+    /**
+     * Abo-9, P128: the operator's own cancellation — end, reason, the way to
+     * renew; a copy for the operator.
+     */
+    public function testKuendigungDurchDenBetreiber(): void
+    {
+        $zone = date_default_timezone_get();
+        date_default_timezone_set('Europe/Vienna');
+
+        try {
+            $cancellation = [
+                'number' => 'WEB-00084-1-K1', 'subscription' => 'WEB-00084-1', 'product' => 'E-Book <Kräuter>',
+                'effectiveAt' => (new \DateTimeImmutable('2027-01-15 10:00'))->getTimestamp(), 'reason' => "Neue Preise.\n<i>", 'renewalHint' => true,
+            ];
+
+            self::assertTrue($this->mail()->cancellationByOperator(7, $cancellation, 'https://shop.test/x'));
+            self::assertTrue($this->mail()->cancellationByOperator(7, ['reason' => '', 'renewalHint' => false] + $cancellation, ''));
+        } finally {
+            date_default_timezone_set($zone);
+        }
+
+        self::assertCount(4, $this->transport->sent);
+
+        [$mail, $copy, $plain] = $this->transport->sent;
+        $html = (string) $mail->getHtmlBody();
+
+        self::assertSame('Kündigung Ihres Abos WEB-00084-1', $mail->getSubject());
+        self::assertStringContainsString('wir kündigen Ihr Abo WEB-00084-1 (E-Book &lt;Kräuter&gt;) ordentlich', $html);
+        self::assertStringContainsString('endet durch diese Kündigung am 15. Januar 2027', $html);
+        self::assertStringContainsString('Neue Preise.<br />', $html);
+        self::assertStringContainsString('&lt;i&gt;', $html);
+        self::assertStringContainsString('„Meine Abos“', $html);
+        self::assertStringContainsString('Bestellung ansehen', $html);
+        self::assertStringNotContainsString('CONSHO.', $html);
+
+        self::assertSame('office@web.example.net', $copy->getTo()[0]->getAddress());
+        self::assertSame('Kündigung durch Sie: Abo WEB-00084-1', $copy->getSubject());
+        self::assertStringContainsString('Kündigungsnummer WEB-00084-1-K1', (string) $copy->getHtmlBody());
+        self::assertStringNotContainsString('CONSHO.', (string) $copy->getHtmlBody());
+
+        $plainHtml = (string) $plain->getHtmlBody();
+        self::assertStringNotContainsString('Meine Abos', $plainHtml, 'Modell nicht mehr angeboten');
+        self::assertStringNotContainsString('border-left', $plainHtml, 'kein leerer Grund');
+    }
+
+    /**
+     * Abo-10: every mail of a price offer renders, with a copy to the
+     * operator for offer, answer and lapse — not for decrease and reminder
+     * (P137).
+     */
+    public function testDieMailsEinesPreisangebots(): void
+    {
+        $zone = date_default_timezone_get();
+        date_default_timezone_set('Europe/Vienna');
+
+        try {
+            $offer = [
+                'subscription' => 'WEB-00084-1', 'product' => 'Tee <grün>', 'oldPrice' => '24,00 €', 'newPrice' => '28,80 €',
+                'priceKey' => 'perMonth', 'months' => 1, 'taxed' => true,
+                'effectiveAt' => (new \DateTimeImmutable('2027-01-15 10:00'))->getTimestamp(),
+                'deadlineAt' => (new \DateTimeImmutable('2026-12-16 10:00'))->getTimestamp(),
+                'business' => false, 'answerUrl' => 'https://shop.test/meine-abos',
+            ];
+
+            foreach (OrderEventMail::PRICE_OFFER_EVENTS as $event) {
+                self::assertTrue($this->mail()->priceOffer($event, 7, $offer, 'https://shop.test/x'), $event);
+            }
+
+            self::assertTrue($this->mail()->priceOffer('offer', 7, ['business' => true, 'taxed' => false] + $offer, 'https://shop.test/x'));
+        } finally {
+            date_default_timezone_set($zone);
+        }
+
+        // 6 to the customer, copies for offer, accepted, lapsedBusiness, lapsedConsumer; then the business offer and its copy.
+        self::assertCount(12, $this->transport->sent);
+
+        foreach ($this->transport->sent as $sent) {
+            self::assertStringNotContainsString('CONSHO.', (string) $sent->getSubject());
+            self::assertStringNotContainsString('CONSHO.', (string) $sent->getHtmlBody());
+        }
+
+        $subjects = array_map(static fn ($sent): string => (string) $sent->getSubject(), $this->transport->sent);
+        self::assertSame([
+            'Neuer Preis für Ihr Abo WEB-00084-1 – bitte antworten Sie',
+            'Preisangebot verschickt: Abo WEB-00084-1',
+            'Ihr Abo WEB-00084-1 wird günstiger',
+            'Erinnerung: neuer Preis für Ihr Abo WEB-00084-1',
+            'Neuer Preis für Ihr Abo WEB-00084-1 bestätigt',
+            'Preisangebot angenommen: Abo WEB-00084-1',
+            'Neuer Preis für Ihr Abo WEB-00084-1 ab dem nächsten Zeitraum',
+            'Preisangebot ohne Antwort, neuer Preis gilt: Abo WEB-00084-1',
+            'Ihr Abo WEB-00084-1 endet',
+            'Preisangebot ohne Antwort, Abo endet: Abo WEB-00084-1',
+            'Neuer Preis für Ihr Abo WEB-00084-1 – bitte antworten Sie',
+            'Preisangebot verschickt: Abo WEB-00084-1',
+        ], $subjects);
+
+        $html = (string) $this->transport->sent[0]->getHtmlBody();
+        self::assertStringContainsString('(Tee &lt;grün&gt;)', $html);
+        self::assertStringContainsString('ab dem 15. Januar 2027', $html);
+        self::assertStringContainsString('28,80 €', $html);
+        self::assertStringContainsString('Inklusive Umsatzsteuer', $html);
+        self::assertStringContainsString('bis zum 16. Dezember 2026', $html);
+        self::assertStringContainsString('endet das Abo am 15. Januar 2027', $html);
+        self::assertStringContainsString('https://shop.test/meine-abos', $html);
+        self::assertSame('office@web.example.net', $this->transport->sent[1]->getTo()[0]->getAddress());
+
+        $business = (string) $this->transport->sent[10]->getHtmlBody();
+        self::assertStringContainsString('gilt Ihr Schweigen als Zustimmung', $business);
+        // Without tax (reverse charge): said so, no "net plus VAT".
+        self::assertStringContainsString('Ohne Umsatzsteuer', $business);
+        self::assertStringContainsString('Geschäftskunde', (string) $this->transport->sent[11]->getHtmlBody());
+
+        // The decrease asks nothing.
+        self::assertStringNotContainsString('meine-abos', (string) $this->transport->sent[2]->getHtmlBody());
+    }
+
     public function testEinAusgefallenerServerWirftNicht(): void
     {
         $this->transport->fail = true;
@@ -1171,6 +1308,10 @@ final class OrderEventMailTest extends TestCase
         self::assertFalse($this->mail()->subscriptionPaused(7, 'WEB-00084-1', 1_793_288_184, 1_795_966_584, 'https://shop.test/x'));
         self::assertFalse($this->mail()->cancellationReceived(7, $this->cancellation(), 'https://shop.test/x'));
         self::assertFalse($this->mail()->cancellationDecided(7, 'WEB-00084-1-K1', 'WEB-00084-1', false, null, 'Nein.', 'https://shop.test/x'));
+        self::assertFalse($this->mail()->cancellationByOperator(7, ['number' => 'K1', 'subscription' => 'WEB-00084-1', 'product' => '', 'effectiveAt' => 1_795_966_584, 'reason' => '', 'renewalHint' => false], ''));
+        self::assertStringContainsString('"cancellation by the operator"', (string) end($this->logger->errors));
+        self::assertFalse($this->mail()->priceOffer('offer', 7, ['subscription' => 'WEB-00084-1', 'product' => '', 'oldPrice' => '1', 'newPrice' => '2', 'priceKey' => 'perMonth', 'months' => 1, 'taxed' => false, 'effectiveAt' => 1_795_966_584, 'deadlineAt' => 1_793_288_184, 'business' => false, 'answerUrl' => ''], 'https://shop.test/x'));
+        self::assertStringContainsString('"price offer"', (string) end($this->logger->errors));
         self::assertNotEmpty($this->logger->errors);
 
         self::assertFalse($this->mail()->documentIssued(7, 16, DocumentType::Invoice, 'https://shop.test/x'));
@@ -1180,13 +1321,13 @@ final class OrderEventMailTest extends TestCase
     /**
      * @param array<string, mixed> $overrides
      *
-     * @return array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null}
+     * @return array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null, priceChange?: bool}
      */
     private function cancellation(array $overrides = []): array
     {
         $zone = new \DateTimeZone('Europe/Vienna');
 
-        /** @var array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null} */
+        /** @var array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null, priceChange?: bool} */
         return [
             'number' => 'WEB-00084-1-K1',
             'subscription' => 'WEB-00084-1',

@@ -26,12 +26,25 @@ class CancellationTermTest extends TestCase
         }
     }
 
-    public function testDieFristReichtGenauBisZumStichtagUndKeineSekundeLaenger(): void
+    /**
+     * The reminder names the deadline as a day, so it runs to the end of that
+     * day — not to the time of day the subscription started.
+     */
+    public function testDieFristReichtBisZumEndeDesStichtagsUndKeineSekundeLaenger(): void
     {
         $row = self::row('sameTerm', '2026-01-15 10:00', 12, '2027-01-15 10:00', 30);
 
-        self::assertSame(self::at('2027-01-15 10:00'), self::term()->ordinary($row, self::at('2026-12-16 10:00'), null)->effectiveAt);
-        self::assertSame(self::at('2028-01-15 10:00'), self::term()->ordinary($row, self::at('2026-12-16 10:00') + 1, null)->effectiveAt);
+        self::assertSame(self::at('2027-01-15 10:00'), self::term()->ordinary($row, self::at('2026-12-16 18:00'), null)->effectiveAt, 'after the time of the start, same day');
+        self::assertSame(self::at('2027-01-15 10:00'), self::term()->ordinary($row, self::at('2026-12-16 23:59:59'), null)->effectiveAt);
+        self::assertSame(self::at('2028-01-15 10:00'), self::term()->ordinary($row, self::at('2026-12-17 00:00'), null)->effectiveAt);
+    }
+
+    public function testOhneKuendigungsfristReichtSieNieUeberDasEndeHinaus(): void
+    {
+        $row = self::row('sameTerm', '2026-01-15 10:00', 12, '2027-01-15 10:00', 0);
+
+        self::assertSame(self::at('2027-01-15 10:00'), self::term()->ordinary($row, self::at('2027-01-15 09:59:59'), null)->effectiveAt);
+        self::assertSame(self::at('2028-01-15 10:00'), self::term()->ordinary($row, self::at('2027-01-15 10:00'), null)->effectiveAt);
     }
 
     public function testEndetAendertNichtAuchWennDieFristNichtReicht(): void

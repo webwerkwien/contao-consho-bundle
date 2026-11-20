@@ -43,6 +43,9 @@ class SubscriptionLifecycleRun
         // The method of the mandate, for "collected via … from …"; optional
         // likewise — without it the reminder names the amount only.
         private readonly SubscriptionBillingMethod|null $billing = null,
+        // An accepted price offer for the amount (Abo-10, P120); optional
+        // likewise — without it the reminder names the frozen price.
+        private readonly SubscriptionAgreedPrice|null $prices = null,
     ) {
     }
 
@@ -167,6 +170,7 @@ class SubscriptionLifecycleRun
                 'noticeDays' => (int) $subscription['noticeDays'],
                 'productUrl' => $this->productUrl($subscription, $order),
                 'renewUrl' => $this->renewUrl($subscription, $order),
+                'priceOfferDeadline' => $this->openOfferDeadline($due),
             ] + $this->nextCharge($due, $subscription, $order), $viewUrl);
         } catch (\Throwable $e) {
             $this->logger->error(\sprintf('The reminder of subscription %s was not sent: %s', $due->subscriptionNumber, $e->getMessage()), ['exception' => $e]);
@@ -205,7 +209,7 @@ class SubscriptionLifecycleRun
 
         try {
             $line = $this->connection->fetchAssociative(
-                "SELECT i.lineTotal, i.taxAmount, o.currency FROM tl_consho_order_item i INNER JOIN tl_consho_order o ON o.id = i.pid
+                "SELECT i.lineTotal, i.taxAmount, i.taxRate, o.currency FROM tl_consho_order_item i INNER JOIN tl_consho_order o ON o.id = i.pid
                   WHERE i.id = ? OR (o.subscription = ? AND i.lineType = 'product')
                   ORDER BY o.createdAt DESC, o.id DESC, i.id LIMIT 1",
                 [(int) $subscription['orderItem'], $due->subscriptionId],
@@ -222,19 +226,51 @@ class SubscriptionLifecycleRun
                 $method = $this->billing->mandateMethod($subscription, (string) $order['language'], $fallback)?->title;
             }
 
+            $taxed = !BigDecimal::of((string) $line['taxAmount'])->isZero();
+            $amount = (string) $line['lineTotal'];
+
+            // Abo-10 (P120): a price agreed for the term after this one is
+            // what the first period after it bills — the advance notice names
+            // that amount, taxed like the newest bill.
+            $agreed = $this->prices?->agreed($subscription, $due->termEndsAt);
+
+            if (null !== $agreed) {
+                $amount = SubscriptionPriceOfferRun::periodAmount($agreed['newUnitNet'], (string) $subscription['quantity'], $taxed ? (string) $line['taxRate'] : '0');
+            }
+
             return [
-                'chargeAmount' => (string) $line['lineTotal'],
+                'chargeAmount' => $amount,
                 'chargeCurrency' => (string) $line['currency'],
                 'chargeMonths' => SubscriptionBiller::periodMonths($subscription),
                 // With tax: the mail says the rate is today's — the follow-up
                 // taxes at the rate of its day (and may lose reverse charge).
-                'chargeTaxed' => !BigDecimal::of((string) $line['taxAmount'])->isZero(),
+                'chargeTaxed' => $taxed,
                 'chargeMethod' => $method,
             ];
         } catch (\Throwable $e) {
             $this->logger->warning(\sprintf('The reminder of subscription %s goes without the amount: %s', $due->subscriptionNumber, $e->getMessage()));
 
             return [];
+        }
+    }
+
+    /**
+     * The deadline of an open price offer for the term after this one, 0 where
+     * none waits (Abo-10, P119) — the reminder asks for the answer.
+     */
+    private function openOfferDeadline(ReminderDue $due): int
+    {
+        try {
+            return (int) $this->connection->fetchOne(
+                "SELECT deadlineAt FROM tl_consho_subscription_price
+                  WHERE pid = ? AND state = 'open' AND mailSentAt > 0 AND effectiveAt <= ?
+                  ORDER BY effectiveAt DESC, id DESC LIMIT 1",
+                [$due->subscriptionId, $due->termEndsAt],
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning(\sprintf('The reminder of subscription %s goes without its open price offer: %s', $due->subscriptionNumber, $e->getMessage()));
+
+            return 0;
         }
     }
 

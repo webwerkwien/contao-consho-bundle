@@ -46,8 +46,9 @@ class MailTemplateFrameTest extends TestCase
         // K1: the two account mails; 26 since R18: a document issued late;
         // 27 since spec 9: the payment claim after a chargeback; 28 since
         // RK-5: the replacement delivery; 29 since RK-6: the rejected
-        // complaint.
-        self::assertSame(29, $customer);
+        // complaint; 30 since Abo-9: the operator's cancellation; 31 since
+        // Abo-10: the price offer.
+        self::assertSame(31, $customer);
         self::assertGreaterThan(0, $operator);
     }
 }

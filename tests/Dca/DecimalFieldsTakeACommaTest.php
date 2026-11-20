@@ -59,6 +59,8 @@ class DecimalFieldsTakeACommaTest extends TestCase
             'tl_consho_payment.amount',
             'tl_consho_product.voucherValue',
             'tl_consho_subscription.unitNet',
+            'tl_consho_subscription_price.newUnitNet',
+            'tl_consho_subscription_price.oldUnitNet',
             'tl_consho_voucher.balance',
             'tl_consho_voucher.faceValue',
             'tl_consho_voucher.paidAmount',

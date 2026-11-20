@@ -24,6 +24,7 @@ use Webwerkwien\ContaoConshoBundle\Document\DocumentArchiverInterface;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentIssuer;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
 use Webwerkwien\ContaoConshoBundle\Order\DbalOrderStatusRepository;
 use Webwerkwien\ContaoConshoBundle\Order\DbalOrderWriter;
@@ -49,6 +50,7 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBiller;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingMethod;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceCheck;
 use Webwerkwien\ContaoConshoBundle\Cron\SubscriptionCron;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderConfirmationSourceInterface;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionChargeFallback;
@@ -125,7 +127,7 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         foreach ([
             'tl_consho_shop', 'tl_consho_number_range', 'tl_consho_order_status', 'tl_consho_payment_method', 'tl_consho_translation',
             'tl_consho_order', 'tl_consho_order_item', 'tl_consho_payment', 'tl_consho_delivery', 'tl_consho_delivery_item',
-            'tl_consho_document', 'tl_consho_subscription', 'tl_consho_subscription_pause', 'tl_consho_entitlement',
+            'tl_consho_document', 'tl_consho_subscription', 'tl_consho_subscription_pause', 'tl_consho_subscription_price', 'tl_consho_entitlement',
             'tl_consho_withdrawal', 'tl_consho_withdrawal_item', 'tl_consho_complaint', 'tl_consho_complaint_item', 'tl_consho_payment_attempt', 'tl_consho_cancellation',
         ] as $table) {
             DcaSchema::create($this->connection, $table);
@@ -274,6 +276,7 @@ final class SubscriptionPauseEndToEndTest extends TestCase
             $this->createStub(SubscriptionCharger::class),
             $this->createStub(SubscriptionChargeFallback::class),
             $this->pause(),
+            $this->createStub(SubscriptionPriceOfferRun::class),
             static fn (): int => $at,
         ))();
 
@@ -399,6 +402,39 @@ final class SubscriptionPauseEndToEndTest extends TestCase
         $this->pause()->schedule(1, 1, 'account', $this->at('2026-02-20 09:00'));
         self::assertFalse($this->pause()->withdraw(1, $this->at('2026-03-01 09:00')));
         self::assertSame(1, (int) $this->row()['pausedMonths']);
+    }
+
+    /**
+     * Abo-10, P125: a price offer not settled yet moves with the pause and
+     * back with its withdrawal; a settled one stays.
+     */
+    public function testDiePauseVerschiebtDasPreisangebot(): void
+    {
+        $before = $this->row();
+        $end = (int) $before['minimumEndsAt'];
+        $calendar = new SubscriptionCalendar(self::ZONE);
+        $deadline = SubscriptionPriceCheck::deadlineOf($calendar, $end, (int) $before['noticeDays']);
+
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 1, 'pid' => 1, 'effectiveAt' => $end, 'deadlineAt' => $deadline, 'state' => 'open', 'mailSentAt' => 5, 'reminderSentAt' => 6]);
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 2, 'pid' => 1, 'effectiveAt' => $end + 1, 'deadlineAt' => $deadline, 'state' => 'declined', 'mailSentAt' => 5]);
+
+        $this->pause()->schedule(1, 3, 'account', $this->at('2026-02-10 09:00'));
+
+        $moved = $this->connection->fetchAssociative('SELECT * FROM tl_consho_subscription_price WHERE id = 1');
+        self::assertIsArray($moved);
+        // Moved like the term: the effective day is the new end.
+        self::assertSame((int) $this->row()['minimumEndsAt'], (int) $moved['effectiveAt']);
+        self::assertNotSame($end, (int) $moved['effectiveAt']);
+        self::assertSame($calendar->endOfDay($calendar->addDays((int) $moved['effectiveAt'], -(int) $before['noticeDays'])), (int) $moved['deadlineAt']);
+        // Kept: it counts no more for the later deadline (SubscriptionPriceOffersTest).
+        self::assertSame(6, (int) $moved['reminderSentAt']);
+        self::assertSame($end + 1, (int) $this->connection->fetchOne('SELECT effectiveAt FROM tl_consho_subscription_price WHERE id = 2'));
+
+        self::assertTrue($this->pause()->withdraw(1, $this->at('2026-02-20 09:00')));
+
+        $back = $this->connection->fetchAssociative('SELECT * FROM tl_consho_subscription_price WHERE id = 1');
+        self::assertIsArray($back);
+        self::assertSame([$end, $deadline, 6], [(int) $back['effectiveAt'], (int) $back['deadlineAt'], (int) $back['reminderSentAt']]);
     }
 
     /**

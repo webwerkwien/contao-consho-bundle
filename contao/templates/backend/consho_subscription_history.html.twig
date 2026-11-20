@@ -1,5 +1,5 @@
 {#
-  "Verlauf" at a subscription: cancellations and pauses, newest first.
+  "Verlauf" at a subscription: cancellations, pauses and price offers, newest first.
   Rendered inside the back end frame by SubscriptionHistoryBackendController.
   Icons as in Contao's operations: the alt is the tooltip, no title on the link.
 #}
@@ -13,7 +13,7 @@
 <div class="tl_listing_container list_view">
     <h2 class="consho-history-head">{{ lang.historyLegend|default('Verlauf') }}: {{ number }}</h2>
     {% if entries is empty %}
-        <p class="tl_empty">{{ lang.historyEmpty|default('Keine Kündigungen und keine Pausen.') }}</p>
+        <p class="tl_empty">{{ lang.historyEmpty|default('Keine Kündigungen, keine Pausen und keine Preisangebote.') }}</p>
     {% else %}
         <table class="tl_listing showColumns">
             <thead>

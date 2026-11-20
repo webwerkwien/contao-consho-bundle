@@ -1,0 +1,64 @@
+{#
+  "Kündigen" at a subscription (Abo-9, P128). Rendered inside the back end
+  frame by SubscriptionCancelBackendController; the form posts back to the
+  same address with Contao's request token.
+#}
+<div id="tl_buttons">
+    <a href="{{ back }}" class="header_back" accesskey="b">{{ lang.cancelBack|default('Zurück') }}</a>
+</div>
+
+{# Contao's own HTML. #}
+{{ messages|raw }}
+
+{% if dates is empty %}
+    <div class="tl_formbody_edit">
+        <fieldset class="tl_box">
+            <legend>{{ lang.cancelLegend|default('Kündigung') }}: {{ number }}</legend>
+            {% if endsAt %}
+                <p class="tl_info">{{ lang.cancelEnding|default('%s')|format(endsAt) }}</p>
+            {% else %}
+                <p class="tl_info">{{ lang.cancelNotPossible|default('') }}</p>
+            {% endif %}
+        </fieldset>
+    </div>
+{% else %}
+    {# data-turbo="false": a form with errors answers the POST with this page
+       (status 200), which Turbo would drop without rendering it. #}
+    <form action="{{ action }}" method="post" class="tl_form" data-turbo="false">
+        <div class="tl_formbody_edit">
+            <input type="hidden" name="FORM_SUBMIT" value="consho_subscription_cancel">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <fieldset class="tl_box">
+                <legend>{{ lang.cancelLegend|default('Kündigung') }}: {{ number }}</legend>
+                <div class="widget w50">
+                    <h3><label for="ctrl_consho_cancel_at">{{ lang.cancelAt|default('Zum') }}</label></h3>
+                    <select name="consho_cancel_at" id="ctrl_consho_cancel_at" class="tl_select">
+                        {% for date in dates %}
+                            <option value="{{ date.at }}"{% if date.at == input.at %} selected{% endif %}>{{ date.day }}{% if not date.kept %} – {{ lang.cancelShortOption|default('') }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                    <p class="tl_help tl_tip">{{ lang.cancelAtHelp|default('%d')|format(leadDays) }}</p>
+                </div>
+                <div class="widget clr">
+                    <h3><label for="ctrl_consho_cancel_reason">{{ lang.cancelReason|default('Grund') }}<span class="mandatory">*</span></label></h3>
+                    <textarea name="consho_cancel_reason" id="ctrl_consho_cancel_reason" class="tl_textarea" rows="4" cols="80" required>{{ input.reason }}</textarea>
+                    <p class="tl_help tl_tip">{{ lang.cancelReasonHelp|default('') }}</p>
+                </div>
+                {% if dates|filter(d => not d.kept) is not empty %}
+                    <div class="widget clr">
+                        <div class="tl_checkbox_single_container">
+                            <input type="checkbox" name="consho_cancel_short" id="ctrl_consho_cancel_short" class="tl_checkbox" value="1"{% if input.short %} checked{% endif %}>
+                            <label for="ctrl_consho_cancel_short">{{ lang.cancelShort|default('') }}</label>
+                        </div>
+                        <p class="tl_help tl_tip">{{ lang.cancelShortHelp|default('') }}</p>
+                    </div>
+                {% endif %}
+            </fieldset>
+        </div>
+        <div class="tl_formbody_submit">
+            <div class="tl_submit_container">
+                <button type="submit" class="tl_submit">{{ lang.cancelSubmit|default('Kündigen') }}</button>
+            </div>
+        </div>
+    </form>
+{% endif %}

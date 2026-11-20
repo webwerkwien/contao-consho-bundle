@@ -37,12 +37,13 @@ class SubscriptionDcaTest extends TestCase
         // Abo pausieren (P101, P111), Abo-7 (P57): the pause page, then
         // cancellations and pauses on one history page, the purchase order
         // before the details (Abo-8, P80, without an href of its own) — still
-        // no edit.
-        self::assertSame(['pause', 'history', 'order', 'show'], array_keys($dca['list']['operations']));
+        // no edit. Abo-9 (P128): the operator's cancellation after the pause.
+        self::assertSame(['pause', 'cancel', 'history', 'order', 'show'], array_keys($dca['list']['operations']));
         self::assertArrayNotHasKey('href', $dca['list']['operations']['order']);
         self::assertSame('key=pauseSubscription', $dca['list']['operations']['pause']['href']);
+        self::assertSame('key=cancelSubscription', $dca['list']['operations']['cancel']['href']);
         self::assertSame('key=subscriptionHistory', $dca['list']['operations']['history']['href']);
-        self::assertSame(['tl_consho_cancellation', 'tl_consho_subscription_pause'], $dca['config']['ctable']);
+        self::assertSame(['tl_consho_cancellation', 'tl_consho_subscription_pause', 'tl_consho_subscription_price'], $dca['config']['ctable']);
     }
 
     public function testDieAbonummerIstEindeutig(): void
@@ -127,7 +128,7 @@ class SubscriptionDcaTest extends TestCase
         $daily = array_keys($GLOBALS['BE_MOD']['consho']);
 
         self::assertSame(array_search('consho_order', $daily, true) + 1, array_search('consho_subscription', $daily, true));
-        self::assertSame(['tl_consho_subscription', 'tl_consho_cancellation', 'tl_consho_subscription_pause'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['tables']);
+        self::assertSame(['tl_consho_subscription', 'tl_consho_cancellation', 'tl_consho_subscription_pause', 'tl_consho_subscription_price'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['tables']);
         self::assertSame([SubscriptionPauseBackendController::class, '__invoke'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['pauseSubscription']);
         self::assertSame([SubscriptionHistoryBackendController::class, '__invoke'], $GLOBALS['BE_MOD']['consho']['consho_subscription']['subscriptionHistory']);
     }

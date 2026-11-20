@@ -10,9 +10,9 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRuleValidator;
  * The earliest possible end of an ordinary cancellation (Abo-7, P54;
  * § 312k Abs. 5 BGB: a declaration without a date counts for the earliest).
  *
- * The notice is kept when the cancellation arrives no later than `noticeDays`
- * calendar days before the end — the same deadline the reminder mail names
- * (SubscriptionLifecycle::remind()).
+ * The notice is kept when the cancellation arrives by the end of the day
+ * `noticeDays` calendar days before the end — the same deadline the reminder
+ * mail names as a day (SubscriptionCalendar::noticeDeadline()).
  *
  *  - Minimum term, notice kept: at the end of the term.
  *  - Endet: at the end of the term in any case — it ends there anyway.
@@ -33,6 +33,16 @@ class CancellationTerm
 {
     public function __construct(private readonly SubscriptionCalendar $calendar)
     {
+    }
+
+    /**
+     * Whether an end falls on an earlier DAY than a known one (P134). The
+     * same day is no earlier end: a requested date is read as midnight, the
+     * known end carries the time of the start.
+     */
+    public function endsEarlier(int $at, int $knownEnd): bool
+    {
+        return $at < $knownEnd && !$this->calendar->sameDay($at, $knownEnd);
     }
 
     /**
@@ -82,7 +92,7 @@ class CancellationTerm
 
     private function noticeKept(int $endsAt, int $notice, int $receivedAt): bool
     {
-        return $receivedAt <= $this->calendar->addDays($endsAt, -$notice);
+        return $receivedAt <= $this->calendar->noticeDeadline($endsAt, $notice);
     }
 
     /**

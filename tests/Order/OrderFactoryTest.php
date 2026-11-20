@@ -897,6 +897,21 @@ class OrderFactoryTest extends TestCase
         self::assertSame(['19.0000', PriceSource::List->value], [$this->writtenItems[1]['taxRate'], $this->writtenItems[1]['priceSource']]);
     }
 
+    /**
+     * Abo-10: a follow-up line at an agreed price says where the price came
+     * from; reverse charge still wins, as it decides the tax.
+     */
+    public function testEinVereinbarterPreisTraegtSeineHerkunft(): void
+    {
+        $agreed = OrderLineDraft::frozen(99, '2', '1.5000', 1, 1, 'Bedingungen neu', 'E-Book', 'EB-001', 'digital', true);
+
+        $this->factory()->create($this->draft('AT'), [$agreed], 1_757_000_000);
+        $this->factory()->create($this->followUp('DE', reverseCharge: true), [$agreed], 1_757_000_000);
+
+        self::assertSame(['1.5000', PriceSource::Agreed->value], [$this->writtenItems[0]['unitPrice'], $this->writtenItems[0]['priceSource']]);
+        self::assertSame(PriceSource::ReverseCharge->value, $this->writtenItems[1]['priceSource']);
+    }
+
     public function testDieFolgebestellungZeigtAufIhrAbo(): void
     {
         $this->factory()->create($this->followUp('AT', subscriptionId: 7), [$this->frozenLine(taxClass: 1)], 1_757_000_000);

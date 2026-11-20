@@ -1,0 +1,31 @@
+{#
+  The operator's copy of a price offer mail (Abo-10, P137): the offer, the
+  agreement, the deadline passed — in the language of the shop.
+
+  Loaded as @Contao/mail/consho_subscription_price_operator.html.twig.
+
+  Variables: as consho_subscription_price.html.twig, without viewUrl.
+#}
+{% block subject %}{{ ('CONSHO.mail.priceOffer.' ~ event ~ '.copySubject')|trans([offer.subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set old = ('CONSHO.subscription.' ~ offer.priceKey)|trans([offer.oldPrice, offer.months], 'contao_default') %}
+{% set new = ('CONSHO.subscription.' ~ offer.priceKey)|trans([offer.newPrice, offer.months], 'contao_default') %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0; font-size: 16px; font-weight: bold;">{{ ('CONSHO.mail.priceOffer.' ~ event ~ '.copyIntro')|trans([offer.subscription, offer.product, offer.effectiveAt, offer.deadlineAt], 'contao_default') }}</p>
+<p style="margin: 0 0 12px 0;">{{ customer.name }} &lt;{{ customer.email }}&gt;</p>
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.priceOffer.old'|trans({}, 'contao_default') }}: {{ old }}<br>{{ 'CONSHO.mail.priceOffer.new'|trans([offer.effectiveAt], 'contao_default') }}: {{ new }}<br><small>{{ ('CONSHO.mail.priceOffer.' ~ (offer.taxed ? 'taxed' : 'untaxed'))|trans({}, 'contao_default') }}</small></p>
+{% if event == 'offer' %}
+<p style="margin: 0 0 12px 0;">{{ ('CONSHO.mail.priceOffer.' ~ (offer.business ? 'copySilenceBusiness' : 'copySilenceConsumer'))|trans([offer.deadlineAt, offer.effectiveAt], 'contao_default') }}</p>
+{% endif %}
+
+</td></tr>
+</table>
+</td></tr>
+</table>
+{% endblock %}

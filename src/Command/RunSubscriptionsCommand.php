@@ -9,23 +9,25 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Webwerkwien\ContaoConshoBundle\Subscription\DelinquencyChange;
+use Webwerkwien\ContaoConshoBundle\Subscription\PriceOfferDue;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionChargeFallback;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCharger;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionDelinquencyRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycleRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
 
 /**
  * Every stage of SubscriptionCron now, in its order (Abo-5 P41, Abo-6 P52):
- * pauses (Abo pausieren, P106), reminders, billing, ends of term, billing again, the charges of Abo-4b
+ * pauses (Abo pausieren, P106), price offers (Abo-10), reminders, billing, ends of term, billing again, the charges of Abo-4b
  * (P94 catch-up, P96 "on account" after 7 days), payment state.
  *
  * No "as of" option, for the reason BillSubscriptionsCommand gives.
  */
 #[AsCommand(
     name: 'consho:subscription:run',
-    description: 'Run every stage of the subscription cron now: pauses, reminders, billing, ends of term, charges, overdue invoices.',
+    description: 'Run every stage of the subscription cron now: pauses, price offers, reminders, billing, ends of term, charges, overdue invoices.',
 )]
 class RunSubscriptionsCommand extends Command
 {
@@ -39,6 +41,7 @@ class RunSubscriptionsCommand extends Command
         private readonly SubscriptionCharger $charger,
         private readonly SubscriptionChargeFallback $fallback,
         private readonly SubscriptionPause $pauses,
+        private readonly SubscriptionPriceOfferRun $prices,
     ) {
         parent::__construct();
     }
@@ -53,6 +56,7 @@ class RunSubscriptionsCommand extends Command
         $now = time();
 
         $pauses = $this->pauses->run($now);
+        $prices = $this->prices->run($now);
         $reminders = $this->lifecycle->remind($now);
         $billed = $this->billing->run($now);
         $transitions = $this->lifecycle->transition($now);
@@ -63,6 +67,21 @@ class RunSubscriptionsCommand extends Command
 
         $io->writeln(\sprintf('Pauses begun: %d%s', \count($pauses['paused']), [] === $pauses['paused'] ? '' : ' ('.implode(', ', $pauses['paused']).')'));
         $io->writeln(\sprintf('Pauses ended: %d%s', \count($pauses['resumed']), [] === $pauses['resumed'] ? '' : ' ('.implode(', ', $pauses['resumed']).')'));
+        $io->writeln(\sprintf('Price offers sent: %d', \count($prices['offers'])));
+
+        foreach ($prices['offers'] as $offer) {
+            $io->writeln(\sprintf('  %s %s (effective %s)', $offer->subscriptionNumber, $offer->event, date('Y-m-d', $offer->effectiveAt)));
+        }
+
+        $io->writeln(\sprintf('Price offer reminders sent: %d%s', \count($prices['reminders']), [] === $prices['reminders'] ? '' : ' ('.implode(', ', array_map(static fn (PriceOfferDue $due): string => $due->subscriptionNumber, $prices['reminders'])).')'));
+        $io->writeln(\sprintf('Price offers run out without an answer: %d', \count($prices['lapsed'])));
+
+        foreach ($prices['lapsed'] as $offer) {
+            $io->writeln(\sprintf('  %s %s', $offer->subscriptionNumber, 'lapsedBusiness' === $offer->event ? 'new price agreed' : 'ends'));
+        }
+
+        $io->writeln(\sprintf('Price offers void: %d%s', \count($prices['voided']), [] === $prices['voided'] ? '' : ' ('.implode(', ', $prices['voided']).')'));
+
         $io->writeln(\sprintf('Reminders sent: %d', \count($reminders)));
 
         foreach ($reminders as $reminder) {

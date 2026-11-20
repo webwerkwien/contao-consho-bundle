@@ -21,9 +21,11 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderDraft;
 use Webwerkwien\ContaoConshoBundle\Order\OrderFactoryInterface;
 use Webwerkwien\ContaoConshoBundle\Order\OrderLineDraft;
 use Webwerkwien\ContaoConshoBundle\Payment\DbalPaymentMethodRepository;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionAgreedPrice;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBiller;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingMethod;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLineTerms;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Tax\CountryProvider;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
@@ -66,7 +68,7 @@ class SubscriptionBillerTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_shop', 'tl_consho_payment_method', 'tl_consho_translation', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_subscription', 'tl_consho_entitlement', 'tl_consho_delivery', 'tl_consho_delivery_item'] as $table) {
+        foreach (['tl_consho_shop', 'tl_consho_payment_method', 'tl_consho_translation', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_subscription', 'tl_consho_entitlement', 'tl_consho_delivery', 'tl_consho_delivery_item', 'tl_consho_subscription_price'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -506,7 +508,111 @@ class SubscriptionBillerTest extends TestCase
         self::assertNull($draft->vatCheck);
     }
 
-    private function biller(MemberCheckoutDefaults|null $members = null, VatIdValidatorInterface|null $vatIds = null, MemberVatId|null $memberVatIds = null): SubscriptionBiller
+    /**
+     * Abo-10 (P120): an accepted offer effective on the period's first day is
+     * billed and taken on — the conditions text built anew from the amount
+     * the offer showed (net here: a business customer).
+     */
+    public function testEinAngenommenesPreisangebotWirdAbgerechnetUndUebernommen(): void
+    {
+        $this->offer(['id' => 5, 'effectiveAt' => $this->at('2026-02-28 10:15')]);
+        // Counter-checks: effective later, still open, its mail never left.
+        $this->offer(['id' => 6, 'effectiveAt' => $this->at('2026-03-31 10:15'), 'newUnitNet' => '9.0000']);
+        $this->offer(['id' => 7, 'effectiveAt' => $this->at('2026-01-31 10:15'), 'state' => 'open', 'newUnitNet' => '8.0000']);
+        $this->offer(['id' => 8, 'effectiveAt' => $this->at('2026-02-01 10:15'), 'mailSentAt' => 0, 'newUnitNet' => '7.0000']);
+
+        $asked = [];
+        $now = $this->at('2026-02-28 11:00');
+        $this->biller(prices: $this->prices($asked, '5,00 € / Monat · Laufzeit 1 Jahr'))->billDue(1, $now);
+
+        $line = $this->created[0][1][0];
+        self::assertSame([5.0, '5,00 € / Monat · Laufzeit 1 Jahr', true], [(float) $line->net, $line->terms, $line->agreed]);
+        self::assertSame([[1, 10.0, 'EUR', 'de']], array_map(static fn (array $a): array => [$a[0], (float) $a[1], $a[2], $a[3]], $asked));
+
+        $subscription = $this->subscription();
+        self::assertSame([5.0, '5,00 € / Monat · Laufzeit 1 Jahr'], [(float) $subscription['unitNet'], $subscription['terms']]);
+        self::assertSame([5 => $now, 6 => 0, 7 => 0, 8 => 0], array_map('intval', $this->connection->fetchAllKeyValue('SELECT id, appliedAt FROM tl_consho_subscription_price ORDER BY id')));
+    }
+
+    public function testVorDemGueltigkeitstagBleibtDerEingefrorenePreis(): void
+    {
+        $this->offer(['id' => 5, 'effectiveAt' => $this->at('2026-03-31 10:15')]);
+
+        $asked = [];
+        $this->biller(prices: $this->prices($asked, 'neu'))->billDue(1, $this->at('2026-02-28 11:00'));
+
+        self::assertSame([4.1667, '4,17 € / Monat · Laufzeit 1 Jahr', false], [(float) $this->created[0][1][0]->net, $this->created[0][1][0]->terms, $this->created[0][1][0]->agreed]);
+        self::assertSame([], $asked);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT appliedAt FROM tl_consho_subscription_price WHERE id = 5'));
+    }
+
+    public function testOhneRegelBleibtDerBedingungstextUndDerPreisAendertSich(): void
+    {
+        $this->offer(['id' => 5, 'effectiveAt' => $this->at('2026-02-28 10:15')]);
+
+        $asked = [];
+        $this->biller(prices: $this->prices($asked, null))->billDue(1, $this->at('2026-02-28 11:00'));
+
+        self::assertSame([5.0, '4,17 € / Monat · Laufzeit 1 Jahr'], [(float) $this->created[0][1][0]->net, $this->created[0][1][0]->terms]);
+        self::assertCount(1, $this->warnings);
+        self::assertStringContainsString('no longer exists', $this->warnings[0]);
+    }
+
+    public function testEinFehlerLaesstDasAngebotUnuebernommen(): void
+    {
+        $this->offer(['id' => 5, 'effectiveAt' => $this->at('2026-02-28 10:15')]);
+        $this->reportOutcome = 'tooMuch';
+
+        $asked = [];
+
+        try {
+            $this->biller(prices: $this->prices($asked, 'neu'))->billDue(1, $this->at('2026-02-28 11:00'));
+            self::fail('The report should have failed.');
+        } catch (\RuntimeException) {
+        }
+
+        self::assertSame(4.1667, (float) $this->subscription()['unitNet']);
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT appliedAt FROM tl_consho_subscription_price WHERE id = 5'));
+    }
+
+    /**
+     * An accepted price offer of subscription 1 at 5.0000 net, its mail sent.
+     *
+     * @param array<string, mixed> $values
+     */
+    private function offer(array $values): void
+    {
+        $this->connection->insert('tl_consho_subscription_price', $values + [
+            'pid' => 1, 'oldUnitNet' => '4.1667', 'newUnitNet' => '5.0000', 'currency' => 'EUR', 'quantity' => '2.0000',
+            'state' => 'accepted', 'answeredBy' => 'account', 'mailSentAt' => $this->at('2026-01-01 08:00'),
+        ]);
+    }
+
+    /**
+     * @param list<array{int, string, string, string}> $asked what the conditions text was built from
+     */
+    private function prices(array &$asked, string|null $terms): SubscriptionAgreedPrice
+    {
+        $lineTerms = $this->createMock(SubscriptionLineTerms::class);
+        $lineTerms->method('of')->willReturnCallback(static function (int $rule, string $amount, string $currency, string $language) use (&$asked, $terms): string|null {
+            $asked[] = [$rule, $amount, $currency, $language];
+
+            return $terms;
+        });
+
+        return new SubscriptionAgreedPrice($this->connection, $lineTerms, new class(function (string $line): void { $this->warnings[] = $line; }) extends AbstractLogger {
+            public function __construct(private readonly \Closure $write)
+            {
+            }
+
+            public function log($level, \Stringable|string $message, array $context = []): void
+            {
+                ($this->write)((string) $message);
+            }
+        });
+    }
+
+    private function biller(MemberCheckoutDefaults|null $members = null, VatIdValidatorInterface|null $vatIds = null, MemberVatId|null $memberVatIds = null, SubscriptionAgreedPrice|null $prices = null): SubscriptionBiller
     {
         $orders = $this->createMock(OrderFactoryInterface::class);
         $orders->method('create')->willReturnCallback(function (OrderDraft $draft, array $lines, int $timestamp): int {
@@ -569,6 +675,7 @@ class SubscriptionBillerTest extends TestCase
             $members,
             $vatIds,
             $memberVatIds,
+            $prices,
         );
     }
 

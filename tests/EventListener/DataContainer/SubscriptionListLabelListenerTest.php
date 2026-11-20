@@ -3,8 +3,11 @@
 namespace Webwerkwien\ContaoConshoBundle\Tests\EventListener\DataContainer;
 
 use Contao\DataContainer;
+use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SubscriptionListLabelListener;
+use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
  * The subscription list: the state as an eye in front, days without the
@@ -66,6 +69,25 @@ final class SubscriptionListLabelListenerTest extends TestCase
         self::assertSame('x', $this->label(['pauseUntil' => 0])[$this->column('subscriptionNumber')], 'andere Spalten bleiben');
     }
 
+    /**
+     * Abo-10 (P130): the deadline of an open offer whose mail went out.
+     */
+    public function testPreisangebotBis(): void
+    {
+        $connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
+        DcaSchema::create($connection, 'tl_consho_subscription_price');
+        $connection->insert('tl_consho_subscription_price', ['pid' => 1, 'state' => 'open', 'mailSentAt' => 1, 'effectiveAt' => 1, 'deadlineAt' => self::NOW + 86_400]);
+        $connection->insert('tl_consho_subscription_price', ['pid' => 2, 'state' => 'open', 'mailSentAt' => 0, 'effectiveAt' => 2, 'deadlineAt' => self::NOW + 86_400]);
+        $connection->insert('tl_consho_subscription_price', ['pid' => 3, 'state' => 'accepted', 'mailSentAt' => 1, 'effectiveAt' => 3, 'deadlineAt' => self::NOW + 86_400]);
+
+        $column = $this->column('priceOfferUntil');
+
+        self::assertSame('<span class="consho-nowrap">'.date('d.m.Y', self::NOW + 86_400).'</span>', $this->label(['id' => 1], $connection)[$column], 'offen');
+        self::assertSame('-', $this->label(['id' => 2], $connection)[$column], 'Mail nicht hinaus');
+        self::assertSame('-', $this->label(['id' => 3], $connection)[$column], 'beantwortet');
+        self::assertSame('-', $this->label(['id' => 1])[$column], 'ohne Verbindung');
+    }
+
     private function column(string $field): int
     {
         $column = array_search($field, $GLOBALS['TL_DCA']['tl_consho_subscription']['list']['label']['fields'], true);
@@ -79,10 +101,10 @@ final class SubscriptionListLabelListenerTest extends TestCase
      *
      * @return array<int, mixed>
      */
-    private function label(array $row): array
+    private function label(array $row, Connection|null $connection = null): array
     {
         $args = array_fill(0, \count($GLOBALS['TL_DCA']['tl_consho_subscription']['list']['label']['fields']), 'x');
-        $result = (new SubscriptionListLabelListener(static fn (): int => self::NOW))($row, '', $this->createStub(DataContainer::class), $args);
+        $result = (new SubscriptionListLabelListener(static fn (): int => self::NOW, $connection))($row, '', $this->createStub(DataContainer::class), $args);
         self::assertIsArray($result);
 
         return $result;

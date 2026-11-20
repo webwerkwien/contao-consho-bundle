@@ -9,9 +9,9 @@ namespace Webwerkwien\ContaoConshoBundle\Pricing;
  * the customer-group notice ("as a member of group X you pay …") and the
  * information duty for personalised pricing under § 4 Abs 1 Z 4a FAGG.
  *
- * Adding a value later would mean a rebuild across the whole price
- * calculation, which is why all six exist from the start — even those no code
- * produces yet.
+ * The values from the catalogue's price calculation exist from the start,
+ * even those no code produces yet. Later ones (NotTaxable, Agreed) are set
+ * outside that calculation.
  */
 enum PriceSource: string
 {
@@ -36,6 +36,14 @@ enum PriceSource: string
      * multi-purpose voucher is no supply whose tax could pass to anyone.
      */
     case NotTaxable = 'notTaxable';
+
+    /*
+     * Abo-10: a subscription's follow-up line billed at a price the customer
+     * agreed to in a price offer — neither the catalogue nor the price frozen
+     * at the purchase. Reverse charge and "nicht steuerbar" still take
+     * precedence, as they decide the tax.
+     */
+    case Agreed = 'agreed';
 
     /**
      * Whether a customer-facing notice is required for this source.

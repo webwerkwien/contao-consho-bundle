@@ -7,10 +7,10 @@ $GLOBALS['TL_LANG']['tl_consho_cancellation']['number'] = ['Nummer', 'Abonummer 
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['receivedAt'] = ['Eingang', 'Datum und Uhrzeit, zu denen „jetzt kündigen" gedrückt wurde (Serverzeit).'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['source'] = ['Weg', ''];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['kind'] = ['Art', ''];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['reason'] = ['Grund', 'Der Grund einer außerordentlichen Kündigung, in den Worten des Kunden.'];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['name'] = ['Name', 'Wie angegeben.'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['reason'] = ['Grund', 'Der Grund einer außerordentlichen Kündigung in den Worten des Kunden, bei einer Kündigung durch den Betreiber dessen Grund, wie er dem Kunden mitgeteilt wurde.'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['name'] = ['Name', 'Wie angegeben; bei einer Kündigung durch den Betreiber der Backend-Benutzer.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['email'] = ['E-Mail', 'Die Adresse des Abos — dorthin ging die Bestätigung.'];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['requestedAt'] = ['Gewünschter Zeitpunkt', 'Leer: zum frühestmöglichen Zeitpunkt.'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['requestedAt'] = ['Gewünschter Zeitpunkt', 'Leer: zum frühestmöglichen Zeitpunkt. Bei einer Kündigung durch den Betreiber der gewählte Termin.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['effectiveAt'] = ['Vertragsende', 'Bei einer ordentlichen Kündigung aus der Aboregel errechnet. Bei einer außerordentlichen: der Tag, zu dem Sie sie annehmen — der Vertrag endet mit Beginn dieses Tages. Ein Abrechnungszeitraum, der vorher beginnt, wird noch voll berechnet; die nächste Abrechnung steht am Abo.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['earliestAt'] = ['Frühestmögliches Ende', 'Aus der Aboregel. Liegt das Vertragsende dahinter, werden Abrechnungszeiträume, die vorher beginnen, noch voll berechnet.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['earliestApplied'] =['Frühestmöglich statt Wunschtermin', 'Der gewünschte Zeitpunkt lag vor dem frühestmöglichen; die Bestätigung nennt das.'];
@@ -23,7 +23,7 @@ $GLOBALS['TL_LANG']['tl_consho_cancellation']['resendDecisionSent'] = 'Die Entsc
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['resendDecisionFailed'] = 'Die Entscheidung über %s konnte nicht gesendet werden. Den Grund nennt das Systemlog.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['resendDecisionNothing'] = 'Für %s gibt es nichts erneut zu senden: noch nicht entschieden, oder die Mail ist schon hinausgegangen.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['rejectReason'] = ['Begründung der Ablehnung', 'Geht an den Kunden.'];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['sources'] = ['form' => '„Verträge hier kündigen"', 'account' => '„Meine Abos"'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['sources'] = ['form' => '„Verträge hier kündigen"', 'account' => '„Meine Abos"', 'operator' => 'Betreiber (Backend)', 'priceChange' => 'Preisangebot (abgelehnt oder Frist abgelaufen)'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['kinds'] = ['ordinary' => 'ordentlich', 'extraordinary' => 'außerordentlich'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['states'] = ['effective' => 'wirksam', 'received' => 'wartet auf Entscheidung', 'accepted' => 'angenommen', 'rejected' => 'abgelehnt'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['edit'] = ['Bearbeiten', 'Kündigung ID %s bearbeiten'];

@@ -25,6 +25,8 @@ use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionChargeFallback;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCharger;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
+use Webwerkwien\ContaoConshoBundle\Subscription\PriceOfferDue;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
@@ -158,11 +160,29 @@ class SubscriptionBillingRunTest extends TestCase
             return [];
         });
 
-        (new SubscriptionCron($run, $delinquency, $this->lifecycleRun(), $this->charger(), $this->fallback(), $this->pauses(), static fn (): int => self::NOW))();
+        (new SubscriptionCron($run, $delinquency, $this->lifecycleRun(), $this->charger(), $this->fallback(), $this->pauses(), $this->prices(), static fn (): int => self::NOW))();
 
         // Abo-4b: catch up and switch after 7 days, before delinquency.
         // Pausing a subscription (P106): pauses first — whoever comes out of the pause is billed in the same run.
-        self::assertSame(['pauses', 'remind', 'bill', 'transition', 'bill', 'catch up', 'lapse', 'delinquency'], $this->steps);
+        // Abo-10: the price offers before the reminder, which names an open one.
+        self::assertSame(['pauses', 'prices', 'remind', 'bill', 'transition', 'bill', 'catch up', 'lapse', 'delinquency'], $this->steps);
+    }
+
+    private function prices(): SubscriptionPriceOfferRun
+    {
+        $prices = $this->createMock(SubscriptionPriceOfferRun::class);
+        $prices->expects(self::once())->method('run')->with(self::callback(static fn (int $now): bool => $now > 0))->willReturnCallback(function (): array {
+            $this->steps[] = 'prices';
+
+            return [
+                'voided' => ['WEB-00010-1'],
+                'lapsed' => [new PriceOfferDue(5, 9, 'WEB-00009-1', 'lapsedConsumer', '10.0000', '12.0000', self::NOW + 86_400 * 30, self::NOW)],
+                'reminders' => [],
+                'offers' => [new PriceOfferDue(4, 8, 'WEB-00008-1', 'offer', '10.0000', '12.0000', self::NOW + 86_400 * 56, self::NOW + 86_400 * 42)],
+            ];
+        });
+
+        return $prices;
     }
 
     private function pauses(): SubscriptionPause
@@ -260,11 +280,16 @@ class SubscriptionBillingRunTest extends TestCase
             return ['paused' => ['WEB-00007-1'], 'resumed' => []];
         });
 
-        $tester = new CommandTester(new RunSubscriptionsCommand($framework, $run, $delinquency, $this->lifecycleRun(), $charger, $fallback, $pauses));
+        $tester = new CommandTester(new RunSubscriptionsCommand($framework, $run, $delinquency, $this->lifecycleRun(), $charger, $fallback, $pauses, $this->prices()));
 
         self::assertSame(0, $tester->execute([]));
+        self::assertStringContainsString('Price offers sent: 1', $tester->getDisplay());
+        self::assertStringContainsString('WEB-00008-1 offer (effective ', $tester->getDisplay());
+        self::assertStringContainsString('Price offer reminders sent: 0', $tester->getDisplay());
+        self::assertStringContainsString('WEB-00009-1 ends', $tester->getDisplay());
+        self::assertStringContainsString('Price offers void: 1 (WEB-00010-1)', $tester->getDisplay());
         // Abo-4b: every stage of the cron, the charges too — and the pauses.
-        self::assertSame(['initialize', 'pauses', 'remind', 'bill', 'transition', 'bill', 'catch up', 'lapse', 'delinquency'], $this->steps);
+        self::assertSame(['initialize', 'pauses', 'prices', 'remind', 'bill', 'transition', 'bill', 'catch up', 'lapse', 'delinquency'], $this->steps);
         self::assertStringContainsString('Pauses begun: 1 (WEB-00007-1)', $tester->getDisplay());
         self::assertStringContainsString('Pauses ended: 0', $tester->getDisplay());
         self::assertStringContainsString('Charges caught up: 1 (order ID 92)', $tester->getDisplay());

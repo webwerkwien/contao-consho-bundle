@@ -15,7 +15,7 @@ The core is free (MIT) and runs a complete shop:
 | **Basket and checkout** | Guest orders, customer groups, net prices for business customers, reverse charge with VIES check; order button ("Button-Lösung"), consent to the terms and conditions, withdrawal information |
 | **Shipping and payment** | Shipping methods with weight tiers, countries and bulky goods; prepayment, on account, cash on delivery; extension points for payment modules and parcel services |
 | **After the purchase** | Invoice as PDF and HTML (with Giro-Code), cancellation invoice and invoice correction, delivery note per parcel (with its own number range), e-invoice ZUGFeRD EN 16931 for business customers; invoices issued by Consho, by an invoicing module or outside Consho, per shop; mails; order page via token; withdrawal function (§ 356a BGB, § 13a FAGG); customer account |
-| **Digital goods and subscriptions** | Files and licence keys, terms, subscriptions with subscription rules, follow-up orders, cancellation button, pauses |
+| **Digital goods and subscriptions** | Files and licence keys, terms, subscriptions with subscription rules, follow-up orders, cancellation button, pauses, cancellation by the operator |
 | **Prices** | Promotions with strike-through price under § 9a PrAG / § 11 PAngV, discount rules, discount codes, gift vouchers |
 | **Stock** | Stock levels, availability display, back-in-stock notification, purchase lists |
 | **Tax** | Tax classes and rates per country, tax in the country of destination with threshold counter and quarterly export (EU OSS) |

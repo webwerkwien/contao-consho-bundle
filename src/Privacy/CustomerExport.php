@@ -59,6 +59,7 @@ class CustomerExport
         'validFrom', 'validUntil', 'suspendedAt', 'assignedAt',
         'startedAt', 'minimumEndsAt', 'periodFrom', 'periodUntil', 'nextBillingAt', 'endsAt', 'reminderSentAt', 'requestedAt', 'effectiveAt', 'earliestAt',
         'pauseFrom', 'pauseUntil', 'withdrawnAt',
+        'deadlineAt', 'answeredAt', 'appliedAt', 'mailSentAt', 'answerMailSentAt',
     ];
 
     /** What a subscription says about the contract (Abo-DSGVO, P84). */
@@ -284,9 +285,13 @@ class CustomerExport
             }
 
             $subscriptions[] = $this->pick($row, [...self::SUBSCRIPTION_FIELDS, 'purchaseOrder', 'followUpPayment']) + [
-                'cancellations' => $this->rows('SELECT number, receivedAt, source, kind, reason, name, email, requestedAt, effectiveAt, earliestAt, state, decidedAt, decisionSentAt, rejectReason, confirmationSentAt FROM tl_consho_cancellation WHERE pid = ? ORDER BY id', (int) $row['id']),
+                // The operator's cancellation names the back end user — the
+                // operator's staff, not the customer's data (Abo-9).
+                'cancellations' => $this->rows('SELECT number, receivedAt, source, kind, reason, CASE WHEN source = \'operator\' THEN \'\' ELSE name END AS name, email, requestedAt, effectiveAt, earliestAt, state, decidedAt, decisionSentAt, rejectReason, confirmationSentAt FROM tl_consho_cancellation WHERE pid = ? ORDER BY id', (int) $row['id']),
                 // Abo pausieren (P111): every pause, withdrawn ones included.
                 'pauses' => $this->rows('SELECT months, pauseFrom, pauseUntil, source, requestedAt, withdrawnAt FROM tl_consho_subscription_pause WHERE pid = ? ORDER BY id', (int) $row['id']),
+                // Abo-10 (P132): every price offer with amounts, days and answer.
+                'priceOffers' => $this->rows('SELECT createdAt, effectiveAt, deadlineAt, oldUnitNet, newUnitNet, currency, quantity, decrease, state, answeredAt, answeredBy, appliedAt, mailSentAt, reminderSentAt, answerMailSentAt FROM tl_consho_subscription_price WHERE pid = ? ORDER BY id', (int) $row['id']),
             ];
         }
 

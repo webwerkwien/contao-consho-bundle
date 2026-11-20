@@ -8,7 +8,9 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\UriSigner;
 use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationForm;
+use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationOutcome;
 use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationRecorder;
+use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationResult;
 use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationTerm;
 use Webwerkwien\ContaoConshoBundle\Cancellation\SubscriptionContact;
 use Webwerkwien\ContaoConshoBundle\Cart\DbalCartRepository;
@@ -17,11 +19,14 @@ use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
 use Webwerkwien\ContaoConshoBundle\Subscription\PauseConfirmation;
 use Webwerkwien\ContaoConshoBundle\Subscription\PauseScheduled;
+use Webwerkwien\ContaoConshoBundle\Subscription\PriceOfferAnswered;
+use Webwerkwien\ContaoConshoBundle\Subscription\PriceOfferDue;
 use Webwerkwien\ContaoConshoBundle\Subscription\RenewalContext;
 use Webwerkwien\ContaoConshoBundle\Subscription\RenewalOffer;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionCalendar;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLockInterface;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPause;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionRenewal;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 use Webwerkwien\ContaoConshoBundle\Token\DbalTokenRepository;
@@ -53,11 +58,17 @@ final class MySubscriptionsFlowTest extends TestCase
     /** @var list<PauseScheduled> the pauses confirmed by mail */
     private array $confirmed = [];
 
+    /** Abo-10: null = not wired, as before it. */
+    private SubscriptionPriceOfferRun|null $prices = null;
+
+    /** @var list<array{int, int, bool, string, int}> the answers given */
+    private array $answers = [];
+
     protected function setUp(): void
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_subscription', 'tl_consho_subscription_pause', 'tl_consho_cancellation', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_order_token', 'tl_consho_cart', 'tl_consho_cart_item'] as $table) {
+        foreach (['tl_consho_subscription', 'tl_consho_subscription_pause', 'tl_consho_subscription_price', 'tl_consho_cancellation', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_order_token', 'tl_consho_cart', 'tl_consho_cart_item'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -76,6 +87,73 @@ final class MySubscriptionsFlowTest extends TestCase
         $this->subscription(5, ['shop' => 2] + $base);
 
         $this->signer = new UriSigner('test-secret', CancellationForm::HASH_PARAM, CancellationForm::EXPIRES_PARAM);
+    }
+
+    /**
+     * Abo-10, P119: an offer to answer shows in the list with its deadline;
+     * the page shows old and new amount — only for the member's own and only
+     * while it can be answered.
+     */
+    public function testPreisangebotInDerListeUndAufSeinerSeite(): void
+    {
+        $this->priceOffers(null);
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 8, 'pid' => 1, 'state' => 'open', 'mailSentAt' => 5, 'effectiveAt' => self::NOW + 40 * self::DAY, 'deadlineAt' => self::NOW + 10 * self::DAY, 'oldUnitNet' => '10.0000', 'newUnitNet' => '12.0000']);
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 9, 'pid' => 2, 'state' => 'accepted', 'mailSentAt' => 5, 'effectiveAt' => self::NOW + 5 * self::DAY, 'deadlineAt' => self::NOW - self::DAY]);
+
+        $lines = $this->view(Request::create(self::HERE))['subscriptions'];
+        self::assertSame([self::HERE.'?consho_price_offer=1', '', ''], array_column($lines, 'priceOfferUrl'));
+        self::assertNotSame('', $lines[0]['priceOfferDeadline']);
+        self::assertSame(['', 'agreed'], [$lines[0]['priceAgreed'], '' === $lines[1]['priceAgreed'] ? '' : 'agreed']);
+
+        $page = $this->view(Request::create(self::HERE.'?consho_price_offer=1'))['priceOffer'];
+        self::assertIsArray($page);
+        self::assertSame([1, 8, '24,00 €', '28,80 €'], [$page['subscription'], $page['offer'], $page['oldPrice'], $page['newPrice']]);
+        self::assertFalse($page['business']);
+
+        self::assertSame(['redirect' => self::HERE.'?consho_my_subscriptions=priceOfferUnavailable'], $this->handle(Request::create(self::HERE.'?consho_price_offer=2'), 5), 'nichts mehr zu beantworten');
+        self::assertSame(['redirect' => self::HERE.'?consho_my_subscriptions=notFound'], $this->handle(Request::create(self::HERE.'?consho_price_offer=4'), 5), 'fremd');
+    }
+
+    /**
+     * P119, P121: agreed — back with a notice; declined — on to the
+     * cancellation's signed result page.
+     */
+    public function testPreisangebotZustimmenOderAblehnen(): void
+    {
+        $offer = new PriceOfferDue(8, 1, 'WEB-00001-1', 'accepted', '10.0000', '12.0000', self::NOW + 40 * self::DAY, self::NOW + 10 * self::DAY);
+
+        $this->priceOffers(new PriceOfferAnswered($offer, true, mailed: true));
+        $post = static fn (string $action, string $subscription = '1'): Request => Request::create(self::HERE, 'POST', ['consho_price_offer_action' => $action, 'consho_price_offer' => $subscription, 'consho_price_offer_id' => '8']);
+
+        self::assertSame(['redirect' => self::HERE.'?consho_my_subscriptions=priceAccepted'], $this->handle($post('accept'), 5, ' Erika Muster '));
+        self::assertSame([[8, 1, true, 'Erika Muster', self::NOW]], $this->answers);
+
+        // Its confirmation did not leave: the notice claims no mail.
+        $this->priceOffers(new PriceOfferAnswered($offer, true));
+        self::assertSame(['redirect' => self::HERE.'?consho_my_subscriptions=priceAcceptedUnmailed'], $this->handle($post('accept'), 5));
+        $this->answers = [$this->answers[0]];
+
+        self::assertSame(['redirect' => self::HERE.'?consho_my_subscriptions=notFound'], $this->handle($post('accept', '4'), 5), 'fremd');
+
+        $this->priceOffers(new PriceOfferAnswered($offer, false, null, new CancellationResult(CancellationOutcome::Recorded, 12, 'WEB-00001-1-K1', 'WEB-00001-1')));
+        $redirect = $this->handle($post('decline'), 5)['redirect'] ?? '';
+        self::assertStringContainsString(CancellationForm::RESULT_PARAM.'=12', $redirect);
+        // One answer after the first: the stranger's subscription asked nothing.
+        self::assertSame([false], array_column(\array_slice($this->answers, 1), 2));
+
+        $this->priceOffers(null);
+        self::assertSame(['redirect' => self::HERE.'?consho_my_subscriptions=priceOfferUnavailable'], $this->handle($post('decline'), 5));
+    }
+
+    private function priceOffers(PriceOfferAnswered|null $answered): void
+    {
+        $this->prices = $this->createMock(SubscriptionPriceOfferRun::class);
+        $this->prices->method('amounts')->willReturn(['oldPrice' => '24,00 €', 'newPrice' => '28,80 €', 'priceKey' => 'perMonth', 'months' => 1, 'taxed' => true]);
+        $this->prices->method('answer')->willReturnCallback(function (int $offerId, int $subscriptionId, bool $accept, string $name, int $now) use ($answered): PriceOfferAnswered|null {
+            $this->answers[] = [$offerId, $subscriptionId, $accept, $name, $now];
+
+            return $answered;
+        });
     }
 
     /**
@@ -466,6 +544,7 @@ final class MySubscriptionsFlowTest extends TestCase
             new DbalCartRepository($this->connection),
             new SubscriptionPause($this->connection, $lock, $calendar),
             $confirmation,
+            $this->prices,
         );
 
         return $flow->handle($request, 1, self::ORDER_PAGE, $memberId, 'de', self::HERE, self::NOW, $memberName, $this->context);

@@ -22,12 +22,41 @@
       pause          the page to choose a pause (Abo pausieren, P101), or
                      null: {contract, subscription, from, options: list of
                      {months, until}, back}
+      priceOffer     the page to answer a price offer (Abo-10, P119), or
+                     null: {contract, subscription, offer, effectiveAt,
+                     deadlineAt (formatted days), business, oldPrice,
+                     newPrice, priceKey, months, taxed, net, back}
+      Each subscription also carries priceOfferUrl, priceOfferDeadline
+      (an offer to answer) and priceAgreed (the day of an agreed one), or ''.
 
     No JavaScript. Everything works with the keyboard alone.
 #}
 
 {% block content %}
-    {% if pause %}
+    {% if priceOffer %}
+        {# Abo-10 (P119): two POST buttons, each final; no JavaScript. #}
+        {% set old = ('CONSHO.subscription.' ~ priceOffer.priceKey)|trans([priceOffer.oldPrice, priceOffer.months], 'contao_default') %}
+        {% set new = ('CONSHO.subscription.' ~ priceOffer.priceKey)|trans([priceOffer.newPrice, priceOffer.months], 'contao_default') %}
+        <form method="post" class="consho-subscription-price">
+            <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
+            <input type="hidden" name="consho_price_offer" value="{{ priceOffer.subscription }}">
+            <input type="hidden" name="consho_price_offer_id" value="{{ priceOffer.offer }}">
+            <h2>{{ 'CONSHO.mySubscriptions.priceOfferTitle'|trans({}, 'contao_default') }}</h2>
+            <p>{{ 'CONSHO.cancellation.contract'|trans({}, 'contao_default') }}: {{ priceOffer.contract }}</p>
+            <p>{{ 'CONSHO.mySubscriptions.priceOfferIntro'|trans([priceOffer.effectiveAt, priceOffer.deadlineAt], 'contao_default') }}</p>
+            <table class="consho-subscription-price__amounts">
+                <tr><th scope="row">{{ 'CONSHO.mail.priceOffer.old'|trans({}, 'contao_default') }}</th><td>{{ old }}</td></tr>
+                <tr><th scope="row">{{ 'CONSHO.mail.priceOffer.new'|trans([priceOffer.effectiveAt], 'contao_default') }}</th><td><strong>{{ new }}</strong></td></tr>
+            </table>
+            <p><small>{{ ('CONSHO.mail.priceOffer.' ~ (priceOffer.taxed ? 'taxed' : 'untaxed'))|trans({}, 'contao_default') }}</small></p>
+            <p>{{ 'CONSHO.mail.priceOffer.decline'|trans([priceOffer.effectiveAt], 'contao_default') }}</p>
+            <p><strong>{{ ('CONSHO.mail.priceOffer.' ~ (priceOffer.business ? 'silenceBusiness' : 'silenceConsumer'))|trans([priceOffer.deadlineAt, priceOffer.effectiveAt], 'contao_default') }}</strong></p>
+            <p>{{ 'CONSHO.mySubscriptions.priceOfferFinal'|trans({}, 'contao_default') }}</p>
+            <button type="submit" name="consho_price_offer_action" value="accept">{{ 'CONSHO.mySubscriptions.priceAccept'|trans({}, 'contao_default') }}</button>
+            <button type="submit" name="consho_price_offer_action" value="decline">{{ 'CONSHO.mySubscriptions.priceDecline'|trans([priceOffer.effectiveAt], 'contao_default') }}</button>
+            <a href="{{ priceOffer.back }}">{{ 'CONSHO.mySubscriptions.back'|trans({}, 'contao_default') }}</a>
+        </form>
+    {% elseif pause %}
         <form method="post" class="consho-subscription-pause">
             <input type="hidden" name="REQUEST_TOKEN" value="{{ contao.request_token }}">
             <input type="hidden" name="consho_pause_action" value="confirm">
@@ -92,9 +121,12 @@
                                 {% if subscription.pauseAnnounced %}<br><small>{{ 'CONSHO.mySubscriptions.pauseAnnounced'|trans([subscription.pauseAnnounced, subscription.pauseUntil], 'contao_default') }}</small>{% endif %}
                                 {% if subscription.pending %}<br><small>{{ 'CONSHO.mySubscriptions.pending'|trans({}, 'contao_default') }}</small>{% endif %}
                                 {% if subscription.renewedBy %}<br><small>{{ 'CONSHO.mySubscriptions.renewedBy'|trans([subscription.renewedBy], 'contao_default') }}</small>{% endif %}
+                                {% if subscription.priceOfferDeadline|default('') %}<br><small>{{ 'CONSHO.mySubscriptions.priceOfferPending'|trans([subscription.priceOfferDeadline], 'contao_default') }}</small>{% endif %}
+                                {% if subscription.priceAgreed|default('') %}<br><small>{{ 'CONSHO.mySubscriptions.priceAgreed'|trans([subscription.priceAgreed], 'contao_default') }}</small>{% endif %}
                             </td>
                             <td data-cellheadline="{{ 'CONSHO.mySubscriptions.nextBilling'|trans({}, 'contao_default') }}">{{ subscription.nextBilling ?: '—' }}</td>
                             <td data-cellheadline="{{ 'CONSHO.mySubscriptions.actions'|trans({}, 'contao_default') }}">
+                                {% if subscription.priceOfferUrl|default('') %}<a href="{{ subscription.priceOfferUrl }}"><strong>{{ 'CONSHO.mySubscriptions.priceOffer'|trans({}, 'contao_default') }}</strong></a><br>{% endif %}
                                 {% if subscription.cancelUrl %}<a href="{{ subscription.cancelUrl }}">{{ 'CONSHO.mySubscriptions.cancel'|trans({}, 'contao_default') }}</a>{% endif %}
                                 {% if subscription.pauseUrl %}<br><a href="{{ subscription.pauseUrl }}">{{ 'CONSHO.mySubscriptions.pause'|trans({}, 'contao_default') }}</a>{% endif %}
                                 {# P107: a POST — it changes the subscription. #}

@@ -17,9 +17,10 @@ use Twig\Environment;
 use Webwerkwien\ContaoConshoBundle\Cancellation\CancellationForm;
 
 /**
- * "Verlauf" at a subscription: its cancellations and pauses on one page,
- * newest first. Both are a record of what happened to the contract; two
- * child lists side by side made the operator look in two places.
+ * "Verlauf" at a subscription: its cancellations, pauses and price offers
+ * (Abo-10, P130) on one page, newest first. All are a record of what happened
+ * to the contract; child lists side by side made the operator look in
+ * several places.
  *
  * The page only reads. A cancellation still opens in its own mask, where an
  * extraordinary one is decided (CancellationListener), and a decision whose
@@ -59,11 +60,13 @@ final class SubscriptionHistoryBackendController
         $system = $this->framework->getAdapter(System::class);
         $system->loadLanguageFile('tl_consho_cancellation');
         $system->loadLanguageFile('tl_consho_subscription_pause');
+        $system->loadLanguageFile('tl_consho_subscription_price');
 
         $language = (string) ($GLOBALS['TL_LANGUAGE'] ?? 'de');
         $lang = $GLOBALS['TL_LANG']['tl_consho_subscription'] ?? [];
         $cancellationLang = $GLOBALS['TL_LANG']['tl_consho_cancellation'] ?? [];
         $pauseLang = $GLOBALS['TL_LANG']['tl_consho_subscription_pause'] ?? [];
+        $priceLang = $GLOBALS['TL_LANG']['tl_consho_subscription_price'] ?? [];
         $entries = [];
 
         foreach ($this->connection->fetchAllAssociative('SELECT * FROM tl_consho_cancellation WHERE pid = ? ORDER BY receivedAt DESC, id DESC', [$id]) as $row) {
@@ -109,7 +112,39 @@ final class SubscriptionHistoryBackendController
             ];
         }
 
-        // Newest first across both; the id keeps two entries of one second in order.
+        // Abo-10 (P130): the price offers, from the day each was made.
+        foreach ($this->connection->fetchAllAssociative('SELECT * FROM tl_consho_subscription_price WHERE pid = ? ORDER BY createdAt DESC, id DESC', [$id]) as $row) {
+            $details = [
+                \sprintf((string) ($lang['historyPriceFrom'] ?? '%s'), CancellationForm::day((int) $row['effectiveAt'], $language)),
+                (bool) $row['decrease']
+                    ? (string) ($priceLang['decrease'][0] ?? 'decrease')
+                    : \sprintf((string) ($lang['historyPriceDeadline'] ?? '%s'), CancellationForm::day((int) $row['deadlineAt'], $language)),
+            ];
+            $state = [(string) ($priceLang['states'][$row['state']] ?? $row['state'])];
+
+            if ('' !== (string) $row['answeredBy']) {
+                $state[] = (string) ($priceLang['answers'][$row['answeredBy']] ?? $row['answeredBy']);
+            }
+
+            if ((int) $row['appliedAt'] > 0) {
+                $state[] = \sprintf((string) ($lang['historyPriceApplied'] ?? '%s'), CancellationForm::day((int) $row['appliedAt'], $language));
+            }
+
+            $entries[] = [
+                'at' => (int) $row['createdAt'],
+                'id' => (int) $row['id'],
+                'when' => $this->moment((int) $row['createdAt'], $language),
+                'type' => (string) ($lang['historyPrice'] ?? 'Price offer'),
+                'title' => $this->money((string) $row['oldUnitNet'], (string) $row['currency'], $language).' → '.$this->money((string) $row['newUnitNet'], (string) $row['currency'], $language),
+                'details' => implode(' · ', $details),
+                'state' => implode(' · ', $state),
+                'editUrl' => null,
+                'showUrl' => $this->url(['table' => 'tl_consho_subscription_price', 'act' => 'show', 'id' => $row['id']]),
+                'resendUrl' => null,
+            ];
+        }
+
+        // Newest first across all; the id keeps two entries of one second in order.
         usort($entries, static fn (array $a, array $b): int => [$b['at'], $b['id']] <=> [$a['at'], $a['id']]);
 
         return $this->twig->render(self::TEMPLATE, [
@@ -127,6 +162,16 @@ final class SubscriptionHistoryBackendController
     private function url(array $params): string
     {
         return $this->router->generate('contao_backend', ['do' => 'consho_subscription'] + $params);
+    }
+
+    /**
+     * A net per unit as the back end reads it, with the currency.
+     */
+    private function money(string $amount, string $currency, string $language): string
+    {
+        $locale = '' !== $language ? str_replace('-', '_', $language) : 'de';
+
+        return (string) (new \NumberFormatter($locale, \NumberFormatter::CURRENCY))->formatCurrency((float) $amount, '' !== $currency ? $currency : 'EUR');
     }
 
     private function moment(int $timestamp, string $language): string

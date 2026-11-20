@@ -28,6 +28,8 @@
     chargeMonths  the months of one period
     chargeTaxed   whether the amount includes VAT — then "at the current rate"
     chargeMethod  the method that collects it via the mandate; '' for an invoice
+    priceOfferUntil the answer deadline of an open price offer, formatted; ''
+                  where none waits (Abo-10, P119)
     viewUrl       the order page, with a token
 #}
 {% block subject %}{{ 'CONSHO.mail.subscriptionReminder.subject'|trans([subscription, termEnd], 'contao_default') }}{% endblock %}
@@ -64,6 +66,11 @@
     {{ ('CONSHO.mail.subscriptionReminder.' ~ (chargeTaxed|default(false) ? 'chargeTaxed' : 'charge'))|trans([termEnd, price], 'contao_default') }}
     {% if chargeMethod %}{{ 'CONSHO.mail.subscriptionReminder.chargeMandate'|trans([chargeMethod, termEnd], 'contao_default') }}{% else %}{{ 'CONSHO.mail.subscriptionReminder.chargeInvoice'|trans({}, 'contao_default') }}{% endif %}
 </p>
+{% endif %}
+
+{# Abo-10 (P119): a price offer still waiting for the answer. #}
+{% if priceOfferUntil|default('') %}
+<p style="margin: 0 0 8px 0;">{{ 'CONSHO.mail.subscriptionReminder.priceOffer'|trans([priceOfferUntil], 'contao_default') }}</p>
 {% endif %}
 
 {# Abo-7b (P71): "Meine Abos" where the shop names that page — the licence

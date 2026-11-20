@@ -49,6 +49,8 @@ final class OrderLineDraft
         public readonly string $discountNet = '0',
         // A reduction's country (H): '' = the delivery's, as for every other charge.
         public readonly string $taxCountry = '',
+        // A follow-up line at a price agreed in a price offer (Abo-10).
+        public readonly bool $agreed = false,
     ) {
     }
 
@@ -56,9 +58,10 @@ final class OrderLineDraft
      * A subscription's follow-up line (Abo-4, P25): the frozen net per licence,
      * the licences, the class whose CURRENT rate applies, and the texts of the
      * first order line — so a product renamed or deleted since does not stop
-     * the billing.
+     * the billing. `$agreed`: the net is one agreed in a price offer
+     * (Abo-10), and the line says so.
      */
-    public static function frozen(int $productId, string $quantity, string $net, int $taxClassId, int $subscriptionRule, string $terms, string $name, string $sku, string $kind): self
+    public static function frozen(int $productId, string $quantity, string $net, int $taxClassId, int $subscriptionRule, string $terms, string $name, string $sku, string $kind, bool $agreed = false): self
     {
         if (!is_numeric($quantity) || (float) $quantity <= 0.0) {
             throw new \InvalidArgumentException(\sprintf('A follow-up line needs a positive quantity, got "%s".', $quantity));
@@ -68,7 +71,7 @@ final class OrderLineDraft
             throw new \InvalidArgumentException(\sprintf('A follow-up line needs an amount of at least zero, got "%s".', $net));
         }
 
-        return new self($productId, $quantity, OrderLineType::Product, $name, $net, $taxClassId, 0, $subscriptionRule, true, $sku, $terms, $kind);
+        return new self($productId, $quantity, OrderLineType::Product, $name, $net, $taxClassId, 0, $subscriptionRule, true, $sku, $terms, $kind, agreed: $agreed);
     }
 
     /**

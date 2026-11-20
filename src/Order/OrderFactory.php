@@ -364,7 +364,7 @@ final class OrderFactory implements OrderFactoryInterface
             'taxClass' => $line->taxClassId,
             'name' => $line->title,
             'sku' => $line->sku,
-            'priceSource' => PriceSource::List->value,
+            'priceSource' => $line->agreed ? PriceSource::Agreed->value : PriceSource::List->value,
             'customerGroup' => 0,
             // As frozen on the subscription: digital or service (A13, DL1).
             'kind' => $line->kind,

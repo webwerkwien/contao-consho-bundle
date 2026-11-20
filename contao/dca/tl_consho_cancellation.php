@@ -74,10 +74,12 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
             'sql' => ['type' => 'integer', 'unsigned' => true, 'default' => 0],
         ],
 
-        // `form` ("Verträge hier kündigen") | `account` ("Meine Abos").
+        // `form` ("Verträge hier kündigen") | `account` ("Meine Abos") |
+        // `operator` (the back end, Abo-9) — taken from the enum, so that a new
+        // source never shows as an unknown option.
         'source' => [
             'inputType' => 'select',
-            'options' => ['form', 'account'],
+            'options' => array_map(static fn (Webwerkwien\ContaoConshoBundle\Cancellation\CancellationSource $source): string => $source->value, Webwerkwien\ContaoConshoBundle\Cancellation\CancellationSource::cases()),
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_cancellation']['sources'],
             // disabled, not readonly: a browser ignores readonly on a select or checkbox (CancellationListener).
             'eval' => ['disabled' => true, 'tl_class' => 'w50'],
@@ -93,7 +95,8 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
             'sql' => ['type' => 'string', 'length' => 16, 'default' => 'ordinary'],
         ],
 
-        // The customer's reason for an extraordinary cancellation.
+        // The customer's reason for an extraordinary cancellation, or the
+        // operator's reason for his own (Abo-9), told to the customer.
         'reason' => [
             'inputType' => 'textarea',
             'eval' => ['readonly' => true, 'tl_class' => 'clr'],

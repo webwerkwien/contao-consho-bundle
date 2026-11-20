@@ -127,8 +127,12 @@ final class CustomerExportTest extends TestCase
 
         $this->connection->insert('tl_consho_payment_method', ['id' => 8, 'type' => 'card', 'title' => 'Kreditkarte']);
         $this->connection->insert('tl_consho_subscription', ['id' => 50, 'subscriptionNumber' => 'WEB-7-1', 'member' => 5, 'firstOrder' => 7, 'ruleTitle' => 'Monatsabo &#40;Kurs&#41;', 'terms' => '1,20 € / Monat', 'state' => 'cancelled', 'endsAt' => strtotime('2026-10-31'), 'reminderSentAt' => 0, 'mandate' => 'cus_GEHEIM|pm_GEHEIM', 'mandateMethod' => 8]);
-        $this->connection->insert('tl_consho_cancellation', ['pid' => 50, 'number' => 'WEB-7-1-K1', 'name' => 'Erika Muster', 'email' => 'erika@example.org', 'reason' => 'Umzug']);
+        $this->connection->insert('tl_consho_cancellation', ['pid' => 50, 'number' => 'WEB-7-1-K1', 'name' => 'Erika Muster', 'email' => 'erika@example.org', 'reason' => 'Umzug', 'source' => 'form']);
+        // Abo-9: the operator's cancellation names the back end user.
+        $this->connection->insert('tl_consho_cancellation', ['pid' => 50, 'number' => 'WEB-7-1-K2', 'name' => 'Staff Member', 'email' => 'erika@example.org', 'reason' => 'Discontinued', 'source' => 'operator']);
         $this->connection->insert('tl_consho_subscription_pause', ['pid' => 50, 'months' => 2, 'pauseFrom' => strtotime('2026-10-01'), 'pauseUntil' => strtotime('2026-12-01'), 'source' => 'account', 'requestedAt' => strtotime('2026-09-15')]);
+        // Abo-10 (P132): a price offer, declined.
+        $this->connection->insert('tl_consho_subscription_price', ['pid' => 50, 'createdAt' => strtotime('2026-09-01'), 'effectiveAt' => strtotime('2026-11-01'), 'deadlineAt' => strtotime('2026-10-15'), 'oldUnitNet' => '1.0000', 'newUnitNet' => '1.2000', 'currency' => 'EUR', 'state' => 'declined', 'answeredAt' => strtotime('2026-09-10'), 'answeredBy' => 'account', 'mailSentAt' => strtotime('2026-09-01')]);
         $this->connection->insert('tl_consho_subscription', ['id' => 51, 'subscriptionNumber' => 'WEB-9-1', 'member' => 0, 'firstOrder' => 9]);
 
         $files = $this->unzip($this->export()->export(1, 'm:5', strtotime('2026-09-28 12:00'))['zip'] ?? '');
@@ -148,10 +152,18 @@ final class CustomerExportTest extends TestCase
         self::assertArrayNotHasKey('reminderSentAt', $subscription, '0 heißt nie — kein Zeitpunkt, keine Auskunft');
         self::assertSame(date(\DATE_ATOM, strtotime('2026-10-31')), $subscription['endsAt']);
         self::assertSame('Umzug', $subscription['cancellations'][0]['reason']);
+        self::assertSame('Erika Muster', $subscription['cancellations'][0]['name'] ?? null);
+        self::assertSame('Discontinued', $subscription['cancellations'][1]['reason']);
+        self::assertSame('', $subscription['cancellations'][1]['name'] ?? '', 'kein Mitarbeitername in der Auskunft');
         self::assertArrayNotHasKey('member', $subscription, 'interne IDs bleiben draußen');
 
         // Pause a subscription (P111): the subscription's pauses.
         self::assertSame([['months' => 2, 'pauseFrom' => date(\DATE_ATOM, strtotime('2026-10-01')), 'pauseUntil' => date(\DATE_ATOM, strtotime('2026-12-01')), 'source' => 'account', 'requestedAt' => date(\DATE_ATOM, strtotime('2026-09-15'))]], $subscription['pauses']);
+
+        // Abo-10 (P132): amounts, days and the answer; "never" stays out.
+        $offer = $subscription['priceOffers'][0];
+        self::assertSame([date(\DATE_ATOM, strtotime('2026-11-01')), date(\DATE_ATOM, strtotime('2026-10-15')), 1.2, 'declined', 'account', date(\DATE_ATOM, strtotime('2026-09-10'))], [$offer['effectiveAt'], $offer['deadlineAt'], (float) $offer['newUnitNet'], $offer['state'], $offer['answeredBy'], $offer['answeredAt']]);
+        self::assertArrayNotHasKey('appliedAt', $offer);
 
         // P98: only the payment method, never the value of the mandate.
         self::assertSame('Kreditkarte', $subscription['followUpPayment']);

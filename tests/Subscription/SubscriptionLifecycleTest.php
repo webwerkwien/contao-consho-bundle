@@ -49,7 +49,7 @@ final class SubscriptionLifecycleTest extends TestCase
         self::assertNotNull($due);
         self::assertSame(RenewalKind::Indefinite, $due->renewal);
         self::assertSame('2027-01-31 10:15', $this->local($due->termEndsAt));
-        self::assertSame('2027-01-17 10:15', $this->local($due->cancelUntil), 'Ende − 14 Tage Kündigungsfrist');
+        self::assertSame('2027-01-17 23:59', $this->local($due->cancelUntil), 'end − 14 days of notice, to the end of that day');
         self::assertSame($this->at('2027-01-01 10:16'), (int) $this->row()['reminderSentAt']);
     }
 

@@ -45,11 +45,16 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['mandate'] = ['Mandat', 'Ob der Za
 $GLOBALS['TL_LANG']['tl_consho_subscription']['mandatePresent'] = 'vorhanden';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pause'] = ['Pausieren', 'Eine Pause ankündigen oder zurücknehmen'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['status'] = ['Status', ''];
-$GLOBALS['TL_LANG']['tl_consho_subscription']['history'] =['Verlauf', 'Kündigungen und Pausen des Abos ID %s anzeigen'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['history'] =['Verlauf', 'Kündigungen, Pausen und Preisangebote des Abos ID %s anzeigen'];
 // The title of the page (Backend::getBackendModule() reads [1] for a `key`).
-$GLOBALS['TL_LANG']['tl_consho_subscription']['subscriptionHistory'] = ['Verlauf', 'Kündigungen und Pausen des Abos ID %s'];
-$GLOBALS['TL_LANG']['tl_consho_subscription']['historyLegend'] = 'Kündigungen und Pausen';
-$GLOBALS['TL_LANG']['tl_consho_subscription']['historyEmpty'] = 'Zu diesem Abo gibt es keine Kündigung und keine Pause.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['subscriptionHistory'] = ['Verlauf', 'Kündigungen, Pausen und Preisangebote des Abos ID %s'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyLegend'] = 'Kündigungen, Pausen und Preisangebote';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyEmpty'] = 'Zu diesem Abo gibt es keine Kündigung, keine Pause und kein Preisangebot.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyPrice'] = 'Preisangebot';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyPriceFrom'] = 'gültig ab %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyPriceDeadline'] = 'Antwort bis %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historyPriceApplied'] = 'übernommen am %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['priceOfferUntil'] = ['Preisangebot bis', 'Die Antwortfrist eines offenen Preisangebots.'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyWhen'] = 'Eingegangen';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyType'] = 'Art';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyEntry'] = 'Eintrag';
@@ -78,6 +83,26 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseNotPossible'] = 'Dieses Abo 
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseScheduled'] = 'Die Pause ist angekündigt; der Kunde bekommt die Bestätigung per E-Mail.';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseWithdrawn'] = 'Die Pause ist zurückgenommen.';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['pauseUnavailable'] = 'Das ging nicht: Das Abo hat sich inzwischen geändert.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancel'] = ['Kündigen', 'Das Abo als Betreiber ordentlich kündigen'];
+// The title of the page (Backend::getBackendModule() reads [1] for a `key`).
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelSubscription'] = ['Kündigen', 'Abo ID %s kündigen'];
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelLegend'] = 'Kündigung durch den Betreiber';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelAt'] = 'Zum';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelAtHelp'] = 'Nur das Ende eines bezahlten Abschnitts, nichts wird anteilig erstattet. Vorausgewählt ist der früheste Termin mit %d Tagen Vorlauf (Shop-Konfiguration).';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelShortOption'] = 'ohne den Vorlauf';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelReason'] = 'Grund';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelReasonHelp'] = 'Steht wörtlich in der E-Mail an den Kunden.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelShort'] = 'Ich kündige zu einem Termin ohne den Vorlauf.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelShortHelp'] = 'Nur nötig für einen Termin, der als „ohne den Vorlauf“ markiert ist. Ob die Frist nach Ihren Bedingungen trotzdem hält, prüft der Shop nicht.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelSubmit'] = 'Kündigen';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelBack'] = 'Zurück';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelEnding'] = 'Das Abo endet bereits am %s.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelNotPossible'] = 'Dieses Abo lässt sich nicht kündigen: Es ist beendet, oder es gibt keinen Termin mehr, zu dem es enden kann.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelRecorded'] = 'Kündigung %s erfasst, wirksam zum %s. Der Kunde bekommt eine E-Mail, Sie eine Kopie.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelMailFailed'] = 'Die E-Mail an den Kunden ging nicht hinaus. Bitte die Kündigung von Hand mitteilen.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelReasonMissing'] = 'Bitte einen Grund angeben, er geht an den Kunden.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelShortUnconfirmed'] = 'Der gewählte Termin hält den Vorlauf nicht ein. Bitte bestätigen oder einen späteren wählen.';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['cancelUnavailable'] = 'Das ging nicht: Das Abo hat sich inzwischen geändert oder der Termin ist nicht mehr möglich.';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['mandateAbsent'] = 'keines';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['termUnits'] = ['month' => 'Monate', 'year' => 'Jahre'];
 $GLOBALS['TL_LANG']['tl_consho_subscription']['renewals'] = ['ends' => 'endet', 'sameTerm' => 'verlängert sich jeweils um die volle Mindestlaufzeit', 'indefinite' => 'läuft weiter, jederzeit kündbar'];

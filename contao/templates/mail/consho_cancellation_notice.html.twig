@@ -1,0 +1,47 @@
+{#
+  The operator's own ordinary cancellation (Abo-9, P128), to the customer, in
+  the language of the order: the end, the operator's reason verbatim and —
+  while the plan is still on offer — the way to renew under "Meine Abos".
+
+  Loaded as @Contao/mail/consho_cancellation_notice.html.twig. Parameters
+  are a LIST (vsprintf, see consho_payment_received.html.twig).
+
+  Variables:
+    order         the latest order of the subscription in InvoiceView's shape
+    customer      {name, email}
+    cancellation  {number, subscription, product, effectiveAt (formatted), reason, renewalHint}
+    viewUrl       the order page, with a token; '' where the shop has none
+#}
+{% block subject %}{{ 'CONSHO.mail.cancellationByOperator.subject'|trans([cancellation.subscription], 'contao_default') }}{% endblock %}
+
+{% block body %}
+{% set font = 'font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.5; color: #222222;' %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f4f4f4;">
+<tr><td align="center" style="padding: 24px 12px;">
+{% include '@Contao/mail/_frame_head.html.twig' %}
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px; background: #ffffff; {{ font }}">
+<tr><td style="padding: 24px 28px;">
+
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.salutation'|trans([customer.name], 'contao_default') }}</p>
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellationByOperator.intro'|trans([cancellation.subscription, cancellation.product], 'contao_default') }}</p>
+<p style="margin: 0 0 12px 0;"><strong>{{ 'CONSHO.mail.cancellation.endsAt'|trans([cancellation.effectiveAt], 'contao_default') }}</strong></p>
+{% if cancellation.reason %}
+<p style="margin: 0 0 12px 0; padding: 8px 12px; border-left: 3px solid #cccccc;">{{ cancellation.reason|nl2br }}</p>
+{% endif %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellationByOperator.until'|trans({}, 'contao_default') }}</p>
+{% if cancellation.renewalHint %}
+<p style="margin: 0 0 12px 0;">{{ 'CONSHO.mail.cancellationByOperator.renew'|trans({}, 'contao_default') }}</p>
+{% endif %}
+
+{% if viewUrl %}
+<p style="margin: 24px 0 0 0;">
+    <a href="{{ viewUrl }}" style="display: inline-block; padding: 10px 18px; background: #222222; color: #ffffff; text-decoration: none; border-radius: 3px;">{{ 'CONSHO.mail.viewOrder'|trans({}, 'contao_default') }}</a>
+</p>
+{% endif %}
+
+</td></tr>
+</table>
+{% include '@Contao/mail/_frame_foot.html.twig' %}
+</td></tr>
+</table>
+{% endblock %}

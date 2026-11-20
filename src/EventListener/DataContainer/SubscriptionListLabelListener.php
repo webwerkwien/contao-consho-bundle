@@ -5,6 +5,7 @@ namespace Webwerkwien\ContaoConshoBundle\EventListener\DataContainer;
 use Contao\CoreBundle\DependencyInjection\Attribute\AsCallback;
 use Contao\DataContainer;
 use Contao\StringUtil;
+use Doctrine\DBAL\Connection;
 use Webwerkwien\ContaoConshoBundle\Config\BackendDate;
 
 /**
@@ -18,6 +19,8 @@ use Webwerkwien\ContaoConshoBundle\Config\BackendDate;
  *  - "Pause bis" (Abo pausieren, P111) only for a pause that runs or is
  *    announced. A pause that is over stays in the history — in the list it
  *    read like one still running ("Pause bis 03.10.2026" after it had ended).
+ *  - "Preisangebot bis" (Abo-10, P130): the deadline of an open price offer
+ *    whose mail went out — a virtual column, read per row.
  */
 class SubscriptionListLabelListener
 {
@@ -26,8 +29,11 @@ class SubscriptionListLabelListener
     /**
      * @param \Closure(): int|null $clock for the tests
      */
-    public function __construct(private readonly \Closure|null $clock = null)
-    {
+    public function __construct(
+        private readonly \Closure|null $clock = null,
+        // Optional for the tests; the container always sets it.
+        private readonly Connection|null $connection = null,
+    ) {
     }
 
     /**
@@ -51,6 +57,7 @@ class SubscriptionListLabelListener
                 'status' === $field => $this->status((string) ($row['state'] ?? '')),
                 \in_array($field, self::DATES, true) => $this->day($row[$field] ?? null),
                 'pauseUntil' === $field => (int) ($row['pauseUntil'] ?? 0) > $now ? $this->day($row['pauseUntil']) : '-',
+                'priceOfferUntil' === $field => $this->day($this->offerDeadline((int) ($row['id'] ?? 0))),
                 default => $args[$column] ?? '',
             };
         }
@@ -66,6 +73,18 @@ class SubscriptionListLabelListener
             '<span class="consho-signals"><span class="consho-signal consho-signal--visible consho-signal--%s" title="%s"></span></span>',
             'active' === $state ? 'done' : 'open',
             StringUtil::specialchars($title),
+        );
+    }
+
+    private function offerDeadline(int $subscriptionId): int
+    {
+        if (null === $this->connection || $subscriptionId < 1) {
+            return 0;
+        }
+
+        return (int) $this->connection->fetchOne(
+            "SELECT MIN(deadlineAt) FROM tl_consho_subscription_price WHERE pid = ? AND state = 'open' AND mailSentAt > 0",
+            [$subscriptionId],
         );
     }
 

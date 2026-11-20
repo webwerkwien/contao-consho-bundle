@@ -77,7 +77,7 @@ class NoticeParamIssueSourceTest extends TestCase
 
         self::assertCount(1, $issues);
         // D-2: plus the order page's declaration and the result of the withdrawal form.
-        self::assertSame('consho_step, consho_purchase, consho_ordered, consho_order, consho_method, consho_session, consho_signature, consho_result, consho_withdraw, consho_withdrawal, consho_cancel, consho_cancellation, consho_hash, consho_expires, consho_open_subscription, consho_cancel_subscription, consho_my_subscriptions, consho_pause_subscription', $issues[0]->context['param']);
+        self::assertSame('consho_step, consho_purchase, consho_ordered, consho_order, consho_method, consho_session, consho_signature, consho_result, consho_withdraw, consho_withdrawal, consho_cancel, consho_cancellation, consho_hash, consho_expires, consho_open_subscription, consho_cancel_subscription, consho_my_subscriptions, consho_pause_subscription, consho_price_offer', $issues[0]->context['param']);
     }
 
     /**

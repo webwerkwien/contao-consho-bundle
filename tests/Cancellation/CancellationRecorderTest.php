@@ -30,6 +30,9 @@ final class CancellationRecorderTest extends TestCase
     /** @var list<array<string, mixed>> */
     private array $mails = [];
 
+    /** @var list<array<string, mixed>> */
+    private array $operatorMails = [];
+
     private bool $mailLeaves = true;
 
     protected function setUp(): void
@@ -94,6 +97,7 @@ final class CancellationRecorderTest extends TestCase
         self::assertSame($this->at('2026-12-01 00:00'), $mail['requestedAt']);
         self::assertSame($this->at('2027-01-15 10:00'), $mail['effectiveAt']);
         self::assertTrue($mail['earliestApplied']);
+        self::assertFalse($mail['priceChange']);
         self::assertSame('neu@example.test', $mail['email']);
     }
 
@@ -157,6 +161,164 @@ final class CancellationRecorderTest extends TestCase
         self::assertSame($this->at('2027-01-15 10:00'), (int) $this->subscription()['endsAt']);
     }
 
+    /**
+     * Abo-9, P128: the customer's notice ran out on 16.12. — the operator's
+     * date stands anyway, it is not moved to the customer's next end.
+     */
+    public function testDerBetreiberKuendigtGenauZumGewaehltenTermin(): void
+    {
+        $declaration = new CancellationDeclaration(1, CancellationSource::Operator, CancellationKind::Ordinary, 'Admin', $this->at('2027-01-15 10:00'), ' Preisänderung ', true);
+
+        $result = $this->recorder()->record($declaration, $this->at('2027-01-10 09:00'));
+
+        self::assertSame(CancellationOutcome::Recorded, $result->outcome);
+        self::assertSame($this->at('2027-01-15 10:00'), $result->effectiveAt);
+        self::assertFalse($result->earliestApplied);
+        self::assertSame($this->at('2027-01-15 10:00'), (int) $this->subscription()['endsAt']);
+
+        $row = $this->cancellation(1);
+        self::assertSame('operator', $row['source']);
+        self::assertSame('Preisänderung', $row['reason'], 'der Grund des Betreibers bleibt');
+        self::assertSame('Admin', $row['name']);
+        self::assertNotNull($row['confirmationSentAt']);
+
+        self::assertSame([], $this->mails, 'keine Eingangsbestätigung');
+        self::assertCount(1, $this->operatorMails);
+        self::assertSame([
+            'order' => 91,
+            'number' => 'WEB-00090-1-K1',
+            'subscription' => 'WEB-00090-1',
+            'product' => 'E-Book Kräuterkunde',
+            'effectiveAt' => $this->at('2027-01-15 10:00'),
+            'reason' => 'Preisänderung',
+            'renewalHint' => true,
+        ], $this->operatorMails[0]);
+    }
+
+    /**
+     * Abo-9: the operator ends the monthly subscription on 15.04. with his
+     * longer notice; the customer's own cancellation reaches 03.03. — it is
+     * recorded and moves the end forward. A later one changes nothing.
+     */
+    public function testDerKundeKannNachDerBetreiberkuendigungFrueherKuendigen(): void
+    {
+        $this->connection->update('tl_consho_subscription', ['phase' => 'indefinite'], ['id' => 1]);
+        $this->recorder()->record(new CancellationDeclaration(1, CancellationSource::Operator, CancellationKind::Ordinary, 'Admin', $this->at('2027-04-15 10:00'), 'Grund'), $this->at('2027-01-20 09:00'));
+
+        // The operator does not cancel again on top of a known end, not even
+        // to an earlier date the customer's term would allow.
+        $again = $this->recorder()->record(new CancellationDeclaration(1, CancellationSource::Operator, CancellationKind::Ordinary, 'Admin', $this->at('2027-03-15 10:00'), 'Grund'), $this->at('2027-02-01 09:00'));
+        self::assertSame(CancellationOutcome::AlreadyEnding, $again->outcome);
+
+        // The same day as the known end spares nothing.
+        $sameDay = $this->recorder()->record($this->ordinary($this->at('2027-04-15 00:00')), $this->at('2027-02-01 12:00'));
+        self::assertSame(CancellationOutcome::AlreadyEnding, $sameDay->outcome);
+
+        $later =$this->recorder()->record($this->ordinary($this->at('2027-05-15 10:00')), $this->at('2027-02-01 12:00'));
+        self::assertSame(CancellationOutcome::AlreadyEnding, $later->outcome);
+        self::assertSame($this->at('2027-04-15 10:00'), (int) $this->subscription()['endsAt']);
+
+        $earlier = $this->recorder()->record($this->ordinary(), $this->at('2027-02-01 12:00'));
+
+        self::assertSame(CancellationOutcome::Recorded, $earlier->outcome);
+        self::assertSame('WEB-00090-1-K2', $earlier->number);
+        // Open-ended: received plus the 30 days' notice (CancellationTerm).
+        self::assertSame($this->at('2027-03-03 12:00'), $earlier->effectiveAt);
+        self::assertSame($this->at('2027-03-03 12:00'), (int) $this->subscription()['endsAt']);
+        self::assertCount(1, $this->mails, 'der Kunde bekommt seine Eingangsbestätigung');
+    }
+
+    /**
+     * The renewal starts at the known end (P68): an earlier end of the old
+     * subscription would leave a gap.
+     */
+    public function testNachDerVerlaengerungKeinVorziehen(): void
+    {
+        $this->connection->update('tl_consho_subscription', ['phase' => 'indefinite', 'endsAt' => $this->at('2027-04-15 10:00'), 'renewedBy' => 2], ['id' => 1]);
+
+        $result = $this->recorder()->record($this->ordinary(), $this->at('2027-02-01 12:00'));
+
+        self::assertSame(CancellationOutcome::AlreadyEnding, $result->outcome);
+        self::assertSame($this->at('2027-04-15 10:00'), (int) $this->subscription()['endsAt']);
+    }
+
+    /**
+     * The most frequent case: a second "earliest possible" cancellation
+     * reaches exactly the known end — nothing new.
+     */
+    public function testZweimalFruehestmoeglichAendertNichts(): void
+    {
+        $this->recorder()->record($this->ordinary(), $this->at('2026-06-01 12:00'));
+        $second = $this->recorder()->record($this->ordinary(), $this->at('2026-06-02 12:00'));
+
+        self::assertSame(CancellationOutcome::AlreadyEnding, $second->outcome);
+        self::assertSame(1, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cancellation'));
+    }
+
+    public function testDerBetreiberKuendigtNichtInDieVergangenheit(): void
+    {
+        $declaration = new CancellationDeclaration(1, CancellationSource::Operator, CancellationKind::Ordinary, 'Admin', $this->at('2027-01-15 10:00'));
+
+        try {
+            $this->recorder()->record($declaration, $this->at('2027-01-15 10:00'));
+            self::fail('expected an exception');
+        } catch (\InvalidArgumentException) {
+        }
+
+        self::assertSame(0, (int) $this->connection->fetchOne('SELECT COUNT(*) FROM tl_consho_cancellation'));
+        self::assertNull($this->subscription()['endsAt']);
+    }
+
+    public function testDerBetreiberKuendigtNurOrdentlich(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->recorder()->record(new CancellationDeclaration(1, CancellationSource::Operator, CancellationKind::Extraordinary, 'Admin', $this->at('2027-01-15 10:00'), 'Grund'), $this->at('2026-06-01 12:00'));
+    }
+
+    /**
+     * Abo-10, P121: a declined price offer ends at its effective day, with
+     * the usual confirmation of receipt — and moves a later end forward.
+     */
+    public function testAbgelehntesPreisangebotEndetZumGueltigkeitstag(): void
+    {
+        $this->connection->update('tl_consho_subscription', ['phase' => 'indefinite', 'endsAt' => $this->at('2027-04-15 10:00')], ['id' => 1]);
+
+        $result = $this->recorder()->record(new CancellationDeclaration(1, CancellationSource::PriceChange, CancellationKind::Ordinary, 'Jane Doe', $this->at('2027-03-15 10:00')), $this->at('2027-02-01 12:00'));
+
+        self::assertSame(CancellationOutcome::Recorded, $result->outcome);
+        self::assertSame($this->at('2027-03-15 10:00'), $result->effectiveAt);
+        self::assertSame($this->at('2027-03-15 10:00'), (int) $this->subscription()['endsAt']);
+        self::assertSame('priceChange', $this->cancellation(1)['source']);
+        self::assertCount(1, $this->mails, 'die gewohnte Eingangsbestätigung');
+        self::assertTrue($this->mails[0]['priceChange'], 'die Mail nennt den Anlass');
+
+        // An end on the day or before stands.
+        $again = $this->recorder()->record(new CancellationDeclaration(1, CancellationSource::PriceChange, CancellationKind::Ordinary, '', $this->at('2027-04-15 10:00')), $this->at('2027-02-02 12:00'));
+        self::assertSame(CancellationOutcome::AlreadyEnding, $again->outcome);
+    }
+
+    /**
+     * Abo-10, P122: the lapse records inside the offer's commit, without a
+     * mail of its own — and only there.
+     */
+    public function testFristablaufOhneEigeneMailNurInEinerTransaktion(): void
+    {
+        $declaration = new CancellationDeclaration(1, CancellationSource::PriceChange, CancellationKind::Ordinary, '', $this->at('2027-01-15 10:00'));
+
+        $this->connection->beginTransaction();
+        $result = $this->recorder()->recordWithin($declaration, $this->at('2026-12-16 10:00'));
+        $this->connection->commit();
+
+        self::assertSame(CancellationOutcome::Recorded, $result->outcome);
+        self::assertSame($this->at('2027-01-15 10:00'), (int) $this->subscription()['endsAt']);
+        self::assertNull($this->cancellation(1)['confirmationSentAt']);
+        self::assertSame([], $this->mails);
+
+        $this->expectException(\LogicException::class);
+        $this->recorder()->recordWithin($declaration, $this->at('2026-12-16 10:00'));
+    }
+
     private function ordinary(int|null $requestedAt = null): CancellationDeclaration
     {
         return new CancellationDeclaration(1, CancellationSource::Form, CancellationKind::Ordinary, ' Jane Doe ', $requestedAt, 'wird verworfen');
@@ -183,6 +345,11 @@ final class CancellationRecorderTest extends TestCase
         $mail = $this->createMock(OrderEventMail::class);
         $mail->method('cancellationReceived')->willReturnCallback(function (int $orderId, array $cancellation): bool {
             $this->mails[] = ['order' => $orderId] + $cancellation;
+
+            return $this->mailLeaves;
+        });
+        $mail->method('cancellationByOperator')->willReturnCallback(function (int $orderId, array $cancellation): bool {
+            $this->operatorMails[] = ['order' => $orderId] + $cancellation;
 
             return $this->mailLeaves;
         });

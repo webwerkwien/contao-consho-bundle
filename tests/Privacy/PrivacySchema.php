@@ -46,7 +46,7 @@ final class PrivacySchema
         // Abo-4b: the payment method a mandate charges through (P98).
         // Block G (G12): the stock notices of a member.
         // Block H (H-5): the codes redeemed with an order.
-        foreach (['tl_consho_cancellation', 'tl_consho_download', 'tl_consho_key', 'tl_consho_payment_method', 'tl_consho_subscription_pause', 'tl_consho_stock_notice', 'tl_consho_product', 'tl_consho_cart_rule', 'tl_consho_cart_rule_redemption', 'tl_consho_voucher'] as $table) {
+        foreach (['tl_consho_cancellation', 'tl_consho_download', 'tl_consho_key', 'tl_consho_payment_method', 'tl_consho_subscription_pause', 'tl_consho_subscription_price', 'tl_consho_stock_notice', 'tl_consho_product', 'tl_consho_cart_rule', 'tl_consho_cart_rule_redemption', 'tl_consho_voucher'] as $table) {
             DcaSchema::create($c, $table);
         }
 

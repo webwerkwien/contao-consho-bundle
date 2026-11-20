@@ -18,7 +18,9 @@ use Doctrine\DBAL\Connection;
  *  - `nextBillingAt` = the end of the pause: the period after the current one
  *    is not billed (SubscriptionBiller starts the next period there);
  *  - `minimumEndsAt` + k months, where it still lies ahead, and the reminder
- *    of the term due again (P104).
+ *    of the term due again (P104);
+ *  - the effective day and deadline of a price offer not settled yet
+ *    (Abo-10, P125), where it lies at or after the pause.
  *
  * The cron only says what is the case: `paused` from `pauseFrom` until
  * `pauseUntil` (run()). Access needs nothing: no period is billed, so it ends
@@ -137,6 +139,7 @@ class SubscriptionPause
             ]);
 
             $pauseId = (int) $this->connection->lastInsertId();
+            $this->shiftOffers($row, $from, $months, $now);
             $this->connection->update('tl_consho_subscription', $fields, ['id' => $subscriptionId]);
 
             return new PauseScheduled($pauseId, $subscriptionId, (string) $row['subscriptionNumber'], $months, $from, $until);
@@ -176,6 +179,8 @@ class SubscriptionPause
             if (null === $row || false === $pause || !self::withdrawable($row, $now)) {
                 return false;
             }
+
+            $this->shiftOffers($row, (int) $pause['pauseUntil'], -(int) $pause['months'], $now);
 
             $this->connection->update('tl_consho_subscription', [
                 'pausedMonths' => max(0, (int) $row['pausedMonths'] - (int) $pause['months']),
@@ -274,6 +279,37 @@ class SubscriptionPause
         }
 
         return 0;
+    }
+
+    /**
+     * P125: the effective day and the deadline of an offer not settled yet
+     * move with the pause — by $months, negative when it is withdrawn. Both
+     * are reckoned from the row as it is before its `pausedMonths` change,
+     * like `minimumEndsAt`. A moved offer is reminded of again before its new
+     * deadline (P118).
+     *
+     * @param array<string, mixed> $row the subscription before the change
+     * @param int                  $from offers on this day or later move
+     */
+    private function shiftOffers(array $row, int $from, int $months, int $now): void
+    {
+        $offers = $this->connection->fetchAllAssociative(
+            "SELECT id, effectiveAt FROM tl_consho_subscription_price
+              WHERE pid = ? AND effectiveAt >= ? AND (state = 'open' OR (state = 'accepted' AND appliedAt = 0))",
+            [(int) $row['id'], $from],
+        );
+
+        foreach ($offers as $offer) {
+            $effectiveAt = $this->calendar->boundary($row, $this->monthsTo($row, (int) $offer['effectiveAt']) + $months);
+            // The reminder stays as it is: one sent for the old deadline does
+            // not count for a later one (SubscriptionPriceOffers::remind()),
+            // and counts again once a withdrawn pause moves the deadline back.
+            $this->connection->update('tl_consho_subscription_price', [
+                'effectiveAt' => $effectiveAt,
+                'deadlineAt' => SubscriptionPriceCheck::deadlineOf($this->calendar, $effectiveAt, (int) $row['noticeDays']),
+                'tstamp' => $now,
+            ], ['id' => (int) $offer['id']]);
+        }
     }
 
     /**

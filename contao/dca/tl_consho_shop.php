@@ -71,7 +71,7 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
 
     'palettes' => [
         '__selector__' => ['invoiceArchive'],
-        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups,vatIdNetGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
+        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups,vatIdNetGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{subscription_legend},subscriptionOperatorDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
     ],
 
     'subpalettes' => [
@@ -554,6 +554,15 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'exclude' => true,
             'eval' => ['rgxp' => 'natural', 'maxlength' => 3, 'tl_class' => 'w50'],
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'default' => 7],
+        ],
+        // Abo-9 (P127): how long before the end the operator cancels a
+        // subscription, and how long before a renewal a price change is
+        // announced. Eight weeks unless the operator's terms say otherwise.
+        'subscriptionOperatorDays' => [
+            'inputType' => 'text',
+            'exclude' => true,
+            'eval' => ['rgxp' => 'natural', 'maxlength' => 3, 'tl_class' => 'w50'],
+            'sql' => ['type' => 'smallint', 'unsigned' => true, 'default' => 56],
         ],
         /*
          * D-5 (L2): how long an order and its documents are kept, in years,

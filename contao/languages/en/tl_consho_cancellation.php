@@ -7,10 +7,10 @@ $GLOBALS['TL_LANG']['tl_consho_cancellation']['number'] = ['Number', 'Subscripti
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['receivedAt'] = ['Received', 'Date and time "cancel now" was pressed (server time).'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['source'] = ['Channel', ''];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['kind'] = ['Kind', ''];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['reason'] = ['Reason', 'The reason for an extraordinary cancellation, in the customer\'s words.'];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['name'] = ['Name', 'As given.'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['reason'] = ['Reason', 'The reason for an extraordinary cancellation, in the customer\'s words; for a cancellation by the operator, the operator\'s reason as told to the customer.'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['name'] = ['Name', 'As given; for a cancellation by the operator, the back end user.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['email'] = ['E-mail', 'The subscription\'s address — where the confirmation went.'];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['requestedAt'] = ['Requested date', 'Empty: the earliest possible date.'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['requestedAt'] = ['Requested date', 'Empty: the earliest possible date. For a cancellation by the operator, the chosen date.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['effectiveAt'] = ['End of contract', 'For an ordinary cancellation worked out from the rule. For an extraordinary one: the day you accept it for — the contract ends as that day begins. A billing period beginning before it is still billed in full; the next billing is shown at the subscription.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['earliestAt'] = ['Earliest possible end', 'From the subscription rule. Where the end of contract lies after it, billing periods beginning before the end are still billed in full.'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['earliestApplied'] =['Earliest instead of requested', 'The requested date was before the earliest possible one; the confirmation says so.'];
@@ -23,7 +23,7 @@ $GLOBALS['TL_LANG']['tl_consho_cancellation']['resendDecisionSent'] = 'The decis
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['resendDecisionFailed'] = 'The decision on %s could not be sent. The reason is in the system log.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['resendDecisionNothing'] = 'There is nothing to resend for %s: not decided yet, or the mail has already gone out.';
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['rejectReason'] = ['Reason for rejection', 'Goes to the customer.'];
-$GLOBALS['TL_LANG']['tl_consho_cancellation']['sources'] = ['form' => '"Cancel contracts here"', 'account' => '"My subscriptions"'];
+$GLOBALS['TL_LANG']['tl_consho_cancellation']['sources'] = ['form' => '"Cancel contracts here"', 'account' => '"My subscriptions"', 'operator' => 'Operator (back end)', 'priceChange' => 'Price offer (refused or deadline passed)'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['kinds'] = ['ordinary' => 'ordinary', 'extraordinary' => 'extraordinary'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['states'] = ['effective' => 'effective', 'received' => 'awaiting decision', 'accepted' => 'accepted', 'rejected' => 'rejected'];
 $GLOBALS['TL_LANG']['tl_consho_cancellation']['edit'] = ['Edit', 'Edit cancellation ID %s'];

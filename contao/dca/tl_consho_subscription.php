@@ -21,7 +21,7 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
     'config' => [
         'dataContainer' => Contao\DC_Table::class,
         // Abo-7: the cancellations of the subscription.
-        'ctable' => ['tl_consho_cancellation', 'tl_consho_subscription_pause'],
+        'ctable' => ['tl_consho_cancellation', 'tl_consho_subscription_pause', 'tl_consho_subscription_price'],
         'closed' => true,
         'notEditable' => true,
         'notCopyable' => true,
@@ -44,13 +44,18 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
             // The state as a symbol in front, as in the withdrawal list; then
             // the dates in their order. Abo-8, P80: the end and the next
             // billing next to the period. Abo pausieren (P111): until when a
-            // pause runs or is announced. `status` is virtual, see below.
-            'fields' => ['status', 'subscriptionNumber', 'member', 'product', 'ruleTitle', 'startedAt', 'periodUntil', 'nextBillingAt', 'endsAt', 'pauseUntil'],
+            // pause runs or is announced. Abo-10 (P130): the deadline of an
+            // open price offer. `status` and `priceOfferUntil` are virtual,
+            // see below.
+            'fields' => ['status', 'subscriptionNumber', 'member', 'product', 'ruleTitle', 'startedAt', 'periodUntil', 'nextBillingAt', 'endsAt', 'pauseUntil', 'priceOfferUntil'],
             'showColumns' => true,
         ],
         'operations' => [
             // Abo pausieren (P101, P107, P111): announce or withdraw.
             'pause' => ['href' => 'key=pauseSubscription', 'icon' => 'bundles/contaoconsho/icons/pause.svg', 'primary' => true],
+            // Abo-9 (P128): the operator's ordinary cancellation. Greyed out
+            // by SubscriptionCancelButtonListener where the end is known.
+            'cancel' => ['href' => 'key=cancelSubscription', 'icon' => 'bundles/contaoconsho/icons/cancel.svg', 'primary' => true],
             // Cancellations and pauses on one page, newest first.
             'history' => ['href' => 'key=subscriptionHistory', 'icon' => 'bundles/contaoconsho/icons/history.svg', 'primary' => true],
             // Abo-8, P80: the purchase order. No href: the address comes only
@@ -229,6 +234,7 @@ $GLOBALS['TL_DCA']['tl_consho_subscription'] = [
         ],
         // The list's first column: a label, no SQL, no inputType.
         'status' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_subscription']['status']],
+        'priceOfferUntil' => ['label' => &$GLOBALS['TL_LANG']['tl_consho_subscription']['priceOfferUntil']],
         'state' => [
             'reference' => &$GLOBALS['TL_LANG']['tl_consho_subscription']['states'],
             'inputType' => 'text',

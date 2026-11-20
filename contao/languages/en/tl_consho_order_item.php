@@ -10,7 +10,7 @@ $GLOBALS['TL_LANG']['tl_consho_order_item']['taxCountry'] = ['Tax country', 'The
 $GLOBALS['TL_LANG']['tl_consho_order_item']['destinationCountry'] = ['Destination country', 'Where the supply went (delivery or billing country at the purchase). Counts towards the One-Stop-Shop threshold.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['taxAmount'] = ['Tax amount', ''];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['lineTotal'] = ['Line total', ''];
-$GLOBALS['TL_LANG']['tl_consho_order_item']['priceSource'] = ['Price source', 'Where the price came from — list, scale, customer group, promotion, personalised or reverse charge.'];
+$GLOBALS['TL_LANG']['tl_consho_order_item']['priceSource'] = ['Price source', 'Where the price came from — list, scale, customer group, promotion, personalised, reverse charge, not taxable, or agreed in a subscription\'s price offer.'];
 $GLOBALS['TL_LANG']['tl_consho_order_item']['customerGroup'] = ['Customer group', 'The group this line\'s price came from. Empty for a list price. A member can hold several groups, and lines may come from different ones.'];
 
 $GLOBALS['TL_LANG']['tl_consho_order_item']['item_legend'] = 'Item';

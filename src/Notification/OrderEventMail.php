@@ -64,7 +64,16 @@ class OrderEventMail
     public const CANCELLATION_TEMPLATE = '@Contao/mail/consho_cancellation_received.html.twig';
     public const CANCELLATION_OPERATOR_TEMPLATE = '@Contao/mail/consho_cancellation_received_operator.html.twig';
     public const CANCELLATION_DECIDED_TEMPLATE = '@Contao/mail/consho_cancellation_decided.html.twig';
-    public const DOCUMENT_ISSUED_TEMPLATE = '@Contao/mail/consho_document_issued.html.twig';
+    public const CANCELLATION_BY_OPERATOR_TEMPLATE = '@Contao/mail/consho_cancellation_notice.html.twig';
+    public const CANCELLATION_BY_OPERATOR_COPY_TEMPLATE = '@Contao/mail/consho_cancellation_notice_operator.html.twig';
+    public const PRICE_OFFER_TEMPLATE = '@Contao/mail/consho_subscription_price.html.twig';
+    public const PRICE_OFFER_OPERATOR_TEMPLATE = '@Contao/mail/consho_subscription_price_operator.html.twig';
+
+    /**
+     * The mails of a price offer (Abo-10), see priceOffer().
+     */
+    public const PRICE_OFFER_EVENTS = ['offer', 'decrease', 'reminder', 'accepted', 'lapsedBusiness', 'lapsedConsumer'];
+    public const DOCUMENT_ISSUED_TEMPLATE ='@Contao/mail/consho_document_issued.html.twig';
     public const PAYMENT_CLAIM_TEMPLATE = '@Contao/mail/consho_payment_claim.html.twig';
 
     public function __construct(
@@ -516,7 +525,7 @@ class OrderEventMail
      * that day, or an invoice per period.
      *
      * @param int                                                                                                                                                                                                                                                                                                  $orderId  an order of the subscription, for address and language
-     * @param array{subscription: string, kind: string, product: string, termEndsAt: int, cancelUntil: int, termLength: int, termUnit: string, noticeDays: int, productUrl: string|null, renewUrl?: string|null, chargeAmount?: string, chargeCurrency?: string, chargeMonths?: int, chargeTaxed?: bool, chargeMethod?: string|null} $reminder
+     * @param array{subscription: string, kind: string, product: string, termEndsAt: int, cancelUntil: int, termLength: int, termUnit: string, noticeDays: int, productUrl: string|null, renewUrl?: string|null, priceOfferDeadline?: int, chargeAmount?: string, chargeCurrency?: string, chargeMonths?: int, chargeTaxed?: bool, chargeMethod?: string|null} $reminder
      *
      * @return bool whether the customer's mail left
      */
@@ -551,6 +560,8 @@ class OrderEventMail
             'noticeDays' => (string) $reminder['noticeDays'],
             'productUrl' => $reminder['productUrl'] ?? '',
             'renewUrl' => $reminder['renewUrl'] ?? '',
+            // Abo-10 (P119): an open price offer, '' where none waits.
+            'priceOfferUntil' => ($reminder['priceOfferDeadline'] ?? 0) > 0 ? self::day($reminder['priceOfferDeadline'], $language) : '',
             'viewUrl' => $viewUrl,
         ], [], $transport, $from);
     }
@@ -569,7 +580,7 @@ class OrderEventMail
      * the mail says that periods beginning before the end are still billed
      * in full (P55; Abo-7).
      *
-     * @param array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null} $cancellation
+     * @param array{number: string, subscription: string, product: string, receivedAt: int, kind: string, reason: string, name: string, email: string, requestedAt: int|null, effectiveAt: int|null, earliestApplied: bool, earliestAt: int|null, priceChange?: bool} $cancellation
      *
      * @return bool whether the customer's mail left
      */
@@ -591,6 +602,8 @@ class OrderEventMail
             'effectiveAt' => null === $cancellation['effectiveAt'] ? '' : self::moment($cancellation['effectiveAt'], $language),
             'laterThanEarliest' => null !== $cancellation['effectiveAt'] && null !== $cancellation['earliestAt'] && $cancellation['effectiveAt'] > $cancellation['earliestAt'],
             'earliestAt' => null === $cancellation['earliestAt'] ? '' : self::moment($cancellation['earliestAt'], $language),
+            // Abo-10: a price offer not agreed to — the mail says why it ends.
+            'priceChange' => $cancellation['priceChange'] ?? false,
         ];
 
         $sent = $this->toCustomer('cancellation', $order, self::CANCELLATION_TEMPLATE, $payload, [
@@ -601,6 +614,98 @@ class OrderEventMail
         $this->toOperator('cancellation', $order, $shop, self::CANCELLATION_OPERATOR_TEMPLATE, $payload, [
             'cancellation' => $for($shop['fallbackLanguage']),
         ], [], $transport, $from);
+
+        return $sent;
+    }
+
+    /**
+     * The operator's own ordinary cancellation (Abo-9, P128): the end, the
+     * operator's reason verbatim and — while the plan is still on offer — the
+     * way to renew under "Meine Abos". The operator gets a copy in the shop's
+     * language.
+     *
+     * @param array{number: string, subscription: string, product: string, effectiveAt: int, reason: string, renewalHint: bool} $cancellation
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function cancellationByOperator(int $orderId, array $cancellation, string $viewUrl): bool
+    {
+        try {
+            [$order, $shop, $transport, $from, $payload] = $this->prepare($orderId, null);
+        } catch (\Throwable $e) {
+            $this->fail('cancellationByOperator', '', $orderId, $e);
+
+            return false;
+        }
+
+        $for = static fn (string $language): array => [
+            ...$cancellation,
+            'effectiveAt' => self::moment($cancellation['effectiveAt'], $language),
+        ];
+
+        $sent = $this->toCustomer('cancellationByOperator', $order, self::CANCELLATION_BY_OPERATOR_TEMPLATE, $payload, [
+            'cancellation' => $for((string) ($order['language'] ?? '')),
+            'viewUrl' => $viewUrl,
+        ], [], $transport, $from);
+
+        $this->toOperator('cancellationByOperator', $order, $shop, self::CANCELLATION_BY_OPERATOR_COPY_TEMPLATE, $payload, [
+            'cancellation' => $for($shop['fallbackLanguage']),
+        ], [], $transport, $from);
+
+        return $sent;
+    }
+
+    /**
+     * The mails of a price offer (Abo-10), in the customer's language, one
+     * template for all of them:
+     *
+     *  - offer: an increase — old and new amount, the day, until when to
+     *    answer and what silence means (P117, P122); copy to the operator
+     *  - decrease: the price falls, nothing to do (P116)
+     *  - reminder: seven days before the deadline (P118)
+     *  - accepted: the agreement confirmed (P119); copy
+     *  - lapsedBusiness / lapsedConsumer: the deadline passed — the new price
+     *    applies, or the subscription ends (P122); copy
+     *
+     * The copy goes where P137 says. A refusal has no mail of its own: it is
+     * a cancellation, confirmed like any other (P121), with its copy.
+     *
+     * @param array{subscription: string, product: string, oldPrice: string, newPrice: string, priceKey: string, months: int, taxed: bool, effectiveAt: int, deadlineAt: int, business: bool, answerUrl: string} $offer amounts formatted, per period
+     *
+     * @return bool whether the customer's mail left
+     */
+    public function priceOffer(string $event, int $orderId, array $offer, string $viewUrl): bool
+    {
+        if (!\in_array($event, self::PRICE_OFFER_EVENTS, true)) {
+            throw new \InvalidArgumentException(\sprintf('Unknown price offer mail "%s".', $event));
+        }
+
+        try {
+            [$order, $shop, $transport, $from, $payload] = $this->prepare($orderId, null);
+        } catch (\Throwable $e) {
+            $this->fail('priceOffer', '', $orderId, $e);
+
+            return false;
+        }
+
+        $for = static fn (string $language): array => [
+            ...$offer,
+            'effectiveAt' => self::day($offer['effectiveAt'], $language),
+            'deadlineAt' => self::day($offer['deadlineAt'], $language),
+        ];
+
+        $sent = $this->toCustomer('priceOffer', $order, self::PRICE_OFFER_TEMPLATE, $payload, [
+            'event' => $event,
+            'offer' => $for((string) ($order['language'] ?? '')),
+            'viewUrl' => $viewUrl,
+        ], [], $transport, $from);
+
+        if (!\in_array($event, ['decrease', 'reminder'], true)) {
+            $this->toOperator('priceOffer', $order, $shop, self::PRICE_OFFER_OPERATOR_TEMPLATE, $payload, [
+                'event' => $event,
+                'offer' => $for($shop['fallbackLanguage']),
+            ], [], $transport, $from);
+        }
 
         return $sent;
     }
@@ -1118,6 +1223,8 @@ class OrderEventMail
                 'subscriptionReminder' => '"subscription reminder"',
                 'cancellation' => '"cancellation received"',
                 'cancellationDecided' => '"cancellation decided"',
+                'cancellationByOperator' => '"cancellation by the operator"',
+                'priceOffer' => '"price offer"',
                 'digitalReleased' => '"digital content ready"',
                 'documentIssued' => '"document issued"',
                 default => '"shipped"',

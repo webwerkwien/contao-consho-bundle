@@ -18,9 +18,11 @@ use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 use Webwerkwien\ContaoConshoBundle\Subscription\LifecycleChange;
 use Webwerkwien\ContaoConshoBundle\Subscription\ReminderDue;
 use Webwerkwien\ContaoConshoBundle\Subscription\RenewalKind;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionAgreedPrice;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingMethod;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycle;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycleRun;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLineTerms;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
 /**
@@ -50,7 +52,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_subscription', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_product', 'tl_consho_shop'] as $table) {
+        foreach (['tl_consho_subscription', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_product', 'tl_consho_shop', 'tl_consho_subscription_price'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -201,6 +203,43 @@ final class SubscriptionLifecycleRunTest extends TestCase
     }
 
     /**
+     * Abo-10 (P120): an accepted offer effective at the end of the term is
+     * what the next period costs — taxed at the newest line's rate. P119: an
+     * open offer for that day is named with its deadline; one for a later
+     * day, or one whose mail never left, is not.
+     */
+    public function testDieErinnerungNenntDenVereinbartenPreisUndDasOffeneAngebot(): void
+    {
+        $termEnd = self::NOW + 20 * self::DAY;
+        $this->connection->update('tl_consho_order', ['currency' => 'EUR'], ['id' => 91]);
+        $this->connection->insert('tl_consho_order_item', ['id' => 7, 'pid' => 91, 'lineType' => 'product', 'lineTotal' => '240.0000', 'taxAmount' => '40.0000', 'taxRate' => '20.00']);
+        $this->connection->update('tl_consho_subscription', ['renewal' => 'sameTerm'], ['id' => 1]);
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 1, 'pid' => 1, 'state' => 'accepted', 'newUnitNet' => '110.0000', 'effectiveAt' => $termEnd, 'mailSentAt' => 1]);
+
+        $prices = new SubscriptionAgreedPrice($this->connection, $this->createStub(SubscriptionLineTerms::class));
+        $this->reminders[1] = new ReminderDue(1, 'WEB-00001-1', RenewalKind::SameTerm, $termEnd, self::NOW + 6 * self::DAY);
+        $this->lifecycleRun(prices: $prices)->remind(self::NOW);
+
+        // 2 × 110 net, plus 20 %.
+        self::assertSame(['264.00', true, 0], [number_format((float) $this->mails[0]['chargeAmount'], 2, '.', ''), $this->mails[0]['chargeTaxed'], $this->mails[0]['priceOfferDeadline']]);
+
+        // Not yet answered: the frozen amount, and the deadline.
+        $this->connection->update('tl_consho_subscription_price', ['state' => 'open', 'deadlineAt' => self::NOW + 6 * self::DAY], ['id' => 1]);
+        $this->connection->insert('tl_consho_subscription_price', ['id' => 2, 'pid' => 1, 'state' => 'open', 'effectiveAt' => $termEnd + 365 * self::DAY, 'deadlineAt' => 99, 'mailSentAt' => 1]);
+        $this->connection->update('tl_consho_subscription', ['reminderSentAt' => 0], ['id' => 1]);
+        $this->lifecycleRun(prices: $prices)->remind(self::NOW);
+
+        self::assertSame(['240.00', self::NOW + 6 * self::DAY], [number_format((float) $this->mails[1]['chargeAmount'], 2, '.', ''), $this->mails[1]['priceOfferDeadline']]);
+
+        // Its mail never left: no offer yet (P135).
+        $this->connection->update('tl_consho_subscription_price', ['mailSentAt' => 0], ['id' => 1]);
+        $this->connection->update('tl_consho_subscription', ['reminderSentAt' => 0], ['id' => 1]);
+        $this->lifecycleRun(prices: $prices)->remind(self::NOW);
+
+        self::assertSame(0, $this->mails[2]['priceOfferDeadline']);
+    }
+
+    /**
      * Abo-7b (P71): "My subscriptions" from the root page of the order language — the
      * page the operator names in `consho_subscriptionsPage`; without it
      * null, and the mail links the product page.
@@ -236,7 +275,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
         return new ShopPageUrls($framework, new ShopResolver($framework), $urls);
     }
 
-    private function lifecycleRun(ShopPageUrls|null $pageUrls = null, SubscriptionBillingMethod|null $billing = null): SubscriptionLifecycleRun
+    private function lifecycleRun(ShopPageUrls|null $pageUrls = null, SubscriptionBillingMethod|null $billing = null, SubscriptionAgreedPrice|null $prices = null): SubscriptionLifecycleRun
     {
         $lifecycle = $this->createMock(SubscriptionLifecycle::class);
         $lifecycle->method('remind')->willReturnCallback(function (int $id, int $now): ReminderDue|null {
@@ -268,7 +307,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
         $source = $this->createStub(OrderConfirmationSourceInterface::class);
         $source->method('rootOf')->willReturn(1);
 
-        return new SubscriptionLifecycleRun($this->connection, $lifecycle, $links, $source, $mail, pageUrls: $pageUrls, billing: $billing);
+        return new SubscriptionLifecycleRun($this->connection, $lifecycle, $links, $source, $mail, pageUrls: $pageUrls, billing: $billing, prices: $prices);
     }
 
     /**

@@ -172,9 +172,11 @@ $conshoBackendModules = [
         // Abo-3 (P20): the subscriptions, read-only. Right after the orders
         // they come from; handling a cancellation follows with Abo-6/Abo-7.
         'consho_subscription' => [
-            'tables' => ['tl_consho_subscription', 'tl_consho_cancellation', 'tl_consho_subscription_pause'],
+            'tables' => ['tl_consho_subscription', 'tl_consho_cancellation', 'tl_consho_subscription_pause', 'tl_consho_subscription_price'],
             // Abo pausieren (P101): announce or withdraw a pause.
             'pauseSubscription' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionPauseBackendController::class, '__invoke'],
+            // Abo-9 (P128): the operator cancels a subscription.
+            'cancelSubscription' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionCancelBackendController::class, '__invoke'],
             // Cancellations and pauses of one subscription, on one page.
             'subscriptionHistory' => [Webwerkwien\ContaoConshoBundle\Controller\Backend\SubscriptionHistoryBackendController::class, '__invoke'],
             // E10: the decision mail on a cancellation once more.

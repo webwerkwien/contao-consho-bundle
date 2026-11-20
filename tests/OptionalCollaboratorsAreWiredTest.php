@@ -15,7 +15,14 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Webwerkwien\ContaoConshoBundle\Cart\ShopPageUrls;
 use Webwerkwien\ContaoConshoBundle\Controller\Backend\MoneyFlowBackendController;
+use Webwerkwien\ContaoConshoBundle\Customer\MySubscriptionsFlow;
+use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\SubscriptionListLabelListener;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionAgreedPrice;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBiller;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycleRun;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionPriceOfferRun;
 use Webwerkwien\ContaoConshoBundle\Cron\PaymentAttemptCleanupCron;
 use Webwerkwien\ContaoConshoBundle\Dashboard\OpenWorkReader;
 use Webwerkwien\ContaoConshoBundle\EventListener\DataContainer\MoneyFlowsButtonListener;
@@ -82,6 +89,20 @@ class OptionalCollaboratorsAreWiredTest extends TestCase
     {
         self::assertSame(MoneyFlows::class, $this->argument(MoneyFlowBackendController::class, '$flows'));
         self::assertSame(UrlGeneratorInterface::class, $this->argument(MoneyFlowBackendController::class, '$router'));
+    }
+
+    /**
+     * Without them an agreed price is never billed, the reminder never names
+     * it, "Meine Abos" offers no answer, the offer mail has no link and the
+     * list column stays empty (Abo-10).
+     */
+    public function testPreisangeboteSindVerdrahtet(): void
+    {
+        self::assertSame(SubscriptionAgreedPrice::class, $this->argument(SubscriptionBiller::class, '$prices'));
+        self::assertSame(SubscriptionAgreedPrice::class, $this->argument(SubscriptionLifecycleRun::class, '$prices'));
+        self::assertSame(SubscriptionPriceOfferRun::class, $this->argument(MySubscriptionsFlow::class, '$prices'));
+        self::assertSame(ShopPageUrls::class, $this->argument(SubscriptionPriceOfferRun::class, '$pageUrls'));
+        self::assertSame(Connection::class, $this->argument(SubscriptionListLabelListener::class, '$connection'));
     }
 
     private function argument(string $service, string $name): string|null
