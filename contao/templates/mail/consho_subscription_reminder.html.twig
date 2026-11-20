@@ -22,6 +22,12 @@
     noticeDays    the notice's number
     productUrl    the product page; '' where none could be built
     renewUrl      "Meine Abos" (Abo-7b, P71); '' where the shop names no such page
+    chargePrice   the amount of one period after the term, formatted; '' where
+                  nothing is charged
+    chargePriceKey perMonth | perYear | perMonths — CONSHO.subscription.*
+    chargeMonths  the months of one period
+    chargeTaxed   whether the amount includes VAT — then "at the current rate"
+    chargeMethod  the method that collects it via the mandate; '' for an invoice
     viewUrl       the order page, with a token
 #}
 {% block subject %}{{ 'CONSHO.mail.subscriptionReminder.subject'|trans([subscription, termEnd], 'contao_default') }}{% endblock %}
@@ -49,6 +55,16 @@
     {{ 'CONSHO.mail.subscriptionReminder.ends'|trans([product], 'contao_default') }}
 {%- endif -%}
 </p>
+
+{# Where it runs on: the amount per period from the end of the term, and how
+   it is paid — with the date, the advance notice of a direct debit. #}
+{% if kind in ['sameTerm', 'indefinite'] and chargePrice|default('') %}
+{% set price = ('CONSHO.subscription.' ~ chargePriceKey)|trans([chargePrice, chargeMonths], 'contao_default') %}
+<p style="margin: 0 0 8px 0;">
+    {{ ('CONSHO.mail.subscriptionReminder.' ~ (chargeTaxed|default(false) ? 'chargeTaxed' : 'charge'))|trans([termEnd, price], 'contao_default') }}
+    {% if chargeMethod %}{{ 'CONSHO.mail.subscriptionReminder.chargeMandate'|trans([chargeMethod, termEnd], 'contao_default') }}{% else %}{{ 'CONSHO.mail.subscriptionReminder.chargeInvoice'|trans({}, 'contao_default') }}{% endif %}
+</p>
+{% endif %}
 
 {# Abo-7b (P71): "Meine Abos" where the shop names that page — the licence
    and its keys go on there; else the product page, to buy anew. #}

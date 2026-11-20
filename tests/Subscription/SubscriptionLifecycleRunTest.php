@@ -13,10 +13,12 @@ use Webwerkwien\ContaoConshoBundle\Cart\ShopPageUrls;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderConfirmationSourceInterface;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderEventMail;
 use Webwerkwien\ContaoConshoBundle\Notification\OrderPageLink;
+use Webwerkwien\ContaoConshoBundle\Payment\PaymentMethod;
 use Webwerkwien\ContaoConshoBundle\Shop\ShopResolver;
 use Webwerkwien\ContaoConshoBundle\Subscription\LifecycleChange;
 use Webwerkwien\ContaoConshoBundle\Subscription\ReminderDue;
 use Webwerkwien\ContaoConshoBundle\Subscription\RenewalKind;
+use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionBillingMethod;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycle;
 use Webwerkwien\ContaoConshoBundle\Subscription\SubscriptionLifecycleRun;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
@@ -48,7 +50,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
     {
         $this->connection = DriverManager::getConnection(['driver' => 'pdo_sqlite', 'memory' => true]);
 
-        foreach (['tl_consho_subscription', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_product'] as $table) {
+        foreach (['tl_consho_subscription', 'tl_consho_order', 'tl_consho_order_item', 'tl_consho_product', 'tl_consho_shop'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 
@@ -161,6 +163,44 @@ final class SubscriptionLifecycleRunTest extends TestCase
     }
 
     /**
+     * Where it runs on, the newest product line of the subscription, gross,
+     * and the length of one period; the method only where the mandate still
+     * charges. Before an end, nothing.
+     */
+    public function testDieErinnerungNenntDenBetragDerNeuestenZeile(): void
+    {
+        // The purchase's line, and a follow-up's — the follow-up is newer.
+        $this->connection->update('tl_consho_order_item', ['lineTotal' => '238.8000'], ['id' => 5]);
+        $this->connection->update('tl_consho_order', ['currency' => 'EUR'], ['id' => 90]);
+        $this->connection->update('tl_consho_order', ['currency' => 'EUR'], ['id' => 91]);
+        $this->connection->insert('tl_consho_order_item', ['id' => 6, 'pid' => 91, 'lineType' => 'payment', 'lineTotal' => '5.0000']);
+        $this->connection->insert('tl_consho_order_item', ['id' => 7, 'pid' => 91, 'lineType' => 'product', 'lineTotal' => '240.0000', 'taxAmount' => '40.0000']);
+        $this->connection->update('tl_consho_subscription', ['renewal' => 'sameTerm', 'billingInterval' => 0, 'mandate' => 'mdt_1', 'mandateMethod' => 3, 'shop' => 1], ['id' => 1]);
+
+        $billing = $this->createStub(SubscriptionBillingMethod::class);
+        $billing->method('mandateMethod')->willReturn(new PaymentMethod(3, 'mollie_directdebit', 'SEPA-Lastschrift', []));
+
+        $this->reminders[1] = new ReminderDue(1, 'WEB-00001-1', RenewalKind::SameTerm, self::NOW + 20 * self::DAY, self::NOW + 6 * self::DAY);
+        $this->lifecycleRun(billing: $billing)->remind(self::NOW);
+
+        // SQLite drops the trailing zeros MySQL returns: compared as a number.
+        self::assertSame(['240.00', 'EUR', 12, 'SEPA-Lastschrift'], [number_format((float) $this->mails[0]['chargeAmount'], 2, '.', ''),$this->mails[0]['chargeCurrency'], $this->mails[0]['chargeMonths'], $this->mails[0]['chargeMethod']]);
+
+        self::assertTrue($this->mails[0]['chargeTaxed']);
+
+        // No method that charges (or no service): the amount, without a method.
+        $this->connection->update('tl_consho_subscription', ['reminderSentAt' => 0], ['id' => 1]);
+        $this->lifecycleRun()->remind(self::NOW);
+        self::assertSame(['240.00', null], [number_format((float) $this->mails[1]['chargeAmount'], 2, '.', ''), $this->mails[1]['chargeMethod']]);
+
+        // Before an end: no amount.
+        $this->connection->update('tl_consho_subscription', ['reminderSentAt' => 0], ['id' => 1]);
+        $this->reminders[1] = new ReminderDue(1, 'WEB-00001-1', RenewalKind::Ends, self::NOW + 20 * self::DAY, self::NOW + 6 * self::DAY);
+        $this->lifecycleRun(billing: $billing)->remind(self::NOW);
+        self::assertArrayNotHasKey('chargeAmount', $this->mails[2]);
+    }
+
+    /**
      * Abo-7b (P71): "My subscriptions" from the root page of the order language — the
      * page the operator names in `consho_subscriptionsPage`; without it
      * null, and the mail links the product page.
@@ -196,7 +236,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
         return new ShopPageUrls($framework, new ShopResolver($framework), $urls);
     }
 
-    private function lifecycleRun(ShopPageUrls|null $pageUrls = null): SubscriptionLifecycleRun
+    private function lifecycleRun(ShopPageUrls|null $pageUrls = null, SubscriptionBillingMethod|null $billing = null): SubscriptionLifecycleRun
     {
         $lifecycle = $this->createMock(SubscriptionLifecycle::class);
         $lifecycle->method('remind')->willReturnCallback(function (int $id, int $now): ReminderDue|null {
@@ -228,7 +268,7 @@ final class SubscriptionLifecycleRunTest extends TestCase
         $source = $this->createStub(OrderConfirmationSourceInterface::class);
         $source->method('rootOf')->willReturn(1);
 
-        return new SubscriptionLifecycleRun($this->connection, $lifecycle, $links, $source, $mail, pageUrls: $pageUrls);
+        return new SubscriptionLifecycleRun($this->connection, $lifecycle, $links, $source, $mail, pageUrls: $pageUrls, billing: $billing);
     }
 
     /**

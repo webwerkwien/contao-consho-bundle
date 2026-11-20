@@ -1001,6 +1001,53 @@ final class OrderEventMailTest extends TestCase
     }
 
     /**
+     * Where it runs on, the reminder names the amount per period from the end
+     * of the term and how it is paid: via the mandate's method from that day
+     * (amount and date: the advance notice of a direct debit), or an invoice.
+     * Before an end, no amount.
+     */
+    public function testDieErinnerungNenntBetragUndAbbuchung(): void
+    {
+        $zone = date_default_timezone_get();
+        date_default_timezone_set('Europe/Vienna');
+
+        $reminder = [
+            'subscription' => 'WEB-00084-1', 'kind' => 'sameTerm', 'product' => 'E-Book',
+            'termEndsAt' => (new \DateTimeImmutable('2027-01-31 10:15'))->getTimestamp(),
+            'cancelUntil' => (new \DateTimeImmutable('2027-01-17 10:15'))->getTimestamp(),
+            'termLength' => 1, 'termUnit' => 'year', 'noticeDays' => 14, 'productUrl' => null,
+            'chargeAmount' => '238.8000', 'chargeCurrency' => 'EUR', 'chargeMonths' => 12,
+        ];
+
+        try {
+            self::assertTrue($this->mail()->subscriptionReminder(7, $reminder + ['chargeMethod' => 'SEPA-Lastschrift', 'chargeTaxed' => true], 'https://shop.test/x'));
+            self::assertTrue($this->mail()->subscriptionReminder(7, $reminder + ['chargeMethod' => null, 'chargeTaxed' => false], 'https://shop.test/x'));
+            self::assertTrue($this->mail()->subscriptionReminder(7, ['kind' => 'indefinite', 'chargeMonths' => 1, 'chargeMethod' => null] + $reminder, 'https://shop.test/x'));
+            self::assertTrue($this->mail()->subscriptionReminder(7, ['kind' => 'ends'] + $reminder, 'https://shop.test/x'));
+        } finally {
+            date_default_timezone_set($zone);
+        }
+
+        $html = array_map(static fn ($mail): string => html_entity_decode(strip_tags((string) $mail->getHtmlBody())), $this->transport->sent);
+
+        self::assertStringContainsString('Ab dem 31. Januar 2027 berechnen wir 238,80', $html[0]);
+        self::assertStringContainsString('/ Jahr, inkl. USt. nach dem derzeitigen Steuersatz.', $html[0]);
+        // Without tax (reverse charge): no rate to name.
+        self::assertStringNotContainsString('Steuersatz', $html[1]);
+        self::assertStringContainsString('über SEPA-Lastschrift ab, erstmals am 31. Januar 2027', $html[0]);
+        self::assertStringNotContainsString('Rechnung.', $html[0]);
+        self::assertStringNotContainsString('CONSHO.', $html[0]);
+
+        self::assertStringContainsString('berechnen wir 238,80', $html[1]);
+        self::assertStringContainsString('Sie erhalten dafür jeweils eine Rechnung.', $html[1]);
+        self::assertStringNotContainsString('buchen wir', $html[1]);
+
+        self::assertStringContainsString('/ Monat', $html[2]);
+
+        self::assertStringNotContainsString('berechnen wir', $html[3]);
+    }
+
+    /**
      * Abo-7, P62 (§ 312k Abs. 4 BGB): content of the cancellation, date and
      * time of receipt and the end of the contract; copy to the operator.
      */

@@ -511,8 +511,12 @@ class OrderEventMail
      *  - endsNoMonthly: an open-ended rule from before variant A billed
      *    otherwise than monthly — it ends
      *
-     * @param int                                                                                                                                                                                                  $orderId  an order of the subscription, for address and language
-     * @param array{subscription: string, kind: string, product: string, termEndsAt: int, cancelUntil: int, termLength: int, termUnit: string, noticeDays: int, productUrl: string|null, renewUrl?: string|null} $reminder
+     * Where it runs on, also what it costs from the end of the term (amount
+     * per period) and how it is paid: collected via the mandate's method from
+     * that day, or an invoice per period.
+     *
+     * @param int                                                                                                                                                                                                                                                                                                  $orderId  an order of the subscription, for address and language
+     * @param array{subscription: string, kind: string, product: string, termEndsAt: int, cancelUntil: int, termLength: int, termUnit: string, noticeDays: int, productUrl: string|null, renewUrl?: string|null, chargeAmount?: string, chargeCurrency?: string, chargeMonths?: int, chargeTaxed?: bool, chargeMethod?: string|null} $reminder
      *
      * @return bool whether the customer's mail left
      */
@@ -527,8 +531,15 @@ class OrderEventMail
         }
 
         $language = (string) ($order['language'] ?? '');
+        $months = $reminder['chargeMonths'] ?? 0;
 
         return $this->toCustomer('subscriptionReminder', $order, self::SUBSCRIPTION_REMINDER_TEMPLATE, $payload, [
+            // '' where nothing is charged after the term (it ends).
+            'chargePrice' => isset($reminder['chargeAmount']) && $months > 0 ? $this->money->format($reminder['chargeAmount'], $reminder['chargeCurrency'] ?? '', $language) : '',
+            'chargePriceKey' => 1 === $months ? 'perMonth' : (12 === $months ? 'perYear' : 'perMonths'),
+            'chargeMonths' => (string) $months,
+            'chargeTaxed' => $reminder['chargeTaxed'] ?? false,
+            'chargeMethod' => $reminder['chargeMethod'] ?? '',
             'subscription' => $reminder['subscription'],
             'kind' => $reminder['kind'],
             'product' => $reminder['product'],

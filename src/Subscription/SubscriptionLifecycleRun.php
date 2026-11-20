@@ -2,6 +2,7 @@
 
 namespace Webwerkwien\ContaoConshoBundle\Subscription;
 
+use Brick\Math\BigDecimal;
 use Doctrine\DBAL\Connection;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -39,6 +40,9 @@ class SubscriptionLifecycleRun
         private readonly ProductUrlGenerator|null $productUrls = null,
         // "Meine Abos" for "Lizenz verlängern" (Abo-7b, P71); optional likewise.
         private readonly ShopPageUrls|null $pageUrls = null,
+        // The method of the mandate, for "collected via … from …"; optional
+        // likewise — without it the reminder names the amount only.
+        private readonly SubscriptionBillingMethod|null $billing = null,
     ) {
     }
 
@@ -163,11 +167,74 @@ class SubscriptionLifecycleRun
                 'noticeDays' => (int) $subscription['noticeDays'],
                 'productUrl' => $this->productUrl($subscription, $order),
                 'renewUrl' => $this->renewUrl($subscription, $order),
-            ], $viewUrl);
+            ] + $this->nextCharge($due, $subscription, $order), $viewUrl);
         } catch (\Throwable $e) {
             $this->logger->error(\sprintf('The reminder of subscription %s was not sent: %s', $due->subscriptionNumber, $e->getMessage()), ['exception' => $e]);
 
             return false;
+        }
+    }
+
+    /**
+     * What the subscription costs after the term, where it runs on (sameTerm,
+     * indefinite): the amount of one period, how long a period is, and the
+     * method that collects it where a mandate charges. Before an end, nothing.
+     *
+     * The amount is the subscription's newest product line, gross: the price
+     * is frozen at the purchase (A9), so each follow-up bills the same line,
+     * and a discount of the first order is a line of its own. Only the tax
+     * can move it: the follow-up taxes at the rate of its day, so a taxed
+     * amount is announced "at the current rate".
+     *
+     * The method only where the mandate still charges; else the follow-up
+     * goes "on account" (P99), and the reminder says an invoice follows.
+     * Together with the date this lets the reminder carry the advance notice
+     * of a direct debit (amount and date); whether that notice is due, and
+     * how early, stays the payment module's and the operator's terms'.
+     *
+     * @param array<string, mixed> $subscription
+     * @param array<string, mixed> $order
+     *
+     * @return array{chargeAmount?: string, chargeCurrency?: string, chargeMonths?: int, chargeTaxed?: bool, chargeMethod?: string|null}
+     */
+    private function nextCharge(ReminderDue $due, array $subscription, array $order): array
+    {
+        if (!\in_array($this->kindOf($due), ['sameTerm', 'indefinite'], true)) {
+            return [];
+        }
+
+        try {
+            $line = $this->connection->fetchAssociative(
+                "SELECT i.lineTotal, i.taxAmount, o.currency FROM tl_consho_order_item i INNER JOIN tl_consho_order o ON o.id = i.pid
+                  WHERE i.id = ? OR (o.subscription = ? AND i.lineType = 'product')
+                  ORDER BY o.createdAt DESC, o.id DESC, i.id LIMIT 1",
+                [(int) $subscription['orderItem'], $due->subscriptionId],
+            );
+
+            if (false === $line) {
+                return [];
+            }
+
+            $method = null;
+
+            if (null !== $this->billing) {
+                $fallback = (string) $this->connection->fetchOne('SELECT fallbackLanguage FROM tl_consho_shop WHERE id = ?', [(int) $subscription['shop']]);
+                $method = $this->billing->mandateMethod($subscription, (string) $order['language'], $fallback)?->title;
+            }
+
+            return [
+                'chargeAmount' => (string) $line['lineTotal'],
+                'chargeCurrency' => (string) $line['currency'],
+                'chargeMonths' => SubscriptionBiller::periodMonths($subscription),
+                // With tax: the mail says the rate is today's — the follow-up
+                // taxes at the rate of its day (and may lose reverse charge).
+                'chargeTaxed' => !BigDecimal::of((string) $line['taxAmount'])->isZero(),
+                'chargeMethod' => $method,
+            ];
+        } catch (\Throwable $e) {
+            $this->logger->warning(\sprintf('The reminder of subscription %s goes without the amount: %s', $due->subscriptionNumber, $e->getMessage()));
+
+            return [];
         }
     }
 

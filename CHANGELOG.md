@@ -7,6 +7,18 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.7.5] – 2026-11-20
+
+### Added
+
+- The reminder before the end of a minimum term names the price where the subscription runs on: the amount per
+  period from the end of the term (with VAT "at the current rate", as a follow-up is taxed at the rate of its day),
+  and how it is paid — collected via the mandate's payment method from that day, or an invoice per period. With
+  amount and date it can serve as the advance notice of a SEPA direct debit; whether that is enough remains up to
+  the payment module and the shop's terms.
+- `SubscriptionBillingMethod::mandateMethod()`: the method that would charge a subscription's mandate today,
+  without the log line of `charging()`.
+
 ## [0.7.4] – 2026-11-17
 
 ### Fixed

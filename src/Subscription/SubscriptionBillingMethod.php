@@ -60,6 +60,24 @@ class SubscriptionBillingMethod
      */
     public function charging(array $subscription, string $language = '', string $fallback = ''): PaymentMethod|null
     {
+        $method = $this->mandateMethod($subscription, $language, $fallback);
+
+        if (null === $method && '' !== trim((string) ($subscription['mandate'] ?? '')) && (int) ($subscription['mandateMethod'] ?? 0) > 0 && null !== $this->handlers) {
+            $this->logger->warning(\sprintf('Subscription %s was billed "on account": the payment method %d of its mandate is not available any more.', $subscription['subscriptionNumber'] ?? '', (int) $subscription['mandateMethod']));
+        }
+
+        return $method;
+    }
+
+    /**
+     * The method that would charge the subscription's mandate today, or null —
+     * charging()'s answer without the log line, for a mail that announces
+     * the next charge (the reminder before the end of a term).
+     *
+     * @param array<string, mixed> $subscription the row
+     */
+    public function mandateMethod(array $subscription, string $language = '', string $fallback = ''): PaymentMethod|null
+    {
         $methodId = (int) ($subscription['mandateMethod'] ?? 0);
 
         if ('' === trim((string) ($subscription['mandate'] ?? '')) || $methodId < 1 || null === $this->handlers) {
@@ -71,8 +89,6 @@ class SubscriptionBillingMethod
                 return $method;
             }
         }
-
-        $this->logger->warning(\sprintf('Subscription %s was billed "on account": the payment method %d of its mandate is not available any more.', $subscription['subscriptionNumber'] ?? '', $methodId));
 
         return null;
     }
