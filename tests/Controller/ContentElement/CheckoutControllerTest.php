@@ -141,6 +141,8 @@ class CheckoutControllerTest extends TestCase
 
     private bool $termsRequired = false;
 
+    private string $customerType = 'consumer';
+
     /** F-3: the test's article is digital. */
     private bool $digital = false;
 
@@ -783,6 +785,19 @@ class CheckoutControllerTest extends TestCase
         // "Dieser Shop verlangt ein Konto" (this shop requires an account) would
         // be wrong — the shop allows guests, the subscription requires it.
         self::assertSame('subscription', $data['login_reason']);
+    }
+
+    /**
+     * The guarantee notice is owed to consumers only: a shop selling to
+     * businesses only links none, even with a page chosen at the start point.
+     */
+    public function testNurUnternehmenVerlinktKeineGewaehrleistungsSeite(): void
+    {
+        self::assertSame('https://example.org/bestellung.html', $this->render()['warranty_url']);
+
+        $this->customerType = 'business';
+
+        self::assertNull($this->render()['warranty_url']);
     }
 
     public function testOhneGastbestellungIstDerGrundDerShop(): void
@@ -1792,7 +1807,7 @@ class CheckoutControllerTest extends TestCase
             static fn (string $key): mixed => ['id' => self::ROOT, 'type' => 'root', 'rootId' => self::ROOT, 'language' => 'de'][$key] ?? null,
         );
         $root->method('__isset')->willReturn(true);
-        $root->method('row')->willReturn(['consho_shop' => self::SHOP, 'consho_currency' => 'EUR', 'consho_orderPage' => $this->orderPage]);
+        $root->method('row')->willReturn(['consho_shop' => self::SHOP, 'consho_currency' => 'EUR', 'consho_orderPage' => $this->orderPage, 'consho_warrantyPage' => self::ORDER_PAGE]);
 
         $shop = $this->createMock(ShopModel::class);
         $shop->method('__get')->willReturnCallback(
@@ -1805,6 +1820,7 @@ class CheckoutControllerTest extends TestCase
                 'deliveryCountries' => [] === $this->deliveryCountries ? null : serialize($this->deliveryCountries),
                 'ageVerifiedGroups' => null,
                 'termsRequired' => $this->termsRequired,
+                'customerType' => $this->customerType,
                 'buyButtonLabel' => 'paymentRequired',
             ][$key] ?? null,
         );

@@ -137,6 +137,15 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'reverseChargeNoteMissing' => 'Die Shop-Konfiguration „%shop%" kann Rechnungen mit Reverse Charge ausstellen (UID-Nummer und Lieferländer außerhalb des Heimatlands), hat aber keinen Hinweis dafür. Eine solche Rechnung ginge ohne Hinweis hinaus. Den Wortlaut legt der Betreiber fest, am Shop unter „Hinweis bei Reverse Charge".',
     'deliveryTimeMissing' => 'Die Shop-Konfiguration „%shop%" stellt mit einer gewählten Zahlungsart die Rechnung schon beim Kauf aus (etwa Vorkasse), hat aber keine Lieferzeit. Eine solche Rechnung entsteht vor dem Versand und soll den voraussichtlichen Lieferzeitraum nennen; ohne Lieferzeit bleibt die Angabe leer. Am Shop unter „Lieferzeit ab/bis (Werktage)" eintragen.',
     'noticeParamStripped' => 'Die Umgebungsvariable QUERY_PARAMS_ALLOW_LIST ist gesetzt und lässt diese Parameter nicht durch: %param%. Der geteilte Cache entfernt sie, bevor die Anfrage ankommt — der Checkout kommt dann nicht über den ersten Schritt, jeder Link zur Bestellseite endet mit 404, und eine abgelehnte Hinzufügung erscheint wortlos. Tragen Sie „consho_.*" in die Liste ein.',
+    'businessShopOpen' => 'Der Shop „%shop%" verkauft laut Kundentyp nur an Unternehmen, aber auch andere können kaufen: %reasons%. Als Unternehmer gilt in Consho nur, wer in einer Nettopreis-Gruppe des Shops ist (über eine geprüfte UID oder von Ihnen gesetzt). Ein Verbraucher, der hier kauft, bekommt weder Widerrufsrecht noch Gewährleistungs-Mitteilung. Gastbestellung ausschalten und Preise und Abo-Regeln auf die Nettopreis-Gruppen beschränken — oder den Kundentyp auf „Verbraucher" stellen.',
+    'businessWithdrawalPageSet' => 'Der Shop „%shop%" verkauft nur an Unternehmen, an diesen Startpunkten ist aber noch eine Seite „Vertrag widerrufen" gewählt: %roots%. Bestellungen ab der Umstellung haben kein Widerrufsrecht; Bestellungen von davor behalten ihre Frist, und ihr Widerruf läuft weiter über diese Seite. Consho ändert keine Seiten; die Auswahl erst leeren, wenn keine dieser Fristen mehr läuft.',
+];
+
+// The reasons of the finding "businessShopOpen".
+$GLOBALS['TL_LANG']['CONSHO']['businessOnly'] = [
+    'guests' => 'Bestellung ohne Konto ist an',
+    'articles' => 'Preise für Kunden außerhalb der Nettopreis-Gruppen bei %s',
+    'andMore' => '%s und %d weiteren',
 ];
 
 // The parts of the finding "product does not fit its kind" (DL5).

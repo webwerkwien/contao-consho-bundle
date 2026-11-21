@@ -70,12 +70,15 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
     ],
 
     'palettes' => [
-        '__selector__' => ['invoiceArchive'],
-        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups,vatIdNetGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},withdrawalDays,withdrawalGraceDays;{subscription_legend},subscriptionOperatorDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
+        '__selector__' => ['invoiceArchive', 'customerType'],
+        'default' => '{title_legend},title;{currency_legend},currencies;{language_legend},fallbackLanguage;{country_legend},country,deliveryCountries;{tax_legend},vatId,taxAtDestination;{customergroup_legend},customerGroup,netPriceGroups,ageVerifiedGroups,vatIdNetGroups;{methods_legend},shippingMethods,paymentMethods;{status_legend:hide},statusAfterPayment,statusAfterDelivery,statusWhenSettled;{checkout_legend},guestCheckout,termsRequired,buyButtonLabel,afterAddToCart;{withdrawal_legend},customerType;{subscription_legend},subscriptionOperatorDays;{privacy_legend},retentionYears,autoAnonymize;{invoice_legend},invoicing,invoiceCompany,invoiceLegalForm,invoiceStreet,invoicePostal,invoiceCity,invoiceCountry,invoiceContactEmail,invoiceLogo,deliveryDaysMin,deliveryDaysMax,remainderDeliveryDays,invoiceFooter,invoiceReverseChargeNote,eInvoice,invoiceArchive;{mail_legend},operatorName,operatorAddress,mailTransport',
     ],
 
     'subpalettes' => [
         'invoiceArchive' => 'invoiceArchiveFolder',
+        // A business-only shop has no withdrawal period (CustomerTypeListener
+        // sets both to 0), so the two fields are shown for consumers only.
+        'customerType_consumer' => 'withdrawalDays,withdrawalGraceDays',
     ],
 
     'fields' => [
@@ -541,7 +544,9 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
          * withdrawal is still taken and marked `afterWindow`.
          *
          * `mandatory` is off on purpose: 0 is a legitimate answer, and
-         * Contao's mandatory check refuses "0" as empty.
+         * Contao's mandatory check refuses "0" as empty. Not for a consumer
+         * shop delivering into the EU/EEA, though: CustomerTypeListener refuses
+         * 0 there, and a business-only shop gets 0 set (customerType).
          */
         'withdrawalDays' => [
             'inputType' => 'text',
@@ -554,6 +559,22 @@ $GLOBALS['TL_DCA']['tl_consho_shop'] = [
             'exclude' => true,
             'eval' => ['rgxp' => 'natural', 'maxlength' => 3, 'tl_class' => 'w50'],
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'default' => 7],
+        ],
+        /*
+         * Whom the shop sells to (CustomerType): consumers too, or businesses
+         * only. Business only switches off what consumer law asks for — the
+         * withdrawal period and the harmonised guarantee notice — and is frozen
+         * into every order. Drawn as one switch like "Brutto | Netto";
+         * submitOnChange shows or hides the withdrawal fields at once.
+         */
+        'customerType' => [
+            'inputType' => 'radio',
+            'exclude' => true,
+            'options' => ['consumer', 'business'],
+            'reference' => &$GLOBALS['TL_LANG']['tl_consho_shop']['customerTypes'],
+            'default' => 'consumer',
+            'eval' => ['mandatory' => true, 'submitOnChange' => true, 'tl_class' => 'clr consho-switch'],
+            'sql' => ['type' => 'string', 'length' => 16, 'default' => 'consumer'],
         ],
         // Abo-9 (P127): how long before the end the operator cancels a
         // subscription, and how long before a renewal a price change is

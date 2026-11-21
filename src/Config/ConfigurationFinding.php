@@ -300,6 +300,11 @@ enum ConfigurationFinding: string
     // (PaymentHeldIssueSource).
     case PaymentHeld = 'paymentHeld';
 
+    // A shop selling to businesses only whose setup lets others buy too, and
+    // one still pointing at a "Vertrag widerrufen" page (BusinessOnlyIssueSource).
+    case BusinessShopOpen = 'businessShopOpen';
+    case BusinessWithdrawalPageSet = 'businessWithdrawalPageSet';
+
     /**
      * The back end modules in which the finding is put right (H1): a user sees it if they may open ONE of them. An empty
      * list is for what no module repairs — a console command, an environment
@@ -340,6 +345,7 @@ enum ConfigurationFinding: string
             self::MailLogoTooLarge => ['consho_shop', 'files'],
             self::SubscriptionNotListed => ['consho_product', 'consho_subscription_rule'],
             self::SubscriptionSameTermOpen => ['consho_subscription_rule'],
+            self::BusinessShopOpen => ['consho_shop', 'consho_product', 'consho_subscription_rule'],
             self::ManufacturerEmailMissing, self::ManufacturerEuResponsibleMissing => ['consho_manufacturer'],
             self::StockLow => ['consho_stock'],
             self::WithdrawalsOpen, self::WithdrawalsUnassigned => ['consho_withdrawal'],
@@ -359,7 +365,7 @@ enum ConfigurationFinding: string
             self::WarrantyNoticeFileMissing, self::WithdrawalFunctionMissing, self::WithdrawalFunctionAdvised,
             self::ShippingCostsPageMissing, self::StartPointWithoutDomain, self::StartPointForwardsToProductPage, self::CancellationPageMissing,
             self::CustomerPageLocksOut, self::OrderPageProtected, self::LoginPageMissing, self::AccountPasswordPageMissing,
-            self::SubscriptionsPageMissing => ['page'],
+            self::SubscriptionsPageMissing, self::BusinessWithdrawalPageSet => ['page'],
             // The registration is a front end module of a theme.
             self::RegistrationPathMissing, self::RegistrationPathMissingNoGuests => ['themes'],
             self::PinnedProductMissing, self::MiniCartMissing, self::CheckoutElementMissing, self::CartElementMissing,
@@ -783,6 +789,22 @@ enum ConfigurationFinding: string
             // An order waits for money that may never come; the provider
             // decides, but someone should look. A warning.
             self::PaymentHeld => true,
+
+            /*
+             * Businesses only, and a consumer can buy all the same: the shop
+             * then sells without the withdrawal right and the guarantee notice
+             * that buyer is owed. A warning, not a lock — who is a business is
+             * not something the core can decide (a buyer outside the EU has no
+             * VIES number, and the operator puts them in a net group by hand).
+             *
+             * A "Vertrag widerrufen" page still chosen is left over once the
+             * orders from before the switch, which keep their frozen period,
+             * are past it; until then their withdrawal runs through it. Kept
+             * beyond that, it offers a withdrawal no order has, which
+             * promises a right nobody has. Nothing fails — a note.
+             */
+            self::BusinessShopOpen => true,
+            self::BusinessWithdrawalPageSet => false,
 
             // The checkout no longer offers a country the operator ticked
             // (E-5, V3). Said loudly, so it is not mistaken for a decision.

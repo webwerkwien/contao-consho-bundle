@@ -119,6 +119,22 @@ class DbalLegalReadinessIssueSourceTest extends TestCase
         self::assertSame(1, $this->only(ConfigurationFinding::WarrantyNoticeFileMissing)->shopId);
     }
 
+    /**
+     * Consumer law (§ 1 Abs 1 FAGG): a shop selling to businesses only owes
+     * neither page nor file. The privacy page stays required.
+     */
+    public function testNurUnternehmenBrauchtKeineGewaehrleistungsMitteilung(): void
+    {
+        $this->connection->update('tl_page', ['consho_warrantyPage' => 0, 'consho_warrantyNotice' => null, 'consho_privacyPage' => 0], ['id' => 1]);
+        $this->connection->update('tl_consho_shop', ['customerType' => 'business'], ['id' => 1]);
+
+        $findings = array_map(static fn ($i): string => $i->finding->value, $this->issues());
+
+        self::assertNotContains('warrantyNoticeMissing', $findings);
+        self::assertNotContains('warrantyNoticeFileMissing', $findings);
+        self::assertContains('privacyPageMissing', $findings);
+    }
+
     public function testEinOrdnerIstKeineGewaehrleistungsDatei(): void
     {
         $this->connection->update('tl_files', ['type' => 'folder'], ['id' => 20]);

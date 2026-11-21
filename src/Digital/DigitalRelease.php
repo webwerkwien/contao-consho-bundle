@@ -237,7 +237,12 @@ class DigitalRelease
      */
     private function periodOf(array $order): int|null
     {
-        $shop = $this->connection->fetchAssociative('SELECT withdrawalDays, withdrawalGraceDays FROM tl_consho_shop WHERE id = ?', [(int) $order['shop']]);
+        // Period and grace as frozen on the order row (tl_consho_order, every
+        // caller passes the full row), the shop's for orders written before
+        // they were.
+        $shop = self::given($order['withdrawalDays'] ?? null)
+            ?['withdrawalDays' => $order['withdrawalDays'], 'withdrawalGraceDays' => $order['withdrawalGraceDays'] ?? 0]
+            : $this->connection->fetchAssociative('SELECT withdrawalDays, withdrawalGraceDays FROM tl_consho_shop WHERE id = ?', [(int) $order['shop']]);
         $days = false === $shop ? 0 : (int) $shop['withdrawalDays'];
 
         if ($days <= 0) {

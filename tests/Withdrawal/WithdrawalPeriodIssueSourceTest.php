@@ -6,6 +6,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\DriverManager;
 use PHPUnit\Framework\TestCase;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
+use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
 use Webwerkwien\ContaoConshoBundle\Withdrawal\WithdrawalPeriodIssueSource;
 use Webwerkwien\ContaoConshoBundle\Tests\Dca\DcaSchema;
 
@@ -62,5 +63,15 @@ final class WithdrawalPeriodIssueSourceTest extends TestCase
         self::assertSame(['shop' => 'Testshop', 'days' => (string) $days, 'countries' => $expected], $issues[0]->context);
         self::assertSame(1, $issues[0]->shopId);
         self::assertTrue($issues[0]->finding->isWarning());
+    }
+
+    public function testNurUnternehmenWirdNichtGewarnt(): void
+    {
+        $this->connection->insert('tl_consho_shop', ['id' => 1, 'title' => 'Testshop', 'withdrawalDays' => 0, 'deliveryCountries' => serialize(['AT']), 'customerType' => 'business']);
+        $this->connection->insert('tl_consho_shop', ['id' => 2, 'title' => 'Verbraucher', 'withdrawalDays' => 0, 'deliveryCountries' => serialize(['AT'])]);
+
+        $issues = (new WithdrawalPeriodIssueSource($this->connection))->issues();
+
+        self::assertSame([2], array_map(static fn (ConfigurationIssue $issue): int => $issue->shopId, $issues));
     }
 }

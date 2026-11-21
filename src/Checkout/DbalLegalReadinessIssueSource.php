@@ -72,7 +72,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
     {
         return [
             ...$this->linkedPageIssues(ConfigurationFinding::PrivacyPageMissing, 'consho_privacyPage'),
-            ...$this->linkedPageIssues(ConfigurationFinding::WarrantyNoticeMissing, 'consho_warrantyPage'),
+            ...$this->linkedPageIssues(ConfigurationFinding::WarrantyNoticeMissing, 'consho_warrantyPage', true),
             ...$this->warrantyFileIssues(),
             ...$this->legalTextIssues(),
             ...$this->withdrawalFunctionIssues(),
@@ -94,9 +94,13 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
      * the buy click, so neither needs an element — a page is enough, and the
      * operator's own page at that.
      *
+     * The guarantee notice is consumer law (§ 1 Abs 1 FAGG): `$consumersOnly`
+     * leaves out the shops that sell to businesses only (CustomerType) — by a
+     * subquery in the same query, so the budget above stays as it is.
+     *
      * @return list<ConfigurationIssue>
      */
-    private function linkedPageIssues(ConfigurationFinding $finding, string $field): array
+    private function linkedPageIssues(ConfigurationFinding $finding, string $field, bool $consumersOnly = false): array
     {
         $rows = $this->connection->fetchAllAssociative(
             \sprintf(
@@ -104,6 +108,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                    FROM tl_page p
               LEFT JOIN tl_page target ON target.id = p.%1\$s
                   WHERE %2\$s
+                    %3\$s
                     AND (
                         p.%1\$s = 0
                         OR p.%1\$s IS NULL
@@ -115,6 +120,7 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                   ORDER BY p.id",
                 $field,
                 $this->liveRoot('p'),
+                $consumersOnly ? self::consumerShop('p') : '',
             ),
             ['now' => $this->minute()],
         );
@@ -131,7 +137,8 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
      * plainly there would send the operator looking in the wrong place.
      *
      * One more counting query in the budget above — a join on tl_files by
-     * uuid, which is indexed.
+     * uuid, which is indexed. Like the page, not for a shop that sells to
+     * businesses only.
      *
      * @return list<ConfigurationIssue>
      */
@@ -143,9 +150,11 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
                    FROM tl_page p
               LEFT JOIN tl_files f ON f.uuid = p.consho_warrantyNotice AND f.type = 'file'
                   WHERE %s
+                    %s
                     AND f.id IS NULL
                   ORDER BY p.id",
                 $this->liveRoot('p'),
+                self::consumerShop('p'),
             ),
             ['now' => $this->minute()],
         );
@@ -596,6 +605,21 @@ final class DbalLegalReadinessIssueSource implements SetupIssueSource
              AND %1\$s.published = 1
              AND (%1\$s.start = '' OR %1\$s.start <= :now)
              AND (%1\$s.stop = '' OR %1\$s.stop > :now)",
+            $alias,
+        );
+    }
+
+    /**
+     * A condition that keeps the start points of shops selling to consumers —
+     * every shop but one set to businesses only (CustomerType). A subquery on
+     * the primary key rather than a join, so it drops into any of the queries
+     * above. A shop that is gone counts as a consumer shop: the other
+     * conditions report that start point anyway.
+     */
+    private static function consumerShop(string $alias): string
+    {
+        return \sprintf(
+            "AND NOT EXISTS (SELECT 1 FROM tl_consho_shop cs WHERE cs.id = %s.consho_shop AND cs.customerType = 'business')",
             $alias,
         );
     }

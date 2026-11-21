@@ -42,6 +42,7 @@ enum SetupStep: string
                 F::HomeCountryMissing, F::InvoiceSenderIncomplete, F::TaxRateMissing, F::DeliveryTimeMissing,
                 F::ReverseChargeNoteMissing, F::RetentionPeriodMissing, F::EInvoiceIncomplete,
                 F::WithdrawalPeriodShort, F::AutomaticStatusCancels, F::InvoiceArchiveFolderUnsafe,
+                F::BusinessShopOpen,
             ],
             self::Mail => [F::MailTransportMissing],
             self::Shipping => [F::ShippingMethodMissing, F::ShippingPriceMissing, F::AgeGateMissing, F::DeliveryCountryWithoutShipping],

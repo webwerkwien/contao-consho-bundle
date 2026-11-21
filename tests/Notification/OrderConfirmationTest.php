@@ -62,6 +62,41 @@ class OrderConfirmationTest extends TestCase
     }
 
     /**
+     * The period frozen on the order decides, not today's shop: an order
+     * placed with 14 days keeps its link after the shop goes to 0, and one
+     * placed with 0 gets none while the shop has 14.
+     */
+    public function testDieEingefroreneFristEntscheidetUeberDenWiderrufslink(): void
+    {
+        $this->source->shopRow['withdrawalDays'] = 0;
+        $this->source->order['withdrawalDays'] = 14;
+        $this->confirmation()->send(7, 1, 'https://shop.test/bestellung?consho_order=abc', 1_758_800_000);
+        self::assertStringContainsString('Vertrag widerrufen', (string) $this->transport->sent[0]->getHtmlBody());
+
+        $this->source->shopRow['withdrawalDays'] = 14;
+        $this->source->order['withdrawalDays'] = 0;
+        $this->transport = new SpyTransport();
+        $this->confirmation()->send(7, 1, 'https://shop.test/bestellung?consho_order=abc', 1_758_800_000);
+        self::assertStringNotContainsString('Vertrag widerrufen', (string) $this->transport->sent[0]->getHtmlBody());
+    }
+
+    /**
+     * Businesses only (§ 1 Abs 1 FAGG): no guarantee notice is attached, by
+     * the type frozen on the order. An order from before the field gets it.
+     */
+    public function testNurUnternehmenBekommtKeineGewaehrleistungsMitteilung(): void
+    {
+        $this->source->order['customerType'] = 'business';
+        $this->confirmation()->send(7, 1, 'https://shop.test/o', 1_758_800_000);
+        self::assertSame(['RE-00014.pdf'], array_map(static fn ($part): string => (string) $part->getFilename(), $this->transport->sent[0]->getAttachments()));
+
+        $this->source->order['customerType'] = null;
+        $this->transport = new SpyTransport();
+        $this->confirmation()->send(7, 1, 'https://shop.test/o', 1_758_800_000);
+        self::assertSame(['RE-00014.pdf', 'gewaehrleistung-de.pdf'], array_map(static fn ($part): string => (string) $part->getFilename(), $this->transport->sent[0]->getAttachments()));
+    }
+
+    /**
      * F-3: The confirmation on a durable medium records consent and
      * acknowledgement (§ 7 Abs. 3 FAGG, § 312f Abs. 3 BGB) — translated in
      * both languages, and only where consent was given.

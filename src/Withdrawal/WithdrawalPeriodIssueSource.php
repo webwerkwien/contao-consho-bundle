@@ -39,7 +39,9 @@ final class WithdrawalPeriodIssueSource implements ConfigurationIssueSource
     {
         $issues = [];
 
-        foreach ($this->connection->fetchAllAssociative('SELECT id, title, withdrawalDays, deliveryCountries FROM tl_consho_shop ORDER BY id') as $row) {
+        // Not for a shop selling to businesses only: no consumer is owed a
+        // period there (CustomerType).
+        foreach ($this->connection->fetchAllAssociative("SELECT id, title, withdrawalDays, deliveryCountries FROM tl_consho_shop WHERE customerType != 'business' ORDER BY id") as $row) {
             $days = (int) $row['withdrawalDays'];
 
             if ($days >= self::STATUTORY_DAYS) {

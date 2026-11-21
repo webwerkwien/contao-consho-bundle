@@ -25,6 +25,7 @@ use Contao\Model;
  * @property string|null $ageVerifiedGroups
  * @property bool        $guestCheckout
  * @property bool        $termsRequired
+ * @property string      $customerType     consumer or business (Customer\CustomerType)
  * @property string      $buyButtonLabel
  * @property string      $invoiceCompany
  * @property string      $invoiceLegalForm

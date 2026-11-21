@@ -845,6 +845,31 @@ class DigitalReleaseTest extends TestCase
         self::assertFalse($release->paymentReady($this->asStrings([...$this->order, 'paymentSettledAt' => null])));
     }
 
+    /**
+     * The period frozen on the order, not today's shop (14 days): 0 frozen
+     * releases at once, 30 waits 16 days longer. NULL and '' read the shop.
+     */
+    public function testDieEingefroreneFristGiltNichtDieDesShops(): void
+    {
+        $release = $this->release();
+
+        self::assertNull($release->periodEndsAt([...$this->order, 'withdrawalDays' => 0, 'withdrawalGraceDays' => 0]));
+        self::assertNull($release->periodEndsAt($this->asStrings([...$this->order, 'withdrawalDays' => 0, 'withdrawalGraceDays' => 0])));
+        self::assertSame(1_759_269_599 + 16 * 86_400, $release->periodEndsAt([...$this->order, 'withdrawalDays' => 30, 'withdrawalGraceDays' => 0]));
+        self::assertSame(1_759_269_599, $release->periodEndsAt($this->asStrings([...$this->order, 'withdrawalDays' => null, 'withdrawalGraceDays' => null])));
+    }
+
+    /**
+     * The allowance frozen on the order counts, not the shop's (2 here): 30
+     * days plus 3 days of allowance.
+     */
+    public function testDerEingefrorenePufferGiltNichtDerDesShops(): void
+    {
+        $this->connection->update('tl_consho_shop', ['withdrawalGraceDays' => 2], ['id' => 1]);
+
+        self::assertSame(1_759_269_599 + 19 * 86_400, $this->release()->periodEndsAt($this->asStrings([...$this->order, 'withdrawalDays' => 30, 'withdrawalGraceDays' => 3])));
+    }
+
     private function handler(): DeliveryHandlerInterface
     {
         return new class($this) implements DeliveryHandlerInterface {

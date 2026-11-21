@@ -13,6 +13,7 @@ use Symfony\Component\Mime\Email;
 use Webwerkwien\ContaoConshoBundle\Catalog\DurabilityGuarantees;
 use Webwerkwien\ContaoConshoBundle\Catalog\GuaranteeYears;
 use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
+use Webwerkwien\ContaoConshoBundle\Customer\CustomerType;
 use Webwerkwien\ContaoConshoBundle\Digital\DigitalRelease;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPayloadBuilder;
 use Webwerkwien\ContaoConshoBundle\Document\DocumentPdfInterface;
@@ -229,8 +230,10 @@ final class OrderConfirmation implements OrderConfirmationInterface
          * The withdrawal function (D-2): the order page, opened on the
          * declaration. Only where the shop has one — a line "Vertrag
          * widerrufen" leading to a page without the function would mislead.
+         * The period frozen on the order, the shop's for older orders.
          */
-        $withdrawalUrl = $shop['withdrawalDays'] > 0 && '' !== $viewUrl
+        $days = null !== ($order['withdrawalDays'] ?? null) ? (int) $order['withdrawalDays'] : $shop['withdrawalDays'];
+        $withdrawalUrl = $days > 0 && '' !== $viewUrl
             ? $viewUrl.(str_contains($viewUrl, '?') ? '&' : '?').OrderPageWithdrawal::FORM_PARAM.'=1'
             : null;
 
@@ -275,7 +278,13 @@ final class OrderConfirmation implements OrderConfirmationInterface
                 'language' => (string) ($order['language'] ?? ''),
             ])[0] ?? throw new \RuntimeException('the order has no e-mail address');
 
-            $notice = $this->warranty->forRoot($rootId);
+            /*
+             * The harmonised guarantee notice is owed to consumers (§ 1 Abs 1,
+             * § 7 Abs 3 FAGG): not attached to an order of a shop selling to
+             * businesses only, by the type frozen on the order. An order from
+             * before the field reads as a consumer's, as it always did.
+             */
+            $notice = CustomerType::Business === CustomerType::of($order['customerType'] ?? null) ? null : $this->warranty->forRoot($rootId);
             $view = $this->view->build(['type' => 'invoice'], $payload);
             $guarantees = $this->guarantees($orderId);
 

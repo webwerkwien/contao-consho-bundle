@@ -35,7 +35,8 @@ class SubscriptionOperatorDaysDcaTest extends TestCase
     {
         $palette = $GLOBALS['TL_DCA']['tl_consho_shop']['palettes']['default'];
 
-        self::assertStringContainsString('withdrawalGraceDays;{subscription_legend},subscriptionOperatorDays;', $palette);
+        self::assertStringContainsString('{withdrawal_legend},customerType;{subscription_legend},subscriptionOperatorDays;', $palette);
+        self::assertSame('withdrawalDays,withdrawalGraceDays', $GLOBALS['TL_DCA']['tl_consho_shop']['subpalettes']['customerType_consumer']);
     }
 
     public function testDieLegendeUndDasFeldSindInBeidenSprachenBenannt(): void

@@ -431,6 +431,24 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
             'sql' => ['type' => 'boolean', 'default' => false],
         ],
 
+        /*
+         * The shop's customer type and withdrawal period as they stood when
+         * the order was written (DbalOrderWriter). The withdrawal window,
+         * the confirmation and the release of digital lines read these, so a
+         * later change at the shop does not move the window of an order
+         * already placed. NULL for orders from before: they read the shop.
+         * No palette — shown nowhere, set once.
+         */
+        'customerType' => [
+            'sql' => ['type' => 'string', 'length' => 16, 'notnull' => false],
+        ],
+        'withdrawalDays' => [
+            'sql' => ['type' => 'smallint', 'unsigned' => true, 'notnull' => false],
+        ],
+        'withdrawalGraceDays' => [
+            'sql' => ['type' => 'smallint', 'unsigned' => true, 'notnull' => false],
+        ],
+
         // Abo-4 (P31): the subscription a follow-up order bills, 0 for a
         // purchase. A purchase that starts a subscription is found through
         // tl_consho_subscription.firstOrder.

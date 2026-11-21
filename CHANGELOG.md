@@ -5,6 +5,38 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.9.0] – 2026-11-21
+
+### Before updating
+
+- Run the database update: new shop field `customerType`, new order fields `customerType`, `withdrawalDays`,
+  `withdrawalGraceDays`. A migration fills the new order fields for existing orders from their shop as it stands at
+  the update; those orders keep that withdrawal period from then on.
+- Existing shops keep the customer type "Consumers". A consumer shop that delivers into the EU or the EEA can no
+  longer be saved with a withdrawal period changed to 0; an existing 0 stays until the customer type or the delivery
+  countries change, and the finding `withdrawalPeriodShort` keeps pointing it out. A shop that sells to businesses
+  only should be switched to "Businesses only (B2B)" first.
+
+### Added
+
+- **Shop configuration: customer type "Consumers | Businesses only (B2B)"** (`customerType`, switch in the
+  withdrawal section). Businesses only: withdrawal period and delivery allowance are set to 0 and hidden, the
+  checkout links no guarantee notice page, and order confirmations carry no guarantee notice file. Switching back to
+  consumers, or adding an EU/EEA delivery country while the period is 0, sets 14 days and an allowance of 7 (an
+  existing allowance is kept). Applies in the back end and through the console alike.
+- **Finding `businessShopOpen`** (warning): a business-only shop with guest checkout on, or with published articles
+  that customers outside the net price groups can buy.
+- **Finding `businessWithdrawalPageSet`** (note): a business-only shop whose start points still name a "Withdraw from
+  contract" page.
+
+### Changed
+
+- **Every order freezes the shop's customer type, withdrawal period and delivery allowance.** The withdrawal window,
+  the withdrawal link in the order confirmation and the release of digital lines read them from the order, so a later
+  change at the shop no longer moves the window of an order already placed.
+- Business-only shops no longer get the findings `warrantyNoticeMissing`, `warrantyNoticeFileMissing` and
+  `withdrawalPeriodShort`.
+
 ## [0.8.0] – 2026-11-20
 
 ### Before updating

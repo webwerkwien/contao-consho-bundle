@@ -42,6 +42,7 @@ use Webwerkwien\ContaoConshoBundle\Checkout\MemberCheckoutDefaults;
 use Webwerkwien\ContaoConshoBundle\Checkout\MethodOption;
 use Webwerkwien\ContaoConshoBundle\Checkout\MethodSettings;
 use Webwerkwien\ContaoConshoBundle\Checkout\PurchaseProblem;
+use Webwerkwien\ContaoConshoBundle\Customer\CustomerType;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Customer\MemberVatId;
 use Webwerkwien\ContaoConshoBundle\Order\BasketGoneAtPurchase;
@@ -428,7 +429,9 @@ class CheckoutController extends AbstractContentElementController
 
         $template->set('legal_texts', $this->legalLinks($root));
         $template->set('privacy_url', $this->pageUrls->privacyOfPage($page));
-        $template->set('warranty_url', $this->pageUrls->warrantyOfPage($page));
+        // The guarantee notice is owed to consumers only (§ 1 Abs 1 FAGG):
+        // no link in a shop selling to businesses only, even where a page is set.
+        $template->set('warranty_url', CustomerType::Business === CustomerType::of($shop->customerType) ? null : $this->pageUrls->warrantyOfPage($page));
         $template->set('terms_required', (bool) $shop->termsRequired);
         $template->set('digital_consent', $this->asksDigitalConsent($shop, $state));
         // Which sentences the box carries (Abo-2, P14): content, service, or both.

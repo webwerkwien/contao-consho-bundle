@@ -137,6 +137,15 @@ $GLOBALS['TL_LANG']['CONSHO']['findings'] = [
     'reverseChargeNoteMissing' => 'Shop configuration "%shop%" can issue reverse charge invoices (a VAT ID and delivery countries outside the home country) but has no note for them. Such an invoice would go out without one. The operator sets the wording, at the shop under "Reverse charge note".',
     'deliveryTimeMissing' => 'Shop configuration "%shop%" issues the invoice at the purchase with a selected payment method (prepayment, for instance) but has no delivery time. Such an invoice is written before shipping and should state the expected delivery period; without a delivery time it stays empty. Set "Delivery time from/to (working days)" at the shop.',
     'noticeParamStripped' => 'The environment variable QUERY_PARAMS_ALLOW_LIST is set and does not let these parameters through: %param%. The shared cache strips them before the request arrives — the checkout then never leaves its first step, every link to an order page ends in a 404, and a refused add reaches the visitor as silence. Add "consho_.*" to the list.',
+    'businessShopOpen' => 'By its customer type the shop "%shop%" sells to businesses only, but others can buy too: %reasons%. In Consho a business is whoever is in a net price group of the shop (through a verified VAT ID or set by you). A consumer buying here gets neither a withdrawal right nor the guarantee notice. Switch guest checkout off and limit prices and subscription rules to the net price groups — or set the customer type to "Consumers".',
+    'businessWithdrawalPageSet' => 'The shop "%shop%" sells to businesses only, but these start points still name a "Withdraw from contract" page: %roots%. Orders from the switch on carry no withdrawal right; orders from before keep their period, and their withdrawal still runs through this page. Consho changes no pages; clear the selection only once none of those periods is running.',
+];
+
+// The reasons of the finding "businessShopOpen".
+$GLOBALS['TL_LANG']['CONSHO']['businessOnly'] = [
+    'guests' => 'guest checkout is on',
+    'articles' => 'prices for customers outside the net price groups for %s',
+    'andMore' => '%s and %d more',
 ];
 
 // The parts of the finding "product does not fit its kind" (DL5).

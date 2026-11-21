@@ -8,8 +8,8 @@ use Webwerkwien\ContaoConshoBundle\Order\OrderBalance;
 use Webwerkwien\ContaoConshoBundle\Order\OrderBalanceReaderInterface;
 
 /**
- * The withdrawal window of a stored order: the shop's period and grace, the
- * balance, and the last shipment.
+ * The withdrawal window of a stored order: the period and grace frozen on it
+ * (the shop's, for older orders), the balance, and the last shipment.
  *
  * "Last shipment" is the later of the typed shipping date and the moment the
  * delivery was reported, over REPORTED deliveries only. Later of the two on
@@ -27,8 +27,12 @@ final class WithdrawalWindowReader
 
     public function of(int $orderId): WithdrawalWindow|null
     {
+        // Period and grace as frozen on the order; the shop's only for orders
+        // written before they were (tl_consho_order.withdrawalDays).
         $shop = $this->connection->fetchAssociative(
-            'SELECT s.withdrawalDays, s.withdrawalGraceDays, o.subscription
+            'SELECT COALESCE(o.withdrawalDays, s.withdrawalDays) AS withdrawalDays,
+                    COALESCE(o.withdrawalGraceDays, s.withdrawalGraceDays) AS withdrawalGraceDays,
+                    o.subscription
                FROM tl_consho_order o
                JOIN tl_consho_shop s ON s.id = o.shop
               WHERE o.id = ?',

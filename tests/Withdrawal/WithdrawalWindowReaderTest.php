@@ -58,6 +58,33 @@ final class WithdrawalWindowReaderTest extends TestCase
     }
 
     /**
+     * Period and grace frozen on the order win over the shop's: a shop
+     * switched to businesses only (0/0) does not close the window of an
+     * order placed before.
+     */
+    public function testDieEingefroreneFristGiltNichtDieDesShops(): void
+    {
+        $this->connection->update('tl_consho_order', ['withdrawalDays' => 30, 'withdrawalGraceDays' => 0], ['id' => self::ORDER]);
+        $this->connection->update('tl_consho_shop', ['withdrawalDays' => 0, 'withdrawalGraceDays' => 0], ['id' => 1]);
+        $this->deliver(1, '2026-10-01 10:00', '2026-10-03 09:00', '2');
+
+        self::assertSame($this->at('2026-11-02 23:59:59'), $this->reader()->of(self::ORDER)?->closesAt);
+    }
+
+    /**
+     * The allowance frozen on the order counts, not the shop's: 30 days plus
+     * 3, the shop's 5 ignored.
+     */
+    public function testDerEingefrorenePufferGiltNichtDerDesShops(): void
+    {
+        $this->connection->update('tl_consho_order', ['withdrawalDays' => 30, 'withdrawalGraceDays' => 3], ['id' => self::ORDER]);
+        $this->connection->update('tl_consho_shop', ['withdrawalDays' => 30, 'withdrawalGraceDays' => 5], ['id' => 1]);
+        $this->deliver(1, '2026-10-01 10:00', '2026-10-03 09:00', '2');
+
+        self::assertSame($this->at('2026-11-05 23:59:59'), $this->reader()->of(self::ORDER)?->closesAt);
+    }
+
+    /**
      * RK-5 (spec 3.3): whether a replacement starts the period anew is not
      * established; the window stays with the original shipment.
      */
