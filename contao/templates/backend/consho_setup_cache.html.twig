@@ -8,6 +8,7 @@
     <p class="consho-setup__help">{{ l.cacheHelp|default('') }}</p>
 
     {% for root in cache.roots %}
+        <div class="consho-setup__cache-root">
         <p>{{ root.text }}</p>
 
         {% if root.canEnable %}
@@ -27,11 +28,12 @@
             {% endfor %}
             </ul>
         {% endif %}
+        </div>
     {% endfor %}
 
     {% if cache.probed %}
-        <p class="tl_gray">{{ l.probeNote|default('') }}</p>
+        <p class="tl_gray consho-setup__probe">{{ l.probeNote|default('') }}</p>
     {% elseif cache.probeUrl %}
-        <p><a href="{{ cache.probeUrl }}" class="tl_submit">{{ l.probe|default('Jetzt messen') }}</a></p>
+        <p class="consho-setup__probe"><a href="{{ cache.probeUrl }}" class="tl_submit">{{ l.probe|default('Jetzt messen') }}</a></p>
     {% endif %}
 </section>

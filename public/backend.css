@@ -210,8 +210,16 @@ a.consho-operation--create:is(:hover, :focus-visible) img {
  * see BackendSystemMessagesListener.
  */
 .consho-ack {
-    display: inline;
-    margin: 0;
+    margin: 2px 0 0;
+}
+
+/*
+ * Several findings in one box: Contao sets no margin between paragraphs
+ * there, so without a gap one finding runs into the next, and a note's
+ * button reads as if it belonged to the note below it.
+ */
+.consho-findings > * + * {
+    margin-top: 12px;
 }
 
 .consho-ack__button {
@@ -708,6 +716,19 @@ a.consho-dashboard__box:hover {
 .consho-setup__badge--open { color: var(--red, #c7241f); }
 .consho-setup__badge--attention { color: var(--orange, #e67300); }
 
+/*
+ * Findings run over several lines; Contao's back end leaves them packed tight.
+ * Its buttons have a fixed height of 30px with 7px padding: an inherited
+ * line height pushes the label down, so they keep a line of exactly one em.
+ */
+.consho-setup__shop {
+    line-height: 1.5;
+}
+
+.consho-setup__shop .tl_submit {
+    line-height: 1;
+}
+
 .consho-setup__help,
 .consho-setup__finding,
 .consho-setup__links {
@@ -726,6 +747,12 @@ a.consho-dashboard__box:hover {
 /* The cache is neutral: no state, no warning colour on the box (I4b). */
 .consho-setup__cache {
     margin-top: 16px;
+}
+
+/* One start point each: its sentence, then its button. */
+.consho-setup__cache-root,
+.consho-setup__probe {
+    margin-top: 14px;
 }
 
 .consho-setup__measured {

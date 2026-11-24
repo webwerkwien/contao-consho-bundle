@@ -215,7 +215,9 @@ class BackendSystemMessagesListener implements ResetInterface
                 continue;
             }
 
-            $notes[] = $line.$this->acknowledgeButton($issue);
+            // One block per note, so the button visibly belongs to the
+            // sentence above it and not to the next one.
+            $notes[] = '<div class="consho-note">'.$line.$this->acknowledgeButton($issue).'</div>';
         }
 
         return ['warnings' => $warnings, 'notes' => $notes];
@@ -330,7 +332,7 @@ class BackendSystemMessagesListener implements ResetInterface
             return '';
         }
 
-        return \sprintf('<div class="%s">%s</div>', $class, implode('', $lines));
+        return \sprintf('<div class="%s consho-findings">%s</div>', $class, implode('', $lines));
     }
 
     /**

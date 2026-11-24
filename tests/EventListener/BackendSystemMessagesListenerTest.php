@@ -165,9 +165,13 @@ class BackendSystemMessagesListenerTest extends TestCase
         ))->summary();
 
         self::assertSame([2, 1], [$summary['warnings'], $summary['notes']]);
-        self::assertStringStartsWith('<div class="tl_error">', $summary['warningsHtml']);
+        self::assertStringStartsWith('<div class="tl_error consho-findings">', $summary['warningsHtml']);
+        self::assertStringStartsWith('<div class="tl_info consho-findings">', $summary['notesHtml']);
         self::assertSame(2, substr_count($summary['warningsHtml'], '<p'), 'die Liste zeigt, was der Kasten zählt');
         self::assertSame(1, substr_count($summary['notesHtml'], 'name="consho_ack"'));
+        // The button stands in one block with its own sentence, not loose
+        // between two notes.
+        self::assertMatchesRegularExpression('#<div class="consho-note"><p>[^<]*</p><form [^>]*class="consho-ack">.*?</form></div>#s', $summary['notesHtml']);
     }
 
     /**

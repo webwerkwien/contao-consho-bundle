@@ -5,6 +5,14 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.9.2] – 2026-11-24
+
+### Fixed
+
+- Back end: notes in the dashboard dialog and on the start page are spaced apart, and each "Zur Kenntnis genommen"
+  stands with its own note instead of reading as part of the next one. The setup page gives findings more line
+  height and separates the page cache entries of each start point. (Dashboard, I-5)
+
 ## [0.9.1] – 2026-11-24
 
 ### Fixed
