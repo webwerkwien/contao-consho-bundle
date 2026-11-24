@@ -4,6 +4,7 @@ namespace Webwerkwien\ContaoConshoBundle\Checkout;
 
 use Doctrine\DBAL\Connection;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
+use Webwerkwien\ContaoConshoBundle\Catalog\ProductKind;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationCheck;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationFinding;
 use Webwerkwien\ContaoConshoBundle\Config\ConfigurationIssue;
@@ -24,7 +25,9 @@ use Webwerkwien\ContaoConshoBundle\Shipping\DbalShippingMethodRepository;
  *
  * getSystemMessages() runs several times per back end page (block B, section
  * 10). Every query here answers a number or a short list of shop titles, never
- * a join across the catalogue.
+ * a join across the catalogue. The one count over a shop's products
+ * (shipsNothing()) runs only where a shipping finding would otherwise be
+ * raised.
  *
  * ── What is deliberately NOT here ─────────────────────────────────────────
  *
@@ -237,6 +240,10 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
             );
 
             foreach ($this->byShop($rows) as $shopId => $titles) {
+                if (ConfigurationFinding::ShippingCostsPageMissing === $finding && $this->shipsNothing($shopId)) {
+                    continue;
+                }
+
                 $issues[] = new ConfigurationIssue(
                     $finding,
                     ['count' => (string) \count($titles), 'pages' => implode(', ', $titles)],
@@ -395,6 +402,10 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
                     continue;
                 }
 
+                if (ConfigurationFinding::ShippingMethodMissing === $finding && $this->shipsNothing((int) $row['id'])) {
+                    continue;
+                }
+
                 $issues[] = new ConfigurationIssue(
                     $finding,
                     ['shops' => (string) $row['title']],
@@ -404,5 +415,41 @@ final class DbalCheckoutReadinessIssueSource implements SetupIssueSource
         }
 
         return $issues;
+    }
+
+    /**
+     * Whether the shop sells products and none of them is shipped (block F,
+     * F14). A basket of such products gets the electronic delivery, which
+     * exists only in code and needs nothing set up — so neither a shipping
+     * method nor a shipping costs page is missing.
+     *
+     * The kind as the checkout reads it: at the main product's type, no type
+     * or an unknown one counting as physical (ProductKind::stored()). Published
+     * products assigned to the shop only — what is not sold ships nothing. A
+     * shop with no products at all is being set up, and most shops ship: it
+     * keeps the finding.
+     *
+     * Asked only where a finding would otherwise be raised, so a shop that is
+     * set up pays nothing for it.
+     */
+    private function shipsNothing(int $shopId): bool
+    {
+        $unshipped = array_values(array_map(
+            static fn (ProductKind $kind): string => $kind->value,
+            array_filter(ProductKind::cases(), static fn (ProductKind $kind): bool => !$kind->isPhysical()),
+        ));
+
+        $row = $this->connection->fetchAssociative(
+            'SELECT COUNT(*) AS total,
+                    SUM(CASE WHEN t.kind IS NULL OR t.kind NOT IN (?) THEN 1 ELSE 0 END) AS physical
+               FROM tl_consho_product p
+          LEFT JOIN tl_consho_product_type t ON t.id = p.productType
+              WHERE p.pid = 0 AND p.published = 1
+                AND EXISTS (SELECT 1 FROM tl_consho_product_shop ps WHERE ps.pid = p.id AND ps.shop = ?)',
+            [$unshipped, $shopId],
+            [\Doctrine\DBAL\ArrayParameterType::STRING, \Doctrine\DBAL\ParameterType::INTEGER],
+        );
+
+        return false !== $row && (int) $row['total'] > 0 && 0 === (int) $row['physical'];
     }
 }

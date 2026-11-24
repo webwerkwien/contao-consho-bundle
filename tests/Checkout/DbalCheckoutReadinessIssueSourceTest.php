@@ -31,6 +31,9 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         DcaSchema::create($this->connection, 'tl_consho_shop');
         DcaSchema::create($this->connection, 'tl_consho_shipping_method');
         DcaSchema::create($this->connection, 'tl_consho_payment_method');
+        DcaSchema::create($this->connection, 'tl_consho_product');
+        DcaSchema::create($this->connection, 'tl_consho_product_type');
+        DcaSchema::create($this->connection, 'tl_consho_product_shop');
 
         // Mail transport and home country set: they are issues here too,
         // but should not disturb the other tests.
@@ -186,6 +189,87 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
         $this->connection->update('tl_consho_shipping_method', ['taxClass' => 0], ['id' => 4]);
 
         self::assertSame(ConfigurationFinding::ShippingMethodMissing, $this->issues()[0]->finding);
+    }
+
+    // ── Shops that ship nothing (block F, F14) ───────────────────────────────
+
+    /**
+     * A basket of digital goods gets the electronic delivery, which exists
+     * only in code — nothing to set up. A shop selling nothing else needs no
+     * shipping method and no shipping costs page.
+     */
+    public function testEinShopNurMitDigitalemBrauchtKeineVersandart(): void
+    {
+        $this->vollstaendig();
+        $this->ohneVersand();
+        $this->produkt(30, 'digital');
+        $this->produkt(31, 'service');
+        $this->produkt(32, 'voucher');
+
+        self::assertSame([], $this->issues());
+    }
+
+    public function testEinPhysischesProduktVerlangtDieVersandartWieder(): void
+    {
+        $this->vollstaendig();
+        $this->ohneVersand();
+        $this->produkt(30, 'digital');
+        $this->produkt(31, 'physical');
+
+        self::assertSame(
+            [ConfigurationFinding::ShippingCostsPageMissing, ConfigurationFinding::ShippingMethodMissing],
+            $this->findings(),
+        );
+    }
+
+    /**
+     * No type, or a type that no longer exists, counts as physical — as in
+     * the checkout (ProductKind::stored()).
+     */
+    public function testEinProduktOhneTypGiltAlsPhysisch(): void
+    {
+        $this->vollstaendig();
+        $this->ohneVersand();
+        $this->produkt(30, 'digital');
+        $this->connection->insert('tl_consho_product', ['id' => 31, 'pid' => 0, 'title' => 'Ohne Typ', 'productType' => 99, 'published' => 1]);
+        $this->connection->insert('tl_consho_product_shop', ['pid' => 31, 'shop' => 1]);
+
+        self::assertSame(
+            [ConfigurationFinding::ShippingCostsPageMissing, ConfigurationFinding::ShippingMethodMissing],
+            $this->findings(),
+        );
+    }
+
+    /**
+     * A shop with no products yet is being set up, and most shops ship: the
+     * finding stays until there is something to tell digital from physical.
+     */
+    public function testEinShopOhneProdukteBrauchtWeiterEineVersandart(): void
+    {
+        $this->vollstaendig();
+        $this->ohneVersand();
+
+        self::assertSame(
+            [ConfigurationFinding::ShippingCostsPageMissing, ConfigurationFinding::ShippingMethodMissing],
+            $this->findings(),
+        );
+    }
+
+    /**
+     * Only what is sold counts: an unpublished physical product, or one of
+     * another shop, does not make this shop ship.
+     */
+    public function testUnveroeffentlichtesOderFremdesPhysischesZaehltNicht(): void
+    {
+        $this->vollstaendig();
+        $this->ohneVersand();
+        $this->produkt(30, 'digital');
+        $this->produkt(31, 'physical');
+        $this->connection->update('tl_consho_product', ['published' => 0], ['id' => 31]);
+        $this->produkt(32, 'physical');
+        $this->connection->update('tl_consho_product_shop', ['shop' => 2], ['pid' => 32]);
+
+        self::assertSame([], $this->issues());
     }
 
     public function testEinShopOhneZahlungsartWirdGemeldet(): void
@@ -393,6 +477,27 @@ class DbalCheckoutReadinessIssueSourceTest extends TestCase
     private function issues(): array
     {
         return (new DbalCheckoutReadinessIssueSource($this->connection, new ConfigurationCheck()))->issues();
+    }
+
+    /**
+     * @return list<ConfigurationFinding>
+     */
+    private function findings(): array
+    {
+        return array_map(static fn (ConfigurationIssue $issue): ConfigurationFinding => $issue->finding, $this->issues());
+    }
+
+    private function ohneVersand(): void
+    {
+        $this->connection->update('tl_consho_shop', ['shippingMethods' => null], ['id' => 1]);
+        $this->connection->update('tl_page', ['consho_shippingCostsPage' => 0], ['id' => 1]);
+    }
+
+    private function produkt(int $id, string $kind): void
+    {
+        $this->connection->insert('tl_consho_product_type', ['id' => $id, 'title' => $kind, 'kind' => $kind]);
+        $this->connection->insert('tl_consho_product', ['id' => $id, 'pid' => 0, 'title' => 'Produkt '.$id, 'productType' => $id, 'published' => 1]);
+        $this->connection->insert('tl_consho_product_shop', ['pid' => $id, 'shop' => 1]);
     }
 
     private function vollstaendig(): void

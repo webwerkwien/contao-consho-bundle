@@ -128,7 +128,7 @@ class ShopPageSetupTest extends TestCase
     {
         // Not "the rows are there" but "the finding they were created for falls
         // silent" — what is asked is the source that locks the purchase.
-        foreach (['tl_consho_shop', 'tl_consho_shipping_method', 'tl_consho_payment_method'] as $table) {
+        foreach (['tl_consho_shop', 'tl_consho_shipping_method', 'tl_consho_payment_method', 'tl_consho_product', 'tl_consho_product_type', 'tl_consho_product_shop'] as $table) {
             DcaSchema::create($this->connection, $table);
         }
 

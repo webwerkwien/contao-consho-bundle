@@ -5,6 +5,15 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.9.1] – 2026-11-24
+
+### Fixed
+
+- A shop whose published products are all digital, services or vouchers no longer needs a shipping method: such
+  baskets get the electronic delivery, which needs nothing set up. The finding `shippingMethodMissing` no longer
+  blocks the checkout of such a shop, and the note `shippingCostsPageMissing` is no longer shown for it. A shop
+  without products, or with at least one physical product, keeps both. (F14)
+
 ## [0.9.0] – 2026-11-21
 
 ### Before updating
