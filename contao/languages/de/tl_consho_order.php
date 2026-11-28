@@ -4,8 +4,8 @@ $GLOBALS['TL_LANG']['tl_consho_order']['orderNumber'] = ['Bestellnummer', 'Wird 
 $GLOBALS['TL_LANG']['tl_consho_order']['orderStatus'] = ['Status', 'Der einzige gepflegte Zustand. Zahlung und Lieferung ergeben sich aus den erfassten Datensätzen.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['shop'] = ['Shop', 'Zu welcher Shop-Konfiguration diese Bestellung gehört.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['createdAt'] = ['Bestellt am', ''];
-$GLOBALS['TL_LANG']['tl_consho_order']['language'] = ['Sprache', 'Die Sprache, in der bestellt wurde. Stammt vom Startpunkt und bleibt unveraendert — auch wenn die Mail Jahre spaeter erneut versendet wird.'];
-$GLOBALS['TL_LANG']['tl_consho_order']['member'] = ['Mitglied', 'Leer bei einer Gastbestellung — die Kundendaten stehen trotzdem vollständig hier.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['language'] = ['Sprache', 'Die Sprache, in der bestellt wurde. Stammt vom Startpunkt und bleibt unverändert — auch wenn die Mail Jahre später erneut versendet wird.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['member'] = ['Mitglied', '„Gast“ bei einer Gastbestellung — die Kundendaten stehen trotzdem vollständig hier.'];
 
 $GLOBALS['TL_LANG']['tl_consho_order']['salutation'] = ['Anrede', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['firstname'] = ['Vorname', ''];
@@ -245,4 +245,20 @@ $GLOBALS['TL_LANG']['tl_consho_order']['subscription'] = ['Folgebestellung zum A
 $GLOBALS['TL_LANG']['tl_consho_order']['businessCustomer'] = ['Geschäftskunde', 'Beim Kauf als Unternehmer gezählt: Netto-Kundengruppe oder geprüfte UID. Einem Geschäftskunden wird die Zustimmung nicht abverlangt.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['entitlements'] = ['Berechtigungen', 'Berechtigungen aus den digitalen Positionen der Bestellung ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['captureWithdrawal'] = ['Widerruf erfassen', 'Widerruf erfassen'];
-$GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Ein Teil der Kunden- und Adressangaben ist schreibgeschützt: Die Lieferadresse steht auf einer erfassten Lieferung oder einem Lieferschein, Kunde und Rechnungsadresse auf einer Rechnung. Eine Rechnung wird mit einer Rechnungskorrektur berichtigt, nicht hier.';
+$GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Diese Felder sind gesperrt: Kunde und Rechnungsadresse nach einer Rechnung, die Lieferadresse nach einer Lieferung oder einem Lieferschein oder wenn keine Ware zu versenden ist, die Frist für die Restlieferung nach der Rechnung oder wenn nichts mehr zu liefern ist, und in einem Status, der die Bestellung sperrt oder abschließt, alles außer dem Status. Eine Rechnung wird mit einer Rechnungskorrektur berichtigt, nicht hier.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNotice'] = 'Bearbeitbar sind hier nur %s. Alles andere ist der Stand beim Kauf.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeSingle'] = 'Bearbeitbar ist hier nur %s. Alles andere ist der Stand beim Kauf.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeAnd'] = ' und ';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeParts'] = ['status' => 'der Status', 'remainder' => 'die Frist für die Restlieferung', 'customer' => 'Kunde und Rechnungsadresse', 'shipping' => 'die Lieferadresse'];
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeInvoice'] = 'Kunde und Rechnungsadresse sind gesperrt, weil eine Rechnung ausgestellt ist; eine Rechnung wird mit einer Rechnungskorrektur berichtigt.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeDelivery'] = 'Die Lieferadresse ist gesperrt, weil eine Lieferung erfasst oder ein Lieferschein ausgestellt ist.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeNoParcel'] = 'Die Lieferadresse ist gesperrt, weil keine Ware zu versenden ist — digitale Güter, Leistungen und Gutscheine gehen in kein Paket.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeRemainderInvoiced'] = 'Die Frist für die Restlieferung ist gesperrt: Sie gilt nur für die Rechnung, und die ist ausgestellt.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeRemainderComplete'] = 'Die Frist für die Restlieferung ist gesperrt, weil keine Ware mehr zu liefern ist.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeHeld'] = 'Der Status „%s“ sperrt die Bestellung. Er selbst bleibt änderbar, etwa um eine spätere Erstattung nachzuziehen oder einen versehentlich gesetzten Status zurückzunehmen.';
+$GLOBALS['TL_LANG']['tl_consho_order']['memberGuest'] = 'Gast';
+$GLOBALS['TL_LANG']['tl_consho_order']['memberMissing'] = 'nicht mehr vorhanden (ID %d)';
+$GLOBALS['TL_LANG']['tl_consho_order']['customerType'] = ['Kundentyp beim Kauf', 'So war der Shop beim Kauf eingestellt. Leer bei älteren Bestellungen: Für sie gilt die Einstellung des Shops.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['customerTypes'] = ['consumer' => 'Verbraucher', 'business' => 'Nur Unternehmen (B2B)'];
+$GLOBALS['TL_LANG']['tl_consho_order']['withdrawalDays'] = ['Widerrufsfrist beim Kauf (Tage)', 'Die Frist des Shops beim Kauf. Eine spätere Änderung am Shop verschiebt sie nicht. Leer bei älteren Bestellungen: Für sie gilt die Einstellung des Shops.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['withdrawalGraceDays'] = ['Zustellpuffer beim Kauf (Tage)', 'Der Puffer des Shops beim Kauf. Leer bei älteren Bestellungen: Für sie gilt die Einstellung des Shops.'];

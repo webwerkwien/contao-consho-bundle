@@ -5,6 +5,32 @@ Alle nennenswerten Änderungen an diesem Paket.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+## [0.9.3] – 2026-11-28
+
+### Changed
+
+- Order edit mask: a note on every open names what can be edited there (status, the period for the remainder and,
+  until a document carries them, customer and billing address and the delivery address) and why a part is locked.
+  Read-only fields in all Consho masks now have a grey background and read as not editable. (Connect-2)
+- Order edit mask: the period for the remainder is locked once the invoice is issued or nothing is left to ship, the
+  delivery address also where no physical goods are left to send (digital goods, services and vouchers go into no
+  parcel, also before their release). In a status that locks changes or completes the order,
+  everything but the status is locked, as the status flag promises; the status stays editable to follow a later
+  refund or to undo a mistake. Saving through "edit multiple" or "override all" is refused the same way.
+- Order edit mask: the member is shown by name and e-mail ("Guest" for a guest order), the countries by name. The
+  customer type, withdrawal period and delivery allowance stored with the order are shown read-only under "Consent and
+  age". Once an order has a status, the status field no longer offers an empty entry.
+
+### Fixed
+
+- Order edit mask: the German help text of the language field is spelled with umlauts.
+- Subscriptions: the cancellation list and the history of a subscription show who cancelled (customer form, "My
+  subscriptions", operator, price offer). In the history, a cancellation whose end was brought forward by a later one
+  is marked "superseded by …" next to its original date. (Abo-9)
+- "My subscriptions": when the operator has already set an end, the cancellation page names the earlier end the
+  customer's own ordinary cancellation would reach — the one it accepts. Not for a renewed subscription or the same
+  day. (Abo-9)
+
 ## [0.9.2] – 2026-11-24
 
 ### Fixed

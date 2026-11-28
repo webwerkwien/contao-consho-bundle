@@ -63,6 +63,7 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['historyState'] = 'Stand';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyCancellation'] = 'Kündigung';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyPause'] = 'Pause';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyEffective'] = 'wirksam zum %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historySuperseded'] = 'abgelöst durch %s';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyMonths'] = '%d Monat(e)';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyWithdrawn'] = 'zurückgenommen am %s';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyEdit'] = 'Kündigung bearbeiten';

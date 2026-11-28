@@ -5,7 +5,7 @@ $GLOBALS['TL_LANG']['tl_consho_order']['orderStatus'] = ['Status', 'The only mai
 $GLOBALS['TL_LANG']['tl_consho_order']['shop'] = ['Shop', 'Which shop configuration this order belongs to.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['createdAt'] = ['Ordered on', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['language'] = ['Language', 'The language the order was placed in. Taken from the start page and never changed — not even when the mail is resent years later.'];
-$GLOBALS['TL_LANG']['tl_consho_order']['member'] = ['Member', 'Empty for a guest order — the customer data is still complete here.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['member'] = ['Member', '"Guest" for a guest order — the customer data is still complete here.'];
 
 $GLOBALS['TL_LANG']['tl_consho_order']['salutation'] = ['Salutation', ''];
 $GLOBALS['TL_LANG']['tl_consho_order']['firstname'] = ['First name', ''];
@@ -244,4 +244,20 @@ $GLOBALS['TL_LANG']['tl_consho_order']['subscription'] = ['Follow-up order of su
 $GLOBALS['TL_LANG']['tl_consho_order']['businessCustomer'] = ['Business customer', 'Counted as a business at the purchase: net price group or verified VAT ID. No consent is asked of a business customer.'];
 $GLOBALS['TL_LANG']['tl_consho_order']['entitlements'] = ['Entitlements', 'Entitlements from the digital lines of order ID %s'];
 $GLOBALS['TL_LANG']['tl_consho_order']['captureWithdrawal'] = ['Record withdrawal', 'Record withdrawal'];
-$GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'Some customer and address details are read-only: the delivery address is on a recorded delivery or a delivery note, the customer and billing address on an invoice. An invoice is corrected by an invoice correction, not here.';
+$GLOBALS['TL_LANG']['tl_consho_order']['addressesFrozen'] = 'These fields are locked: customer and billing address after an invoice, the delivery address after a delivery or a delivery note or where there are no goods to send, the period for the remainder after the invoice or once nothing is left to ship, and everything but the status in a status that locks or completes the order. An invoice is corrected by an invoice correction, not here.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNotice'] = 'Only %s can be edited here. Everything else is the state at the purchase.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeSingle'] = 'Only %s can be edited here. Everything else is the state at the purchase.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeAnd'] = ' and ';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeParts'] = ['status' => 'the status', 'remainder' => 'the period for the remainder', 'customer' => 'customer and billing address', 'shipping' => 'the delivery address'];
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeInvoice'] = 'Customer and billing address are locked because an invoice has been issued; an invoice is corrected by an invoice correction.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeDelivery'] = 'The delivery address is locked because a delivery has been recorded or a delivery note issued.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeNoParcel'] = 'The delivery address is locked because there are no goods to send — digital goods, services and vouchers go into no parcel.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeRemainderInvoiced'] = 'The period for the remainder is locked: it applies to the invoice only, and that has been issued.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeRemainderComplete'] = 'The period for the remainder is locked because nothing is left to ship.';
+$GLOBALS['TL_LANG']['tl_consho_order']['editNoticeHeld'] = 'The status "%s" locks the order. The status itself stays editable, for instance to follow a later refund or to undo a status set by mistake.';
+$GLOBALS['TL_LANG']['tl_consho_order']['memberGuest'] = 'Guest';
+$GLOBALS['TL_LANG']['tl_consho_order']['memberMissing'] = 'no longer exists (ID %d)';
+$GLOBALS['TL_LANG']['tl_consho_order']['customerType'] = ['Customer type at the purchase', 'How the shop was set at the purchase. Empty for older orders: the shop setting applies to them.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['customerTypes'] = ['consumer' => 'Consumers', 'business' => 'Businesses only (B2B)'];
+$GLOBALS['TL_LANG']['tl_consho_order']['withdrawalDays'] = ['Withdrawal period at the purchase (days)', 'The shop\'s period at the purchase. A later change at the shop does not move it. Empty for older orders: the shop setting applies to them.'];
+$GLOBALS['TL_LANG']['tl_consho_order']['withdrawalGraceDays'] = ['Delivery allowance at the purchase (days)', 'The shop\'s allowance at the purchase. Empty for older orders: the shop setting applies to them.'];

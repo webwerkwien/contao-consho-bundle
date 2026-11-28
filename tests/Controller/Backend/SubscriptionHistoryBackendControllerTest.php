@@ -92,6 +92,56 @@ final class SubscriptionHistoryBackendControllerTest extends TestCase
         self::assertStringContainsString('alt="Entscheidung erneut senden"', $html);
     }
 
+    /**
+     * Abo-9: who cancelled — above all the operator — stands with the
+     * cancellation, as it does with a pause.
+     */
+    public function testDieQuelleDerKuendigung(): void
+    {
+        $this->cancellation(11, strtotime('2026-09-01'), ['source' => 'operator', 'state' => 'effective', 'effectiveAt' => strtotime('2027-06-30')]);
+
+        self::assertStringContainsString('ordentlich · Betreiber (Backend) · wirksam zum', html_entity_decode($this->controller()($this->dc())));
+    }
+
+    /**
+     * Abo-9: a later cancellation that ends the contract earlier
+     * supersedes the earlier one (P134); its old date stays, marked. A later
+     * one that is rejected or still waiting supersedes nothing.
+     */
+    public function testEineUeberholteKuendigungZeigtWodurch(): void
+    {
+        $this->cancellation(11, strtotime('2026-09-01'), ['number' => 'K-0001', 'source' => 'operator', 'state' => 'effective', 'effectiveAt' => strtotime('2027-06-30')]);
+        $this->cancellation(12, strtotime('2026-09-10'), ['number' => 'K-0002', 'kind' => 'extraordinary', 'state' => 'rejected', 'effectiveAt' => strtotime('2026-10-31')]);
+        $this->cancellation(13, strtotime('2026-09-20'), ['number' => 'K-0003', 'source' => 'account', 'state' => 'effective', 'effectiveAt' => strtotime('2027-03-31')]);
+
+        $html = html_entity_decode($this->controller()($this->dc()));
+
+        self::assertSame(1, substr_count($html, 'abgelöst durch'));
+        self::assertStringContainsString('wirksam · abgelöst durch K-0003', $html);
+        // The mark sits in K-0001's row, not in the newest one's.
+        self::assertGreaterThan(strpos($html, 'K-0001'), strpos($html, 'abgelöst durch'));
+    }
+
+    /**
+     * What counts is the earlier end, not the order of receipt: an
+     * extraordinary cancellation accepted at an earlier date supersedes one
+     * received after it as well as those before. Of two earlier ends, the
+     * earliest is named.
+     */
+    public function testDasFruehereEndeZaehltNichtDerEingang(): void
+    {
+        $this->cancellation(11, strtotime('2026-09-15'), ['number' => 'K-0001', 'kind' => 'extraordinary', 'state' => 'accepted', 'decidedAt' => strtotime('2026-09-25'), 'decisionSentAt' => strtotime('2026-09-25'), 'effectiveAt' => strtotime('2026-10-31')]);
+        $this->cancellation(12, strtotime('2026-09-10'), ['number' => 'K-0002', 'state' => 'effective', 'effectiveAt' => strtotime('2027-03-31')]);
+        $this->cancellation(13, strtotime('2026-09-05'), ['number' => 'K-0003', 'source' => 'operator', 'state' => 'effective', 'effectiveAt' => strtotime('2027-06-30')]);
+        $this->cancellation(14, strtotime('2026-09-20'), ['number' => 'K-0004', 'kind' => 'extraordinary', 'state' => 'accepted', 'decidedAt' => strtotime('2026-09-22'), 'decisionSentAt' => strtotime('2026-09-22'), 'effectiveAt' => strtotime('2027-09-30')]);
+
+        $html = html_entity_decode($this->controller()($this->dc()));
+
+        self::assertSame(3, substr_count($html, 'abgelöst durch K-0001'));
+        self::assertStringNotContainsString('abgelöst durch K-0002', $html);
+        self::assertStringContainsString('angenommen</td>', $html, 'the one in force carries no mark');
+    }
+
     public function testOhneEintraegeEinHinweis(): void
     {
         self::assertStringContainsString('keine Kündigung, keine Pause und kein Preisangebot', $this->controller()($this->dc()));

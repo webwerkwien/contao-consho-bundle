@@ -69,11 +69,24 @@ final class SubscriptionHistoryBackendController
         $priceLang = $GLOBALS['TL_LANG']['tl_consho_subscription_price'] ?? [];
         $entries = [];
 
-        foreach ($this->connection->fetchAllAssociative('SELECT * FROM tl_consho_cancellation WHERE pid = ? ORDER BY receivedAt DESC, id DESC', [$id]) as $row) {
-            $details = [(string) ($cancellationLang['kinds'][$row['kind']] ?? $row['kind'])];
+        $cancellations = $this->connection->fetchAllAssociative('SELECT * FROM tl_consho_cancellation WHERE pid = ? ORDER BY receivedAt DESC, id DESC', [$id]);
+
+        foreach ($cancellations as $row) {
+            // Who cancelled (Abo-9): the operator above all — as with a pause.
+            $details = array_values(array_filter([
+                (string) ($cancellationLang['kinds'][$row['kind']] ?? $row['kind']),
+                (string) ($cancellationLang['sources'][$row['source']] ?? $row['source']),
+            ], static fn (string $part): bool => '' !== $part));
 
             if (null !== $row['effectiveAt'] && (int) $row['effectiveAt'] > 0) {
                 $details[] = \sprintf((string) ($lang['historyEffective'] ?? '%s'), CancellationForm::day((int) $row['effectiveAt'], $language));
+            }
+
+            $state = [(string) ($cancellationLang['states'][$row['state']] ?? $row['state'])];
+            $superseding = self::supersededBy($row, $cancellations);
+
+            if (null !== $superseding) {
+                $state[] = \sprintf((string) ($lang['historySuperseded'] ?? '%s'), (string) $superseding['number']);
             }
 
             $entries[] = [
@@ -83,7 +96,7 @@ final class SubscriptionHistoryBackendController
                 'type' => (string) ($lang['historyCancellation'] ?? 'Cancellation'),
                 'title' => (string) $row['number'],
                 'details' => implode(' · ', $details),
-                'state' => (string) ($cancellationLang['states'][$row['state']] ?? $row['state']),
+                'state' => implode(' · ', $state),
                 'editUrl' => $this->url(['table' => 'tl_consho_cancellation', 'act' => 'edit', 'id' => $row['id']]),
                 'showUrl' => $this->url(['table' => 'tl_consho_cancellation', 'act' => 'show', 'id' => $row['id']]),
                 // As DecisionResendButtonListener: decided, but the mail did not leave.
@@ -154,6 +167,40 @@ final class SubscriptionHistoryBackendController
             'back' => $system->getReferer(),
             'lang' => $lang,
         ]);
+    }
+
+    /**
+     * The cancellation that moved this one's end forward (Abo-9). Of all
+     * in force — effective, or accepted — the earliest end is the contract's:
+     * the recorder takes an ordinary one only if it ends earlier (P134), and
+     * an accepted extraordinary one ends it at its own date. So one in force
+     * with an earlier end supersedes this one, whenever it was received or
+     * decided. The record keeps its own date; the history says that it no
+     * longer holds. A rejected or waiting one moves nothing.
+     *
+     * @param array<string, mixed>       $row
+     * @param list<array<string, mixed>> $all
+     *
+     * @return array<string, mixed>|null the earliest-ending of those
+     */
+    private static function supersededBy(array $row, array $all): array|null
+    {
+        $inForce = static fn (array $c): bool => \in_array((string) $c['state'], ['effective', 'accepted'], true) && (int) ($c['effectiveAt'] ?? 0) > 0;
+
+        if (!$inForce($row)) {
+            return null;
+        }
+
+        $by = null;
+
+        foreach ($all as $other) {
+            if ($inForce($other) && (int) $other['effectiveAt'] < (int) $row['effectiveAt']
+                && (null === $by || (int) $other['effectiveAt'] < (int) $by['effectiveAt'])) {
+                $by = $other;
+            }
+        }
+
+        return $by;
     }
 
     /**

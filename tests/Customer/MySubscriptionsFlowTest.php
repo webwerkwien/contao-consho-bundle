@@ -305,6 +305,27 @@ final class MySubscriptionsFlowTest extends TestCase
     }
 
     /**
+     * A known end set by someone else — the operator's, with his longer
+     * notice (Abo-9, P134) — does not hide an earlier end the customer's own
+     * cancellation would reach: the page names it, as the recorder accepts it.
+     */
+    public function testBeiBekanntemEndeDasFruehereFruehestmoegliche(): void
+    {
+        $earliest = CancellationForm::moment(self::NOW + 265 * self::DAY, 'de');
+
+        $this->connection->update('tl_consho_subscription', ['endsAt' => self::NOW + 400 * self::DAY], ['id' => 1]);
+        self::assertSame($earliest, $this->view(Request::create(self::HERE.'?consho_cancel_subscription=1'))['earliest']);
+
+        // The same day spares nothing.
+        $this->connection->update('tl_consho_subscription', ['endsAt' => self::NOW + 265 * self::DAY + 3600], ['id' => 1]);
+        self::assertSame('', $this->view(Request::create(self::HERE.'?consho_cancel_subscription=1'))['earliest']);
+
+        // Renewed: the successor starts at the known end (P68), so no earlier one.
+        $this->connection->update('tl_consho_subscription', ['endsAt' => self::NOW + 400 * self::DAY, 'renewedBy' => 4], ['id' => 1]);
+        self::assertSame('', $this->view(Request::create(self::HERE.'?consho_cancel_subscription=1'))['earliest']);
+    }
+
+    /**
      * The name from the account is pre-filled, editable — an error keeps what
      * was typed.
      */

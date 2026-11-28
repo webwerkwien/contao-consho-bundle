@@ -62,6 +62,7 @@ $GLOBALS['TL_LANG']['tl_consho_subscription']['historyState'] = 'State';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyCancellation'] = 'Cancellation';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyPause'] = 'Pause';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyEffective'] = 'effective %s';
+$GLOBALS['TL_LANG']['tl_consho_subscription']['historySuperseded'] = 'superseded by %s';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyMonths'] = '%d month(s)';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyWithdrawn'] = 'withdrawn on %s';
 $GLOBALS['TL_LANG']['tl_consho_subscription']['historyEdit'] = 'Edit cancellation';

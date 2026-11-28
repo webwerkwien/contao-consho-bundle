@@ -36,7 +36,8 @@ $GLOBALS['TL_DCA']['tl_consho_cancellation'] = [
             'headerFields' => ['subscriptionNumber', 'state', 'endsAt'],
             'defaultSearchField' => 'number',
         ],
-        'label' => ['fields' => ['number', 'receivedAt', 'kind', 'state'], 'format' => '%s — %s — %s — %s'],
+        // The source too (Abo-9): whether the customer or the operator cancelled.
+        'label' => ['fields' => ['number', 'receivedAt', 'kind', 'source', 'state'], 'format' => '%s — %s — %s — %s — %s'],
         'operations' => [
             'edit',
             'show' => ['href' => 'act=show', 'icon' => 'show.svg', 'primary' => true],

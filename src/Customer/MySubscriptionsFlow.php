@@ -473,17 +473,27 @@ class MySubscriptionsFlow
 
     /**
      * The earliest end of an ordinary cancellation now, for the confirmation
-     * page (Abo-7) — '' where it has an end already or has ended.
+     * page (Abo-7) — '' where it has ended, or where it has an end already
+     * that a cancellation now would not bring forward. An end set by someone
+     * else (the operator's, Abo-9) can be: the same rule as the recorder's
+     * (P134), so the page names only an end it would accept.
      *
      * @param array<string, mixed> $subscription
      */
     private function earliest(array $subscription, string $language, int $now): string
     {
-        if ('ended' === (string) $subscription['state'] || (int) ($subscription['endsAt'] ?? 0) > 0) {
+        if ('ended' === (string) $subscription['state']) {
             return '';
         }
 
-        return CancellationForm::moment($this->term->ordinary($subscription, $now, null)->effectiveAt, $language);
+        $earliest = $this->term->ordinary($subscription, $now, null)->effectiveAt;
+        $endsAt = (int) ($subscription['endsAt'] ?? 0);
+
+        if ($endsAt > 0 && ((int) ($subscription['renewedBy'] ?? 0) > 0 || !$this->term->endsEarlier($earliest, $endsAt))) {
+            return '';
+        }
+
+        return CancellationForm::moment($earliest, $language);
     }
 
     /**

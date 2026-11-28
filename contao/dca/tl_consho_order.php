@@ -197,7 +197,7 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
     ],
 
     'palettes' => [
-        'default' => '{order_legend},orderNumber,orderStatus,createdAt,language,subscription,servicePeriodFrom,servicePeriodUntil;{customer_legend},member,salutation,firstname,lastname,email,phone,company;{billing_legend},billingStreet,billingPostal,billingCity,billingState,billingCountry;{shipping_legend},shippingCompany,shippingFirstname,shippingLastname,shippingStreet,shippingPostal,shippingCity,shippingState,shippingCountry,shippingPhone;{method_legend},shippingMethodTitle,paymentMethodTitle,remainderDeliveryDays;{consent_legend},termsAcceptedAt,digitalConsentAt,businessCustomer,minimumAge,dateOfBirth;{tax_legend},vatId,vatIdStatus,vatIdRequestIdentifier,vatIdName;{total_legend},currency,netTotal,taxTotal,grandTotal',
+        'default' => '{order_legend},orderNumber,orderStatus,createdAt,language,subscription,servicePeriodFrom,servicePeriodUntil;{customer_legend},member,salutation,firstname,lastname,email,phone,company;{billing_legend},billingStreet,billingPostal,billingCity,billingState,billingCountry;{shipping_legend},shippingCompany,shippingFirstname,shippingLastname,shippingStreet,shippingPostal,shippingCity,shippingState,shippingCountry,shippingPhone;{method_legend},shippingMethodTitle,paymentMethodTitle,remainderDeliveryDays;{consent_legend},termsAcceptedAt,digitalConsentAt,businessCustomer,minimumAge,dateOfBirth,customerType,withdrawalDays,withdrawalGraceDays;{tax_legend},vatId,vatIdStatus,vatIdRequestIdentifier,vatIdName;{total_legend},currency,netTotal,taxTotal,grandTotal',
     ],
 
     'fields' => [
@@ -437,15 +437,23 @@ $GLOBALS['TL_DCA']['tl_consho_order'] = [
          * the confirmation and the release of digital lines read these, so a
          * later change at the shop does not move the window of an order
          * already placed. NULL for orders from before: they read the shop.
-         * No palette — shown nowhere, set once.
+         * Shown read-only, set once.
          */
         'customerType' => [
+            'inputType' => 'select',
+            'options' => ['consumer', 'business'],
+            'reference' => &$GLOBALS['TL_LANG']['tl_consho_order']['customerTypes'],
+            'eval' => ['disabled' => true, 'includeBlankOption' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'string', 'length' => 16, 'notnull' => false],
         ],
         'withdrawalDays' => [
+            'inputType' => 'text',
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'notnull' => false],
         ],
         'withdrawalGraceDays' => [
+            'inputType' => 'text',
+            'eval' => ['readonly' => true, 'tl_class' => 'w50'],
             'sql' => ['type' => 'smallint', 'unsigned' => true, 'notnull' => false],
         ],
 
@@ -572,6 +580,12 @@ foreach ($conshoOrderStrings as $conshoName => $conshoLength) {
         'eval' => ['maxlength' => $conshoLength, 'tl_class' => 'w50'],
         'sql' => ['type' => 'string', 'length' => $conshoLength, 'default' => ''],
     ];
+
+    // The country by name (OrderFormListener supplies every country).
+    if (str_ends_with($conshoName, 'Country')) {
+        $GLOBALS['TL_DCA']['tl_consho_order']['fields'][$conshoName]['inputType'] = 'select';
+        $GLOBALS['TL_DCA']['tl_consho_order']['fields'][$conshoName]['eval'] = ['includeBlankOption' => true, 'chosen' => true, 'tl_class' => 'w50'];
+    }
 
     // By reference, the way Contao's own DCAs do it: the language file is what
     // fills these, and showColumns reads the label straight off the field.

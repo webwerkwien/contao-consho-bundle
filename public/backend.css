@@ -1023,3 +1023,28 @@ button.consho-dashboard__finding:focus-visible {
 .consho-nowrap {
     white-space: nowrap;
 }
+
+/*
+ * Read-only fields in Consho masks: visibly not editable, still readable.
+ * Contao only lightens the border, so an order mask full of frozen purchase
+ * data looked editable; its disabled grey text is too faint for values one
+ * has to read. Selects are disabled rather than read-only (browsers ignore
+ * read-only there) and lose the arrow that promises a choice.
+ */
+form[id^="tl_consho_"] :is(.tl_text, .tl_text_2, .tl_text_3, .tl_text_4, .tl_textarea, .tl_text_unit, .tl_text_interval):is([readonly], [disabled]),
+form[id^="tl_consho_"] :is(.tl_select, .tl_select_unit, .tl_select_interval)[disabled] {
+    background-color: var(--form-button-disabled, #f3f3f5);
+    color: var(--text, #222);
+    cursor: default;
+}
+
+form[id^="tl_consho_"] :is(.tl_select, .tl_select_unit, .tl_select_interval)[disabled] {
+    background-image: none;
+    opacity: 1;
+}
+
+/* The same for a select with a search box ("chosen"), which Contao wraps. */
+form[id^="tl_consho_"] .choices.is-disabled {
+    border-color: var(--form-border-disabled, #d8d8da);
+    background-color: var(--form-button-disabled, #f3f3f5);
+}
